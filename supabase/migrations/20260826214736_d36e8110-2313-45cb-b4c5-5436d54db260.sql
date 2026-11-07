@@ -1,0 +1,1 @@
+ALTER TABLE public.patch_notes ADD COLUMN IF NOT EXISTS log_texto text NOT NULL DEFAULT '';

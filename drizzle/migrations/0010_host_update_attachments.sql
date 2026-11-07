@@ -1,0 +1,5 @@
+ALTER TABLE public.dev_tasks ADD COLUMN IF NOT EXISTS attachments jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.dev_tasks ADD CONSTRAINT dev_tasks_attachments_array CHECK (jsonb_typeof(attachments) = 'array');
+CREATE POLICY "Team reads HOST UPDATE files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'host-update-files' AND public.is_team_member(auth.uid()));
+CREATE POLICY "Team uploads own HOST UPDATE files" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'host-update-files' AND public.is_team_member(auth.uid()) AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Team removes own HOST UPDATE files" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'host-update-files' AND public.is_team_member(auth.uid()) AND (storage.foldername(name))[1] = auth.uid()::text);

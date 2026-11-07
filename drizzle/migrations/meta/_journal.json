@@ -1,0 +1,139 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789724044089,
+      "tag": "0000_create_financeiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789724654967,
+      "tag": "0001_grant_financeiro_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789725308325,
+      "tag": "0002_grant_execute_is_founder",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790283499572,
+      "tag": "0003_ilegal_log_and_area_edit",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791816053797,
+      "tag": "0004_kanban_ranking_base",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791816150864,
+      "tag": "0005_eventos_banners_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791820620150,
+      "tag": "0006_restrict_policies_to_team_members",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791953246413,
+      "tag": "0007_ilegal_transferir_org",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791956356278,
+      "tag": "0008_ilegal_transferir_online_completo",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791957159956,
+      "tag": "0009_transferir_org_coroas_organizacao",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793414409110,
+      "tag": "0010_host_update_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793418271500,
+      "tag": "0011_create_captacoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793418789966,
+      "tag": "0012_restrict_captacoes_to_areas",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793419847657,
+      "tag": "0013_captacoes_cargos_acesso",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793420490258,
+      "tag": "0014_add_head_moderator_contributor_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793424901066,
+      "tag": "0015_captacoes_desativado_policia",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793426044805,
+      "tag": "0016_create_peds_control",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793464552716,
+      "tag": "0017_peds_area_kids_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793736802357,
+      "tag": "0018_dev_tasks_estrutura",
+      "breakpoints": true
+    }
+  ]
+}

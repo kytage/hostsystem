@@ -1,0 +1,1 @@
+ALTER TABLE public.pendencias ADD COLUMN IF NOT EXISTS anexos jsonb NOT NULL DEFAULT '[]'::jsonb;

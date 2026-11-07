@@ -1,0 +1,2 @@
+ALTER TABLE public.kanban_devs ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS kanban_devs_user_id_idx ON public.kanban_devs(user_id);

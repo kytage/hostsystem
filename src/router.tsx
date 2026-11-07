@@ -3,15 +3,32 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
-  // One client per request: a module-level QueryClient leaks cached data between SSR requests.
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Cache global: evita refetch ao trocar de aba/rota e ao focar a janela
+        // Cache generoso: dados críticos já sincronizam via Supabase Realtime,
+        // então trocar de página não dispara refetch — navegação instantânea
+        staleTime: 2 * 60_000,
+        gcTime: 10 * 60_000,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
+        retry: 1,
+      },
+      mutations: {
+        retry: 0,
+      },
+    },
+  });
 
   const router = createRouter({
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    // Lets Query own freshness; set caching defaults on the QueryClient, not the router.
-    defaultPreloadStaleTime: 0,
+    // Pré-carrega a rota ao passar o mouse/focar no link: navegação quase instantânea
+    defaultPreload: "intent",
+    defaultPreloadDelay: 0,
+    defaultPreloadStaleTime: 30_000,
   });
 
   return router;

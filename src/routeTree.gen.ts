@@ -9,50 +9,418 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAreaManagerRouteImport } from './routes/_authenticated/area-manager'
+import { Route as AuthenticatedAvisosRouteImport } from './routes/_authenticated/avisos'
+import { Route as AuthenticatedCaptacoesRouteImport } from './routes/_authenticated/captacoes'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_authenticated/desenvolvimento'
+import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
+import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
+import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
+import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
+import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
+import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAreaManagerRoute =
+  AuthenticatedAreaManagerRouteImport.update({
+    id: '/area-manager',
+    path: '/area-manager',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAvisosRoute = AuthenticatedAvisosRouteImport.update({
+  id: '/avisos',
+  path: '/avisos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCaptacoesRoute = AuthenticatedCaptacoesRouteImport.update({
+  id: '/captacoes',
+  path: '/captacoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDesenvolvimentoRoute =
+  AuthenticatedDesenvolvimentoRouteImport.update({
+    id: '/desenvolvimento',
+    path: '/desenvolvimento',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEventosRoute = AuthenticatedEventosRouteImport.update({
+  id: '/eventos',
+  path: '/eventos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIlegalRoute = AuthenticatedIlegalRouteImport.update({
+  id: '/ilegal',
+  path: '/ilegal',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPedsRoute = AuthenticatedPedsRouteImport.update({
+  id: '/peds',
+  path: '/peds',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPunicoesRoute = AuthenticatedPunicoesRouteImport.update({
+  id: '/punicoes',
+  path: '/punicoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUpdateRoute = AuthenticatedUpdateRouteImport.update({
+  id: '/update',
+  path: '/update',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicWebhookOnlineRoute = ApiPublicWebhookOnlineRouteImport.update({
+  id: '/api/public/webhook/online',
+  path: '/api/public/webhook/online',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/avisos': typeof AuthenticatedAvisosRoute
+  '/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
+  '/eventos': typeof AuthenticatedEventosRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/ilegal': typeof AuthenticatedIlegalRoute
+  '/peds': typeof AuthenticatedPedsRoute
+  '/punicoes': typeof AuthenticatedPunicoesRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/update': typeof AuthenticatedUpdateRoute
+  '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/avisos': typeof AuthenticatedAvisosRoute
+  '/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
+  '/eventos': typeof AuthenticatedEventosRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/ilegal': typeof AuthenticatedIlegalRoute
+  '/peds': typeof AuthenticatedPedsRoute
+  '/punicoes': typeof AuthenticatedPunicoesRoute
+  '/tarefas': typeof AuthenticatedTarefasRoute
+  '/update': typeof AuthenticatedUpdateRoute
+  '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/_authenticated/avisos': typeof AuthenticatedAvisosRoute
+  '/_authenticated/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
+  '/_authenticated/eventos': typeof AuthenticatedEventosRoute
+  '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
+  '/_authenticated/peds': typeof AuthenticatedPedsRoute
+  '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
+  '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
+  '/_authenticated/update': typeof AuthenticatedUpdateRoute
+  '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/area-manager'
+    | '/avisos'
+    | '/captacoes'
+    | '/configuracoes'
+    | '/desenvolvimento'
+    | '/eventos'
+    | '/financeiro'
+    | '/ilegal'
+    | '/peds'
+    | '/punicoes'
+    | '/tarefas'
+    | '/update'
+    | '/usuarios'
+    | '/api/public/webhook/online'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/auth'
+    | '/sitemap.xml'
+    | '/area-manager'
+    | '/avisos'
+    | '/captacoes'
+    | '/configuracoes'
+    | '/desenvolvimento'
+    | '/eventos'
+    | '/financeiro'
+    | '/ilegal'
+    | '/peds'
+    | '/punicoes'
+    | '/tarefas'
+    | '/update'
+    | '/usuarios'
+    | '/'
+    | '/api/public/webhook/online'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/_authenticated/area-manager'
+    | '/_authenticated/avisos'
+    | '/_authenticated/captacoes'
+    | '/_authenticated/configuracoes'
+    | '/_authenticated/desenvolvimento'
+    | '/_authenticated/eventos'
+    | '/_authenticated/financeiro'
+    | '/_authenticated/ilegal'
+    | '/_authenticated/peds'
+    | '/_authenticated/punicoes'
+    | '/_authenticated/tarefas'
+    | '/_authenticated/update'
+    | '/_authenticated/usuarios'
+    | '/_authenticated/'
+    | '/api/public/webhook/online'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/area-manager': {
+      id: '/_authenticated/area-manager'
+      path: '/area-manager'
+      fullPath: '/area-manager'
+      preLoaderRoute: typeof AuthenticatedAreaManagerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/avisos': {
+      id: '/_authenticated/avisos'
+      path: '/avisos'
+      fullPath: '/avisos'
+      preLoaderRoute: typeof AuthenticatedAvisosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/captacoes': {
+      id: '/_authenticated/captacoes'
+      path: '/captacoes'
+      fullPath: '/captacoes'
+      preLoaderRoute: typeof AuthenticatedCaptacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/desenvolvimento': {
+      id: '/_authenticated/desenvolvimento'
+      path: '/desenvolvimento'
+      fullPath: '/desenvolvimento'
+      preLoaderRoute: typeof AuthenticatedDesenvolvimentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/eventos': {
+      id: '/_authenticated/eventos'
+      path: '/eventos'
+      fullPath: '/eventos'
+      preLoaderRoute: typeof AuthenticatedEventosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ilegal': {
+      id: '/_authenticated/ilegal'
+      path: '/ilegal'
+      fullPath: '/ilegal'
+      preLoaderRoute: typeof AuthenticatedIlegalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/peds': {
+      id: '/_authenticated/peds'
+      path: '/peds'
+      fullPath: '/peds'
+      preLoaderRoute: typeof AuthenticatedPedsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/punicoes': {
+      id: '/_authenticated/punicoes'
+      path: '/punicoes'
+      fullPath: '/punicoes'
+      preLoaderRoute: typeof AuthenticatedPunicoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tarefas': {
+      id: '/_authenticated/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AuthenticatedTarefasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/update': {
+      id: '/_authenticated/update'
+      path: '/update'
+      fullPath: '/update'
+      preLoaderRoute: typeof AuthenticatedUpdateRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/usuarios': {
+      id: '/_authenticated/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/webhook/online': {
+      id: '/api/public/webhook/online'
+      path: '/api/public/webhook/online'
+      fullPath: '/api/public/webhook/online'
+      preLoaderRoute: typeof ApiPublicWebhookOnlineRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAreaManagerRoute: typeof AuthenticatedAreaManagerRoute
+  AuthenticatedAvisosRoute: typeof AuthenticatedAvisosRoute
+  AuthenticatedCaptacoesRoute: typeof AuthenticatedCaptacoesRoute
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedDesenvolvimentoRoute: typeof AuthenticatedDesenvolvimentoRoute
+  AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
+  AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
+  AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
+  AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
+  AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
+  AuthenticatedUpdateRoute: typeof AuthenticatedUpdateRoute
+  AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAreaManagerRoute: AuthenticatedAreaManagerRoute,
+  AuthenticatedAvisosRoute: AuthenticatedAvisosRoute,
+  AuthenticatedCaptacoesRoute: AuthenticatedCaptacoesRoute,
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedDesenvolvimentoRoute: AuthenticatedDesenvolvimentoRoute,
+  AuthenticatedEventosRoute: AuthenticatedEventosRoute,
+  AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
+  AuthenticatedPedsRoute: AuthenticatedPedsRoute,
+  AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
+  AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
+  AuthenticatedUpdateRoute: AuthenticatedUpdateRoute,
+  AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
