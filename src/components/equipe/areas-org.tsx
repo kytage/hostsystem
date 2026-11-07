@@ -10,7 +10,8 @@ import {
   Crown,
   LayoutGrid,
   Scale,
-  Skull,
+  PartyPopper,
+  Swords,
   Users,
   X,
   type LucideIcon,
@@ -41,9 +42,11 @@ interface GrupoDef {
 
 const GRUPOS: GrupoDef[] = [
   { key: "legal", label: "LEGAL", icon: Scale, descricao: "Empresas e serviços da cidade" },
-  { key: "ilegal", label: "ILEGAL", icon: Skull, descricao: "Organizações do crime" },
-  { key: "outras", label: "OPERAÇÃO", icon: LayoutGrid, descricao: "Staff, eventos e demais áreas" },
+  { key: "confronto", label: "BASE PADRÃO", icon: Swords, descricao: "Ilegal × Polícia — lados rivais" },
+  { key: "entretenimento", label: "ENTRETENIMENTO", icon: PartyPopper, descricao: "Eventos e competições" },
+  { key: "operacao", label: "OPERAÇÃO", icon: LayoutGrid, descricao: "Staff, suporte e bastidores" },
 ];
+const GRUPO_KEYS = new Set(GRUPOS.map((g) => g.key));
 
 const DEFICIT_LIMITE = 2;
 const TRINTA_DIAS = 30 * 24 * 60 * 60 * 1000;
@@ -181,7 +184,7 @@ export function AreasOrg({
       const datas = pend.map((p) => p.aprovadoAt ?? p.createdAt).sort();
       return {
         def,
-        grupo: def.grupo === "legal" || def.grupo === "ilegal" ? def.grupo : "outras",
+        grupo: def.grupo && GRUPO_KEYS.has(def.grupo) ? def.grupo : "operacao",
         lideres,
         membros: doArea,
         pend,
@@ -275,11 +278,21 @@ export function AreasOrg({
                     </div>
                   </div>
                   {lista.length > 0 && <div className="h-5 w-px bg-white/15" />}
-                  <div className={cn("grid gap-3", lista.length > 4 ? "grid-cols-2" : "grid-cols-1")}>
-                    {lista.map((a) => (
-                      <AreaNode key={a.def.key} a={a} onOpen={() => setAberta(a.def.key)} />
-                    ))}
-                  </div>
+                  {g.key === "confronto" && lista.length === 2 ? (
+                    <div className="flex items-center gap-2">
+                      <AreaNode a={lista[0]!} onOpen={() => setAberta(lista[0]!.def.key)} />
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full border border-primary/40 bg-primary/10 font-display text-[11px] font-semibold tracking-wider text-primary">
+                        VS
+                      </span>
+                      <AreaNode a={lista[1]!} onOpen={() => setAberta(lista[1]!.def.key)} />
+                    </div>
+                  ) : (
+                    <div className={cn("grid gap-3", lista.length > 4 ? "grid-cols-2" : "grid-cols-1")}>
+                      {lista.map((a) => (
+                        <AreaNode key={a.def.key} a={a} onOpen={() => setAberta(a.def.key)} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -391,7 +404,7 @@ function AreaDrawer({ area, onClose, onVerEquipe }: { area: AreaResumo; onClose:
           <div className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xl">{area.def.emoji}</span>
             <div>
-              <p className="eyebrow">{area.grupo === "outras" ? "Operação" : area.grupo}</p>
+              <p className="eyebrow">{GRUPOS.find((g) => g.key === area.grupo)?.label ?? area.grupo}</p>
               <p className="font-display text-lg font-semibold">{area.def.label}</p>
             </div>
           </div>

@@ -59,27 +59,26 @@ export type CategoryActions = Map<string, ActionKey[]>;
 
 /** Áreas (sub-cargos) disponíveis — sincronizadas com a planilha de staff */
 export const AREAS = [
-  { key: "ilegal", label: "Ilegal", emoji: "🕵️" },
-  { key: "captacao", label: "CAPTAÇÃO", emoji: "🤝" },
-  { key: "policia", label: "Policia", emoji: "👮" },
   { key: "hospital", label: "Hospital", emoji: "🏥" },
   { key: "judiciario", label: "Judiciário", emoji: "⚖️" },
   { key: "mecanica", label: "Mecânica", emoji: "🔧" },
-  { key: "restaurante", label: "Restaurante", emoji: "🍔" },
   { key: "restaurantes", label: "Restaurantes", emoji: "🍽️" },
-  { key: "eventos", label: "Eventos", emoji: "🎉" },
   { key: "jornal", label: "Jornal", emoji: "📰" },
-  { key: "kids", label: "KIDS E PEDS", emoji: "🧸" },
+  { key: "creators", label: "Creators", emoji: "🎬" },
+  { key: "kids", label: "Peds e Kids", emoji: "🧸" },
+  { key: "ilegal", label: "Ilegal", emoji: "💀" },
+  { key: "policia", label: "Policia", emoji: "👮" },
+  { key: "eventos", label: "Eventos", emoji: "🎉" },
   { key: "competitive", label: "Competitive", emoji: "🏆" },
   { key: "var", label: "VAR", emoji: "🎥" },
   { key: "cars", label: "Cars", emoji: "🚗" },
   { key: "clotches", label: "Clotches", emoji: "👕" },
-  { key: "creators", label: "Creators", emoji: "🎬" },
   { key: "denuncias", label: "Denuncias", emoji: "🚨" },
   { key: "financeiro", label: "Financeiro", emoji: "💰" },
   { key: "marketing", label: "Marketing", emoji: "📣" },
   { key: "staff", label: "Staff", emoji: "🛡️" },
-  { key: "id_pre_acess_free", label: "ID PRÉ ACESS FREE", emoji: "🎟️" },
+  { key: "desenvolvimento", label: "Desenvolvimento", emoji: "💻" },
+  { key: "captacao", label: "CAPTAÇÃO", emoji: "🤝" },
 ] as const;
 export type AreaKey = (typeof AREAS)[number]["key"];
 export const AREA_LABELS: Record<AreaKey, string> = Object.fromEntries(
