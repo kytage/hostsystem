@@ -60,6 +60,7 @@ export type Database = {
         Row: {
           created_at: string
           emoji: string
+          grupo: string | null
           id: string
           key: string
           label: string
@@ -69,6 +70,7 @@ export type Database = {
         Insert: {
           created_at?: string
           emoji?: string
+          grupo?: string | null
           id?: string
           key: string
           label: string
@@ -78,6 +80,7 @@ export type Database = {
         Update: {
           created_at?: string
           emoji?: string
+          grupo?: string | null
           id?: string
           key?: string
           label?: string

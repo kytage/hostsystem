@@ -210,6 +210,8 @@ export interface AreaRow {
   label: string;
   emoji: string;
   ordem: number;
+  /** Agrupamento no organograma (ex.: "legal", "ilegal"); null = outras áreas. */
+  grupo?: string | null;
 }
 
 export function useAreas() {
@@ -218,7 +220,7 @@ export function useAreas() {
     queryFn: async (): Promise<AreaRow[]> => {
       const { data, error } = await supabase
         .from("areas")
-        .select("key, label, emoji, ordem")
+        .select("key, label, emoji, ordem, grupo")
         .order("ordem", { ascending: true });
       if (error) throw error;
       const rows = (data ?? []) as AreaRow[];

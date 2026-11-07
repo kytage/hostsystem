@@ -105,7 +105,7 @@
 
 /* HOST — Premium Dark Glass (all-black, #ce0e0e only as accent) */
 .dark {
-  --background: #050505;
+  --background: #000000;
   --foreground: #f5f5f5;
   --card: rgba(255, 255, 255, 0.035);
   --card-foreground: #f5f5f5;
@@ -290,9 +290,13 @@
 @layer base {
   .dark body {
     background:
-      radial-gradient(1100px 620px at 82% -12%, rgba(206, 14, 14, 0.065), transparent 62%),
-      radial-gradient(900px 700px at -10% 110%, rgba(255, 255, 255, 0.022), transparent 60%),
-      linear-gradient(180deg, #0b0b0b 0%, #050505 42%, #070707 100%);
+      /* brilho vermelho no topo, como uma luz atrás do cabeçalho */
+      radial-gradient(1400px 520px at 62% -14%, rgba(206, 14, 14, 0.42), transparent 68%),
+      radial-gradient(900px 420px at 92% -6%, rgba(150, 8, 8, 0.32), transparent 70%),
+      radial-gradient(700px 380px at 20% -10%, rgba(120, 6, 6, 0.18), transparent 70%),
+      /* faixa vertical que dissolve o vermelho no preto */
+      linear-gradient(180deg, rgba(40, 3, 3, 0.55) 0%, rgba(0, 0, 0, 0) 38%),
+      #000000;
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
   }

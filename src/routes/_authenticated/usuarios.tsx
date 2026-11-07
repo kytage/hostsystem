@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus,
@@ -23,6 +23,8 @@ import {
   Plus,
   AtSign,
   ArrowUpCircle,
+  Network,
+  Table2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -61,7 +63,8 @@ import {
 import type { EquipeUser } from "@/lib/equipe-merge";
 import { PageHeader } from "@/components/page-header";
 import { PermissoesModal } from "@/components/permissoes-modal";
-import { AreasDashboard } from "@/components/areas-dashboard";
+import { AreasOrg } from "@/components/equipe/areas-org";
+import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
@@ -89,7 +92,7 @@ type Aba = "equipe" | "areas" | "casting";
 
 const ABAS: { key: Aba; label: string; icon: typeof Users }[] = [
   { key: "equipe", label: "Equipe", icon: Users },
-  { key: "areas", label: "Áreas", icon: BarChart3 },
+  { key: "areas", label: "Áreas", icon: Network },
   { key: "casting", label: "Casting", icon: Clapperboard },
 ];
 
@@ -202,6 +205,20 @@ function EquipePage() {
   });
 
   const [aba, setAba] = useState<Aba>("equipe");
+  const [visao, setVisao] = useState<"org" | "tabela">("org");
+  const [selecionado, setSelecionado] = useState<UserRow | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("host-equipe-visao");
+      if (v === "org" || v === "tabela") setVisao(v);
+    } catch {}
+  }, []);
+  const trocarVisao = (v: "org" | "tabela") => {
+    setVisao(v);
+    try {
+      localStorage.setItem("host-equipe-visao", v);
+    } catch {}
+  };
   const [busca, setBusca] = useState("");
   const [areaFiltro, setAreaFiltro] = useState<string>("todas");
   const [cargoFiltro, setCargoFiltro] = useState<string>("todos");
@@ -599,6 +616,26 @@ function EquipePage() {
         ))}
         {aba === "equipe" && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="glass flex items-center gap-0.5 rounded-full p-1" role="group" aria-label="Modo de visualização">
+              {([
+                { v: "org", icon: Network, label: "Organograma" },
+                { v: "tabela", icon: Table2, label: "Tabela" },
+              ] as const).map((o) => (
+                <button
+                  key={o.v}
+                  onClick={() => trocarVisao(o.v)}
+                  title={o.label}
+                  aria-label={o.label}
+                  aria-pressed={visao === o.v}
+                  className={cn(
+                    "grid size-8 place-items-center rounded-full transition-colors duration-200",
+                    visao === o.v ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <o.icon className="size-4" strokeWidth={1.7} />
+                </button>
+              ))}
+            </div>
             <div className="w-48">
               <MinimalSelect
                 value={cargoFiltro}
@@ -628,6 +665,15 @@ function EquipePage() {
       <div className="overflow-hidden rounded-xl glass">
         {loadingUsers || (aba === "casting" && loadingCasting) ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">Carregando equipe...</p>
+        ) : aba === "equipe" && visao === "org" ? (
+          <div className="p-3">
+            <TeamOrgChart
+              users={filtradas}
+              areas={areasDisponiveis}
+              selectedId={selecionado?.id ?? null}
+              onSelect={setSelecionado}
+            />
+          </div>
         ) : aba === "equipe" ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -791,10 +837,9 @@ function EquipePage() {
             </table>
           </div>
         ) : aba === "areas" ? (
-          <AreasDashboard
+          <AreasOrg
             membros={linhas}
             areas={areasDisponiveis}
-            roleLabels={ROLE_LABELS}
             onSelectArea={(key) => {
               setAreaFiltro(key);
               setAba("equipe");
@@ -1375,6 +1420,29 @@ function EquipePage() {
           </div>
         </div>
       )}
+
+      {aba === "equipe" && selecionado && (() => {
+        const atual = linhas.find((u) => u.id === selecionado.id) ?? selecionado;
+        return (
+          <PersonDrawer
+            user={atual}
+            areas={areasDisponiveis}
+            onClose={() => setSelecionado(null)}
+            podeEditar={podeEditar}
+            podeExcluir={podeExcluir}
+            onRename={() => openRename(atual)}
+            onEditIds={() => openIdsEditor(atual)}
+            onEditAreas={() => openAreaEditor(atual)}
+            onResetToken={() => setResetTarget(atual)}
+            onDelete={() => {
+              if (confirm(`Excluir o usuário "${atual.username}"? Essa ação não pode ser desfeita.`)) {
+                mutDelete.mutate(atual.id);
+                setSelecionado(null);
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
