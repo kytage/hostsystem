@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, FileDown, Loader2, Maximize2, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Columns3, FileDown, ListChecks, Loader2, Maximize2, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addDevTask,
@@ -19,21 +19,23 @@ import { toast } from "sonner";
 import { PlanningDialog } from "@/components/update-planning-dialog";
 import { UpdateOverview } from "@/components/update-overview";
 import { MinhasDemandas, STATUS_PILL } from "@/components/update-minhas-demandas";
+import { PendenciasPanel } from "@/components/update-pendencias";
+import { playSfx } from "@/lib/sfx";
 
 export const Route = createFileRoute("/_authenticated/update")({
   head: () => ({
     meta: [
-      { title: "HOST UPDATE 2.1 — FiveM Host" },
+      { title: "HOST UPDATE 3.0 — FiveM Host" },
       {
         name: "description",
-        content: "Projetos e novidades da atualização HOST 2.1.",
+        content: "Projetos e novidades da atualização HOST 3.0.",
       },
-      { property: "og:title", content: "HOST UPDATE 2.1 — FiveM Host" },
+      { property: "og:title", content: "HOST UPDATE 3.0 — FiveM Host" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
-        content: "Projetos e novidades da atualização HOST 2.1.",
+        content: "Projetos e novidades da atualização HOST 3.0.",
       },
     ],
   }),
@@ -67,6 +69,17 @@ function HostUpdate() {
   const [reportLoading, setReportLoading] = useState(false);
   const [selected, setSelected] = useState<{ projeto: DevTask; editing: boolean } | null>(null);
   const [over, setOver] = useState<ColumnId | null>(null);
+  const [visao, setVisao] = useState<"pendencias" | "quadro">("pendencias");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("host-update-visao") === "quadro") setVisao("quadro");
+    } catch { /* sem storage */ }
+  }, []);
+  const trocarVisao = (v: "pendencias" | "quadro") => {
+    playSfx("click");
+    setVisao(v);
+    try { localStorage.setItem("host-update-visao", v); } catch { /* sem storage */ }
+  };
 
   useRealtimeTable("dev_tasks", [["host-update"]]);
 
@@ -109,7 +122,7 @@ function HostUpdate() {
     <div className="host-update-theme mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
       <PageHeader
         kicker="UPDATE"
-        title="HOST UPDATE 2.1"
+        title="HOST UPDATE 3.0"
         subtitle={`Projetos e novidades desta atualização — ${concluidos}/${projetos.length} concluídos (${progresso}%)`}
         actions={
           <div className="flex flex-wrap items-center gap-3">
@@ -134,9 +147,33 @@ function HostUpdate() {
         />
       </div>
 
+      <div className="mt-6 flex items-center gap-3">
+        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
+          {([
+            { id: "pendencias", label: "Pendências", icon: ListChecks },
+            { id: "quadro", label: "Quadro", icon: Columns3 },
+          ] as const).map((v) => (
+            <button
+              key={v.id}
+              onClick={() => trocarVisao(v.id)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs transition-colors",
+                visao === v.id ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <v.icon className="size-3.5" /> {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Carregando projetos...
+        </div>
+      ) : visao === "pendencias" ? (
+        <div className="mt-5">
+          <PendenciasPanel projetos={projetos} />
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 2xl:grid-cols-[1fr_320px]">

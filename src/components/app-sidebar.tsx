@@ -74,7 +74,7 @@ const founderOnly: NavEntry[] = [
 ];
 
 const ops: NavEntry[] = [
-  { title: "HOST UPDATE 2.1", icon: Rocket, url: "/update" },
+  { title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" },
 ];
 
 /* ---- Icon-only button (rail style, used in footer + collapsed) ---- */

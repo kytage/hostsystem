@@ -4,7 +4,7 @@ import { carregarLogoHost, type RGB } from "@/lib/relatorio-pdf-ui";
 import { parseEstrutura, progressoEstrutura, type EstruturaGrupo } from "@/lib/update-estrutura";
 
 /**
- * Relatório HOST UPDATE 2.1 em formato de apresentação horizontal 1920x1080,
+ * Relatório HOST UPDATE 3.0 em formato de apresentação horizontal 1920x1080,
  * com gráficos (rosca de status, barras por projeto e por responsável) e
  * um slide por projeto com subtítulos/itens da estrutura.
  */
@@ -84,12 +84,12 @@ export async function gerarRelatorioHostUpdate(tasks: DevTask[]): Promise<void> 
     if (!first) doc.addPage([W, H], "landscape");
     doc.setFillColor(...BG); doc.rect(0, 0, W, H, "F");
     doc.setFillColor(...ACCENT); doc.rect(M, 64, 56, 6, "F");
-    text("HOST UPDATE 2.1", M, 110, 22, true);
+    text("HOST UPDATE 3.0", M, 110, 22, true);
     text(section, M + 240, 110, 18, false, SOFT);
     text(`${date} • Brasília`, W - M, 110, 18, false, SOFT, "right");
   };
 
-  doc.setProperties({ title: "HOST UPDATE 2.1 — Relatório de progresso", author: "HOST" });
+  doc.setProperties({ title: "HOST UPDATE 3.0 — Relatório de progresso", author: "HOST" });
 
   // ---------- Slide 1: visão geral ----------
   const counts = STATUS.map((s) => ({ ...s, count: tasks.filter((t) => t.column === s.id).length }));
@@ -218,8 +218,8 @@ export async function gerarRelatorioHostUpdate(tasks: DevTask[]): Promise<void> 
   const pages = doc.getNumberOfPages();
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
-    text("HOST / UPDATE 2.1", M, H - 40, 14, true, SOFT);
+    text("HOST / UPDATE 3.0", M, H - 40, 14, true, SOFT);
     text(`${p} / ${pages}`, W - M, H - 40, 14, false, SOFT, "right");
   }
-  doc.save(`HOST-UPDATE-2.1-${generated.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })}.pdf`);
+  doc.save(`HOST-UPDATE-3.0-${generated.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" })}.pdf`);
 }

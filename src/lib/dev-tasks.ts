@@ -20,6 +20,21 @@ export interface DevTask {
   assignee: string;
   column: ColumnId;
   attachments: PlanningAttachment[];
+  checklist: ChecklistItem[];
+  prazo: string | null;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export function parseChecklist(value: unknown): ChecklistItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((i): i is ChecklistItem => typeof i === "object" && i !== null && typeof i.id === "string" && typeof i.text === "string")
+    .map((i) => ({ id: i.id, text: i.text, done: Boolean(i.done) }));
 }
 
 export interface Pendencia {
@@ -40,6 +55,8 @@ interface TaskRow {
   assignee: string;
   column_id: string;
   attachments?: unknown;
+  checklist?: unknown;
+  prazo?: string | null;
 }
 
 interface PendenciaRow {
@@ -61,6 +78,8 @@ function rowToTask(r: TaskRow): DevTask {
     assignee: r.assignee,
     column: r.column_id as ColumnId,
     attachments: parsePlanningAttachments(r.attachments),
+    checklist: parseChecklist(r.checklist),
+    prazo: r.prazo ?? null,
   };
 }
 
@@ -82,6 +101,27 @@ export async function updateDevTask(id: string, input: Pick<DevTask, "title" | "
   }).eq("id", id).select("id").single();
   if (error) throw error;
   if (!data) throw new Error("Projeto não encontrado ou sem permissão.");
+}
+
+/** Atualiza campos soltos de um tópico (checklist, prioridade, prazo, status...). */
+export async function patchDevTask(
+  id: string,
+  patch: Partial<Pick<DevTask, "title" | "description" | "priority" | "tag" | "checklist" | "prazo" | "column" | "attachments">>,
+): Promise<void> {
+  const row: {
+    updated_at: string; title?: string; description?: string; priority?: string; tag?: string;
+    checklist?: ChecklistItem[]; prazo?: string | null; column_id?: string; attachments?: PlanningAttachment[];
+  } = { updated_at: new Date().toISOString() };
+  if (patch.title !== undefined) row.title = patch.title.trim();
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.priority !== undefined) row.priority = patch.priority;
+  if (patch.tag !== undefined) row.tag = patch.tag;
+  if (patch.checklist !== undefined) row.checklist = patch.checklist.map((i) => ({ ...i }));
+  if (patch.prazo !== undefined) row.prazo = patch.prazo;
+  if (patch.column !== undefined) row.column_id = patch.column;
+  if (patch.attachments !== undefined) row.attachments = patch.attachments.map((a) => ({ ...a }));
+  const { error } = await supabase.from("dev_tasks").update(row as never).eq("id", id);
+  if (error) throw error;
 }
 
 export async function uploadPlanningFile(file: File): Promise<PlanningAttachment> {

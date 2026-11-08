@@ -46,7 +46,7 @@ export function PlanningDialog({ projeto, initiallyEditing = false, onClose }: P
   return <Dialog open onOpenChange={(open) => { if (!open) close(); }}>
     <DialogContent aria-describedby={undefined} className="host-update-theme flex h-dvh w-screen max-w-none flex-col gap-0 rounded-none border-0 p-0 sm:rounded-none" onInteractOutside={(e) => e.preventDefault()}>
       <header className="border-b border-border px-5 py-5 pr-14 md:px-10 md:pr-16">
-        <p className="mb-2 text-xs font-semibold text-primary">HOST UPDATE 2.1 / PLANEJAMENTO</p>
+        <p className="mb-2 text-xs font-semibold text-primary">HOST UPDATE 3.0 / PLANEJAMENTO</p>
         <div className="flex flex-wrap items-center justify-between gap-3"><DialogTitle className="min-w-0 break-words leading-snug">{saved.title}</DialogTitle>
           <div className="flex flex-wrap gap-2">{editing ? <><Button variant="outline" onClick={discard} disabled={save.isPending || uploading}>Descartar</Button><Button onClick={() => save.mutate()} disabled={!draft.title.trim() || save.isPending || uploading}>{save.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Salvar alterações</Button></> : <Button onClick={() => setEditing(true)}><Pencil className="size-4" /> Editar planejamento</Button>}</div>
         </div>

@@ -460,11 +460,13 @@ export type Database = {
         Row: {
           assignee: string
           attachments: Json
+          checklist: Json
           column_id: string
           created_at: string
           description: string
           estrutura: Json
           id: string
+          prazo: string | null
           priority: string
           tag: string
           title: string
@@ -473,11 +475,13 @@ export type Database = {
         Insert: {
           assignee?: string
           attachments?: Json
+          checklist?: Json
           column_id?: string
           created_at?: string
           description?: string
           estrutura?: Json
           id?: string
+          prazo?: string | null
           priority?: string
           tag?: string
           title: string
@@ -486,11 +490,13 @@ export type Database = {
         Update: {
           assignee?: string
           attachments?: Json
+          checklist?: Json
           column_id?: string
           created_at?: string
           description?: string
           estrutura?: Json
           id?: string
+          prazo?: string | null
           priority?: string
           tag?: string
           title?: string
