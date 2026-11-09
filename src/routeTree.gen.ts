@@ -21,12 +21,15 @@ import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_auth
 import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
+import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
+import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
 import { Route as ApiPublicWebhookPlayersRouteImport } from './routes/api/public/webhook/players'
 
@@ -92,6 +95,11 @@ const AuthenticatedIlegalRoute = AuthenticatedIlegalRouteImport.update({
   path: '/ilegal',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPedsRoute = AuthenticatedPedsRouteImport.update({
   id: '/peds',
   path: '/peds',
@@ -122,6 +130,16 @@ const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAreasIndexRoute = AuthenticatedAreasIndexRouteImport.update({
+  id: '/areas/',
+  path: '/areas/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAreasAreaRoute = AuthenticatedAreasAreaRouteImport.update({
+  id: '/areas/$area',
+  path: '/areas/$area',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicWebhookOnlineRoute = ApiPublicWebhookOnlineRouteImport.update({
   id: '/api/public/webhook/online',
   path: '/api/public/webhook/online',
@@ -145,12 +163,15 @@ export interface FileRoutesByFullPath {
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
+  '/marketing': typeof AuthenticatedMarketingRoute
   '/peds': typeof AuthenticatedPedsRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -165,6 +186,7 @@ export interface FileRoutesByTo {
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
+  '/marketing': typeof AuthenticatedMarketingRoute
   '/peds': typeof AuthenticatedPedsRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
@@ -172,6 +194,8 @@ export interface FileRoutesByTo {
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/areas': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -188,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated/eventos': typeof AuthenticatedEventosRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
+  '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
@@ -195,6 +220,8 @@ export interface FileRoutesById {
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -212,12 +239,15 @@ export interface FileRouteTypes {
     | '/eventos'
     | '/financeiro'
     | '/ilegal'
+    | '/marketing'
     | '/peds'
     | '/players'
     | '/punicoes'
     | '/tarefas'
     | '/update'
     | '/usuarios'
+    | '/areas/$area'
+    | '/areas/'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   fileRoutesByTo: FileRoutesByTo
@@ -232,6 +262,7 @@ export interface FileRouteTypes {
     | '/eventos'
     | '/financeiro'
     | '/ilegal'
+    | '/marketing'
     | '/peds'
     | '/players'
     | '/punicoes'
@@ -239,6 +270,8 @@ export interface FileRouteTypes {
     | '/update'
     | '/usuarios'
     | '/'
+    | '/areas/$area'
+    | '/areas'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   id:
@@ -254,6 +287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/eventos'
     | '/_authenticated/financeiro'
     | '/_authenticated/ilegal'
+    | '/_authenticated/marketing'
     | '/_authenticated/peds'
     | '/_authenticated/players'
     | '/_authenticated/punicoes'
@@ -261,6 +295,8 @@ export interface FileRouteTypes {
     | '/_authenticated/update'
     | '/_authenticated/usuarios'
     | '/_authenticated/'
+    | '/_authenticated/areas/$area'
+    | '/_authenticated/areas/'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   fileRoutesById: FileRoutesById
@@ -359,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIlegalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/marketing': {
+      id: '/_authenticated/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof AuthenticatedMarketingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/peds': {
       id: '/_authenticated/peds'
       path: '/peds'
@@ -401,6 +444,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/areas/': {
+      id: '/_authenticated/areas/'
+      path: '/areas'
+      fullPath: '/areas/'
+      preLoaderRoute: typeof AuthenticatedAreasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/areas/$area': {
+      id: '/_authenticated/areas/$area'
+      path: '/areas/$area'
+      fullPath: '/areas/$area'
+      preLoaderRoute: typeof AuthenticatedAreasAreaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/webhook/online': {
       id: '/api/public/webhook/online'
       path: '/api/public/webhook/online'
@@ -427,6 +484,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
+  AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
@@ -434,6 +492,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUpdateRoute: typeof AuthenticatedUpdateRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAreasAreaRoute: typeof AuthenticatedAreasAreaRoute
+  AuthenticatedAreasIndexRoute: typeof AuthenticatedAreasIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -445,6 +505,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEventosRoute: AuthenticatedEventosRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
+  AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
@@ -452,6 +513,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUpdateRoute: AuthenticatedUpdateRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAreasAreaRoute: AuthenticatedAreasAreaRoute,
+  AuthenticatedAreasIndexRoute: AuthenticatedAreasIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

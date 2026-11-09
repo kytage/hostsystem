@@ -1356,6 +1356,63 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_conteudos: {
+        Row: {
+          created_at: string
+          criado_por: string
+          curtidas: number
+          data_gravacao: string | null
+          data_publicacao: string | null
+          formato: string
+          id: string
+          link: string
+          local: string
+          plataformas: string[]
+          responsavel: string
+          roteiro: string
+          status: string
+          titulo: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string
+          curtidas?: number
+          data_gravacao?: string | null
+          data_publicacao?: string | null
+          formato?: string
+          id?: string
+          link?: string
+          local?: string
+          plataformas?: string[]
+          responsavel?: string
+          roteiro?: string
+          status?: string
+          titulo: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          curtidas?: number
+          data_gravacao?: string | null
+          data_publicacao?: string | null
+          formato?: string
+          id?: string
+          link?: string
+          local?: string
+          plataformas?: string[]
+          responsavel?: string
+          roteiro?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: []
+      }
       pendencias: {
         Row: {
           anexos: Json

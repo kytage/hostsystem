@@ -63,7 +63,6 @@ import {
 import type { EquipeUser } from "@/lib/equipe-merge";
 import { PageHeader } from "@/components/page-header";
 import { PermissoesModal } from "@/components/permissoes-modal";
-import { AreasOrg } from "@/components/equipe/areas-org";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 
 
@@ -88,11 +87,10 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
 });
 
 type UserRow = EquipeUser;
-type Aba = "equipe" | "areas" | "casting";
+type Aba = "equipe" | "casting";
 
 const ABAS: { key: Aba; label: string; icon: typeof Users }[] = [
   { key: "equipe", label: "Equipe", icon: Users },
-  { key: "areas", label: "Áreas", icon: Network },
   { key: "casting", label: "Casting", icon: Clapperboard },
 ];
 
@@ -836,16 +834,6 @@ function EquipePage() {
               </tbody>
             </table>
           </div>
-        ) : aba === "areas" ? (
-          <AreasOrg
-            membros={linhas}
-            areas={areasDisponiveis}
-            onSelectArea={(key) => {
-              setAreaFiltro(key);
-              setAba("equipe");
-            }}
-          />
-
         ) : (
           <table className="w-full text-sm">
             <thead>

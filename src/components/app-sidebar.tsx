@@ -19,6 +19,8 @@ import {
   NotebookPen,
   Wallet,
   Contact,
+  Clapperboard,
+  Map as MapIcon,
   PanelLeftClose,
   PanelLeftOpen,
   type LucideIcon,
@@ -61,8 +63,10 @@ const nav: NavEntry[] = [
   { title: "Ilegal", icon: Skull, url: "/ilegal", category: "ilegal" },
   { title: "Captações", icon: Handshake, url: "/captacoes", category: "captacoes" },
   { title: "Peds", icon: Baby, url: "/peds", category: "peds" },
+  { title: "Áreas", icon: MapIcon, url: "/areas" },
   { title: "Equipe", icon: ClipboardList, url: "/usuarios", category: "controle_staff" },
   { title: "Players", icon: Contact, url: "/players", category: "players" },
+  { title: "Marketing", icon: Clapperboard, url: "/marketing", category: "marketing" },
   { title: "Área Manager", icon: FolderKanban, url: "/area-manager", category: "area_manager" },
   { title: "Eventos e Cronograma", icon: PartyPopper, url: "/eventos" },
   { title: "Punições", icon: Gavel, url: "/punicoes", category: "punicoes" },
@@ -287,7 +291,7 @@ export function AppSidebar() {
         <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none]">
           <div className="flex flex-col items-center gap-1 py-1">
             {visibleNav.map((item) => (
-              <RailIcon key={item.title} item={item} active={pathname === item.url} />
+              <RailIcon key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
             ))}
           </div>
         </div>
@@ -296,7 +300,7 @@ export function AppSidebar() {
           <div className="w-full border-t border-white/5 py-1.5">
             <div className="flex flex-col items-center gap-1">
               {visibleOps.map((item) => (
-                <RailIcon key={item.title} item={item} active={pathname === item.url} />
+                <RailIcon key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
               ))}
             </div>
           </div>
@@ -370,7 +374,7 @@ export function AppSidebar() {
           <div className="grid grid-cols-[56px_208px] gap-y-1 py-0.5">
 
             {visibleNav.map((item) => (
-              <NavRow key={item.title} item={item} active={pathname === item.url} />
+              <NavRow key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
             ))}
           </div>
         </div>
@@ -380,7 +384,7 @@ export function AppSidebar() {
           <div className="col-span-2 border-t border-sidebar-border">
             <div className="grid grid-cols-[56px_208px] gap-y-1 py-1.5">
               {visibleOps.map((item) => (
-                <NavRow key={item.title} item={item} active={pathname === item.url} />
+                <NavRow key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
               ))}
             </div>
           </div>

@@ -25,7 +25,7 @@ export const CATEGORIES = [
   { key: "configuracoes", label: "Configurações" },
 ] as const;
 
-export type CategoryKey = (typeof CATEGORIES)[number]["key"];
+export type CategoryKey = (typeof CATEGORIES)[number]["key"] | "marketing";
 
 /* ------------------------------------------------------------------ *
  * Ações granulares por categoria
@@ -263,6 +263,7 @@ export function canAccessCombined(
 ): boolean {
   if (category === "captacoes") return hasCaptacoesAccess(role, myAreas);
   if (category === "peds") return hasPedsAccess(role, myAreas);
+  if (category === "marketing") return isCoordinatorPlus(role) || (myAreas ?? []).includes("marketing");
   if (category === "players" && isCoordinatorPlus(role)) return true;
   if (canAccess(role, category, perms)) return true;
   for (const area of myAreas ?? []) {
