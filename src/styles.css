@@ -411,3 +411,9 @@
     color-scheme: dark;
   }
 }
+
+/* Moeda HOST 3D (perfil do player) */
+@keyframes host-coin-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}

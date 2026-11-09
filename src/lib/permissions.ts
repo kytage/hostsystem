@@ -20,6 +20,7 @@ export const CATEGORIES = [
   { key: "cronograma", label: "Cronograma" },
   { key: "punicoes", label: "Punições" },
   { key: "desenvolvimento", label: "Desenvolvimento" },
+  { key: "players", label: "Players" },
   { key: "usuarios", label: "Usuários" },
   { key: "configuracoes", label: "Configurações" },
 ] as const;
@@ -262,6 +263,7 @@ export function canAccessCombined(
 ): boolean {
   if (category === "captacoes") return hasCaptacoesAccess(role, myAreas);
   if (category === "peds") return hasPedsAccess(role, myAreas);
+  if (category === "players" && isCoordinatorPlus(role)) return true;
   if (canAccess(role, category, perms)) return true;
   for (const area of myAreas ?? []) {
     if (areaPerms?.get(area)?.has(category)) return true;
@@ -284,6 +286,7 @@ export function actionsFor(
   if (category === "peds") return hasPedsAccess(role, myAreas) ? [...ALL_ACTIONS] : [];
   if (role === "founder") return [...ALL_ACTIONS];
   const set = new Set<ActionKey>();
+  if (category === "players" && isCoordinatorPlus(role)) set.add("view");
   for (const action of perms?.get(role)?.get(category) ?? []) set.add(action);
   for (const area of myAreas ?? []) {
     for (const action of areaPerms?.get(area)?.get(category) ?? []) set.add(action);

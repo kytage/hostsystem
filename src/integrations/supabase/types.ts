@@ -1419,6 +1419,90 @@ export type Database = {
         }
         Relationships: []
       }
+      players: {
+        Row: {
+          headshots: number
+          host_coins: number
+          kills: number
+          level: number
+          maior_sequencia: number
+          mortes: number
+          rank_vip: string | null
+          xp: number
+          banco: number
+          carteira: number
+          created_at: string
+          discord_id: string | null
+          discord_nome: string | null
+          grupos: string[]
+          id: string
+          idade: number | null
+          inventario: Json
+          license: string
+          nome: string
+          online: boolean
+          passaporte: string | null
+          telefone: string | null
+          ultimo_login: string | null
+          updated_at: string
+          veiculos: string[]
+        }
+        Insert: {
+          headshots?: number
+          host_coins?: number
+          kills?: number
+          level?: number
+          maior_sequencia?: number
+          mortes?: number
+          rank_vip?: string | null
+          xp?: number
+          banco?: number
+          carteira?: number
+          created_at?: string
+          discord_id?: string | null
+          discord_nome?: string | null
+          grupos?: string[]
+          id?: string
+          idade?: number | null
+          inventario?: Json
+          license: string
+          nome?: string
+          online?: boolean
+          passaporte?: string | null
+          telefone?: string | null
+          ultimo_login?: string | null
+          updated_at?: string
+          veiculos?: string[]
+        }
+        Update: {
+          headshots?: number
+          host_coins?: number
+          kills?: number
+          level?: number
+          maior_sequencia?: number
+          mortes?: number
+          rank_vip?: string | null
+          xp?: number
+          banco?: number
+          carteira?: number
+          created_at?: string
+          discord_id?: string | null
+          discord_nome?: string | null
+          grupos?: string[]
+          id?: string
+          idade?: number | null
+          inventario?: Json
+          license?: string
+          nome?: string
+          online?: boolean
+          passaporte?: string | null
+          telefone?: string | null
+          ultimo_login?: string | null
+          updated_at?: string
+          veiculos?: string[]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string

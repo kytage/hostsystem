@@ -22,11 +22,13 @@ import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
+import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
+import { Route as ApiPublicWebhookPlayersRouteImport } from './routes/api/public/webhook/players'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -95,6 +97,11 @@ const AuthenticatedPedsRoute = AuthenticatedPedsRouteImport.update({
   path: '/peds',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPunicoesRoute = AuthenticatedPunicoesRouteImport.update({
   id: '/punicoes',
   path: '/punicoes',
@@ -120,6 +127,11 @@ const ApiPublicWebhookOnlineRoute = ApiPublicWebhookOnlineRouteImport.update({
   path: '/api/public/webhook/online',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhookPlayersRoute = ApiPublicWebhookPlayersRouteImport.update({
+  id: '/api/public/webhook/players',
+  path: '/api/public/webhook/players',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -134,11 +146,13 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/peds': typeof AuthenticatedPedsRoute
+  '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
+  '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -152,12 +166,14 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/peds': typeof AuthenticatedPedsRoute
+  '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/': typeof AuthenticatedIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
+  '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -173,12 +189,14 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
+  '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
+  '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -195,11 +213,13 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/ilegal'
     | '/peds'
+    | '/players'
     | '/punicoes'
     | '/tarefas'
     | '/update'
     | '/usuarios'
     | '/api/public/webhook/online'
+    | '/api/public/webhook/players'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -213,12 +233,14 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/ilegal'
     | '/peds'
+    | '/players'
     | '/punicoes'
     | '/tarefas'
     | '/update'
     | '/usuarios'
     | '/'
     | '/api/public/webhook/online'
+    | '/api/public/webhook/players'
   id:
     | '__root__'
     | '/_authenticated'
@@ -233,12 +255,14 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/ilegal'
     | '/_authenticated/peds'
+    | '/_authenticated/players'
     | '/_authenticated/punicoes'
     | '/_authenticated/tarefas'
     | '/_authenticated/update'
     | '/_authenticated/usuarios'
     | '/_authenticated/'
     | '/api/public/webhook/online'
+    | '/api/public/webhook/players'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -246,6 +270,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
+  ApiPublicWebhookPlayersRoute: typeof ApiPublicWebhookPlayersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -341,6 +366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPedsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/players': {
+      id: '/_authenticated/players'
+      path: '/players'
+      fullPath: '/players'
+      preLoaderRoute: typeof AuthenticatedPlayersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/punicoes': {
       id: '/_authenticated/punicoes'
       path: '/punicoes'
@@ -376,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhookOnlineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhook/players': {
+      id: '/api/public/webhook/players'
+      path: '/api/public/webhook/players'
+      fullPath: '/api/public/webhook/players'
+      preLoaderRoute: typeof ApiPublicWebhookPlayersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -389,6 +428,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
+  AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
   AuthenticatedUpdateRoute: typeof AuthenticatedUpdateRoute
@@ -406,6 +446,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
+  AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
   AuthenticatedUpdateRoute: AuthenticatedUpdateRoute,
@@ -421,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,
+  ApiPublicWebhookPlayersRoute: ApiPublicWebhookPlayersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
