@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type Plataforma = "instagram" | "tiktok";
-export type StatusConteudo = "ideia" | "roteiro" | "gravar" | "edicao" | "aprovacao" | "agendado" | "publicado";
+export type TipoPostagem = "comum" | "campanha";
+export type StatusConteudo = "rascunho" | "ideia" | "roteiro" | "gravar" | "edicao" | "aprovacao" | "agendado" | "publicado";
 
 export const PLATAFORMAS: { id: Plataforma; label: string; sigla: string; cls: string }[] = [
   { id: "instagram", label: "Instagram", sigla: "IG", cls: "border-pink-400/30 bg-pink-500/10 text-pink-200" },
@@ -14,6 +15,11 @@ export const FORMATOS = [
   { id: "feed", label: "Post feed" },
   { id: "carrossel", label: "Carrossel" },
   { id: "stories", label: "Stories" },
+];
+
+export const TIPOS_POSTAGEM: { id: TipoPostagem; label: string }[] = [
+  { id: "comum", label: "Comum" },
+  { id: "campanha", label: "Campanha" },
 ];
 
 export const STATUS_CONTEUDO: { id: StatusConteudo; label: string; dot: string }[] = [
@@ -40,11 +46,13 @@ export interface Conteudo {
   link: string;
   views: number;
   curtidas: number;
+  areas: string[];
+  tipo_postagem: TipoPostagem;
 }
 
 export type ConteudoInput = Omit<Conteudo, "id">;
 
-const COLUNAS = "id, titulo, roteiro, plataformas, formato, status, data_gravacao, data_publicacao, responsavel, local, link, views, curtidas";
+const COLUNAS = "id, titulo, roteiro, plataformas, formato, status, data_gravacao, data_publicacao, responsavel, local, link, views, curtidas, areas, tipo_postagem";
 
 export async function fetchConteudos(): Promise<Conteudo[]> {
   const { data, error } = await supabase.from("marketing_conteudos").select(COLUNAS).order("created_at", { ascending: true });

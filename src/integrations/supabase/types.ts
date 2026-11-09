@@ -1358,7 +1358,9 @@ export type Database = {
       }
       marketing_conteudos: {
         Row: {
+          areas: string[]
           created_at: string
+          tipo_postagem: string
           criado_por: string
           curtidas: number
           data_gravacao: string | null
@@ -1376,7 +1378,9 @@ export type Database = {
           views: number
         }
         Insert: {
+          areas?: string[]
           created_at?: string
+          tipo_postagem?: string
           criado_por?: string
           curtidas?: number
           data_gravacao?: string | null
@@ -1394,7 +1398,9 @@ export type Database = {
           views?: number
         }
         Update: {
+          areas?: string[]
           created_at?: string
+          tipo_postagem?: string
           criado_por?: string
           curtidas?: number
           data_gravacao?: string | null

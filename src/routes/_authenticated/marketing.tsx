@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Camera, ChevronLeft, ChevronRight, Columns3, ExternalLink, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowRight, CalendarDays, Camera, ChevronLeft, ChevronRight, Columns3, ExternalLink, FilePenLine, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getCurrentUsername } from "@/lib/kanban";
-import { isCoordinatorPlus, useMyAreas, useMyRole } from "@/lib/permissions";
+import { isCoordinatorPlus, useAreas, useMyAreas, useMyRole } from "@/lib/permissions";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
 import {
@@ -23,10 +23,12 @@ import {
   paraInput,
   PLATAFORMAS,
   STATUS_CONTEUDO,
+  TIPOS_POSTAGEM,
   type Conteudo,
   type ConteudoInput,
   type Plataforma,
   type StatusConteudo,
+  type TipoPostagem,
 } from "@/lib/marketing";
 
 export const Route = createFileRoute("/_authenticated/marketing")({
@@ -95,11 +97,12 @@ function MarketingPage() {
 function Painel() {
   useRealtimeTable("marketing_conteudos", [KEY]);
   const { data: todos = [], isLoading } = useQuery({ queryKey: KEY, queryFn: fetchConteudos });
-  const [visao, setVisao] = useState<"calendario" | "pipeline">("calendario");
+  const [visao, setVisao] = useState<"calendario" | "pipeline" | "rascunhos">("calendario");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [rascunho, setRascunho] = useState<Rascunho>(null);
 
   const lista = useMemo(() => (filtro === "todas" ? todos : todos.filter((c) => c.plataformas.includes(filtro))), [todos, filtro]);
+  const rascunhos = lista.filter((c) => c.status === "rascunho");
   const agora = new Date();
   const agoraIso = agora.toISOString();
   const mesAtual = chaveDia(agora).slice(0, 7);
@@ -156,6 +159,9 @@ function Painel() {
           <button className={seg(visao === "pipeline")} onClick={() => setVisao("pipeline")}>
             <Columns3 className="size-3.5" /> Produção
           </button>
+          <button className={seg(visao === "rascunhos")} onClick={() => setVisao("rascunhos")}>
+            <FilePenLine className="size-3.5" /> Rascunhos <span className="text-ink-3">{rascunhos.length}</span>
+          </button>
         </div>
       </div>
 
@@ -171,6 +177,8 @@ function Painel() {
             <Proximos titulo="Fila de publicação" icon={Send} itens={fila} campo="data_publicacao" onAbrir={setRascunho} />
           </aside>
         </div>
+      ) : visao === "rascunhos" ? (
+        <Rascunhos itens={rascunhos} onAbrir={setRascunho} />
       ) : (
         <Pipeline lista={lista} onAbrir={setRascunho} />
       )}
@@ -187,6 +195,122 @@ function Siglas({ c }: { c: Conteudo }) {
         <span key={p.id} title={p.label} className={cn("rounded border px-1 text-[9px] font-semibold leading-[14px]", p.cls)}>{p.sigla}</span>
       ))}
     </span>
+  );
+}
+
+function AreasTags({ ids }: { ids: string[] }) {
+  const { data: areas = [] } = useAreas();
+  if (ids.length === 0) return null;
+  return (
+    <span className="flex min-w-0 flex-wrap gap-1">
+      {ids.map((id) => {
+        const a = areas.find((x) => x.key === id);
+        return (
+          <span key={id} className="rounded-full border border-white/[0.08] bg-white/[0.04] px-1.5 text-[10px] leading-4 text-muted-foreground">
+            {a ? `${a.emoji} ${a.label}` : id}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function SeloCampanha({ c }: { c: Conteudo }) {
+  if (c.tipo_postagem !== "campanha") return null;
+  return <span className="rounded-full border border-primary/35 bg-primary/10 px-1.5 text-[10px] leading-4 text-red-200">Campanha</span>;
+}
+
+function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteudo) => void }) {
+  const qc = useQueryClient();
+  const patch = usePatch();
+  const { data: eu = "" } = useQuery({ queryKey: ["current-username"], queryFn: getCurrentUsername, staleTime: 300_000 });
+  const [titulo, setTitulo] = useState("");
+  const [convertendo, setConvertendo] = useState<string | null>(null);
+
+  const criar = useMutation({
+    mutationFn: () =>
+      criarConteudo(
+        {
+          titulo: titulo.trim(), roteiro: "", plataformas: ["instagram", "tiktok"], formato: "reels", status: "rascunho",
+          data_gravacao: null, data_publicacao: null, responsavel: "", local: "", link: "", views: 0, curtidas: 0, areas: [], tipo_postagem: "comum",
+        },
+        eu,
+      ),
+    onSuccess: () => {
+      playSfx("add");
+      setTitulo("");
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+    onError: () => toast.error("Não foi possível salvar o rascunho."),
+  });
+  const enviar = () => {
+    if (titulo.trim() && eu && !criar.isPending) criar.mutate();
+  };
+
+  return (
+    <section className="mx-auto mt-5 max-w-3xl">
+      <div className="glass flex items-center gap-2 rounded-[20px] p-2">
+        <Plus className="ml-2.5 size-4 shrink-0 text-ink-3" />
+        <input
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && enviar()}
+          placeholder="Anote uma ideia sem data e aperte Enter"
+          aria-label="Novo rascunho"
+          className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-3"
+        />
+        {criar.isPending && <Loader2 className="mr-2 size-4 animate-spin text-muted-foreground" />}
+      </div>
+
+      <ul className="mt-3 space-y-2">
+        {itens.map((c) => (
+          <li key={c.id} className="glass animate-rise rounded-2xl">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button onClick={() => onAbrir(c)} className="min-w-0 flex-1 text-left">
+                <span className="block truncate text-sm font-medium">{c.titulo}</span>
+                {c.roteiro && <span className="block truncate text-[11.5px] text-ink-3">{c.roteiro}</span>}
+                {(c.areas.length > 0 || c.tipo_postagem === "campanha") && (
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <SeloCampanha c={c} />
+                    <AreasTags ids={c.areas} />
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setConvertendo((v) => (v === c.id ? null : c.id))}
+                aria-expanded={convertendo === c.id}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Converter <ArrowRight className="size-3" />
+              </button>
+            </div>
+            <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", convertendo === c.id ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+              <div className="overflow-hidden">
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-white/[0.05] px-4 py-2.5">
+                  <span className="mr-1 text-[11px] text-ink-3">Enviar para</span>
+                  {STATUS_CONTEUDO.map((s) => (
+                    <button
+                      key={s.id}
+                      tabIndex={convertendo === c.id ? 0 : -1}
+                      onClick={() => {
+                        playSfx("check");
+                        setConvertendo(null);
+                        patch.mutate({ id: c.id, patch: { status: s.id } });
+                        toast.success(`“${c.titulo}” foi para ${s.label}.`);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-white/20 hover:text-foreground"
+                    >
+                      <span className={cn("size-1.5 rounded-full", s.dot)} /> {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </li>
+        ))}
+        {itens.length === 0 && <li className="glass-inset rounded-2xl px-4 py-12 text-center text-sm text-ink-3">Nenhum rascunho por aqui.</li>}
+      </ul>
+    </section>
   );
 }
 
@@ -387,6 +511,12 @@ function Pipeline({ lista, onAbrir }: { lista: Conteudo[]; onAbrir: (c: Conteudo
                     <Siglas c={c} />
                   </span>
                   <span className="mt-1 line-clamp-2 block text-[13px] font-medium leading-snug">{c.titulo}</span>
+                  {(c.areas.length > 0 || c.tipo_postagem === "campanha") && (
+                    <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                      <SeloCampanha c={c} />
+                      <AreasTags ids={c.areas} />
+                    </span>
+                  )}
                   {(c.data_gravacao || c.data_publicacao || c.responsavel) && (
                     <span className="mt-1.5 block truncate text-[10.5px] text-ink-3">
                       {c.status === "publicado" && c.views > 0
@@ -410,6 +540,7 @@ function Pipeline({ lista, onAbrir }: { lista: Conteudo[]; onAbrir: (c: Conteudo
 function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onClose: () => void }) {
   const qc = useQueryClient();
   const { data: eu = "" } = useQuery({ queryKey: ["current-username"], queryFn: getCurrentUsername, staleTime: 300_000 });
+  const { data: todasAreas = [] } = useAreas();
   const [f, setF] = useState({
     titulo: inicial.titulo ?? "",
     roteiro: inicial.roteiro ?? "",
@@ -423,7 +554,10 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
     link: inicial.link ?? "",
     views: inicial.views ?? 0,
     curtidas: inicial.curtidas ?? 0,
+    areas: inicial.areas ?? ([] as string[]),
+    tipo_postagem: inicial.tipo_postagem ?? ("comum" as TipoPostagem),
   });
+  const ehRascunho = f.status === "rascunho";
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((o) => ({ ...o, [k]: v }));
   const fim = () => {
     void qc.invalidateQueries({ queryKey: KEY });
@@ -438,13 +572,15 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
         plataformas: f.plataformas,
         formato: f.formato,
         status: f.status,
-        data_gravacao: deInput(f.gravacao),
-        data_publicacao: deInput(f.publicacao),
+        data_gravacao: ehRascunho ? null : deInput(f.gravacao),
+        data_publicacao: ehRascunho ? null : deInput(f.publicacao),
         responsavel: f.responsavel.trim(),
         local: f.local.trim(),
         link: f.link.trim(),
         views: f.views,
         curtidas: f.curtidas,
+        areas: f.areas,
+        tipo_postagem: f.tipo_postagem,
       };
       if (inicial.id) await atualizarConteudo(inicial.id, input);
       else await criarConteudo(input, eu);
@@ -473,7 +609,7 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
       <DialogContent aria-describedby={undefined} className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0">
         <header className="border-b border-white/[0.07] px-6 pb-4 pt-6 pr-14">
           <div className="flex flex-wrap gap-1">
-            {STATUS_CONTEUDO.map((s) => (
+            {[{ id: "rascunho" as StatusConteudo, label: "Rascunho", dot: "bg-white/20" }, ...STATUS_CONTEUDO].map((s) => (
               <button key={s.id} onClick={() => set("status", s.id)} className={cn("flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] transition-colors", f.status === s.id ? "bg-white/[0.12] text-foreground" : "text-muted-foreground hover:text-foreground")}>
                 <span className={cn("size-1.5 rounded-full", s.dot)} /> {s.label}
               </button>
@@ -507,9 +643,30 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
             </div>
           </div>
 
+          <div>
+            <span className={label}>Tipo de postagem</span>
+            <div className="flex gap-2">
+              {TIPOS_POSTAGEM.map((t) => <button key={t.id} onClick={() => set("tipo_postagem", t.id)} className={chip(f.tipo_postagem === t.id)}>{t.label}</button>)}
+            </div>
+          </div>
+
+          <div>
+            <span className={label}>Áreas relacionadas</span>
+            <div className="flex flex-wrap gap-1.5">
+              {todasAreas.map((a) => {
+                const on = f.areas.includes(a.key);
+                return <button key={a.key} aria-pressed={on} onClick={() => set("areas", on ? f.areas.filter((x) => x !== a.key) : [...f.areas, a.key])} className={chip(on)}>{a.emoji} {a.label}</button>;
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="block"><span className={label}>Gravação</span><input type="datetime-local" value={f.gravacao} onChange={(e) => set("gravacao", e.target.value)} className={campo} /></label>
-            <label className="block"><span className={label}>Publicação</span><input type="datetime-local" value={f.publicacao} onChange={(e) => set("publicacao", e.target.value)} className={campo} /></label>
+            {!ehRascunho && (
+              <>
+                <label className="block"><span className={label}>Gravação</span><input type="datetime-local" value={f.gravacao} onChange={(e) => set("gravacao", e.target.value)} className={campo} /></label>
+                <label className="block"><span className={label}>Publicação</span><input type="datetime-local" value={f.publicacao} onChange={(e) => set("publicacao", e.target.value)} className={campo} /></label>
+              </>
+            )}
             <label className="block"><span className={label}>Responsável</span><input value={f.responsavel} onChange={(e) => set("responsavel", e.target.value)} placeholder="Quem cuida deste conteúdo" className={campo} /></label>
             <label className="block"><span className={label}>Local da gravação</span><input value={f.local} onChange={(e) => set("local", e.target.value)} placeholder="Ex.: Praça central" className={campo} /></label>
           </div>
