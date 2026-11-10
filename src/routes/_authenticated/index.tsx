@@ -27,6 +27,9 @@ import { fetchEventos } from "@/lib/eventos";
 import { CalendarMonth, dayKey } from "@/components/calendar-month";
 import { TarefasPreview } from "@/components/home-pessoal";
 import { Termometro } from "@/components/termometro";
+import { HoshiCard } from "@/components/hoshi/hoshi-card";
+import { TemasCarousel } from "@/components/temas-carousel";
+import { AvisosHero } from "@/components/avisos-hero";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -159,6 +162,20 @@ function Dashboard() {
     },
   ];
 
+  const etapas = [
+    { id: "backlog", label: "Planejado" },
+    { id: "doing", label: "Em andamento" },
+    { id: "review", label: "Em teste" },
+    { id: "done", label: "Concluído" },
+  ].map((e) => ({ ...e, n: tasks.filter((t) => t.column === e.id).length }));
+  const maiorEtapa = Math.max(1, ...etapas.map((e) => e.n));
+  const linhas = [
+    { k: "Em revisão", v: emRevisao, icon: Clock },
+    { k: "Minhas pendências ativas", v: minhasAtivas, icon: ClipboardList },
+    ...(isCoordinatorPlus ? [{ k: "Aguardando aprovação", v: aguardando.length, icon: Inbox }] : []),
+    { k: "Próximos eventos", v: proximosEventos.length, icon: CalendarDays },
+  ];
+
   const hora = now?.getHours() ?? 12;
   const saudacao = !now ? "Olá" : hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   const diaSelecionado = selectedDay ? new Date(`${selectedDay}T12:00:00`) : null;
@@ -167,25 +184,51 @@ function Dashboard() {
     <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
       {statusOpen && <MinhasPendenciasModal onClose={() => setStatusOpen(false)} />}
 
-      <header className="animate-rise flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">HOST · Painel</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-[-0.02em] md:text-[28px]">
-            {saudacao}, {username || "…"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Visão geral do seu servidor FiveM</p>
+      {/* Abertura editorial: saudação grande sobre imagem, relógio e ações em pílulas */}
+      <section className="animate-rise relative overflow-hidden rounded-[32px] border border-white/[0.07] bg-[#050505]">
+        <img src="/img/ondas.jpg" alt="" aria-hidden className="foto-metal pointer-events-none absolute inset-y-0 right-0 h-full w-[62%] object-cover" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/85 to-transparent" />
+        <div className="relative flex min-h-[300px] flex-col justify-between gap-10 p-6 md:p-9">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">HOST GROUP · Sistema e gestão</p>
+              <h1 className="text-metal mt-3 font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[60px]">
+                {saudacao},
+                <br />
+                {username || "…"}
+              </h1>
+            </div>
+            <div className="w-full text-right sm:w-auto">
+              <p className="font-display text-3xl font-semibold tabular-nums tracking-tight md:text-4xl">
+                {now ? now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
+                <span className="text-ink-3">:{now ? String(now.getSeconds()).padStart(2, "0") : "--"}</span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {now ? cap(now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })) : "—"}
+              </p>
+              <AvisosHero />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {quickActions.map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                title={a.title}
+                className={cn("pilula group", a.primary && "pilula-ativa")}
+              >
+                <a.icon className="size-4" strokeWidth={1.7} />
+                {a.label}
+                {a.badge > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">{a.badge}</span>}
+              </button>
+            ))}
+          </div>
         </div>
-        <span className="glass flex items-center gap-2 rounded-full px-3.5 py-2 text-xs text-muted-foreground">
-          <CalendarDays className="size-3.5" strokeWidth={1.7} />
-          {now ? cap(now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })) : "—"}
-        </span>
-      </header>
+      </section>
 
       {isCoordinatorPlus && caixaEntrada.length > 0 && (
-        <a
-          href="#caixa-entrada"
-          className="glass animate-rise mt-5 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-colors hover:border-primary/30"
-        >
+        <a href="#caixa-entrada" className="glass animate-rise mt-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm">
           <span className="size-1.5 shrink-0 rounded-full bg-primary" />
           <span>
             Você tem{" "}
@@ -198,90 +241,58 @@ function Dashboard() {
         </a>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-12">
-        {/* Hero */}
-        <section
-          style={{ animationDelay: "60ms" }}
-          className="glass-elevated animate-rise relative overflow-hidden rounded-[24px] p-6 md:p-7 lg:col-span-8"
-        >
-          <div className="pointer-events-none absolute -right-20 -top-32 h-72 w-[28rem] rounded-full bg-primary/[0.09] blur-3xl" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          <div className="relative flex flex-col gap-8 2xl:flex-row 2xl:items-end 2xl:justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Agora</p>
-              <p className="mt-1 font-display text-[56px] font-semibold leading-none tracking-[-0.045em] tabular-nums md:text-[68px]">
-                {now ? now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
-                <span className="text-ink-3">:{now ? String(now.getSeconds()).padStart(2, "0") : "--"}</span>
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {tasks.length} tarefas no quadro · {emRevisao} em revisão
-              </p>
-            </div>
-            <div className="glass-inset flex min-w-0 flex-wrap justify-between gap-2 rounded-[20px] p-3 sm:justify-start sm:gap-3 sm:p-4">
-              {quickActions.map((a) => (
-                <button
-                  key={a.label}
-                  onClick={a.onClick}
-                  title={a.title}
-                  className="group flex w-[68px] shrink-0 flex-col items-center gap-2 sm:w-[76px]"
-                >
-                  <span
-                    className={cn(
-                      "relative grid size-12 place-items-center rounded-full transition-all duration-200 group-hover:-translate-y-0.5 sm:size-14",
-                      a.primary
-                        ? "bg-primary text-white"
-                        : "border border-white/[0.08] bg-white/[0.045] text-foreground group-hover:bg-white/[0.08]",
-                    )}
-                  >
-                    <a.icon className="size-5" strokeWidth={1.6} />
-                    {a.badge > 0 && (
-                      <span
-                        className={cn(
-                          "absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
-                          a.primary ? "bg-foreground text-black" : "bg-primary text-white",
-                        )}
-                      >
-                        {a.badge}
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-center text-[11px] leading-tight text-muted-foreground transition-colors duration-200 group-hover:text-foreground">
-                    {a.label}
-                  </span>
-                </button>
-              ))}
-            </div>
+      <HoshiCard />
+
+      {/* Operação em números (um bloco só, sem cartões repetidos) + atalhos em carrossel */}
+      <div className="mt-4 grid gap-4 lg:grid-cols-12">
+        <section className="metal animate-rise rounded-[28px] p-6 lg:col-span-5" style={{ animationDelay: "80ms" }}>
+          <div className="flex items-center justify-between">
+            <p className="eyebrow">Operação agora</p>
+            <button onClick={() => navigate({ to: "/desenvolvimento" })} aria-label="Abrir quadro de desenvolvimento" className="grid size-8 place-items-center rounded-full border border-white/[0.08] text-muted-foreground transition-colors hover:text-foreground">
+              <ArrowUpRight className="size-3.5" />
+            </button>
           </div>
+          <p className="text-metal mt-5 font-display text-[76px] font-semibold leading-none tracking-[-0.05em] tabular-nums">{tasks.length}</p>
+          <p className="mt-2 text-sm text-muted-foreground">tarefas no quadro de desenvolvimento</p>
+
+          {/* distribuição por etapa */}
+          <div className="mt-6 flex h-16 items-end gap-2" role="img" aria-label="Tarefas por etapa">
+            {etapas.map((e) => (
+              <div key={e.id} className="flex h-full flex-1 items-end">
+                <div className="barra-cresce w-full rounded-t-md bg-gradient-to-t from-white/10 to-white/60" style={{ height: `${Math.max(6, (e.n / maiorEtapa) * 100)}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2 text-center text-[10.5px] text-ink-3">
+            {etapas.map((e) => (
+              <span key={e.id} className="flex-1">
+                <span className="block tabular-nums text-foreground/80">{e.n}</span>
+                {e.label}
+              </span>
+            ))}
+          </div>
+
+          <dl className="mt-6 divide-y divide-white/[0.06] border-t border-white/[0.06]">
+            {linhas.map((l) => (
+              <div key={l.k} className="flex items-center gap-3 py-3 text-sm">
+                <l.icon className="size-4 text-ink-3" strokeWidth={1.6} />
+                <dt className="text-muted-foreground">{l.k}</dt>
+                <dd className="ml-auto font-display text-lg font-semibold tabular-nums">{l.v}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
 
-        {/* Ranking */}
-        <div style={{ animationDelay: "120ms" }} className="animate-rise lg:col-span-4 lg:row-span-2">
-          <RankingPanel variant="premium" />
+        {/* coluna da direita: atalhos em cima e ranking embaixo, ocupando a mesma altura do bloco ao lado */}
+        <div className="animate-rise flex flex-col gap-4 lg:col-span-7" style={{ animationDelay: "140ms" }}>
+          <TemasCarousel />
+          <div className="flex-1 [&>*]:h-full">
+            <RankingPanel variant="premium" />
+          </div>
         </div>
+      </div>
 
-        {/* Stats */}
-        {stats.map((s, i) => (
-          <button
-            key={s.label}
-            onClick={() => navigate({ to: "/desenvolvimento" })}
-            style={{ animationDelay: `${180 + i * 60}ms` }}
-            className="glass surface-hover animate-rise group flex items-end justify-between rounded-[24px] p-5 text-left lg:col-span-4"
-          >
-            <div>
-              <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <s.icon className="size-3.5" strokeWidth={1.7} /> {s.label}
-              </p>
-              <p className="mt-4 font-display text-5xl font-semibold leading-none tracking-[-0.045em] tabular-nums">
-                {s.value}
-              </p>
-              <p className="mt-2 text-xs text-ink-3">{s.delta}</p>
-            </div>
-            <span className="grid size-10 place-items-center rounded-full border border-white/[0.08] bg-white/[0.04] text-muted-foreground transition-all duration-200 group-hover:border-primary/40 group-hover:text-foreground">
-              <ArrowUpRight className="size-4" strokeWidth={1.7} />
-            </span>
-          </button>
-        ))}
-
+      <div className="mt-4 grid gap-4 lg:grid-cols-12">
         {/* Calendário */}
         <section
           style={{ animationDelay: "300ms" }}

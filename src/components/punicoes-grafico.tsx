@@ -47,8 +47,8 @@ export function PunicoesGrafico({ rows, dias = 14 }: PunicoesGraficoProps) {
                 <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="grad-var" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                <stop offset="0%" stopColor="#a8a8a8" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#a8a8a8" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -87,7 +87,7 @@ export function PunicoesGrafico({ rows, dias = 14 }: PunicoesGraficoProps) {
               type="monotone"
               dataKey="var"
               name="VAR"
-              stroke="#3b82f6"
+              stroke="#a8a8a8"
               fill="url(#grad-var)"
               strokeWidth={2}
             />

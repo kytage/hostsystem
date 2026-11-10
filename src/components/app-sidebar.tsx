@@ -58,7 +58,7 @@ interface NavEntry {
 
 const nav: NavEntry[] = [
   { title: "Home", icon: Home, url: "/" },
-  { title: "Avisos", icon: Megaphone, url: "/avisos", category: "avisos" },
+  // Avisos saiu do menu: o quadro fica na tela inicial (a página /avisos continua, pelo atalho do quadro).
   { title: "Comandos Staffs", icon: ShieldCheck, category: "comandos" },
   { title: "Ilegal", icon: Skull, url: "/ilegal", category: "ilegal" },
   { title: "Captações", icon: Handshake, url: "/captacoes", category: "captacoes" },

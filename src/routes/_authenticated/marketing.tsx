@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CalendarDays, Camera, ChevronLeft, ChevronRight, Columns3, ExternalLink, FilePenLine, Loader2, Lock, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowRight, CalendarDays, Camera, ChevronLeft, ChevronRight, Columns3, ExternalLink, FilePenLine, Loader2, Lock, Plus, Send, Trash2, UserSearch } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
+import { MarketingLeads } from "@/components/marketing/leads";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getCurrentUsername } from "@/lib/kanban";
@@ -97,7 +98,7 @@ function MarketingPage() {
 function Painel() {
   useRealtimeTable("marketing_conteudos", [KEY]);
   const { data: todos = [], isLoading } = useQuery({ queryKey: KEY, queryFn: fetchConteudos });
-  const [visao, setVisao] = useState<"calendario" | "pipeline" | "rascunhos">("calendario");
+  const [visao, setVisao] = useState<"calendario" | "pipeline" | "rascunhos" | "leads">("calendario");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [rascunho, setRascunho] = useState<Rascunho>(null);
 
@@ -146,7 +147,7 @@ function Painel() {
       </div>
 
       <div className="mt-7 flex flex-wrap items-center justify-between gap-2">
-        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
+        <div className={cn("glass-inset inline-flex gap-1 rounded-full p-1", visao === "leads" && "invisible")} aria-hidden={visao === "leads"}>
           <button className={seg(filtro === "todas")} onClick={() => setFiltro("todas")}>Todas</button>
           {PLATAFORMAS.map((p) => (
             <button key={p.id} className={seg(filtro === p.id)} onClick={() => setFiltro(p.id)}>{p.label}</button>
@@ -162,10 +163,15 @@ function Painel() {
           <button className={seg(visao === "rascunhos")} onClick={() => setVisao("rascunhos")}>
             <FilePenLine className="size-3.5" /> Rascunhos <span className="text-ink-3">{rascunhos.length}</span>
           </button>
+          <button className={seg(visao === "leads")} onClick={() => setVisao("leads")}>
+            <UserSearch className="size-3.5" /> Leads
+          </button>
         </div>
       </div>
 
-      {isLoading ? (
+      {visao === "leads" ? (
+        <MarketingLeads />
+      ) : isLoading ? (
         <div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Carregando conteúdos…
         </div>

@@ -757,6 +757,57 @@ export type Database = {
           },
         ]
       }
+      hoshi_pets: {
+        Row: {
+          carinho: number
+          created_at: string
+          cuidado_em: string
+          energia: number
+          fome: number
+          nome: string
+          recorde_petiscos: number
+          recorde_reflexo: number
+          sede: number
+          updated_at: string
+          user_id: string
+          username: string
+          visual: Json
+          xp: number
+        }
+        Insert: {
+          carinho?: number
+          created_at?: string
+          cuidado_em?: string
+          energia?: number
+          fome?: number
+          nome?: string
+          recorde_petiscos?: number
+          recorde_reflexo?: number
+          sede?: number
+          updated_at?: string
+          user_id: string
+          username?: string
+          visual?: Json
+          xp?: number
+        }
+        Update: {
+          carinho?: number
+          created_at?: string
+          cuidado_em?: string
+          energia?: number
+          fome?: number
+          nome?: string
+          recorde_petiscos?: number
+          recorde_reflexo?: number
+          sede?: number
+          updated_at?: string
+          user_id?: string
+          username?: string
+          visual?: Json
+          xp?: number
+        }
+        Relationships: []
+      }
       ilegal_anotacoes: {
         Row: {
           created_at: string
@@ -1269,6 +1320,90 @@ export type Database = {
         }
         Relationships: []
       }
+      org_membros: {
+        Row: {
+          cargo: string
+          cliques: number
+          created_at: string
+          discord: string
+          id: string
+          nome: string
+          painel_id: string
+          passaporte: string
+          slug: string
+          updated_at: string
+          visitas: number
+        }
+        Insert: {
+          cargo?: string
+          cliques?: number
+          created_at?: string
+          discord?: string
+          id?: string
+          nome: string
+          painel_id: string
+          passaporte?: string
+          slug: string
+          updated_at?: string
+          visitas?: number
+        }
+        Update: {
+          cargo?: string
+          cliques?: number
+          created_at?: string
+          discord?: string
+          id?: string
+          nome?: string
+          painel_id?: string
+          passaporte?: string
+          slug?: string
+          updated_at?: string
+          visitas?: number
+        }
+        Relationships: []
+      }
+      org_paineis: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          criado_por: string
+          id: string
+          lider_nome: string
+          link_destino: string
+          nome: string
+          setagem: string
+          ultimo_acesso: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          lider_nome?: string
+          link_destino?: string
+          nome: string
+          setagem?: string
+          ultimo_acesso?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          lider_nome?: string
+          link_destino?: string
+          nome?: string
+          setagem?: string
+          ultimo_acesso?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patch_notes: {
         Row: {
           created_at: string
@@ -1415,6 +1550,105 @@ export type Database = {
           status?: string
           titulo?: string
           updated_at?: string
+          views?: number
+        }
+        Relationships: []
+      }
+      marketing_leads: {
+        Row: {
+          contato: string
+          created_at: string
+          criado_por: string
+          id: string
+          interesse: string
+          link: string
+          nicho: string
+          nome: string
+          notas: string
+          plataforma: string
+          proximo_contato: string | null
+          responsavel: string
+          seguidores: number
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          contato?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          interesse?: string
+          link?: string
+          nicho?: string
+          nome: string
+          notas?: string
+          plataforma?: string
+          proximo_contato?: string | null
+          responsavel?: string
+          seguidores?: number
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          contato?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          interesse?: string
+          link?: string
+          nicho?: string
+          nome?: string
+          notas?: string
+          plataforma?: string
+          proximo_contato?: string | null
+          responsavel?: string
+          seguidores?: number
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_referencias: {
+        Row: {
+          canal: string
+          categoria: string
+          created_at: string
+          criado_por: string
+          id: string
+          link: string
+          nicho: string
+          notas: string
+          plataforma: string
+          titulo: string
+          views: number
+        }
+        Insert: {
+          canal?: string
+          categoria?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          link?: string
+          nicho?: string
+          notas?: string
+          plataforma?: string
+          titulo: string
+          views?: number
+        }
+        Update: {
+          canal?: string
+          categoria?: string
+          created_at?: string
+          criado_por?: string
+          id?: string
+          link?: string
+          nicho?: string
+          notas?: string
+          plataforma?: string
+          titulo?: string
           views?: number
         }
         Relationships: []
@@ -1935,6 +2169,7 @@ export type Database = {
         Returns: undefined
       }
       is_coordinator_plus: { Args: { _user_id: string }; Returns: boolean }
+      org_convite_contar: { Args: { _campo: string; _slug: string }; Returns: undefined }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_ilegal_lider: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }

@@ -66,10 +66,10 @@ const CORES: Record<string, string> = {
   Armas: "#ce0e0e",
   Muni: "#f59e0b",
   Lavagem: "#22c55e",
-  Garagem: "#3b82f6",
+  Garagem: "#a8a8a8",
   Drogas: "#a855f7",
   HPI: "#ec4899",
-  "Guarnições": "#38bdf8",
+  "Guarnições": "#d0d0d0",
   Restaurantes: "#eab308",
 };
 
@@ -987,7 +987,7 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
                   itemStyle={{ color: "hsl(var(--foreground))" }}
                 />
                 <Bar dataKey="pico" name="Pico" fill="#ce0e0e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="media" name="Média" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="media" name="Média" fill="#a8a8a8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </section>

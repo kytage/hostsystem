@@ -9,12 +9,12 @@ interface PunicoesDistribuicaoProps {
 /** Paleta fixa para as fatias dos gráficos (cores de gráfico não são tokens de tema). */
 const CORES = [
   "#ce0e0e",
-  "#3b82f6",
+  "#a8a8a8",
   "#10b981",
   "#f59e0b",
-  "#8b5cf6",
+  "#5f5f5f",
   "#ec4899",
-  "#06b6d4",
+  "#8a8a8a",
   "#f97316",
   "#84cc16",
   "#64748b",
@@ -22,7 +22,7 @@ const CORES = [
   "#14b8a6",
   "#a855f7",
   "#eab308",
-  "#22d3ee",
+  "#bdbdbd",
 ];
 
 function Donut({

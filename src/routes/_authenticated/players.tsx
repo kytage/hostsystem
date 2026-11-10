@@ -18,7 +18,7 @@ import { MinimalSelect } from "@/components/ui/minimal-select";
 import { useRealtimeTable } from "@/lib/realtime";
 import { useCan, useMyRole } from "@/lib/permissions";
 import { brl, fetchPlayers } from "@/lib/players";
-import { CopyBtn, PlayerInventario } from "@/components/players/player-inventario";
+import { CopyBtn, HostAvatar, PlayerInventario } from "@/components/players/player-inventario";
 
 export const Route = createFileRoute("/_authenticated/players")({
   head: () => ({
@@ -78,60 +78,57 @@ function PlayersPage() {
     );
   }
 
-  return (
-    <div className="mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
-      <PageHeader
-        kicker="SERVIDOR"
-        title="Players"
-        subtitle="Todos os personagens do servidor: dados, grupos, inventário e veículos."
-        actions={
-          role === "founder" ? (
-            <Button variant="outline" onClick={() => setIntegracao(true)}>
-              <PlugZap className="size-4" /> Integração
-            </Button>
-          ) : undefined
-        }
-      />
+  const colunas = "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_90px_minmax(0,1fr)_90px_90px_40px]";
+  const seg = (on: boolean) => cn("flex-1 rounded-full px-3 py-1.5 text-xs capitalize transition-colors", on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground");
 
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpis.map((c) => (
-          <div key={c.k} className="glass rounded-2xl p-4">
-            <p className="eyebrow flex items-center gap-1.5">
-              <c.icon className="size-3.5" /> {c.k}
-            </p>
-            <p className="mt-2 truncate font-display text-2xl font-semibold tabular-nums">{c.v}</p>
+  return (
+    <div className="mx-auto max-w-[1040px] px-4 py-6 md:px-8 md:py-8">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
+        <span />
+        <div className="text-center">
+          <p className="eyebrow">Servidor</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">Players</h1>
+        </div>
+        <div className="justify-self-end">
+          {role === "founder" && (
+            <button onClick={() => setIntegracao(true)} aria-label="Integração" title="Integração" className="glass-inset grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground">
+              <PlugZap className="size-4" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="glass mt-6 grid grid-cols-2 gap-y-5 rounded-[24px] py-5 md:grid-cols-4">
+        {kpis.map((c, n) => (
+          <div key={c.k} className="pf-pop min-w-0 px-3 text-center" style={{ animationDelay: `${n * 60}ms` }}>
+            <c.icon className="mx-auto size-4 text-ink-3" strokeWidth={1.7} />
+            <p className="mt-2 truncate font-display text-xl font-semibold tabular-nums">{c.v}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{c.k}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <label className="glass-inset flex h-10 min-w-[220px] flex-1 items-center gap-2 rounded-full px-4">
+      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[210px_minmax(0,1fr)_210px]">
+        <div className="glass-inset flex h-10 items-center gap-1 rounded-full p-1">
+          {(["todos", "online", "offline"] as const).map((f) => (
+            <button key={f} onClick={() => setFiltro(f)} className={seg(filtro === f)}>{f}</button>
+          ))}
+        </div>
+        <label className="glass-inset flex h-10 items-center gap-2 rounded-full px-4">
           <Search className="size-4 text-ink-3" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome, passaporte, telefone, license, Discord ou veículo…"
+            placeholder="Buscar player, passaporte, license, Discord ou veículo"
+            aria-label="Buscar player"
             className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-3"
           />
         </label>
-        <div className="glass-inset flex gap-1 rounded-full p-1">
-          {(["todos", "online", "offline"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFiltro(f)}
-              className={cn("rounded-full px-3 py-1.5 text-xs capitalize", filtro === f ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground")}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        <div className="w-48">
-          <MinimalSelect
-            value={grupo}
-            onChange={setGrupo}
-            options={[{ value: "todos", label: "Todos os grupos" }, ...todosGrupos.map((g) => ({ value: g, label: g }))]}
-          />
-        </div>
+        <MinimalSelect
+          value={grupo}
+          onChange={setGrupo}
+          options={[{ value: "todos", label: "Todos os grupos" }, ...todosGrupos.map((g) => ({ value: g, label: g }))]}
+        />
       </div>
 
       {isLoading ? (
@@ -139,55 +136,39 @@ function PlayersPage() {
           <Loader2 className="size-4 animate-spin" /> Carregando players…
         </div>
       ) : lista.length === 0 ? (
-        <p className="glass-inset mt-5 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="glass-inset mt-4 rounded-[24px] px-4 py-14 text-center text-sm text-muted-foreground">
           {players.length === 0 ? "Nenhum player ainda — os dados chegam pela integração com o servidor." : "Nenhum player com esses filtros."}
         </p>
       ) : (
-        <div className="glass mt-5 overflow-hidden rounded-[20px]">
-          <div className="hidden grid-cols-[minmax(0,2fr)_90px_110px_minmax(0,1.3fr)_minmax(0,1.6fr)_80px] gap-4 border-b border-white/[0.06] px-5 py-3 text-[11px] uppercase tracking-[0.14em] text-ink-3 lg:grid">
+        <div className="glass mt-4 overflow-hidden rounded-[24px]">
+          <div className={cn("hidden gap-4 px-5 pb-2 pt-4 text-[11px] text-ink-3 md:grid", colunas)}>
             <span>Personagem</span>
-            <span>Idade</span>
-            <span>Telefone</span>
-            <span>Banco</span>
-            <span>Grupos</span>
-            <span className="text-right">Veículos</span>
+            <span className="text-center">Level</span>
+            <span className="text-center">Banco</span>
+            <span className="text-center">Grupos</span>
+            <span className="text-center">Veículos</span>
+            <span />
           </div>
           <ul>
-            {lista.map((p) => (
-              <li key={p.id}>
+            {lista.map((p, n) => (
+              <li key={p.id} className="pf-linha" style={{ animationDelay: `${Math.min(n, 14) * 30}ms` }}>
                 <button
                   onClick={() => setSelId(p.id)}
-                  className={cn(
-                    "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/[0.04] px-5 py-3 text-left transition-colors last:border-0 hover:bg-white/[0.03] lg:grid-cols-[minmax(0,2fr)_90px_110px_minmax(0,1.3fr)_minmax(0,1.6fr)_80px]",
-                    selId === p.id && "bg-white/[0.05]",
-                  )}
+                  className={cn("grid h-16 w-full items-center gap-4 border-t border-white/[0.04] px-5 text-left transition-colors first:border-t-0 hover:bg-white/[0.03]", colunas)}
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="relative grid size-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] font-display text-sm font-semibold">
-                      {(p.nome || "?").charAt(0).toUpperCase()}
-                      <span className={cn("absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-black", p.online ? "bg-emerald-500" : "bg-white/25")} />
-                    </span>
+                    <HostAvatar className="size-10" />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{p.nome || "Sem nome"}</span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        #{p.passaporte ?? "—"} · {p.discord_nome ? `@${p.discord_nome}` : p.license}
-                      </span>
+                      <span className="block truncate text-sm font-medium">{p.nome || "Sem nome"}{p.passaporte && <span className="ml-1 font-normal text-ink-3">#{p.passaporte}</span>}</span>
+                      <span className="block truncate text-[11px] text-ink-3">{p.discord_nome ? `@${p.discord_nome}` : p.license}</span>
                     </span>
                   </span>
-                  <span className="hidden text-sm text-muted-foreground lg:block">{p.idade ?? "—"}</span>
-                  <span className="hidden text-sm text-muted-foreground lg:block">{p.telefone ?? "—"}</span>
-                  <span className="hidden truncate text-sm tabular-nums lg:block">{brl(p.banco)}</span>
-                  <span className="hidden min-w-0 items-center gap-1 overflow-hidden lg:flex">
-                    {p.grupos.slice(0, 3).map((g) => (
-                      <span key={g} className="shrink-0 rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-muted-foreground">
-                        {g}
-                      </span>
-                    ))}
-                    {p.grupos.length > 3 && <span className="shrink-0 text-[10.5px] text-ink-3">+{p.grupos.length - 3}</span>}
-                  </span>
-                  <span className="text-right text-sm tabular-nums text-muted-foreground">
-                    <Car className="mr-1 inline size-3.5" />
-                    {p.veiculos.length}
+                  <span className="hidden text-center text-sm tabular-nums md:block">{p.level}</span>
+                  <span className="hidden truncate text-center text-sm tabular-nums md:block">{brl(p.banco)}</span>
+                  <span className="hidden text-center text-sm tabular-nums text-muted-foreground md:block">{p.grupos.length}</span>
+                  <span className="hidden text-center text-sm tabular-nums text-muted-foreground md:block">{p.veiculos.length}</span>
+                  <span className="flex justify-end">
+                    <span title={p.online ? "Online" : "Offline"} className={cn("size-2 rounded-full", p.online ? "bg-emerald-400" : "bg-white/20")} />
                   </span>
                 </button>
               </li>

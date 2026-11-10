@@ -69,7 +69,7 @@ export function FinanceiroComparativo({ data }: ComparativoProps) {
               type="monotone"
               dataKey="saldo"
               name="Saldo"
-              stroke="#3b82f6"
+              stroke="#a8a8a8"
               strokeWidth={2}
               dot={false}
             />
@@ -80,7 +80,7 @@ export function FinanceiroComparativo({ data }: ComparativoProps) {
   );
 }
 
-const CORES = ["var(--primary)", "#3b82f6", "#10b981", "#f59e0b", "#a855f7"];
+const CORES = ["var(--primary)", "#a8a8a8", "#10b981", "#f59e0b", "#a855f7"];
 
 interface DistribuicaoProps {
   titulo: string;

@@ -127,6 +127,12 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <div className="aurora" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
         {children}
         <Scripts />
       </body>
@@ -156,6 +162,27 @@ function RootComponent() {
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
 
+  // Luz que acompanha o ponteiro nos cartões de vidro (.glass lê --mx/--my).
+  useEffect(() => {
+    let raf = 0;
+    const mover = (e: PointerEvent) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const alvo = e.target instanceof Element ? e.target.closest<HTMLElement>(".glass") : null;
+        if (!alvo) return;
+        const r = alvo.getBoundingClientRect();
+        alvo.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        alvo.style.setProperty("--my", `${e.clientY - r.top}px`);
+      });
+    };
+    window.addEventListener("pointermove", mover, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", mover);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   if (isAuthPage) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -164,11 +191,24 @@ function RootComponent() {
     );
   }
 
+  // Páginas abertas a quem não tem conta: painel do líder (entra por código) e
+  // link de afiliação. Ficam sem o menu da equipe.
+  if (pathname === "/lider" || pathname.startsWith("/convite/")) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <main className="relative z-10 min-h-screen w-full">
+          <Outlet />
+        </main>
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="relative z-10 flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main key={pathname} className="page-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

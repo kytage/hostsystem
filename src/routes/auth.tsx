@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff, KeyRound, Loader2, Lock, ShieldCheck, User } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { definirMinhaSenha } from "@/lib/users.functions";
-import hostSimbolo from "@/assets/host-simbolo.png.asset.json";
+import { LogoExtenso } from "@/components/dashboard/Logo";
+import { CHAVE_ABERTURA } from "@/components/abertura";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -36,11 +37,31 @@ function AuthPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [showNova, setShowNova] = useState(false);
+  const [inclina, setInclina] = useState({ x: 0, y: 0 });
+
+  // Quem chega aqui está deslogado: a próxima entrada mostra a abertura de novo.
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(CHAVE_ABERTURA);
+    } catch {
+      // sem armazenamento, nada a limpar
+    }
+  }, []);
+
+  /** Vai para o painel avisando a abertura de que o login acabou de acontecer. */
+  const irParaPainel = () => {
+    try {
+      sessionStorage.setItem(CHAVE_ABERTURA, "login");
+    } catch {
+      // sem armazenamento: entra sem a animação do portal
+    }
+    navigate({ to: "/" });
+  };
 
   const verificarTrocaSenha = async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) {
-      navigate({ to: "/" });
+      irParaPainel();
       return;
     }
     const { data: profile } = await supabase
@@ -51,7 +72,7 @@ function AuthPage() {
     if (profile?.deve_trocar_senha) {
       setCriandoSenha(true);
     } else {
-      navigate({ to: "/" });
+      irParaPainel();
     }
   };
 
@@ -101,7 +122,7 @@ function AuthPage() {
     setLoading(true);
     try {
       await definirSenha({ data: { password: novaSenha } });
-      navigate({ to: "/" });
+      irParaPainel();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível salvar a senha.");
     } finally {
@@ -109,186 +130,87 @@ function AuthPage() {
     }
   };
 
+  const campo =
+    "h-12 w-full rounded-2xl border border-white/[0.09] bg-black/40 pl-11 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-ink-3 focus:border-white/30 sm:text-sm";
+  const rotulo = "mb-1.5 block text-xs text-muted-foreground";
+  const botao =
+    "flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold text-black transition-all duration-200 hover:bg-white/90 active:scale-[0.985] disabled:opacity-60";
+
   return (
-    <div className="dark relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      {/* Gradiente cinza + grid animado */}
-      <div
-        className="auth-glow pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 55% at 50% -10%, rgb(206 14 14 / 26%), transparent 70%), radial-gradient(ellipse 50% 40% at 85% 110%, rgb(206 14 14 / 14%), transparent 70%)",
-        }}
-      />
-      <div className="auth-grid pointer-events-none absolute inset-0" />
-
-      {/* Logo sutil ao fundo */}
-      <img
-        src={hostSimbolo.url}
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute -bottom-24 -right-24 w-[420px] select-none opacity-[0.05]"
-      />
-
-      <div className="relative w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center">
-          <img
-            src={hostSimbolo.url}
-            alt="HOST"
-            className="size-14 select-none object-contain drop-shadow-[0_0_24px_rgb(206_14_14/45%)]"
-          />
-          <h1 className="mt-5 text-xl font-light uppercase tracking-[0.45em] text-foreground">
-            Host <span className="font-semibold text-primary">Saas</span>
-          </h1>
-          <p className="mt-2 text-xs font-light tracking-wide text-muted-foreground">
-            Sistema administrativo e desenvolvimento privado
-          </p>
+    <div
+      className="dark relative flex min-h-screen flex-col items-center overflow-hidden px-4"
+      onPointerMove={(e) => setInclina({ x: (0.5 - e.clientY / window.innerHeight) * 10, y: (e.clientX / window.innerWidth - 0.5) * 14 })}
+    >
+      {/* HOST gigante atrás do cartão de vidro, inclinando em 3D com o ponteiro */}
+      <div className="pf-glow pointer-events-none mt-[9vh] w-[min(1080px,94vw)] select-none" style={{ perspective: 1200 }}>
+        <div className="transition-transform duration-500 ease-out" style={{ transform: `rotateX(${inclina.x}deg) rotateY(${inclina.y}deg)` }}>
+          <LogoExtenso />
         </div>
+      </div>
 
-        {/* Card */}
-        <div className="mt-8 rounded-2xl border border-border bg-card p-6">
-          {criandoSenha ? (
-            <form onSubmit={handleCriarSenha} className="space-y-4">
-              <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                  <KeyRound className="size-3.5" /> Primeiro acesso
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  Você entrou com um token temporário. Crie agora a sua senha pessoal — ela será
-                  usada nos próximos acessos. Mínimo de 6 caracteres.
-                </p>
-              </div>
+      <div className="pf-modal glass relative z-10 -mt-[min(9vw,92px)] w-full max-w-sm rounded-[28px] !bg-black/45 p-6 backdrop-blur-2xl sm:p-7">
+        <p className="eyebrow text-center">HOST GROUP · Sistema e gestão</p>
+        <h1 className="mt-2 text-center font-display text-2xl font-semibold tracking-tight">{criandoSenha ? "Crie sua senha" : "Acesse o painel"}</h1>
+        <p className="mt-1.5 text-center text-xs text-muted-foreground">
+          {criandoSenha ? "Primeiro acesso: escolha uma senha pessoal de pelo menos 6 caracteres." : "Sistema administrativo privado da equipe."}
+        </p>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Nova senha
-                </span>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type={showNova ? "text" : "password"}
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                    value={novaSenha}
-                    onChange={(e) => setNovaSenha(e.target.value)}
-                    placeholder="mínimo 6 caracteres"
-                    className="w-full rounded-xl border border-border bg-secondary py-2.5 pl-10 pr-10 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNova((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={showNova ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showNova ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </label>
+        {criandoSenha ? (
+          <form onSubmit={handleCriarSenha} className="mt-6 space-y-4">
+            <label className="block">
+              <span className={rotulo}>Nova senha</span>
+              <span className="relative block">
+                <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
+                <input type={showNova ? "text" : "password"} required minLength={6} autoComplete="new-password" autoFocus value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} placeholder="mínimo 6 caracteres" className={campo} />
+                <button type="button" onClick={() => setShowNova((v) => !v)} aria-label={showNova ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-ink-3 transition-colors hover:text-foreground">
+                  {showNova ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </span>
+            </label>
+            <label className="block">
+              <span className={rotulo}>Confirmar senha</span>
+              <span className="relative block">
+                <KeyRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
+                <input type={showNova ? "text" : "password"} required minLength={6} autoComplete="new-password" value={confirmaSenha} onChange={(e) => setConfirmaSenha(e.target.value)} placeholder="repita a senha" className={campo} />
+              </span>
+            </label>
+            {error && <p role="alert" className="rounded-xl bg-primary/10 px-3 py-2 text-xs text-red-200">{error}</p>}
+            <button type="submit" disabled={loading} className={botao}>
+              {loading && <Loader2 className="size-4 animate-spin" />} Criar senha e entrar
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            <label className="block">
+              <span className={rotulo}>Usuário</span>
+              <span className="relative block">
+                <User className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
+                <input type="text" required autoComplete="username" autoCapitalize="none" autoFocus value={username} onChange={(e) => setUsername(e.target.value)} placeholder="seu.usuario" className={campo} />
+              </span>
+            </label>
+            <label className="block">
+              <span className={rotulo}>Senha ou token</span>
+              <span className="relative block">
+                <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-ink-3" />
+                <input type={showPassword ? "text" : "password"} required minLength={6} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className={campo} />
+                <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-ink-3 transition-colors hover:text-foreground">
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </span>
+            </label>
+            {error && <p role="alert" className="rounded-xl bg-primary/10 px-3 py-2 text-xs text-red-200">{error}</p>}
+            <button type="submit" disabled={loading} className={botao}>
+              {loading && <Loader2 className="size-4 animate-spin" />} Entrar no painel
+            </button>
+          </form>
+        )}
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Confirmar senha
-                </span>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type={showNova ? "text" : "password"}
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                    value={confirmaSenha}
-                    onChange={(e) => setConfirmaSenha(e.target.value)}
-                    placeholder="repita a senha"
-                    className="w-full rounded-xl border border-border bg-secondary py-2.5 pl-10 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-              </label>
-
-              {error && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground glow-red transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
-                {loading && <Loader2 className="size-4 animate-spin" />}
-                Criar senha e entrar
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Usuário
-                </span>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    required
-                    autoComplete="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="seu.usuario"
-                    className="w-full rounded-xl border border-border bg-secondary py-2.5 pl-10 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">
-                  Senha ou token
-                </span>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full rounded-xl border border-border bg-secondary py-2.5 pl-10 pr-10 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </label>
-
-              {error && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground glow-red transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
-                {loading && <Loader2 className="size-4 animate-spin" />}
-                Entrar no painel
-              </button>
-            </form>
-          )}
-        </div>
-
-        <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <ShieldCheck className="size-3.5" /> Conexão segura — dados sincronizados na nuvem
+        <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] text-ink-3">
+          <ShieldCheck className="size-3.5" /> Conexão segura
         </p>
       </div>
+
+      <p className="relative z-10 mt-auto pb-6 pt-8 text-[10px] uppercase tracking-[0.3em] text-ink-3">desenvolvido por henrique bonne</p>
     </div>
   );
 }

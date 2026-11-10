@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as LiderRouteImport } from './routes/lider'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAreaManagerRouteImport } from './routes/_authenticated/area-manager'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as ConviteSlugRouteImport } from './routes/convite.$slug'
 import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
 import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
@@ -40,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiderRoute = LiderRouteImport.update({
+  id: '/lider',
+  path: '/lider',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -130,6 +137,11 @@ const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ConviteSlugRoute = ConviteSlugRouteImport.update({
+  id: '/convite/$slug',
+  path: '/convite/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAreasIndexRoute = AuthenticatedAreasIndexRouteImport.update({
   id: '/areas/',
   path: '/areas/',
@@ -154,6 +166,7 @@ const ApiPublicWebhookPlayersRoute = ApiPublicWebhookPlayersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/area-manager': typeof AuthenticatedAreaManagerRoute
   '/avisos': typeof AuthenticatedAvisosRoute
@@ -170,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -177,6 +191,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/area-manager': typeof AuthenticatedAreaManagerRoute
   '/avisos': typeof AuthenticatedAvisosRoute
@@ -193,6 +208,7 @@ export interface FileRoutesByTo {
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/': typeof AuthenticatedIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas': typeof AuthenticatedAreasIndexRoute
@@ -203,6 +219,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/area-manager': typeof AuthenticatedAreaManagerRoute
   '/_authenticated/avisos': typeof AuthenticatedAvisosRoute
@@ -219,6 +236,7 @@ export interface FileRoutesById {
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/convite/$slug': typeof ConviteSlugRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
@@ -230,6 +248,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/lider'
     | '/sitemap.xml'
     | '/area-manager'
     | '/avisos'
@@ -246,6 +265,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/update'
     | '/usuarios'
+    | '/convite/$slug'
     | '/areas/$area'
     | '/areas/'
     | '/api/public/webhook/online'
@@ -253,6 +273,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/lider'
     | '/sitemap.xml'
     | '/area-manager'
     | '/avisos'
@@ -269,6 +290,7 @@ export interface FileRouteTypes {
     | '/tarefas'
     | '/update'
     | '/usuarios'
+    | '/convite/$slug'
     | '/'
     | '/areas/$area'
     | '/areas'
@@ -278,6 +300,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/lider'
     | '/sitemap.xml'
     | '/_authenticated/area-manager'
     | '/_authenticated/avisos'
@@ -294,6 +317,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tarefas'
     | '/_authenticated/update'
     | '/_authenticated/usuarios'
+    | '/convite/$slug'
     | '/_authenticated/'
     | '/_authenticated/areas/$area'
     | '/_authenticated/areas/'
@@ -304,7 +328,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  LiderRoute: typeof LiderRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ConviteSlugRoute: typeof ConviteSlugRoute
   ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
   ApiPublicWebhookPlayersRoute: typeof ApiPublicWebhookPlayersRoute
 }
@@ -323,6 +349,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lider': {
+      id: '/lider'
+      path: '/lider'
+      fullPath: '/lider'
+      preLoaderRoute: typeof LiderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -444,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/convite/$slug': {
+      id: '/convite/$slug'
+      path: '/convite/$slug'
+      fullPath: '/convite/$slug'
+      preLoaderRoute: typeof ConviteSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/areas/': {
       id: '/_authenticated/areas/'
       path: '/areas'
@@ -523,7 +563,9 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  LiderRoute: LiderRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ConviteSlugRoute: ConviteSlugRoute,
   ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,
   ApiPublicWebhookPlayersRoute: ApiPublicWebhookPlayersRoute,
 }

@@ -21,6 +21,7 @@ import {
   FileText,
   Eraser,
   Send,
+  KeyRound,
 
 
 
@@ -81,6 +82,7 @@ import { fetchCoroasSemanaAtual } from "@/lib/ilegal-coroas";
 
 
 import { IlegalSolicitacoes } from "@/components/ilegal-solicitacoes";
+import { IlegalPaineis } from "@/components/ilegal-paineis";
 
 
 
@@ -1018,7 +1020,7 @@ function DetalhesModal({
 }
 
 /** Abas do painel Ilegal. */
-type IlegalView = "orgs" | "anotacoes" | "cronograma" | "solicitacoes" | "online";
+type IlegalView = "orgs" | "anotacoes" | "cronograma" | "solicitacoes" | "online" | "paineis";
 
 const ILEGAL_VIEWS: {
   id: IlegalView;
@@ -1029,6 +1031,7 @@ const ILEGAL_VIEWS: {
   { id: "anotacoes", label: "Anotações", Icon: StickyNote },
   { id: "cronograma", label: "Cronograma de RP", Icon: CalendarClock },
   { id: "online", label: "Online", Icon: Activity },
+  { id: "paineis", label: "Painéis dos líderes", Icon: KeyRound },
 ];
 
 
@@ -1206,7 +1209,7 @@ function IlegalDashboard() {
           <div className="flex items-center gap-3">
             <IlegalLogButton />
             <div className="flex items-center gap-1 rounded-full glass p-1">
-              {ILEGAL_VIEWS.map(({ id, label, Icon }) => (
+              {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon }) => (
                 <button
                   key={id}
                   onClick={() => setView(id)}
@@ -1278,6 +1281,8 @@ function IlegalDashboard() {
         <IlegalOnline />
       ) : view === "solicitacoes" ? (
         <IlegalSolicitacoes />
+      ) : view === "paineis" ? (
+        <IlegalPaineis orgs={allOrgs} />
       ) : (
         <>
 
