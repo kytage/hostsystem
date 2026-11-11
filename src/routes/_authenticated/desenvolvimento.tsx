@@ -341,7 +341,7 @@ function Desenvolvimento() {
 
 
   return (
-    <div className="flex h-full min-w-0 flex-col px-6 py-5">
+    <div className="flex h-full min-w-0 flex-col px-3 py-3 md:px-4">
       <PageHeader
         title="Desenvolvimento"
         subtitle="Solicitações → Dev → Teste → Concluído — sincronizado em tempo real"

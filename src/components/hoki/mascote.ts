@@ -1,15 +1,35 @@
 /**
- * HOSHI de capuz: cabeça grande, corpo pequeno, macacão com orelhas.
+ * HOKI de capuz: cabeça grande, corpo pequeno, macacão com orelhas.
  * Cada parte fica em seu próprio "osso" (cabeça, braços, pernas, orelhas),
  * e trajes, roupas e acessórios são montados seguindo as mesmas medidas,
  * então acompanham os movimentos sem flutuar nem atravessar o corpo.
  */
 import type * as TH from "three";
-import { coresDe, peca as pecaPorId, trajeDe, type Humor, type Visual } from "@/lib/hoshi";
+import { coresDe, peca as pecaPorId, trajeDe, type Humor, type Visual } from "@/lib/hoki";
+import { criarEsqueleto, materialDeSombra, materialDoCorpo, TEMPO } from "./corpo";
+import { criarEfeito, type Efeito } from "./efeitos";
+import { pecasVestidas, vestirModelo } from "./pecas3d";
+import type { Modelo } from "./modelo";
 
 export type Reacao =
-  | "comer" | "beber" | "carinho" | "dormir" | "festa"
-  | "acenar" | "girar" | "rolar" | "dancar" | "correr" | "mortal" | "cumprimentar";
+  | "comer"
+  | "beber"
+  | "carinho"
+  | "dormir"
+  | "festa"
+  | "acenar"
+  | "girar"
+  | "rolar"
+  | "dancar"
+  | "correr"
+  | "mortal"
+  | "cumprimentar"
+  | "dancinha"
+  | "rebolar"
+  | "robo"
+  | "onda"
+  | "pulinhos"
+  | "disco";
 
 export interface Quadro {
   t: number;
@@ -19,6 +39,15 @@ export interface Quadro {
   p: number;
   mouse: { x: number; y: number };
   calmo: boolean;
+  /** Na praça: está caminhando (balança pernas e braços). */
+  andando?: boolean;
+  /** Na praça: está sentado num banco. */
+  sentado?: boolean;
+  /** No berço: está deitado (quem gira o corpo é o mundo; aqui só relaxa as pernas e a cabeça). */
+  deitado?: boolean;
+  /** Na praça, em dupla: dá a mão (esquerda ou direita), abraça, pula corda, carrega alguém ou vai montado. */
+  pose?:
+    "maoE" | "maoD" | "abraco" | "corda" | "carrega" | "montado" | "trabalha" | "turbo" | undefined;
 }
 
 // medidas do boneco (o chão é y = 0)
@@ -28,17 +57,23 @@ const CAPUZ = { y: 0.36, r: 0.5, s: [1.05, 0.97, 0.98] as const };
 const ROSTO = { y: 0.34, z: 0.13, r: 0.42, s: [1, 0.95, 0.9] as const };
 const TOPO_CAPUZ = CAPUZ.y + CAPUZ.r * CAPUZ.s[1];
 /** Z da frente do rosto no ponto (x, y), em coordenadas da cabeça. */
-const rostoZ = (x: number, y: number) => ROSTO.z + ROSTO.s[2] * Math.sqrt(Math.max(0, ROSTO.r * ROSTO.r - x * x - ((y - ROSTO.y) / ROSTO.s[1]) ** 2));
+const rostoZ = (x: number, y: number) =>
+  ROSTO.z +
+  ROSTO.s[2] *
+    Math.sqrt(Math.max(0, ROSTO.r * ROSTO.r - x * x - ((y - ROSTO.y) / ROSTO.s[1]) ** 2));
 
-/** Modelo 3D do HOSHI clássico (malha com textura), já carregado pelo palco. */
-export interface Modelo {
-  geo: TH.BufferGeometry;
-  tex: TH.Texture;
-}
 // Medidas do modelo, nas unidades do arquivo: altura total e a cabeça (centro, meia largura, meia altura, meia profundidade).
 const MODELO = { altura: 0.979, cabeca: { y: 0.7, rx: 0.33, ry: 0.28, rz: 0.25 } };
 
-export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) {
+export interface OpcoesMascote {
+  /** Malha do HOKI clássico (com textura ou leve). Sem ela, o clássico usa o boneco montado por formas. */
+  modelo?: Modelo | undefined;
+  /** Na praça há vários HOKIs: sem luz própria, para não pesar. */
+  mundo?: boolean;
+}
+
+export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMascote = {}) {
+  const { modelo, mundo = false } = opcoes;
   const lixo: { dispose: () => void }[] = [];
   const mat = (cor: TH.ColorRepresentation, o: TH.MeshStandardMaterialParameters = {}) => {
     const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.88, ...o });
@@ -47,14 +82,31 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   };
   const esfera = new THREE.SphereGeometry(1, 36, 26);
   lixo.push(esfera);
-  const bola = (pai: TH.Object3D, m: TH.Material, r: number, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
+  const bola = (
+    pai: TH.Object3D,
+    m: TH.Material,
+    r: number,
+    x: number,
+    y: number,
+    z: number,
+    sx = 1,
+    sy = 1,
+    sz = 1,
+  ) => {
     const o = new THREE.Mesh(esfera, m);
     o.position.set(x, y, z);
     o.scale.set(r * sx, r * sy, r * sz);
     pai.add(o);
     return o;
   };
-  const forma = (pai: TH.Object3D, g: TH.BufferGeometry, m: TH.Material, x: number, y: number, z: number) => {
+  const forma = (
+    pai: TH.Object3D,
+    g: TH.BufferGeometry,
+    m: TH.Material,
+    x: number,
+    y: number,
+    z: number,
+  ) => {
     lixo.push(g);
     const o = new THREE.Mesh(g, m);
     o.position.set(x, y, z);
@@ -68,12 +120,32 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     return g;
   };
   /** Recorte de uma esfera (entre dois ângulos, 0 = topo e 1 = base): é como roupa, boné e visor "vestem" o corpo. */
-  const casca = (pai: TH.Object3D, base: { y: number; r: number; s: readonly [number, number, number]; z?: number }, m: TH.Material, de: number, ate: number, folga: number, phi0 = 0, phiLen = Math.PI * 2) => {
-    const o = forma(pai, new THREE.SphereGeometry(base.r, 40, 14, phi0, phiLen, de * Math.PI, (ate - de) * Math.PI), m, 0, base.y, base.z ?? 0);
+  const casca = (
+    pai: TH.Object3D,
+    base: { y: number; r: number; s: readonly [number, number, number]; z?: number },
+    m: TH.Material,
+    de: number,
+    ate: number,
+    folga: number,
+    phi0 = 0,
+    phiLen = Math.PI * 2,
+  ) => {
+    const o = forma(
+      pai,
+      new THREE.SphereGeometry(base.r, 40, 14, phi0, phiLen, de * Math.PI, (ate - de) * Math.PI),
+      m,
+      0,
+      base.y,
+      base.z ?? 0,
+    );
     o.scale.set(base.s[0] * folga, base.s[1] * folga, base.s[2] * folga);
     return o;
   };
-  const textura = (largura: number, altura: number, pintar: (c: CanvasRenderingContext2D) => void) => {
+  const textura = (
+    largura: number,
+    altura: number,
+    pintar: (c: CanvasRenderingContext2D) => void,
+  ) => {
     const tela = document.createElement("canvas");
     tela.width = largura;
     tela.height = altura;
@@ -111,7 +183,11 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   const branco = mat("#ffffff", { roughness: 0.4 });
   const ouro = mat("#f2c14e", { roughness: 0.3, metalness: 0.75 });
   const vermelho = mat("#ce0e0e", { roughness: 0.6 });
-  const matRoupa = roupa ? (roupa.listras ? mat("#ffffff", { map: listrado(roupa.listras), side: THREE.DoubleSide }) : mat(roupa.cor, { side: THREE.DoubleSide })) : null;
+  const matRoupa = roupa
+    ? roupa.listras
+      ? mat("#ffffff", { map: listrado(roupa.listras), side: THREE.DoubleSide })
+      : mat(roupa.cor, { side: THREE.DoubleSide })
+    : null;
   const manga = roupa ? mat(roupa.listras?.[0] ?? roupa.cor) : principal;
   const matCalca = calca ? mat(calca.cor, { side: THREE.DoubleSide }) : null;
   const matLuva = luvas?.tipo === "ouro" ? ouro : mat(cores.luvas);
@@ -130,7 +206,14 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   if (matRoupa) casca(corpo, TORSO, matRoupa, 0.2, matCalca ? 0.62 : 0.74, 1.07);
   if (matCalca) casca(corpo, TORSO, matCalca, 0.62, 1, 1.075);
   if (!roupa && (tipo === "redonda" || tipo === "original" || tipo === "veterano")) {
-    const estrela = forma(corpo, new THREE.OctahedronGeometry(0.055), tipo === "original" ? vermelho : ouro, 0, 0.62, TORSO.r * TORSO.s[2] + 0.005);
+    const estrela = forma(
+      corpo,
+      new THREE.OctahedronGeometry(0.055),
+      tipo === "original" ? vermelho : ouro,
+      0,
+      0.62,
+      TORSO.r * TORSO.s[2] + 0.005,
+    );
     estrela.scale.set(1, 1, 0.35);
     estrela.name = "estrela";
   }
@@ -138,10 +221,19 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   // ---------------- pernas e pés ----------------
   const perna = (lado: number) => {
     const g = grupo(corpo, lado * 0.115, 0.3, 0);
-    forma(g, new THREE.CapsuleGeometry(0.085, 0.1, 6, 14), matCalca ? mat(calca!.cor) : principal, 0, -0.1, 0);
+    forma(
+      g,
+      new THREE.CapsuleGeometry(0.085, 0.1, 6, 14),
+      matCalca ? mat(calca!.cor) : principal,
+      0,
+      -0.1,
+      0,
+    );
     const r = calcado?.tipo === "botas" ? 0.13 : 0.105;
     bola(g, matPe, r, 0, -0.3 + r * 0.72, 0.035, 1, 0.72, 1.3);
-    if (calcado?.tipo === "botas") forma(g, new THREE.TorusGeometry(0.092, 0.03, 8, 20), branco, 0, -0.17, 0).rotation.x = Math.PI / 2;
+    if (calcado?.tipo === "botas")
+      forma(g, new THREE.TorusGeometry(0.092, 0.03, 8, 20), branco, 0, -0.17, 0).rotation.x =
+        Math.PI / 2;
     if (calcado?.tipo === "tenis") bola(g, mat("#2a2a2a"), 0.108, 0, -0.275, 0.035, 1, 0.3, 1.32);
     return g;
   };
@@ -151,7 +243,14 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   // ---------------- braços e mãos ----------------
   const braco = (lado: number) => {
     const g = grupo(corpo, lado * 0.235, 0.7, 0);
-    const manguinha = forma(g, new THREE.CapsuleGeometry(0.07, 0.17, 6, 14), manga, lado * 0.035, -0.13, 0);
+    const manguinha = forma(
+      g,
+      new THREE.CapsuleGeometry(0.07, 0.17, 6, 14),
+      manga,
+      lado * 0.035,
+      -0.13,
+      0,
+    );
     manguinha.rotation.z = lado * 0.2;
     bola(g, matLuva, luvas?.tipo === "fofas" ? 0.115 : 0.085, lado * 0.07, -0.29, 0.01);
     return g;
@@ -164,9 +263,24 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     bola(corpo, principal, 0.11, 0, 0.42, -0.36, 0.9, 0.9, 1.9);
     bola(corpo, detalhe, 0.085, 0, 0.44, -0.55);
   } else if (tipo === "gato") {
-    const rabo = forma(corpo, new THREE.CapsuleGeometry(0.035, 0.3, 6, 10), principal, 0, 0.5, -0.32);
+    const rabo = forma(
+      corpo,
+      new THREE.CapsuleGeometry(0.035, 0.3, 6, 10),
+      principal,
+      0,
+      0.5,
+      -0.32,
+    );
     rabo.rotation.x = -0.7;
-  } else bola(corpo, tipo === "coelho" ? principal : detalhe, tipo === "coelho" ? 0.085 : 0.06, 0, 0.38, -0.25);
+  } else
+    bola(
+      corpo,
+      tipo === "coelho" ? principal : detalhe,
+      tipo === "coelho" ? 0.085 : 0.06,
+      0,
+      0.38,
+      -0.25,
+    );
 
   // ---------------- cabeça: capuz + rosto ----------------
   const cabeca = grupo(corpo, 0, PESCOCO, 0);
@@ -181,8 +295,29 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     bola(g, brilho, 0.019, 0.018, 0.035, 0.03);
     return g;
   });
-  for (const lado of [-1, 1]) bola(cabeca, mat("#ff9aa8", { transparent: true, opacity: 0.55 }), 0.055, lado * 0.26, 0.24, rostoZ(0.26, 0.24) - 0.02, 1, 0.65, 0.3);
-  const boca = bola(cabeca, mat("#b0475a", { roughness: 0.5 }), 0.03, 0, 0.22, rostoZ(0, 0.22) - 0.008, 1.4, 0.6, 0.5);
+  for (const lado of [-1, 1])
+    bola(
+      cabeca,
+      mat("#ff9aa8", { transparent: true, opacity: 0.55 }),
+      0.055,
+      lado * 0.26,
+      0.24,
+      rostoZ(0.26, 0.24) - 0.02,
+      1,
+      0.65,
+      0.3,
+    );
+  const boca = bola(
+    cabeca,
+    mat("#b0475a", { roughness: 0.5 }),
+    0.03,
+    0,
+    0.22,
+    rostoZ(0, 0.22) - 0.008,
+    1.4,
+    0.6,
+    0.5,
+  );
 
   // orelhas do capuz, conforme o traje
   const orelhas: TH.Object3D[] = [];
@@ -200,9 +335,17 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
       const alto = tipo === "raposa" ? 0.34 : 0.26;
       const g = grupo(cabeca, lado * 0.3, TOPO_CAPUZ - 0.13, 0);
       forma(g, new THREE.ConeGeometry(0.15, alto, 18), corOrelha, 0, alto / 2, 0);
-      const miolo = forma(g, new THREE.ConeGeometry(0.085, alto * 0.7, 14), dentro, 0, alto * 0.42, 0.06);
+      const miolo = forma(
+        g,
+        new THREE.ConeGeometry(0.085, alto * 0.7, 14),
+        dentro,
+        0,
+        alto * 0.42,
+        0.06,
+      );
       miolo.scale.z = 0.5;
-      if (tipo === "raposa") forma(g, new THREE.ConeGeometry(0.06, alto * 0.4, 12), mat(cores.luvas), 0, alto * 0.81, 0);
+      if (tipo === "raposa")
+        forma(g, new THREE.ConeGeometry(0.06, alto * 0.4, 12), mat(cores.luvas), 0, alto * 0.81, 0);
       g.rotation.z = -lado * 0.3;
       orelhas.push(g);
     } else {
@@ -216,19 +359,36 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   topo = PESCOCO + TOPO_CAPUZ + ({ coelho: 0.56, raposa: 0.24, gato: 0.16 }[tipo] ?? 0.08);
   if (tipo === "coelho") {
     // presilha de estrela junto de uma das orelhas (a cor segue "detalhes")
-    const presilha = forma(cabeca, new THREE.OctahedronGeometry(0.085), detalhe, 0.34, TOPO_CAPUZ - 0.1, 0.16);
+    const presilha = forma(
+      cabeca,
+      new THREE.OctahedronGeometry(0.085),
+      detalhe,
+      0.34,
+      TOPO_CAPUZ - 0.1,
+      0.16,
+    );
     presilha.scale.set(1, 1, 0.45);
     presilha.rotation.z = 0.4;
   }
   if (tipo === "veterano") {
-    const aro = forma(cabeca, new THREE.TorusGeometry(0.44, 0.022, 8, 40), mat("#f2c14e", { emissive: "#f2c14e", emissiveIntensity: 0.9 }), 0, CAPUZ.y + 0.06, 0.02);
+    const aro = forma(
+      cabeca,
+      new THREE.TorusGeometry(0.44, 0.022, 8, 40),
+      mat("#f2c14e", { emissive: "#f2c14e", emissiveIntensity: 0.9 }),
+      0,
+      CAPUZ.y + 0.06,
+      0.02,
+    );
     aro.rotation.x = Math.PI / 2 - 0.5;
   }
 
-  // ---------------- modelo 3D do HOSHI clássico ----------------
+  // ---------------- modelo 3D do HOKI clássico ----------------
   // Com o modelo, o corpo montado por formas sai e entra a malha com textura; a "cabeça" do
   // boneco continua existindo (vazia) só para segurar chapéus e óculos no lugar certo.
   const usaModelo = !!modelo && tipo === "redonda";
+  // Braços, pernas, cabeça e tronco do modelo (malha única) dobram direto no desenho.
+  const esqueleto = criarEsqueleto(THREE);
+  let efeitoDoModelo: Efeito | null = null;
   if (usaModelo && modelo) {
     const formas: TH.Object3D[] = [];
     corpo.traverse((o) => {
@@ -237,42 +397,67 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     formas.forEach((o) => o.parent?.remove(o));
 
     const s = (PESCOCO + TOPO_CAPUZ + 0.14) / MODELO.altura;
-    const matModelo = new THREE.MeshStandardMaterial({ map: modelo.tex, roughness: 0.85 });
-    lixo.push(matModelo);
-    // troca de cor: o vermelho da textura vira a cor principal e o branco vira a cor de detalhe
-    const corPrincipal = { value: new THREE.Color(cores.principal) };
-    const corDetalhe = { value: new THREE.Color(cores.detalhe) };
-    matModelo.onBeforeCompile = (sh) => {
-      sh.uniforms["uPrincipal"] = corPrincipal;
-      sh.uniforms["uDetalhe"] = corDetalhe;
-      sh.fragmentShader = sh.fragmentShader
-        .replace("#include <common>", "#include <common>\nuniform vec3 uPrincipal;\nuniform vec3 uDetalhe;")
-        .replace(
-          "#include <map_fragment>",
-          `#include <map_fragment>
-          float verm = smoothstep(0.12, 0.4, diffuseColor.r - max(diffuseColor.g, diffuseColor.b));
-          diffuseColor.rgb = mix(diffuseColor.rgb, uPrincipal * clamp(diffuseColor.r / 0.8, 0.0, 1.25), verm);
-          float claro = smoothstep(0.62, 0.85, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
-          diffuseColor.rgb = mix(diffuseColor.rgb, uDetalhe * clamp(diffuseColor.g / 0.92, 0.0, 1.1), claro);`,
-        );
-    };
+    // vinil acetinado; o vermelho do modelo vira a cor principal e o branco vira a cor de detalhe
+    const pele = materialDoCorpo(
+      THREE,
+      modelo,
+      esqueleto,
+      { principal: cores.principal, detalhe: cores.detalhe },
+      !!opcoes.mundo,
+    );
+    const matModelo = pele.material;
+    const sombraDoCorpo = materialDeSombra(THREE, esqueleto);
+    lixo.push(matModelo, sombraDoCorpo);
     const malha = new THREE.Mesh(modelo.geo, matModelo);
+    malha.customDepthMaterial = sombraDoCorpo;
+    // roupas e acessórios vestidos por cima do modelo (recortados da própria pele, por isso encaixam)
+    const roupas = vestirModelo(
+      THREE,
+      modelo.geo,
+      esqueleto,
+      pecasVestidas(visual as unknown as Record<string, unknown>),
+      !!opcoes.mundo,
+    );
+    roupas.grupo.scale.setScalar(s);
+    corpo.add(roupas.grupo);
+    lixo.push({ dispose: roupas.descartar });
+    // aura, glitter, estrelas... (acompanham o corpo)
+    efeitoDoModelo = criarEfeito(THREE, visual.efeito, modelo.geo, esqueleto, !!opcoes.mundo);
+    if (efeitoDoModelo) {
+      efeitoDoModelo.grupo.scale.setScalar(s);
+      corpo.add(efeitoDoModelo.grupo);
+      lixo.push({ dispose: efeitoDoModelo.descartar });
+    }
     malha.scale.setScalar(s);
     corpo.add(malha);
 
     // alinha a "cabeça" invisível com a cabeça do modelo
     const c = MODELO.cabeca;
-    cabeca.scale.set((s * c.rx) / (CAPUZ.r * CAPUZ.s[0]), (s * c.ry) / (CAPUZ.r * CAPUZ.s[1]), (s * c.rz) / (CAPUZ.r * CAPUZ.s[2]));
+    cabeca.scale.set(
+      (s * c.rx) / (CAPUZ.r * CAPUZ.s[0]),
+      (s * c.ry) / (CAPUZ.r * CAPUZ.s[1]),
+      (s * c.rz) / (CAPUZ.r * CAPUZ.s[2]),
+    );
     cabeca.position.set(0, s * c.y - cabeca.scale.y * CAPUZ.y, 0);
     largura = Math.max(largura, s * 0.75 + 0.1);
   }
 
-  // ---------------- chapéus ----------------
-  if (chapeu) {
-    const m = mat(chapeu.tipo === "festa" ? cores.acessorio : chapeu.cor, { side: THREE.DoubleSide, roughness: 0.6 });
+  // ---------------- chapéus (no modelo 3D eles vêm das peças novas, mais acima) ----------------
+  if (chapeu && !usaModelo) {
+    const m = mat(chapeu.tipo === "festa" ? cores.acessorio : chapeu.cor, {
+      side: THREE.DoubleSide,
+      roughness: 0.6,
+    });
     if (chapeu.tipo === "bone") {
       casca(cabeca, CAPUZ, m, 0, 0.3, 1.05);
-      const aba = forma(cabeca, new THREE.CylinderGeometry(0.3, 0.3, 0.035, 28), m, 0, CAPUZ.y + CAPUZ.r * 0.6, 0.47);
+      const aba = forma(
+        cabeca,
+        new THREE.CylinderGeometry(0.3, 0.3, 0.035, 28),
+        m,
+        0,
+        CAPUZ.y + CAPUZ.r * 0.6,
+        0.47,
+      );
       aba.scale.set(1, 1, 0.75);
       aba.rotation.x = 0.18;
       bola(cabeca, branco, 0.04, 0, TOPO_CAPUZ + 0.045, 0);
@@ -283,21 +468,61 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     } else if (chapeu.tipo === "cartola") {
       forma(cabeca, new THREE.CylinderGeometry(0.24, 0.24, 0.38, 26), m, 0, TOPO_CAPUZ + 0.15, 0);
       forma(cabeca, new THREE.CylinderGeometry(0.42, 0.42, 0.035, 30), m, 0, TOPO_CAPUZ - 0.03, 0);
-      forma(cabeca, new THREE.CylinderGeometry(0.245, 0.245, 0.075, 26), vermelho, 0, TOPO_CAPUZ + 0.03, 0);
+      forma(
+        cabeca,
+        new THREE.CylinderGeometry(0.245, 0.245, 0.075, 26),
+        vermelho,
+        0,
+        TOPO_CAPUZ + 0.03,
+        0,
+      );
       topo = Math.max(topo, PESCOCO + TOPO_CAPUZ + 0.38);
     } else if (chapeu.tipo === "coroa") {
-      const aro = forma(cabeca, new THREE.CylinderGeometry(0.27, 0.23, 0.17, 26, 1, true), ouro, 0, TOPO_CAPUZ + 0.03, 0);
+      const aro = forma(
+        cabeca,
+        new THREE.CylinderGeometry(0.27, 0.23, 0.17, 26, 1, true),
+        ouro,
+        0,
+        TOPO_CAPUZ + 0.03,
+        0,
+      );
       (aro.material as TH.MeshStandardMaterial).side = THREE.DoubleSide;
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2;
-        forma(cabeca, new THREE.ConeGeometry(0.05, 0.14, 8), ouro, Math.cos(a) * 0.255, TOPO_CAPUZ + 0.18, Math.sin(a) * 0.255);
+        forma(
+          cabeca,
+          new THREE.ConeGeometry(0.05, 0.14, 8),
+          ouro,
+          Math.cos(a) * 0.255,
+          TOPO_CAPUZ + 0.18,
+          Math.sin(a) * 0.255,
+        );
       }
       bola(cabeca, vermelho, 0.04, 0, TOPO_CAPUZ + 0.04, 0.26);
       topo = Math.max(topo, PESCOCO + TOPO_CAPUZ + 0.28);
     } else if (chapeu.tipo === "tiara") {
-      const aro = forma(cabeca, new THREE.TorusGeometry(0.47, 0.02, 8, 40, Math.PI), ouro, 0, CAPUZ.y + 0.1, 0.02);
+      const aro = forma(
+        cabeca,
+        new THREE.TorusGeometry(0.47, 0.02, 8, 40, Math.PI),
+        ouro,
+        0,
+        CAPUZ.y + 0.1,
+        0.02,
+      );
       aro.scale.set(CAPUZ.s[0], 1, 1);
-      const estrela = forma(cabeca, new THREE.OctahedronGeometry(0.09), mat("#f2c14e", { emissive: "#f2c14e", emissiveIntensity: 0.8, metalness: 0.6, roughness: 0.3 }), 0, TOPO_CAPUZ + 0.08, 0.02);
+      const estrela = forma(
+        cabeca,
+        new THREE.OctahedronGeometry(0.09),
+        mat("#f2c14e", {
+          emissive: "#f2c14e",
+          emissiveIntensity: 0.8,
+          metalness: 0.6,
+          roughness: 0.3,
+        }),
+        0,
+        TOPO_CAPUZ + 0.08,
+        0.02,
+      );
       estrela.scale.set(1, 1, 0.4);
       topo = Math.max(topo, PESCOCO + TOPO_CAPUZ + 0.2);
     }
@@ -306,12 +531,34 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   // ---------------- óculos ----------------
   // no modelo 3D os olhos ficam mais baixos que no boneco montado
   const yOlho = usaModelo ? 0.24 : 0.36;
-  if (visual.oculos === "oculos:escuros") {
-    for (const lado of [-1, 1]) bola(cabeca, preto, 0.105, lado * 0.15, yOlho, rostoZ(0.15, yOlho) + 0.025, 1, 0.85, 0.35);
-    forma(cabeca, new THREE.BoxGeometry(0.1, 0.025, 0.025), preto, 0, yOlho + 0.02, rostoZ(0, yOlho + 0.02) + 0.03);
+  if (!usaModelo && visual.oculos === "oculos:escuros") {
+    for (const lado of [-1, 1])
+      bola(cabeca, preto, 0.105, lado * 0.15, yOlho, rostoZ(0.15, yOlho) + 0.025, 1, 0.85, 0.35);
+    forma(
+      cabeca,
+      new THREE.BoxGeometry(0.1, 0.025, 0.025),
+      preto,
+      0,
+      yOlho + 0.02,
+      rostoZ(0, yOlho + 0.02) + 0.03,
+    );
     olhos.forEach((o) => (o.visible = false));
-  } else if (visual.oculos === "oculos:visor") {
-    casca(cabeca, ROSTO, mat("#ff2a2a", { emissive: "#ff1a1a", emissiveIntensity: 1.5, roughness: 0.2, side: THREE.DoubleSide }), usaModelo ? 0.52 : 0.4, usaModelo ? 0.68 : 0.56, 1.05, 0.2 * Math.PI, 0.6 * Math.PI);
+  } else if (!usaModelo && visual.oculos === "oculos:visor") {
+    casca(
+      cabeca,
+      ROSTO,
+      mat("#ff2a2a", {
+        emissive: "#ff1a1a",
+        emissiveIntensity: 1.5,
+        roughness: 0.2,
+        side: THREE.DoubleSide,
+      }),
+      usaModelo ? 0.52 : 0.4,
+      usaModelo ? 0.68 : 0.56,
+      1.05,
+      0.2 * Math.PI,
+      0.6 * Math.PI,
+    );
     olhos.forEach((o) => (o.visible = false));
   }
 
@@ -320,18 +567,36 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   let forro: TH.Mesh | null = null;
   let pano: TH.Mesh | null = null;
   const asas: TH.Object3D[] = [];
-  if (costas?.tipo === "capa") {
+  if (!usaModelo && costas?.tipo === "capa") {
     const pivo = grupo(corpo, 0, 0.8, -0.21);
     const g = new THREE.PlaneGeometry(0.7, 0.62, 6, 8);
     g.translate(0, -0.31, 0);
     capa = forma(pivo, g, mat(costas.cor, { side: THREE.DoubleSide, roughness: 0.7 }), 0, 0, 0);
-    if (costas.id === "capa:noite") forro = forma(pivo, g.clone(), mat("#ce0e0e", { side: THREE.DoubleSide }), 0, 0, 0.01);
-  } else if (costas?.tipo === "mochila") {
+    if (costas.id === "capa:noite")
+      forro = forma(pivo, g.clone(), mat("#ce0e0e", { side: THREE.DoubleSide }), 0, 0, 0.01);
+  } else if (!usaModelo && costas?.tipo === "mochila") {
     const m = mat(cores.acessorio, { roughness: 0.7 });
     bola(corpo, m, 0.17, 0, 0.54, -0.29, 1.1, 1.2, 0.7);
-    bola(corpo, mat(new THREE.Color(cores.acessorio).multiplyScalar(0.75)), 0.1, 0, 0.48, -0.4, 1.1, 0.8, 0.5);
+    bola(
+      corpo,
+      mat(new THREE.Color(cores.acessorio).multiplyScalar(0.75)),
+      0.1,
+      0,
+      0.48,
+      -0.4,
+      1.1,
+      0.8,
+      0.5,
+    );
   } else if (costas?.tipo?.startsWith("bandeira")) {
-    forma(corpo, new THREE.CylinderGeometry(0.016, 0.016, 1.5, 8), mat("#d8d8d8", { metalness: 0.6, roughness: 0.3 }), 0.17, 1.15, -0.3);
+    forma(
+      corpo,
+      new THREE.CylinderGeometry(0.016, 0.016, 1.5, 8),
+      mat("#d8d8d8", { metalness: 0.6, roughness: 0.3 }),
+      0.17,
+      1.15,
+      -0.3,
+    );
     bola(corpo, ouro, 0.03, 0.17, 1.92, -0.3);
     const mapa = costas.listras
       ? listrado(costas.listras)
@@ -363,7 +628,14 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
         });
     const g = new THREE.PlaneGeometry(0.5, 0.32, 8, 1);
     g.translate(0.25, 0, 0);
-    pano = forma(corpo, g, mat("#ffffff", { map: mapa, side: THREE.DoubleSide, roughness: 0.7 }), 0.185, 1.72, -0.3);
+    pano = forma(
+      corpo,
+      g,
+      mat("#ffffff", { map: mapa, side: THREE.DoubleSide, roughness: 0.7 }),
+      0.185,
+      1.72,
+      -0.3,
+    );
     topo = Math.max(topo, 1.98);
     largura = 2;
   } else if (costas?.tipo === "asas") {
@@ -380,24 +652,49 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   const brilhos: TH.Mesh[] = [];
   let aura: TH.Mesh | null = null;
   let aureola: TH.Mesh | null = null;
-  const luz = new THREE.PointLight(efeito?.cor ?? "#ff3a2a", 0, 6);
-  luz.position.set(0, 0.5, 0.9);
-  raiz.add(luz);
+  const luz = mundo ? null : new THREE.PointLight(efeito?.cor ?? "#ff3a2a", 0, 6);
+  if (luz) {
+    luz.position.set(0, 0.5, 0.9);
+    raiz.add(luz);
+  }
   const arcoIris = efeito?.listras;
   if (efeito?.tipo === "glitter") {
     for (let i = 0; i < 16; i++) {
       const cor = arcoIris ? (arcoIris[i % arcoIris.length] ?? efeito.cor) : efeito.cor;
-      brilhos.push(forma(raiz, new THREE.OctahedronGeometry(0.035), mat(cor, { emissive: cor, emissiveIntensity: 2 }), 0, 0, 0));
+      brilhos.push(
+        forma(
+          raiz,
+          new THREE.OctahedronGeometry(0.035),
+          mat(cor, { emissive: cor, emissiveIntensity: 2 }),
+          0,
+          0,
+          0,
+        ),
+      );
     }
     largura = Math.max(largura, 1.9);
   } else if (efeito?.tipo === "aura") {
-    const m = new THREE.MeshBasicMaterial({ color: efeito.cor, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const m = new THREE.MeshBasicMaterial({
+      color: efeito.cor,
+      transparent: true,
+      opacity: 0.4,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
     lixo.push(m);
     aura = forma(raiz, new THREE.RingGeometry(0.4, 0.85, 48), m, 0, 0.02, 0);
     aura.rotation.x = -Math.PI / 2;
     largura = Math.max(largura, 1.9);
   } else if (efeito?.tipo === "aureola") {
-    aureola = forma(corpo, new THREE.TorusGeometry(0.24, 0.026, 10, 40), mat(efeito.cor, { emissive: "#ffc94a", emissiveIntensity: 2 }), 0, topo + 0.14, 0);
+    aureola = forma(
+      corpo,
+      new THREE.TorusGeometry(0.24, 0.026, 10, 40),
+      mat(efeito.cor, { emissive: "#ffc94a", emissiveIntensity: 2 }),
+      0,
+      topo + 0.14,
+      0,
+    );
     aureola.rotation.x = Math.PI / 2;
     topo += 0.22;
   }
@@ -406,7 +703,10 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   if (usaModelo) {
     const caixa = new THREE.Box3().setFromObject(raiz);
     topo = Math.max(caixa.max.y, 0.5);
-    largura = Math.max(largura, (Math.max(Math.abs(caixa.min.x), Math.abs(caixa.max.x)) + 0.06) * 2);
+    largura = Math.max(
+      largura,
+      (Math.max(Math.abs(caixa.min.x), Math.abs(caixa.max.x)) + 0.06) * 2,
+    );
   }
   const alturaAureola = topo - 0.08;
 
@@ -414,11 +714,12 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
   let giro = 0;
   let inclinaAtual = 0;
   let sentado = 0;
-  let olharX = 0;
   let olharY = 0;
 
   function atualizar(q: Quadro) {
     const { t, humor, reacao, p, mouse } = q;
+    TEMPO.value = t;
+    efeitoDoModelo?.atualizar(t);
     const dorme = humor === "dormindo";
     const feliz = humor === "feliz";
     const triste = humor === "triste";
@@ -430,7 +731,7 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     let mortal = 0;
     let andaX = 0;
     let inclina = triste ? 0.1 : 0;
-    let cabX = dorme ? 0.35 : triste ? 0.2 + mouse.y * 0.08 : mouse.y * 0.2;
+    let cabX = q.deitado ? 0 : dorme ? 0.35 : triste ? 0.2 + mouse.y * 0.08 : mouse.y * 0.2;
     let cabY = dorme ? 0 : mouse.x * 0.45;
     let cabZ = feliz ? Math.sin(t * 1.6) * 0.06 * ritmo : Math.sin(t * 0.8) * 0.02 * ritmo;
     let olho = dorme || t % 3.8 < 0.13 ? 0.1 : 1;
@@ -440,7 +741,11 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     let pE = 0;
     let pD = 0;
     let orelha = triste || dorme ? 0.35 : Math.max(0, Math.sin(t * 0.9) - 0.93) * 3;
-    let alvoSentado = dorme ? 1 : 0;
+    let alvoSentado = dorme && !q.deitado ? 1 : 0;
+    // tronco (só no modelo 3D): inclinar para a frente, torcer a cintura e pender para o lado
+    let trX = 0;
+    let trY = 0;
+    let trZ = 0;
 
     // descanso: balanço leve dos braços; feliz dá pulinhos e acena de vez em quando
     if (!reacao && ritmo) {
@@ -451,6 +756,11 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
         if (t % 9 < 1.6) bD.z = 2.4 + Math.sin(t * 13) * 0.3;
       }
       if (!dorme && t % 13 > 11) cabY += Math.sin((t % 13) * 4) * 0.45;
+      // parado ele nunca fica duro: troca o peso de perna devagar, e a cabeça compensa
+      trZ = Math.sin(t * 0.7) * 0.03;
+      trY = Math.sin(t * 0.45) * 0.05;
+      cabZ -= trZ * 0.8;
+      cabX += Math.sin(t * 1.1) * 0.02;
     }
 
     if (reacao) {
@@ -501,7 +811,90 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
         giroExtra = Math.sin(p * 4) * 0.6;
         salto = Math.abs(b) * 0.07;
         cabZ = -b * 0.16;
+        trZ = b * 0.14;
+        trY = Math.sin(p * 4) * 0.25;
         abre = 2.2;
+      } else if (reacao === "dancinha" && k(4) >= 0) {
+        // passinho de um lado para o outro: o peso troca de perna, os braços acompanham e a cabeça marca o ritmo
+        const b = Math.sin(p * 6.2);
+        const dobro = Math.sin(p * 12.4);
+        trZ = b * 0.2;
+        trY = b * 0.22;
+        andaX = b * 0.13;
+        pE = Math.max(0, -b) * 0.55;
+        pD = Math.max(0, b) * 0.55;
+        bE.z = -0.9 - Math.max(0, b) * 0.9;
+        bD.z = 0.9 + Math.max(0, -b) * 0.9;
+        bE.x = bD.x = -0.35 + dobro * 0.25;
+        cabZ = -b * 0.2;
+        cabX = 0.06 + Math.abs(dobro) * 0.09;
+        salto = Math.abs(dobro) * 0.05;
+        abre = 2;
+      } else if (reacao === "rebolar" && k(3.6) >= 0) {
+        // rebolado: a cintura torce para um lado e a cabeça fica olhando para a frente
+        const b = Math.sin(p * 9);
+        trY = b * 0.6;
+        trZ = Math.cos(p * 9) * 0.1;
+        cabY = -b * 0.5;
+        cabZ = Math.sin(p * 4.5) * 0.12;
+        bE.z = -1.5 + b * 0.25;
+        bD.z = 1.5 + b * 0.25;
+        bE.x = b * 0.5;
+        bD.x = -b * 0.5;
+        pE = b * 0.22;
+        pD = -b * 0.22;
+        salto = Math.abs(Math.sin(p * 9)) * 0.03;
+        abre = 2;
+      } else if (reacao === "robo" && k(3.6) >= 0) {
+        // robô: movimentos duros, em degraus
+        const passo = Math.floor(p * 2.6);
+        const liga = (n: number) => (passo % 4 === n ? 1 : 0);
+        bE.z = -0.2 - (liga(0) + liga(2)) * 1.5;
+        bD.z = 0.2 + (liga(1) + liga(2)) * 1.5;
+        bE.x = -liga(3) * 1.3;
+        bD.x = -liga(3) * 1.3;
+        cabY = (liga(0) - liga(1)) * 0.55;
+        trY = (liga(1) - liga(0)) * 0.3;
+        cabZ = liga(2) * 0.2;
+        salto = (p * 2.6) % 1 < 0.12 ? 0.03 : 0;
+      } else if (reacao === "onda" && (x = k(3)) >= 0) {
+        // onda: sobe por um braço, passa pela cabeça e desce pelo outro
+        const fase = (x * 3) % 1;
+        const crista = (centro: number) => Math.max(0, 1 - Math.abs(fase - centro) * 4);
+        bE.z = -0.3 - crista(0.2) * 2.1;
+        bD.z = 0.3 + crista(0.8) * 2.1;
+        trZ = (crista(0.35) - crista(0.65)) * 0.22;
+        cabZ = (crista(0.42) - crista(0.58)) * 0.3;
+        cabX = -crista(0.5) * 0.12;
+        salto = crista(0.5) * 0.05;
+        abre = 2;
+      } else if (reacao === "pulinhos" && k(2.6) >= 0) {
+        // pulinhos de alegria, com os braços para cima alternando
+        const b = Math.sin(p * 10);
+        salto = Math.abs(b) * 0.22;
+        bE.z = -2.2 - Math.max(0, b) * 0.5;
+        bD.z = 2.2 + Math.max(0, -b) * 0.5;
+        pE = pD = -Math.abs(b) * 0.35;
+        cabX = -0.12;
+        cabZ = b * 0.1;
+        trZ = b * 0.06;
+        abre = 2.4;
+      } else if (reacao === "disco" && k(3.8) >= 0) {
+        // discoteca: um braço aponta para o alto e desce cruzando o corpo, com a cintura acompanhando
+        const b = Math.sin(p * 5.2);
+        const alto = b > 0;
+        bD.z = alto ? 2.5 : 0.4;
+        bD.x = alto ? 0 : -1.1;
+        bE.z = -0.5;
+        bE.x = -0.25;
+        trY = b * 0.38;
+        trZ = b * -0.12;
+        cabY = b * 0.3;
+        cabZ = b * -0.1;
+        pE = Math.max(0, b) * 0.3;
+        pD = Math.max(0, -b) * 0.3;
+        salto = Math.abs(Math.sin(p * 10.4)) * 0.04;
+        abre = 2;
       } else if (reacao === "correr" && (x = k(2.6)) >= 0) {
         const volta = x * Math.PI * 2;
         andaX = Math.sin(volta) * 0.5;
@@ -518,14 +911,82 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
         pE = pD = -0.9;
         bE.x = bD.x = -1.1;
       } else if (reacao === "cumprimentar" && (x = k(1.7)) >= 0) {
-        inclina = Math.sin(x * Math.PI) * 0.6;
+        inclina = Math.sin(x * Math.PI) * (usaModelo ? 0.2 : 0.6);
+        trX = Math.sin(x * Math.PI) * 0.55;
+        cabX = Math.sin(x * Math.PI) * 0.3;
         bD.x = -Math.sin(x * Math.PI);
         bD.z = -0.5;
         if (x > 0.25 && x < 0.75) olho = 0.1;
       }
     }
 
-    // sentar para dormir: as pernas vão para a frente e o corpo desce
+    // na praça: caminhar balança pernas e braços; o modelo inteiriço balança o corpo
+    if (q.andando) {
+      const passada = t * 11;
+      pE = Math.sin(passada) * 0.8;
+      pD = -pE;
+      bE.x = -pE * 0.8;
+      bD.x = pE * 0.8;
+      salto += Math.abs(Math.sin(passada)) * 0.035;
+      inclina = Math.max(inclina, 0.1);
+      if (usaModelo) rolar += Math.sin(passada) * 0.05;
+      // ao andar a cintura torce contra as pernas e a cabeça fica firme, olhando para onde vai
+      trY = Math.sin(passada) * 0.18;
+      cabY = -trY * 0.7;
+      cabX = 0.04 + Math.abs(Math.sin(passada)) * 0.03;
+    }
+    if (q.sentado) alvoSentado = 1;
+
+    // poses de dupla: valem enquanto a interação durar (por cima do andar e do descanso)
+    if (q.pose === "maoE") bE.z = -0.72;
+    else if (q.pose === "maoD") bD.z = 0.72;
+    else if (q.pose === "abraco") {
+      bE.x = bD.x = -1.25;
+      bE.z = 0.38;
+      bD.z = -0.38;
+      olho = 0.1;
+      cabZ = 0.14;
+      abre = 2;
+    } else if (q.pose === "corda") {
+      // pula quando a corda passa por baixo (a corda gira no mesmo relógio)
+      const giroDaCorda = t * 9.4;
+      const sobe = Math.max(0, -Math.sin(giroDaCorda));
+      salto = sobe * 0.34;
+      bE.z = -0.85;
+      bD.z = 0.85;
+      bE.x = bD.x = Math.sin(giroDaCorda) * 0.3;
+      pE = pD = -sobe * 0.4;
+      abre = 2;
+    } else if (q.pose === "carrega") {
+      bE.z = -2.35;
+      bD.z = 2.35;
+      inclina = Math.max(inclina, 0.14);
+    } else if (q.pose === "trabalha") {
+      // no computador: mãos para a frente, digitando, e os olhos no monitor
+      bE.x = -1.15 + Math.sin(t * 15) * 0.1;
+      bD.x = -1.15 + Math.sin(t * 15 + 2.4) * 0.1;
+      bE.z = 0.28;
+      bD.z = -0.28;
+      cabX = 0.1 + Math.sin(t * 0.9) * 0.04;
+      cabY = Math.sin(t * 0.6) * 0.12;
+    } else if (q.pose === "turbo") {
+      // disparada na ponte: corpo bem inclinado, pernas girando rápido e braços para trás
+      const giro = t * 34;
+      inclina = 0.6;
+      pE = Math.sin(giro) * 1.15;
+      pD = -pE;
+      bE.x = bD.x = 1.05;
+      bE.z = 0.25;
+      bD.z = -0.25;
+      salto += Math.abs(Math.sin(giro)) * 0.03;
+      cabX = -0.25;
+    } else if (q.pose === "montado") {
+      alvoSentado = 1;
+      bE.x = bD.x = -0.95;
+      abre = 2;
+    }
+
+    // sentar (no banco ou para dormir): as pernas vão para a frente e o corpo desce
     sentado += (alvoSentado - sentado) * 0.06;
     if (sentado > 0.02) {
       pE = pE * (1 - sentado) - 1.45 * sentado;
@@ -542,9 +1003,9 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     const estica = usaModelo ? 1 + Math.min(0.08, salto * 0.18) - sentado * 0.06 : 1;
     corpo.scale.set(1 / Math.sqrt(estica), respira * estica, 1 / Math.sqrt(estica));
     if (usaModelo) {
-      olharX += (cabX * 0.35 - olharX) * 0.12;
-      olharY += (cabY * 0.6 - olharY) * 0.1;
-      corpo.rotation.set(olharX, olharY, cabZ * 0.8);
+      // no modelo quem olha é a cabeça (no pescoço); o corpo só acompanha um pouquinho
+      olharY += (cabY * 0.18 - olharY) * 0.1;
+      corpo.rotation.set(0, olharY, 0);
     } else {
       cabeca.rotation.x += (cabX - cabeca.rotation.x) * 0.15;
       cabeca.rotation.y += (cabY - cabeca.rotation.y) * 0.1;
@@ -552,6 +1013,35 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
     }
     olhos.forEach((o) => (o.scale.y = olho));
     boca.scale.y = 0.03 * 0.6 * Math.max(0.5, Math.min(3, abre));
+    if (usaModelo) {
+      // o modelo nasce de braços abertos: em repouso eles descem um pouco e balançam; nos truques, sobem
+      const sobe = (z: number, fase: number) =>
+        Math.max(
+          -0.55,
+          Math.min(
+            0.95,
+            (Math.abs(z) - 0.1) * 0.5 - 0.38 + Math.sin(t * 1.7 + fase) * 0.06 * ritmo,
+          ),
+        );
+      // cada parte vai para o lugar aos poucos: os movimentos emendam um no outro sem tranco
+      const vai = 0.3;
+      const ate = (v: { x: number; y: number }, x: number, y: number) => {
+        v.x += (x - v.x) * vai;
+        v.y += (y - v.y) * vai;
+      };
+      ate(esqueleto.bracoE.value, sobe(bE.z, 0), -bE.x * 0.7);
+      ate(esqueleto.bracoD.value, sobe(bD.z, 0.9), -bD.x * 0.7);
+      // ângulo negativo leva a perna para a frente: sentado, as perninhas ficam esticadas para a frente
+      ate(esqueleto.pernas.value, pE * 0.75, pD * 0.75);
+      const c = esqueleto.cabeca.value;
+      c.x += (cabX * 0.85 - c.x) * 0.22;
+      c.y += (cabY * 0.85 - c.y) * 0.16;
+      c.z += (cabZ * 1.15 - c.z) * 0.22;
+      const tr = esqueleto.tronco.value;
+      tr.x += (trX - tr.x) * 0.22;
+      tr.y += (trY - tr.y) * 0.22;
+      tr.z += (trZ - tr.z) * 0.22;
+    }
     bracoE.rotation.set(bE.x, 0, bE.z);
     bracoD.rotation.set(bD.x, 0, bD.z);
     pernaE.rotation.x = pE;
@@ -564,12 +1054,17 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
 
     // acessórios em movimento
     if (capa) {
-      const balanco = 0.25 + Math.sin(t * 2.2) * 0.07 * ritmo + Math.min(0.9, salto * 1.4 + Math.abs(andaX) * 0.5);
+      const balanco =
+        0.25 +
+        Math.sin(t * 2.2) * 0.07 * ritmo +
+        Math.min(0.9, salto * 1.4 + Math.abs(andaX) * 0.5);
       capa.rotation.x = balanco;
       if (forro) forro.rotation.x = balanco;
     }
     if (pano) pano.rotation.y = Math.sin(t * 3.2) * 0.3 * (q.calmo ? 0 : 1);
-    asas.forEach((a, i) => (a.rotation.y = (i ? 1 : -1) * (0.25 + Math.sin(t * 5) * 0.3 * (q.calmo ? 0 : 1))));
+    asas.forEach(
+      (a, i) => (a.rotation.y = (i ? 1 : -1) * (0.25 + Math.sin(t * 5) * 0.3 * (q.calmo ? 0 : 1))),
+    );
     if (estrela) estrela.rotation.z = Math.sin(t * 1.5) * 0.2 * ritmo;
     brilhos.forEach((b, i) => {
       const a = t * 0.8 + (i / brilhos.length) * Math.PI * 2;
@@ -587,9 +1082,9 @@ export function criarMascote(THREE: typeof TH, visual: Visual, modelo?: Modelo) 
       if (arcoIris) {
         corAura.setHSL((t * 0.12) % 1, 1, 0.55);
         m.color.copy(corAura);
-        luz.color.copy(corAura);
+        luz?.color.copy(corAura);
       }
-      luz.intensity = 5 + Math.sin(t * 2.4) * 2;
+      if (luz) luz.intensity = 5 + Math.sin(t * 2.4) * 2;
     }
     if (aureola) aureola.position.y = alturaAureola + Math.sin(t * 2) * 0.03;
     return salto;

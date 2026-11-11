@@ -508,7 +508,7 @@ function EventosPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         title="Eventos e Cronograma"
         subtitle="Criação, organização e publicação dos eventos do servidor"

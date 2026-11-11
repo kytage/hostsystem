@@ -537,14 +537,6 @@
   .glass:hover::before { opacity: 1; }
 }
 
-/* Cartões temáticos (carrossel do dashboard) */
-.tema-card {
-  background: #0a0a0a;
-  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1), opacity 700ms ease-out, border-color 400ms ease-out;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
-  will-change: transform;
-}
-
 /* Abertura do painel */
 .logo3d-flutua { animation: logo3d-flutua 5s ease-in-out infinite; }
 @keyframes logo3d-flutua {
@@ -563,7 +555,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .logo3d-flutua, .abertura-portal, .abertura-sai, .abertura-texto { animation: none !important; }
-  .tema-card { transition: none; }
 }
 
 /* ================================================================== *
@@ -768,3 +759,212 @@ img.foto-metal[src$="curvas.jpg"] { filter: grayscale(1) invert(1) contrast(1.2)
 
 /* Página do Update: o amarelo vira prata para manter o site em preto e metal */
 .dark { --update: #e6e6e6; --update-foreground: #0a0a0a; }
+
+/* ================================================================== *
+ * VIDRO NEGRO (4ª geração): fundo preto puro, sem imagens; cartões de
+ * vidro escuro com um fio de luz na borda; botão principal branco;
+ * vermelho só em detalhes pequenos. Não há barra
+ * no topo: só o menu lateral. A borda elástica (o fio que estica perto do
+ * ponteiro) é desenhada por src/lib/borda-elastica.ts, por cima de tudo.
+ * ================================================================== */
+.dark {
+  --background: #000000;
+  --foreground: #f3f3f4;
+  --card: rgba(13, 13, 15, 0.62);
+  --card-foreground: #f3f3f4;
+  --popover: #0e0e10;
+  --popover-foreground: #f3f3f4;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #8d8d92;
+  --ink-3: #5e5e63;
+  --accent: rgba(255, 255, 255, 0.075);
+  --border: rgba(255, 255, 255, 0.075);
+  --input: rgba(255, 255, 255, 0.09);
+  --ring: rgba(255, 255, 255, 0.3);
+  --sidebar: transparent;
+  /* camadas: cartão de vidro, cartão de dentro, controle, controle ativo */
+  --sup-1: #09090a;
+  --sup-2: rgba(255, 255, 255, 0.04);
+  --sup-3: rgba(255, 255, 255, 0.07);
+  --sup-4: rgba(255, 255, 255, 0.115);
+  --borrao: blur(28px) saturate(135%);
+}
+
+/* ---------- fundo: preto puro, sem imagem, sem grão e sem clarões ---------- */
+.dark body { background: #000000; }
+.dark body::before { display: none; }
+.dark .aurora { display: none; }
+.dark .moldura { background: #000000; }
+.dark .page-main { background: transparent; }
+
+/* ---------- vidro ---------- */
+.dark .glass,
+.dark .metal {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.058) 0%, rgba(255, 255, 255, 0.018) 36%, rgba(255, 255, 255, 0.008) 100%),
+    var(--sup-1);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  box-shadow: 0 28px 60px -34px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* fio de luz na borda: aceso em cima à esquerda, some no meio e volta fraco embaixo à direita */
+.dark .glass::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.09) 17%, rgba(255, 255, 255, 0) 44%, rgba(255, 255, 255, 0) 74%, rgba(255, 255, 255, 0.14) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+  transition: opacity 280ms;
+  pointer-events: none;
+}
+.dark .glass:hover::before { opacity: 1; }
+.dark a.glass:hover, .dark button.glass:hover { border-color: rgba(255, 255, 255, 0.13); }
+.dark .surface-hover:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 28px 60px -34px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.07); }
+
+/* cartão de dentro: um degrau mais claro, sem sombra */
+.dark .glass-inset {
+  background: var(--sup-2);
+  border-color: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.dark :is(a, button).glass-inset:hover { background: var(--sup-3); border-color: rgba(255, 255, 255, 0.13); }
+
+/* o que flutua por cima da página (janelas, menus, avisos): vidro com desfoque de verdade */
+.dark .glass-elevated,
+.dark .glass-modal,
+.dark [role="dialog"],
+.dark [role="alertdialog"],
+.dark [data-radix-popper-content-wrapper] > * {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 30%, rgba(255, 255, 255, 0.012)),
+    rgba(13, 13, 15, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  backdrop-filter: var(--borrao);
+  -webkit-backdrop-filter: var(--borrao);
+}
+.dark [data-radix-popper-content-wrapper] > * { color: var(--foreground); border-radius: 16px; }
+.dark [role="dialog"] [cmdk-root] { background: transparent; }
+.dark .eyebrow { font-size: 10px; letter-spacing: 0.2em; color: var(--ink-3); }
+
+/* ---------- botões ---------- */
+/* principal: branco, como uma tecla */
+.dark button.bg-primary,
+.dark a.bg-primary {
+  background: #f4f4f5 !important;
+  color: #09090a !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 10px 26px -12px rgba(255, 255, 255, 0.32), 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+}
+.dark button.bg-primary:hover, .dark a.bg-primary:hover { background: #ffffff !important; filter: none; }
+.dark button.bg-primary svg, .dark a.bg-primary svg { color: #09090a; }
+/* com borda: vidro fino */
+.dark :is(.page-main, [role="dialog"], .glass-modal) :is(button, a)[class~="border"][class~="border-border"],
+.dark :is(.page-main, [role="dialog"], .glass-modal) button[class*="border-white/[0.08]"] { background-color: var(--sup-2); }
+.dark :is(.page-main, [role="dialog"], .glass-modal) :is(button, a)[class~="border"][class~="border-border"]:hover,
+.dark :is(.page-main, [role="dialog"], .glass-modal) button[class*="border-white/[0.08]"]:hover { background-color: var(--sup-3); border-color: rgba(255, 255, 255, 0.17); }
+.pilula {
+  height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #d6d6da;
+  background: var(--sup-2);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.pilula:hover { background: var(--sup-3); color: #ffffff; border-color: rgba(255, 255, 255, 0.17); transform: none; }
+.pilula-ativa, .pilula-ativa:hover { background: #f4f4f5; color: #09090a; border-color: transparent; font-weight: 600; box-shadow: 0 10px 24px -12px rgba(255, 255, 255, 0.34); }
+.pilula-ativa .bg-primary { background: #ce0e0e !important; color: #ffffff !important; }
+
+/* tudo o que se aperta responde. Fica na camada base para qualquer classe poder mudar. */
+@layer base {
+  .dark :is(button, a, [role="tab"], [role="menuitem"]) {
+    transition: background-color 180ms, border-color 180ms, color 180ms, box-shadow 180ms, opacity 180ms, scale 180ms cubic-bezier(0.2, 0.8, 0.2, 1), translate 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .dark :is(button, a.pilula):not(:disabled):active { scale: 0.97; }
+  .dark button:is(.w-full, .text-left):not(:disabled):active { scale: 0.992; }
+  .dark :focus-visible { outline: 2px solid rgba(255, 255, 255, 0.55); outline-offset: 2px; }
+  .dark * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.13) transparent; }
+}
+
+/* ---------- campos e tabelas ---------- */
+.dark :is(.page-main, [role="dialog"], .glass-modal) :is(input, textarea, select)[class~="border"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.085);
+  transition: border-color 160ms, box-shadow 160ms, background-color 160ms;
+}
+.dark :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus { border-color: rgba(255, 255, 255, 0.34); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06); }
+.dark .page-main table thead th { color: var(--ink-3); font-weight: 500; letter-spacing: 0.08em; }
+.dark .page-main table tbody tr { transition: background-color 160ms; }
+.dark .page-main table tbody tr:hover { background-color: rgba(255, 255, 255, 0.028); }
+.dark .sticky.bg-muted { background-color: #121214; }
+
+/* ---------- movimento ---------- */
+/* entrada das páginas: cada bloco sobe um pouco, um depois do outro */
+@keyframes entra { from { opacity: 0; transform: translateY(16px) scale(0.992); } to { opacity: 1; transform: none; } }
+.animate-rise { animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.page-main > * { animation: none; }
+.pagina > * { animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.pagina > *:nth-child(2) { animation-delay: 60ms; }
+.pagina > *:nth-child(3) { animation-delay: 120ms; }
+.pagina > *:nth-child(4) { animation-delay: 180ms; }
+.pagina > *:nth-child(5) { animation-delay: 240ms; }
+.pagina > *:nth-child(n + 6) { animation-delay: 300ms; }
+@keyframes surge { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.surge { animation: surge 360ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+@keyframes cresce { from { transform: scaleY(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+/* o gráfico se revela da esquerda para a direita */
+@keyframes revela { from { clip-path: inset(-20% 100% -20% -2%); } to { clip-path: inset(-20% -2% -20% -2%); } }
+.revela { animation: revela 1100ms cubic-bezier(0.3, 0.7, 0.2, 1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise, .pagina > *, .surge, .revela, .tiques > i { animation: none !important; }
+}
+
+/* ---------- peças ---------- */
+/* invólucro das páginas: usa a largura toda, com margens pequenas */
+.pagina { width: 100%; padding: 0.875rem 0.75rem 1.5rem; }
+@media (min-width: 768px) { .pagina { padding: 1rem 1rem 1.75rem 0.375rem; } }
+/* controle de segmentos: trilho de vidro, o ativo é uma pílula branca */
+.segmentos { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03); }
+.segmentos > :is(button, a) { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 13px; border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); white-space: nowrap; }
+.segmentos > :is(button, a):hover { color: #ffffff; }
+.segmentos > :is(button, a)[aria-pressed="true"], .segmentos > :is(button, a)[aria-selected="true"], .segmentos > :is(button, a)[data-ativo="true"], .segmentos > :is(button, a)[data-state="active"] { background: #f4f4f5; color: #09090a; font-weight: 600; box-shadow: 0 8px 18px -8px rgba(255, 255, 255, 0.4); }
+/* selos pequenos de estado */
+.selo { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.selo-verde { background: rgba(126, 231, 135, 0.14); color: #8ff09a; }
+.selo-vermelho { background: rgba(229, 35, 27, 0.16); color: #ff8f85; }
+.selo-neutro { background: var(--sup-3); color: #d4d4d8; }
+/* tiques: barrinhas em pé, uma por item */
+.tiques { display: inline-flex; align-items: flex-end; gap: 3px; height: 18px; }
+.tiques > i { display: block; width: 2.5px; border-radius: 2px; background: rgba(255, 255, 255, 0.16); transform-origin: bottom; animation: cresce 480ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+/* quadradinho de ícone dentro dos cartões */
+.icone-quadro { display: grid; place-items: center; flex-shrink: 0; border-radius: 12px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+/* brilho vermelho de canto (cartões de destaque) e pontilhado */
+.brilho { isolation: isolate; }
+.brilho::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: radial-gradient(72% 120% at 0% 0%, rgba(226, 32, 22, 0.3), rgba(160, 14, 10, 0.1) 44%, transparent 70%); pointer-events: none; }
+.pontilhado { position: absolute; inset: 0; border-radius: inherit; background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1.4px); background-size: 16px 16px; -webkit-mask-image: linear-gradient(200deg, #000, transparent 62%); mask-image: linear-gradient(200deg, #000, transparent 62%); pointer-events: none; }
+
+/* ---------- menu lateral ---------- */
+.menu-lateral { transition: width 320ms cubic-bezier(0.3, 0.7, 0.2, 1); }
+.menu-lateral .rotulo { transition: opacity 200ms; white-space: nowrap; }
+.menu-lateral[data-fechado="true"] .rotulo { opacity: 0; pointer-events: none; }
+.item-menu { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 9px; border-radius: 10px; border: 1px solid transparent; font-size: 12.5px; font-weight: 500; color: var(--muted-foreground); }
+.item-menu:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
+.item-menu-ativo, .item-menu-ativo:hover { color: #ffffff; background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06)); border-color: rgba(255, 255, 255, 0.1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 22px -14px rgba(0, 0, 0, 0.9); }
+.item-menu-ativo::after { content: ""; position: absolute; left: -9px; top: 9px; bottom: 9px; width: 2.5px; border-radius: 3px; background: #e5231b; box-shadow: 0 0 10px rgba(229, 35, 27, 0.9); }
+
+/* rolagem */
+.dark ::-webkit-scrollbar { width: 9px; height: 9px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.11); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); background-clip: padding-box; }
+.dark ::-webkit-scrollbar-track { background: transparent; }

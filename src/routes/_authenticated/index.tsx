@@ -6,11 +6,9 @@ import {
   CalendarDays,
   CalendarX2,
   ClipboardList,
-  Clock,
   Code2,
   Inbox,
   Paperclip,
-  Sparkles,
 } from "lucide-react";
 import { MinhasPendenciasModal } from "@/components/minhas-pendencias-modal";
 import { RankingPanel } from "@/components/ranking-panel";
@@ -27,35 +25,62 @@ import { fetchEventos } from "@/lib/eventos";
 import { CalendarMonth, dayKey } from "@/components/calendar-month";
 import { TarefasPreview } from "@/components/home-pessoal";
 import { Termometro } from "@/components/termometro";
-import { HoshiCard } from "@/components/hoshi/hoshi-card";
-import { TemasCarousel } from "@/components/temas-carousel";
+import { HokiCard } from "@/components/hoki/hoki-card";
+import { AtalhosCard } from "@/components/atalhos-card";
 import { AvisosHero } from "@/components/avisos-hero";
 import { OrganizacoesDestaque } from "@/components/organizacoes-destaque";
 import { cn } from "@/lib/utils";
+import { CartaoAndamento, CartaoMovimento } from "@/components/home-graficos";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Dashboard — HOST" },
-      { name: "description", content: "Visão geral do servidor: pendências, jogadores e desempenho." },
+      {
+        name: "description",
+        content: "Visão geral do servidor: pendências, jogadores e desempenho.",
+      },
       { property: "og:title", content: "Dashboard — HOST" },
-      { property: "og:description", content: "Visão geral do servidor: pendências, jogadores e desempenho." },
+      {
+        property: "og:description",
+        content: "Visão geral do servidor: pendências, jogadores e desempenho.",
+      },
     ],
   }),
   component: Dashboard,
 });
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const hhmm = (d: string) => new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const hhmm = (d: string) =>
+  new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 function useNow() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
   return now;
+}
+
+/** Barrinhas em pé, uma por item (até `maximo`). Sem itens, fica um trilho apagado. */
+function Tiques({ n, cor, maximo = 12 }: { n: number; cor: string; maximo?: number }) {
+  const total = Math.min(n, maximo);
+  return (
+    <span className="tiques" aria-hidden>
+      {Array.from({ length: total || 6 }, (_, i) => (
+        <i
+          key={i}
+          style={{
+            height: `${48 + ((i * 37) % 52)}%`,
+            animationDelay: `${i * 28}ms`,
+            ...(total ? { background: cor } : {}),
+          }}
+        />
+      ))}
+    </span>
+  );
 }
 
 function Dashboard() {
@@ -80,7 +105,8 @@ function Dashboard() {
     .slice(0, 5);
 
   const { data: myRole } = useMyRole();
-  const isCoordinatorPlus = ROLE_ORDER.indexOf(myRole ?? "dev") <= ROLE_ORDER.indexOf("coordinator");
+  const isCoordinatorPlus =
+    ROLE_ORDER.indexOf(myRole ?? "dev") <= ROLE_ORDER.indexOf("coordinator");
 
   const { data: caixaEntrada = [] } = useQuery({
     queryKey: ["minhas-solicitacoes-admin"],
@@ -90,7 +116,8 @@ function Dashboard() {
 
   const lidaMutation = useMutation({
     mutationFn: marcarSolicitacaoAdminLida,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["minhas-solicitacoes-admin"] }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["minhas-solicitacoes-admin"] }),
   });
 
   const { data: tasks = [] } = useQuery({ queryKey: ["dev-tasks"], queryFn: fetchDevTasks });
@@ -105,7 +132,9 @@ function Dashboard() {
     queryFn: () => fetchCards(false),
     staleTime: 20_000,
   });
-  const minhasAtivas = meusCards.filter((c) => c.criadoPor?.toLowerCase() === username.toLowerCase()).length;
+  const minhasAtivas = meusCards.filter(
+    (c) => c.criadoPor?.toLowerCase() === username.toLowerCase(),
+  ).length;
   const emRevisao = tasks.filter((t) => t.column === "review").length;
 
   // Pendências aguardando aprovação (Área Manager + Ilegal) — só Coordinator+
@@ -115,53 +144,11 @@ function Dashboard() {
     enabled: isCoordinatorPlus,
     staleTime: 20_000,
   });
-  const aguardando = pendenciasArea.filter((p) => p.status === "pendente" && p.tipo === "solicitacao");
+  const aguardando = pendenciasArea.filter(
+    (p) => p.status === "pendente" && p.tipo === "solicitacao",
+  );
   const aguardandoIlegal = aguardando.filter((p) => p.area === "ilegal").length;
   const aguardandoManager = aguardando.length - aguardandoIlegal;
-
-  const stats = [
-    { label: "Tarefas em dev", value: tasks.length, icon: Code2, delta: "no quadro de desenvolvimento" },
-    { label: "Em revisão", value: emRevisao, icon: Clock, delta: "aguardando validação" },
-  ];
-
-  const quickActions = [
-    ...(isCoordinatorPlus
-      ? [
-          {
-            label: "Aguardando aprovação",
-            icon: Inbox,
-            badge: aguardando.length,
-            primary: true,
-            title: `Manager: ${aguardandoManager} · Ilegal: ${aguardandoIlegal}`,
-            onClick: () => navigate({ to: "/area-manager" }),
-          },
-        ]
-      : []),
-    {
-      label: "Minhas pendências",
-      icon: ClipboardList,
-      badge: minhasAtivas,
-      primary: !isCoordinatorPlus,
-      title: "Status das minhas pendências",
-      onClick: () => setStatusOpen(true),
-    },
-    {
-      label: "Quadro de dev",
-      icon: Code2,
-      badge: 0,
-      primary: false,
-      title: "Quadro de desenvolvimento",
-      onClick: () => navigate({ to: "/desenvolvimento" }),
-    },
-    {
-      label: "Eventos",
-      icon: Sparkles,
-      badge: 0,
-      primary: false,
-      title: "Eventos e cronograma",
-      onClick: () => navigate({ to: "/eventos" }),
-    },
-  ];
 
   const etapas = [
     { id: "backlog", label: "Planejado" },
@@ -169,75 +156,148 @@ function Dashboard() {
     { id: "review", label: "Em teste" },
     { id: "done", label: "Concluído" },
   ].map((e) => ({ ...e, n: tasks.filter((t) => t.column === e.id).length }));
-  const maiorEtapa = Math.max(1, ...etapas.map((e) => e.n));
-  const linhas = [
-    { k: "Em revisão", v: emRevisao, icon: Clock },
-    { k: "Minhas pendências ativas", v: minhasAtivas, icon: ClipboardList },
-    ...(isCoordinatorPlus ? [{ k: "Aguardando aprovação", v: aguardando.length, icon: Inbox }] : []),
-    { k: "Próximos eventos", v: proximosEventos.length, icon: CalendarDays },
+
+  // movimento: quando os pedidos chegaram e quando foram concluídos
+  const datasNovas = isCoordinatorPlus
+    ? pendenciasArea.filter((p) => p.tipo === "solicitacao").map((p) => p.createdAt)
+    : meusCards.map((c) => c.createdAt);
+  const datasConcluidas = meusCards.flatMap((c) => (c.concluidoAt ? [c.concluidoAt] : []));
+
+  // quadros do topo: o que pede atenção, com o caminho de cada um
+  const proximo = proximosEventos[0];
+  const quadros = [
+    ...(isCoordinatorPlus
+      ? [
+          {
+            titulo: "Aguardando aprovação",
+            valor: aguardando.length,
+            icon: Inbox,
+            cor: "#ff5a4d",
+            alerta: true,
+            sub: `Manager ${aguardandoManager} · Ilegal ${aguardandoIlegal}`,
+            dica: "Abrir as solicitações",
+            onClick: () => void navigate({ to: "/area-manager" }),
+          },
+        ]
+      : []),
+    {
+      titulo: "Minhas pendências",
+      valor: minhasAtivas,
+      icon: ClipboardList,
+      cor: "#f0a04b",
+      alerta: false,
+      sub: "ativas no quadro",
+      dica: "Ver o status das minhas pendências",
+      onClick: () => setStatusOpen(true),
+    },
+    {
+      titulo: "Quadro de dev",
+      valor: tasks.length,
+      icon: Code2,
+      cor: "#e4e4e7",
+      alerta: false,
+      sub: `${emRevisao} em revisão`,
+      dica: "Abrir o quadro de desenvolvimento",
+      onClick: () => void navigate({ to: "/desenvolvimento" }),
+    },
+    {
+      titulo: "Próximos eventos",
+      valor: proximosEventos.length,
+      icon: CalendarDays,
+      cor: "#7ee787",
+      alerta: false,
+      sub: proximo ? proximo.titulo : "nenhum marcado",
+      dica: "Abrir eventos e cronograma",
+      onClick: () => void navigate({ to: "/eventos" }),
+    },
   ];
+  const pedindo = (isCoordinatorPlus ? aguardando.length : 0) + minhasAtivas;
 
   const hora = now?.getHours() ?? 12;
   const saudacao = !now ? "Olá" : hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   const diaSelecionado = selectedDay ? new Date(`${selectedDay}T12:00:00`) : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       {statusOpen && <MinhasPendenciasModal onClose={() => setStatusOpen(false)} />}
 
-      {/* Abertura editorial: saudação grande sobre imagem, relógio e ações em pílulas */}
-      <section className="animate-rise relative overflow-hidden rounded-[32px] border border-white/[0.07] bg-[#050505]">
-        <img src="/img/ondas.jpg" alt="" aria-hidden className="foto-metal pointer-events-none absolute inset-y-0 right-0 h-full w-[62%] object-cover" />
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/85 to-transparent" />
-        <div className="relative flex min-h-[300px] flex-col justify-between gap-10 p-6 md:p-9">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="eyebrow">HOST GROUP · Sistema e gestão</p>
-              <h1 className="text-metal mt-3 font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] md:text-[60px]">
-                {saudacao},
-                <br />
-                {username || "…"}
+      {/* 1º bloco: o que pede você agora (cada quadro leva direto ao lugar) e o quadro de avisos */}
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,400px)]">
+        <section className="glass relative overflow-hidden rounded-[24px] p-4">
+          <span aria-hidden className="pontilhado opacity-50" />
+          <div className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-[21px] font-semibold tracking-[-0.02em]">
+                {saudacao}, {username || "…"}{" "}
+                <span className="font-normal text-muted-foreground">
+                  {pedindo > 0
+                    ? `· ${pedindo} ${pedindo > 1 ? "itens pedem" : "item pede"} você`
+                    : "· tudo em dia"}
+                </span>
               </h1>
-            </div>
-            <div className="w-full text-right sm:w-auto">
-              <p className="font-display text-3xl font-semibold tabular-nums tracking-tight md:text-4xl">
-                {now ? now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
-                <span className="text-ink-3">:{now ? String(now.getSeconds()).padStart(2, "0") : "--"}</span>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                {now
+                  ? cap(
+                      now.toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      }),
+                    )
+                  : "—"}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {now ? cap(now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })) : "—"}
-              </p>
-              <AvisosHero />
             </div>
+            <OrganizacoesDestaque />
           </div>
-
-          <div className="flex flex-col gap-3">
-          <OrganizacoesDestaque />
-          <div className="flex flex-wrap gap-2">
-            {quickActions.map((a) => (
+          <div className="relative mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
+            {quadros.map((q, n) => (
               <button
-                key={a.label}
-                onClick={a.onClick}
-                title={a.title}
-                className={cn("pilula group", a.primary && "pilula-ativa")}
+                key={q.titulo}
+                onClick={q.onClick}
+                title={q.dica}
+                className="glass-inset surge group w-full rounded-2xl border p-3 text-left"
+                style={{ animationDelay: `${120 + n * 60}ms` }}
               >
-                <a.icon className="size-4" strokeWidth={1.7} />
-                {a.label}
-                {a.badge > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">{a.badge}</span>}
+                <span className="flex items-center gap-2.5">
+                  <span className="icone-quadro size-8 text-foreground/90">
+                    <q.icon className="size-4" strokeWidth={1.8} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">
+                    {q.titulo}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-display text-[17px] font-semibold tabular-nums",
+                      q.alerta && q.valor > 0 ? "text-[#ff5a4d]" : "text-foreground",
+                    )}
+                  >
+                    {q.valor}
+                  </span>
+                </span>
+                <span className="mt-2.5 flex items-center gap-2.5">
+                  <Tiques n={q.valor} cor={q.cor} />
+                  <span className="min-w-0 truncate text-[11.5px] text-ink-3">{q.sub}</span>
+                </span>
               </button>
             ))}
           </div>
-          </div>
-        </div>
-      </section>
+        </section>
+        <AvisosHero />
+      </div>
 
       {isCoordinatorPlus && caixaEntrada.length > 0 && (
-        <a href="#caixa-entrada" className="glass animate-rise mt-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm">
+        <a
+          href="#caixa-entrada"
+          className="glass animate-rise mt-3 flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm"
+        >
           <span className="size-1.5 shrink-0 rounded-full bg-primary" />
           <span>
             Você tem{" "}
             <span className="font-semibold">
-              {caixaEntrada.length} {caixaEntrada.length > 1 ? "solicitações administrativas" : "solicitação administrativa"}
+              {caixaEntrada.length}{" "}
+              {caixaEntrada.length > 1
+                ? "solicitações administrativas"
+                : "solicitação administrativa"}
             </span>{" "}
             na caixa de entrada.
           </span>
@@ -245,62 +305,33 @@ function Dashboard() {
         </a>
       )}
 
-      <HoshiCard />
+      <HokiCard />
 
-      {/* Operação em números (um bloco só, sem cartões repetidos) + atalhos em carrossel */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-12">
-        <section className="metal animate-rise rounded-[28px] p-6 lg:col-span-5" style={{ animationDelay: "80ms" }}>
-          <div className="flex items-center justify-between">
-            <p className="eyebrow">Operação agora</p>
-            <button onClick={() => navigate({ to: "/desenvolvimento" })} aria-label="Abrir quadro de desenvolvimento" className="grid size-8 place-items-center rounded-full border border-white/[0.08] text-muted-foreground transition-colors hover:text-foreground">
-              <ArrowUpRight className="size-3.5" />
-            </button>
-          </div>
-          <p className="text-metal mt-5 font-display text-[76px] font-semibold leading-none tracking-[-0.05em] tabular-nums">{tasks.length}</p>
-          <p className="mt-2 text-sm text-muted-foreground">tarefas no quadro de desenvolvimento</p>
+      {/* andamento do desenvolvimento, movimento do quadro e atalhos */}
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+        <CartaoAndamento
+          etapas={etapas}
+          onAbrir={() => void navigate({ to: "/desenvolvimento" })}
+          className="xl:col-span-3"
+        />
+        <CartaoMovimento
+          novos={datasNovas}
+          concluidos={datasConcluidas}
+          legenda={
+            isCoordinatorPlus ? "Solicitações que chegaram e pedidos concluídos" : "Pedidos do quadro, por dia"
+          }
+          className="xl:col-span-4"
+        />
 
-          {/* distribuição por etapa */}
-          <div className="mt-6 flex h-16 items-end gap-2" role="img" aria-label="Tarefas por etapa">
-            {etapas.map((e) => (
-              <div key={e.id} className="flex h-full flex-1 items-end">
-                <div className="barra-cresce w-full rounded-t-md bg-gradient-to-t from-white/10 to-white/60" style={{ height: `${Math.max(6, (e.n / maiorEtapa) * 100)}%` }} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-2 text-center text-[10.5px] text-ink-3">
-            {etapas.map((e) => (
-              <span key={e.id} className="flex-1">
-                <span className="block tabular-nums text-foreground/80">{e.n}</span>
-                {e.label}
-              </span>
-            ))}
-          </div>
-
-          <dl className="mt-6 divide-y divide-white/[0.06] border-t border-white/[0.06]">
-            {linhas.map((l) => (
-              <div key={l.k} className="flex items-center gap-3 py-3 text-sm">
-                <l.icon className="size-4 text-ink-3" strokeWidth={1.6} />
-                <dt className="text-muted-foreground">{l.k}</dt>
-                <dd className="ml-auto font-display text-lg font-semibold tabular-nums">{l.v}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        {/* coluna da direita: atalhos em cima e ranking embaixo, ocupando a mesma altura do bloco ao lado */}
-        <div className="animate-rise flex flex-col gap-4 lg:col-span-7" style={{ animationDelay: "140ms" }}>
-          <TemasCarousel />
-          <div className="flex-1 [&>*]:h-full">
-            <RankingPanel variant="premium" />
-          </div>
-        </div>
+        <AtalhosCard className="md:col-span-2 xl:col-span-5" />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-12">
+      {/* calendário, agenda do dia e ranking, lado a lado */}
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
         {/* Calendário */}
         <section
           style={{ animationDelay: "300ms" }}
-          className="glass surface-hover animate-rise rounded-[20px] p-5 lg:col-span-7"
+          className="glass surface-hover animate-rise rounded-[22px] p-4 md:col-span-2 xl:col-span-5"
         >
           <CalendarMonth eventos={eventos} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
         </section>
@@ -308,14 +339,20 @@ function Dashboard() {
         {/* Agenda */}
         <section
           style={{ animationDelay: "360ms" }}
-          className="glass surface-hover animate-rise flex flex-col rounded-[20px] p-5 lg:col-span-5"
+          className="glass surface-hover animate-rise flex flex-col rounded-[22px] p-4 xl:col-span-3"
         >
           <header className="flex items-start justify-between gap-2">
             <div>
               <p className="eyebrow">{selectedDay === hojeKey ? "Eventos do dia" : "Eventos"}</p>
               <h2 className="mt-1 font-display text-lg font-semibold">
                 {diaSelecionado
-                  ? cap(diaSelecionado.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }))
+                  ? cap(
+                      diaSelecionado.toLocaleDateString("pt-BR", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      }),
+                    )
                   : "—"}
               </h2>
             </div>
@@ -362,7 +399,11 @@ function Dashboard() {
               >
                 <p className="text-sm font-medium">{ev.titulo}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {new Date(ev.dataInicio).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+                  {new Date(ev.dataInicio).toLocaleDateString("pt-BR", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                  })}
                   {" · "}
                   {hhmm(ev.dataInicio)}
                   {ev.criadoPor && ` · ${ev.criadoPor}`}
@@ -371,6 +412,13 @@ function Dashboard() {
             ))}
           </div>
         </section>
+
+        <div
+          className="animate-rise xl:col-span-4 [&>*]:h-full"
+          style={{ animationDelay: "420ms" }}
+        >
+          <RankingPanel variant="premium" />
+        </div>
       </div>
 
       {/* Caixa de entrada — Solicitações Administrativas (Coordinator+) */}
@@ -379,7 +427,9 @@ function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="eyebrow">Caixa de entrada</p>
-              <h2 className="mt-1 font-display text-lg font-semibold">Solicitações administrativas</h2>
+              <h2 className="mt-1 font-display text-lg font-semibold">
+                Solicitações administrativas
+              </h2>
             </div>
             <span className="glass-inset rounded-full px-2.5 py-1 text-[11px] tabular-nums text-muted-foreground">
               {caixaEntrada.length} pendente{caixaEntrada.length > 1 ? "s" : ""}
@@ -392,7 +442,9 @@ function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold">{s.titulo}</h3>
                     {s.descricao && (
-                      <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{s.descricao}</p>
+                      <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+                        {s.descricao}
+                      </p>
                     )}
                     {s.anexos.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -428,7 +480,7 @@ function Dashboard() {
         </section>
       )}
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
         <div className="animate-rise" style={{ animationDelay: "420ms" }}>
           <TarefasPreview />
         </div>

@@ -69,7 +69,7 @@ function PlayersPage() {
 
   if (role && !podeVer) {
     return (
-      <div className="mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
+      <div className="pagina">
         <PageHeader kicker="SERVIDOR" title="Players" />
         <p className="glass-inset mt-6 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
           Você não tem acesso a esta área. Peça liberação da categoria “Players” a um Founder.
@@ -82,21 +82,18 @@ function PlayersPage() {
   const seg = (on: boolean) => cn("flex-1 rounded-full px-3 py-1.5 text-xs capitalize transition-colors", on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground");
 
   return (
-    <div className="mx-auto max-w-[1040px] px-4 py-6 md:px-8 md:py-8">
-      <header className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
-        <span />
-        <div className="text-center">
-          <p className="eyebrow">Servidor</p>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">Players</h1>
-        </div>
-        <div className="justify-self-end">
-          {role === "founder" && (
+    <div className="pagina">
+      <PageHeader
+        kicker="Servidor"
+        title="Players"
+        actions={
+          role === "founder" ? (
             <button onClick={() => setIntegracao(true)} aria-label="Integração" title="Integração" className="glass-inset grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground">
               <PlugZap className="size-4" />
             </button>
-          )}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
 
       <div className="glass mt-6 grid grid-cols-2 gap-y-5 rounded-[24px] py-5 md:grid-cols-4">
         {kpis.map((c, n) => (

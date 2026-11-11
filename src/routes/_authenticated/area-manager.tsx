@@ -111,7 +111,7 @@ function AreaManagerPage() {
   useRealtimeTable("solicitacoes_admin", [["solicitacoes-admin"]]);
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         title="Área Manager"
         subtitle="Crie solicitações da sua área. Coordinator+ aprova antes de ir para o Desenvolvimento."

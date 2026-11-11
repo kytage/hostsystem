@@ -271,9 +271,10 @@ export function QuickPendenciaButton() {
         onClick={() => setOpen(true)}
         aria-label="Nova pendência particular"
         title="Nova pendência particular"
-        className="flex size-9 items-center justify-center rounded-xl border border-white/15 text-neutral-300 transition-colors hover:bg-primary hover:text-primary-foreground"
+        data-sem-elastico
+        className="grid size-8 shrink-0 place-items-center rounded-[10px] text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
       >
-        <PencilLine className="size-[18px]" strokeWidth={1.9} />
+        <PencilLine className="size-[15px]" strokeWidth={1.6} />
       </button>
       {open && <NovaPendenciaDialog onClose={() => setOpen(false)} />}
       <ReuniaoAlarme />

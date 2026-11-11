@@ -11,20 +11,42 @@ export interface Resultado {
   valor: number;
 }
 
-export function HoshiJogos({ onFim, onClose }: { onFim: (r: Resultado) => void; onClose: () => void }) {
+export function HokiJogos({
+  onFim,
+  onClose,
+}: {
+  onFim: (r: Resultado) => void;
+  onClose: () => void;
+}) {
   const [jogo, setJogo] = useState<Jogo | null>(null);
   const opcoes = [
-    { id: "petiscos" as const, nome: "Chuva de petiscos", desc: "Mova o HOSHI e pegue o máximo em 20 segundos.", icon: Bone },
-    { id: "reflexo" as const, nome: "Reflexo de estrela", desc: "Clique assim que a estrela acender. São 5 rodadas.", icon: Zap },
+    {
+      id: "petiscos" as const,
+      nome: "Chuva de petiscos",
+      desc: "Mova o HOKI e pegue o máximo em 20 segundos.",
+      icon: Bone,
+    },
+    {
+      id: "reflexo" as const,
+      nome: "Reflexo de estrela",
+      desc: "Clique assim que a estrela acender. São 5 rodadas.",
+      icon: Zap,
+    },
   ];
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent aria-describedby={undefined} className="w-[calc(100vw-1.5rem)] max-w-lg">
-        <DialogTitle>{jogo ? opcoes.find((o) => o.id === jogo)?.nome : "Brincar com o HOSHI"}</DialogTitle>
+        <DialogTitle>
+          {jogo ? opcoes.find((o) => o.id === jogo)?.nome : "Brincar com o HOKI"}
+        </DialogTitle>
         {!jogo && (
           <div className="grid gap-2">
             {opcoes.map((o) => (
-              <button key={o.id} onClick={() => setJogo(o.id)} className="glass surface-hover flex items-center gap-3 rounded-2xl p-4 text-left">
+              <button
+                key={o.id}
+                onClick={() => setJogo(o.id)}
+                className="glass surface-hover flex items-center gap-3 rounded-2xl p-4 text-left"
+              >
                 <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/15 text-red-200">
                   <o.icon className="size-5" />
                 </span>
@@ -34,7 +56,9 @@ export function HoshiJogos({ onFim, onClose }: { onFim: (r: Resultado) => void; 
                 </span>
               </button>
             ))}
-            <p className="text-[11px] text-ink-3">Cada partida gasta um pouco de energia e rende XP e carinho.</p>
+            <p className="text-[11px] text-ink-3">
+              Cada partida gasta um pouco de energia e rende XP e carinho.
+            </p>
           </div>
         )}
         {jogo === "petiscos" && <Petiscos onFim={(valor) => onFim({ jogo: "petiscos", valor })} />}
@@ -80,7 +104,13 @@ function Petiscos({ onFim }: { onFim: (pontos: number) => void }) {
       }
       if (agora >= d.proximo) {
         d.proximo = agora + 620 - passou * 14;
-        d.itens.push({ id: d.id++, x: 6 + Math.random() * 88, y: -8, v: 34 + passou * 2.2 + Math.random() * 14, emoji: EMOJIS[d.id % EMOJIS.length] ?? "🦴" });
+        d.itens.push({
+          id: d.id++,
+          x: 6 + Math.random() * 88,
+          y: -8,
+          v: 34 + passou * 2.2 + Math.random() * 14,
+          emoji: EMOJIS[d.id % EMOJIS.length] ?? "🦴",
+        });
       }
       d.itens = d.itens.filter((it) => {
         it.y += it.v * dt;
@@ -111,7 +141,9 @@ function Petiscos({ onFim }: { onFim: (pontos: number) => void }) {
         <span className="flex items-center gap-1.5">
           <Timer className="size-3.5" /> {resta}s
         </span>
-        <span className="font-display text-base font-semibold tabular-nums text-foreground">{d.pontos} petiscos</span>
+        <span className="font-display text-base font-semibold tabular-nums text-foreground">
+          {d.pontos} petiscos
+        </span>
       </div>
       <div
         ref={area}
@@ -120,11 +152,18 @@ function Petiscos({ onFim }: { onFim: (pontos: number) => void }) {
         className="glass-inset relative h-[300px] touch-none select-none overflow-hidden rounded-2xl"
       >
         {d.itens.map((it) => (
-          <span key={it.id} className="absolute -translate-x-1/2 text-2xl" style={{ left: `${it.x}%`, top: `${it.y}%` }}>
+          <span
+            key={it.id}
+            className="absolute -translate-x-1/2 text-2xl"
+            style={{ left: `${it.x}%`, top: `${it.y}%` }}
+          >
             {it.emoji}
           </span>
         ))}
-        <span className="absolute bottom-2 -translate-x-1/2 text-4xl transition-[left] duration-75" style={{ left: `${d.cesto}%` }}>
+        <span
+          className="absolute bottom-2 -translate-x-1/2 text-4xl transition-[left] duration-75"
+          style={{ left: `${d.cesto}%` }}
+        >
           🐶
         </span>
         {fim && (
@@ -132,14 +171,19 @@ function Petiscos({ onFim }: { onFim: (pontos: number) => void }) {
             <div>
               <p className="font-display text-3xl font-semibold tabular-nums">{d.pontos}</p>
               <p className="text-sm text-muted-foreground">petiscos pegos</p>
-              <button onClick={() => onFim(d.pontos)} className="mt-4 h-10 rounded-full bg-primary px-5 text-sm font-semibold text-white">
+              <button
+                onClick={() => onFim(d.pontos)}
+                className="mt-4 h-10 rounded-full bg-primary px-5 text-sm font-semibold text-white"
+              >
                 Pegar recompensa
               </button>
             </div>
           </div>
         )}
       </div>
-      <p className="mt-2 text-[11px] text-ink-3">Passe o mouse ou arraste o dedo para mover o HOSHI.</p>
+      <p className="mt-2 text-[11px] text-ink-3">
+        Passe o mouse ou arraste o dedo para mover o HOKI.
+      </p>
     </div>
   );
 }
@@ -197,23 +241,45 @@ function Reflexo({ onFim }: { onFim: (mediaMs: number) => void }) {
         disabled={acabou}
         className={cn(
           "grid h-[300px] w-full select-none place-items-center rounded-2xl border text-center transition-colors duration-100",
-          fase === "agora" ? "border-primary bg-primary/25" : fase === "cedo" ? "border-amber-400/40 bg-amber-400/10" : "glass-inset border-white/[0.05]",
+          fase === "agora"
+            ? "border-primary bg-primary/25"
+            : fase === "cedo"
+              ? "border-amber-400/40 bg-amber-400/10"
+              : "glass-inset border-white/[0.05]",
         )}
       >
         {acabou ? (
           <span>
-            <span className="block font-display text-3xl font-semibold tabular-nums">{media} ms</span>
+            <span className="block font-display text-3xl font-semibold tabular-nums">
+              {media} ms
+            </span>
             <span className="block text-sm text-muted-foreground">tempo médio</span>
           </span>
         ) : (
           <span>
-            <span className={cn("block text-6xl transition-transform duration-100", fase === "agora" ? "scale-125" : "scale-90 opacity-30 grayscale")}>⭐</span>
-            <span className="mt-3 block text-sm text-muted-foreground">{fase === "agora" ? "Agora!" : fase === "cedo" ? "Cedo demais, espere a estrela." : "Espere a estrela acender…"}</span>
+            <span
+              className={cn(
+                "block text-6xl transition-transform duration-100",
+                fase === "agora" ? "scale-125" : "scale-90 opacity-30 grayscale",
+              )}
+            >
+              ⭐
+            </span>
+            <span className="mt-3 block text-sm text-muted-foreground">
+              {fase === "agora"
+                ? "Agora!"
+                : fase === "cedo"
+                  ? "Cedo demais, espere a estrela."
+                  : "Espere a estrela acender…"}
+            </span>
           </span>
         )}
       </button>
       {acabou && (
-        <button onClick={() => onFim(media)} className="mt-3 h-10 w-full rounded-full bg-primary text-sm font-semibold text-white">
+        <button
+          onClick={() => onFim(media)}
+          className="mt-3 h-10 w-full rounded-full bg-primary text-sm font-semibold text-white"
+        >
           Pegar recompensa
         </button>
       )}

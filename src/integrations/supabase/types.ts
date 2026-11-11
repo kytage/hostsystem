@@ -798,9 +798,13 @@ export type Database = {
           cuidado_em: string
           energia: number
           fome: number
+          colheitas: Json
+          higiene: number
+          inventario: Json
           itens: Json
           nome: string
           recorde_petiscos: number
+          recorde_parkour: number
           recorde_reflexo: number
           sede: number
           updated_at: string
@@ -816,9 +820,13 @@ export type Database = {
           cuidado_em?: string
           energia?: number
           fome?: number
+          colheitas?: Json
+          higiene?: number
+          inventario?: Json
           itens?: Json
           nome?: string
           recorde_petiscos?: number
+          recorde_parkour?: number
           recorde_reflexo?: number
           sede?: number
           updated_at?: string
@@ -834,9 +842,13 @@ export type Database = {
           cuidado_em?: string
           energia?: number
           fome?: number
+          colheitas?: Json
+          higiene?: number
+          inventario?: Json
           itens?: Json
           nome?: string
           recorde_petiscos?: number
+          recorde_parkour?: number
           recorde_reflexo?: number
           sede?: number
           updated_at?: string

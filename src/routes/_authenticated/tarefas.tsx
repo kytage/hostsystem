@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/tarefas")({
 
 function TarefasPage() {
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         title="Tarefas particulares"
         subtitle="Seu quadro pessoal e bloco de anotações — somente você vê."

@@ -1216,7 +1216,7 @@ function IlegalDashboard() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         title="Painel Ilegal"
         subtitle="Sincronizado na nuvem — toda a equipe vê as mesmas informações em tempo real"

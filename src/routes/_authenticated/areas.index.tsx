@@ -113,7 +113,7 @@ function AreasPage() {
     );
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
+    <div className="pagina">
       <PageHeader kicker="GERAL DA CIDADE" title="Áreas" subtitle="Quem cuida de cada área e o que precisa ser feito." />
 
       <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">

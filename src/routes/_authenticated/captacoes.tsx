@@ -92,7 +92,7 @@ function CaptacoesContent() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="flex flex-col gap-6 pagina">
       <PageHeader
         title="Captações"
         subtitle="Encontre organizações para as vagas livres, marque reuniões e gere a proposta."

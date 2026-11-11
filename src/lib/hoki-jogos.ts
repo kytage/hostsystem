@@ -1,5 +1,5 @@
 /**
- * Partidas online da praça do HOSHI: jogo da velha (desafio entre duas pessoas)
+ * Partidas online da praça do HOKI: jogo da velha (desafio entre duas pessoas)
  * e Mau-Mau (jogo de cartas de descarte, em salas abertas para a equipe).
  * O estado de cada partida fica em uma linha de `hoshi_jogos`; toda jogada
  * confere a versão lida, então duas jogadas ao mesmo tempo não se atropelam.
@@ -24,9 +24,14 @@ export interface Velha {
 }
 
 const LINHAS = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6],
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
 ];
 export function linhaVencedora(tab: (Marca | null)[]): number[] | null {
   return LINHAS.find(([a, b, c]) => tab[a!] && tab[a!] === tab[b!] && tab[a!] === tab[c!]) ?? null;
@@ -36,7 +41,12 @@ export function jogarVelha(e: Velha, casa: number, quem: string): Velha | null {
   const tab = e.tab.slice();
   tab[casa] = e.vez;
   const venceu = linhaVencedora(tab);
-  return { ...e, tab, vez: e.vez === "x" ? "o" : "x", vencedor: venceu ? e.vez : tab.every(Boolean) ? "empate" : null };
+  return {
+    ...e,
+    tab,
+    vez: e.vez === "x" ? "o" : "x",
+    vencedor: venceu ? e.vez : tab.every(Boolean) ? "empate" : null,
+  };
 }
 
 /* ---------------- Mau-Mau (cartas) ---------------- */
@@ -69,7 +79,7 @@ export interface Cartas {
 }
 export const MAX_JOGADORES = 8;
 
-const embaralhar = <T,>(l: T[]) => {
+const embaralhar = <T>(l: T[]) => {
   const a = l.slice();
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -88,7 +98,18 @@ function baralho(): Carta[] {
   return embaralhar(cartas).map((c, id) => ({ ...c, id }));
 }
 
-export const salaNova = (dono: Pessoa): Cartas => ({ dono: dono.id, jogadores: [dono], maos: {}, monte: [], mesa: null, naipe: "v", vez: 0, sentido: 1, vencedor: null, aviso: "" });
+export const salaNova = (dono: Pessoa): Cartas => ({
+  dono: dono.id,
+  jogadores: [dono],
+  maos: {},
+  monte: [],
+  mesa: null,
+  naipe: "v",
+  vez: 0,
+  sentido: 1,
+  vencedor: null,
+  aviso: "",
+});
 
 export function comecarCartas(e: Cartas): Cartas {
   const monte = baralho();
@@ -97,10 +118,21 @@ export function comecarCartas(e: Cartas): Cartas {
   // a primeira carta da mesa é sempre um número
   const i = monte.findIndex((c) => c.n !== "x" && /^\d$/.test(c.v));
   const [mesa] = monte.splice(i, 1);
-  return { ...e, maos, monte, mesa: mesa ?? null, naipe: (mesa?.n ?? "v") as Naipe, vez: 0, sentido: 1, vencedor: null, aviso: "Partida começou!" };
+  return {
+    ...e,
+    maos,
+    monte,
+    mesa: mesa ?? null,
+    naipe: (mesa?.n ?? "v") as Naipe,
+    vez: 0,
+    sentido: 1,
+    vencedor: null,
+    aviso: "Partida começou!",
+  };
 }
 
-export const podeJogar = (e: Cartas, c: Carta) => c.n === "x" || c.n === e.naipe || c.v === e.mesa?.v;
+export const podeJogar = (e: Cartas, c: Carta) =>
+  c.n === "x" || c.n === e.naipe || c.v === e.mesa?.v;
 
 const proximo = (e: Pick<Cartas, "jogadores" | "sentido">, de: number, passos = 1) => {
   const n = e.jogadores.length;
@@ -110,11 +142,19 @@ const proximo = (e: Pick<Cartas, "jogadores" | "sentido">, de: number, passos = 
 /** Tira cartas do monte; quando acaba, o monte ganha um baralho novo embaralhado. */
 function comprarDoMonte(monte: Carta[], qtd: number): [Carta[], Carta[]] {
   let m = monte.slice();
-  if (m.length < qtd) m = m.concat(baralho().map((c) => ({ ...c, id: c.id + 1000 + Math.floor(Math.random() * 1e6) })));
+  if (m.length < qtd)
+    m = m.concat(
+      baralho().map((c) => ({ ...c, id: c.id + 1000 + Math.floor(Math.random() * 1e6) })),
+    );
   return [m.slice(0, qtd), m.slice(qtd)];
 }
 
-export function jogarCarta(e: Cartas, quem: string, cartaId: number, naipeEscolhido?: Naipe): Cartas | null {
+export function jogarCarta(
+  e: Cartas,
+  quem: string,
+  cartaId: number,
+  naipeEscolhido?: Naipe,
+): Cartas | null {
   const atual = e.jogadores[e.vez];
   if (e.vencedor || !atual || atual.id !== quem) return null;
   const mao = e.maos[quem] ?? [];
@@ -163,7 +203,13 @@ export function comprarCarta(e: Cartas, quem: string): Cartas | null {
   const atual = e.jogadores[e.vez];
   if (e.vencedor || !atual || atual.id !== quem) return null;
   const [compradas, monte] = comprarDoMonte(e.monte, 1);
-  return { ...e, monte, maos: { ...e.maos, [quem]: [...(e.maos[quem] ?? []), ...compradas] }, vez: proximo(e, e.vez), aviso: `${atual.nome} comprou uma carta.` };
+  return {
+    ...e,
+    monte,
+    maos: { ...e.maos, [quem]: [...(e.maos[quem] ?? []), ...compradas] },
+    vez: proximo(e, e.vez),
+    aviso: `${atual.nome} comprou uma carta.`,
+  };
 }
 
 /** Alguém saiu no meio: tira a pessoa e devolve as cartas dela ao monte. */
@@ -176,14 +222,23 @@ export function sairDasCartas(e: Cartas, quem: string): Cartas {
   if (i < vez) vez--;
   if (vez >= jogadores.length) vez = 0;
   const sobrou = jogadores.length === 1 && e.mesa ? jogadores[0]!.id : null;
-  return { ...e, jogadores, maos, monte: [...e.monte, ...devolvidas], vez, dono: e.dono === quem ? (jogadores[0]?.id ?? e.dono) : e.dono, vencedor: e.vencedor ?? sobrou, aviso: "Um jogador saiu." };
+  return {
+    ...e,
+    jogadores,
+    maos,
+    monte: [...e.monte, ...devolvidas],
+    vez,
+    dono: e.dono === quem ? (jogadores[0]?.id ?? e.dono) : e.dono,
+    vencedor: e.vencedor ?? sobrou,
+    aviso: "Um jogador saiu.",
+  };
 }
 
 /* ---------------- banco ---------------- */
 
 export interface Jogo<T = unknown> {
   id: string;
-  tipo: "velha" | "cartas";
+  tipo: "velha" | "cartas" | "dama" | "ligue4" | "ppt" | "festa";
   status: "aberto" | "jogando" | "fim";
   estado: T;
   versao: number;
@@ -195,28 +250,51 @@ const COLUNAS = "id, tipo, status, estado, versao, criado_por, updated_at";
 /** Partidas em aberto ou em andamento nas últimas 3 horas. */
 export async function jogosAtivos(): Promise<Jogo[]> {
   const desde = new Date(Date.now() - 3 * 3_600_000).toISOString();
-  const { data, error } = await supabase.from("hoshi_jogos").select(COLUNAS).neq("status", "fim").gte("updated_at", desde).order("updated_at", { ascending: false }).limit(40);
+  const { data, error } = await supabase
+    .from("hoshi_jogos")
+    .select(COLUNAS)
+    .neq("status", "fim")
+    .gte("updated_at", desde)
+    .order("updated_at", { ascending: false })
+    .limit(40);
   if (error) throw error;
   return (data ?? []) as Jogo[];
 }
 
 export async function buscarJogo(id: string): Promise<Jogo | null> {
-  const { data, error } = await supabase.from("hoshi_jogos").select(COLUNAS).eq("id", id).maybeSingle();
+  const { data, error } = await supabase
+    .from("hoshi_jogos")
+    .select(COLUNAS)
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw error;
   return data as Jogo | null;
 }
 
-export async function criarJogo(tipo: Jogo["tipo"], estado: Velha | Cartas): Promise<Jogo> {
-  const { data, error } = await supabase.from("hoshi_jogos").insert({ tipo, estado: estado as unknown as Json }).select(COLUNAS).single();
+export async function criarJogo(tipo: Jogo["tipo"], estado: object): Promise<Jogo> {
+  const { data, error } = await supabase
+    .from("hoshi_jogos")
+    .insert({ tipo, estado: estado as unknown as Json })
+    .select(COLUNAS)
+    .single();
   if (error) throw error;
   return data as Jogo;
 }
 
 /** Grava o novo estado só se ninguém jogou antes; devolve false quando perdeu a corrida. */
-export async function gravarJogo(jogo: Pick<Jogo, "id" | "versao">, estado: Velha | Cartas, status: Jogo["status"]): Promise<boolean> {
+export async function gravarJogo(
+  jogo: Pick<Jogo, "id" | "versao">,
+  estado: object,
+  status: Jogo["status"],
+): Promise<boolean> {
   const { data, error } = await supabase
     .from("hoshi_jogos")
-    .update({ estado: estado as unknown as Json, status, versao: jogo.versao + 1, updated_at: new Date().toISOString() })
+    .update({
+      estado: estado as unknown as Json,
+      status,
+      versao: jogo.versao + 1,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", jogo.id)
     .eq("versao", jogo.versao)
     .select("id");
@@ -232,7 +310,10 @@ export async function apagarJogo(id: string): Promise<void> {
  * Lê a partida, aplica a jogada e grava. Se outra pessoa jogou no meio do
  * caminho, lê de novo e tenta outra vez. `fn` devolve null quando a jogada não vale.
  */
-export async function mutarJogo<T extends Velha | Cartas>(id: string, fn: (e: T, j: Jogo<T>) => { estado: T; status: Jogo["status"] } | null): Promise<boolean> {
+export async function mutarJogo<T extends object>(
+  id: string,
+  fn: (e: T, j: Jogo<T>) => { estado: T; status: Jogo["status"] } | null,
+): Promise<boolean> {
   for (let i = 0; i < 4; i++) {
     const j = (await buscarJogo(id)) as Jogo<T> | null;
     if (!j) return false;

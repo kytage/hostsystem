@@ -73,7 +73,7 @@ function AreaPage() {
 
   if (!AREAS_COM_PAGINA.has(area) || (!carregando && !v)) {
     return (
-      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
+      <div className="pagina">
         {voltar}
         <p className="glass-inset mt-6 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
           Esta área não tem uma tela própria.

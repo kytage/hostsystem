@@ -47,7 +47,7 @@ export function PedsContent() {
     { label: "Não setados", value: summary.naoSetados, icon: Clock3, tone: "text-warning" },
     { label: "Removidos", value: summary.removidos, icon: Archive, tone: "text-muted-foreground" },
   ];
-  return <div className="mx-auto w-full min-w-0 max-w-[1600px] space-y-5 p-4 md:p-6">
+  return <div className="pagina min-w-0 space-y-4">
     <PageHeader title="Peds" subtitle="PED / KIDS" actions={<Button onClick={() => setEditing(null)}><Plus className="size-4" /> Novo Ped</Button>} />
     <section aria-label="Resumo de Peds" className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">{metrics.map(({ label, value, icon: Icon, tone }) => <div key={label} className="border-l-2 border-border px-4 first:border-primary"><div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className={cn("size-3.5", tone)} /><p>{label}</p></div><p className={cn("mt-2 text-3xl font-semibold tabular-nums font-display", tone)}>{value}</p></div>)}</section>
     <div className="flex flex-wrap gap-x-6 gap-y-2 border-l-2 border-primary pl-3 text-xs text-muted-foreground"><span>Skin padrão feminino · <code className="text-foreground">mp_f_freemode_01</code></span><span>Skin padrão masculino · <code className="text-foreground">mp_m_freemode_01</code></span></div>

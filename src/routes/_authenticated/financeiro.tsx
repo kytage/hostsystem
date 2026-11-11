@@ -198,7 +198,7 @@ function FinanceiroPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         title="Financeiro"
         subtitle="Saldo, entradas e despesas do servidor — visível apenas para o Founder."

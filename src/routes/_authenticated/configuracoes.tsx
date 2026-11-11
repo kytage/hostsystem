@@ -99,14 +99,15 @@ function ConfiguracoesPage() {
   const avatarUrl = profile?.avatar_url || DEFAULT_AVATAR_URL;
 
   return (
-    <div className="mx-auto max-w-3xl p-6 lg:p-10">
+    <div className="pagina">
       <PageHeader
         title="Configurações"
         subtitle="Gerencie sua conta e preferências"
       />
 
       {/* Foto de perfil */}
-      <section className="mt-8 rounded-2xl glass p-6">
+      <div className="mt-4 gap-3 xl:columns-2 [&>section]:mb-3 [&>section]:break-inside-avoid">
+      <section className="rounded-[24px] glass p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Foto de perfil
         </h2>
@@ -176,7 +177,7 @@ function ConfiguracoesPage() {
       </section>
 
       {/* Perfil estilo Discord: status + bio */}
-      <section className="mt-6 rounded-2xl glass p-6">
+      <section className="rounded-[24px] glass p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Presença e bio
         </h2>
@@ -226,7 +227,7 @@ function ConfiguracoesPage() {
       </section>
 
       {/* Identificação: ID Discord e ID Host */}
-      <section className="mt-6 rounded-2xl glass p-6">
+      <section className="rounded-[24px] glass p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Identificação
         </h2>
@@ -271,6 +272,7 @@ function ConfiguracoesPage() {
           </button>
         </div>
       </section>
+      </div>
     </div>
   );
 }

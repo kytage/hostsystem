@@ -9,7 +9,6 @@ import { getAuthUserData } from "@/lib/auth-cache";
 import { useRealtimeTable } from "@/lib/realtime";
 import { useMyRole, useMyAreas, isCoordinatorPlus } from "@/lib/permissions";
 import { PageHeader } from "@/components/page-header";
-import hostRegistros from "@/assets/host-registros.png.asset.json";
 import { PunicoesGrafico } from "@/components/punicoes-grafico";
 import { PunicoesDistribuicao } from "@/components/punicoes-distribuicao";
 import { PunicoesLista } from "@/components/punicoes-lista";
@@ -244,13 +243,8 @@ function PunicoesPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={
-          <img
-            src={hostRegistros.url}
-            alt="HOST Registros"
-            className="h-16 w-auto select-none object-contain"
-          />
-        }
+        kicker="Registros"
+        title="Punições"
         subtitle="Denúncias normais e punições de hack (VAR) em um só lugar."
         actions={
           <div className="flex flex-wrap items-center gap-3">

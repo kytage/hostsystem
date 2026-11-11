@@ -1,0 +1,1502 @@
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import type * as TH from "three";
+import { cn } from "@/lib/utils";
+import { type Visual } from "@/lib/hoki";
+import { crescimento, type Cultura } from "@/lib/hoki-itens";
+import { criarMosquitos } from "./mosquitos";
+import type { Dupla, Par } from "@/lib/hoki-presenca";
+import { criarMascote, type Reacao } from "./mascote";
+import { modeloLeve, type Modelo } from "./modelo";
+import { ASSENTO, criarMundo } from "./mundo-cena";
+import {
+  ajustar,
+  avancar,
+  BANCOS,
+  CANTEIROS,
+  CHEGADA,
+  CHUVEIRO,
+  CORREIO,
+  ESCORREGADOR,
+  cliqueNaPonteDaFazenda,
+  frenteDoBanco,
+  naPonteDaFazenda,
+  PARKOUR,
+  planejar,
+  TERMOMETRO,
+  VAGAS,
+  type Ponto,
+} from "./mundo-mapa";
+import {
+  anoitecerLuzes,
+  COR_NEVOA,
+  COR_NEVOA_NOITE,
+  montarLuzes,
+  nivelDaNoite,
+  prepararDesenho,
+  SOL,
+  texturaMancha,
+} from "./luz";
+import { ceu } from "./voxel";
+
+/** Uma pessoa na praça. (x, z) é para onde ela está indo; `banco` é o banco onde vai sentar. */
+export interface PessoaMundo {
+  id: string;
+  nome: string;
+  /** Sigla do cargo (ex.: SUP), em vermelho antes do nome. */
+  tag?: string;
+  status: string;
+  visual: Visual;
+  x: number;
+  z: number;
+  banco: number | null;
+  /** Está deitado no berço, dormindo (ainda não acordou). */
+  dorme?: boolean;
+  /** Interação em dupla: esta pessoa acompanha a outra (mãos dadas, cavalinho, corda ou abraço). */
+  par?: Par | null;
+  /** Animação que fica repetindo até a pessoa parar (dança, aceno…). */
+  anim?: Reacao | null;
+  /** Sujo: mosquitos zumbindo em cima da cabeça. */
+  sujo?: boolean;
+  souEu?: boolean;
+}
+export interface Mundo3DRef {
+  /** Faz o HOKI de alguém executar um truque (acenar, dançar…). */
+  truque(id: string, tipo: Reacao): void;
+  /** Aproxima (negativo) ou afasta (positivo) a câmera. */
+  zoom(delta: number): void;
+}
+interface Eventos {
+  onChao(p: Ponto): void;
+  onBanco(i: number): void;
+  onPessoa(id: string): void;
+  /** Clicou no termômetro (o totem ou o símbolo que pisca em cima dele). */
+  onTermometro(): void;
+  /** O meu HOKI terminou de andar e parou neste ponto. */
+  onParou(p: Ponto): void;
+  /** Clicou no portal do parkour (ou no símbolo em cima dele). */
+  onParkour(): void;
+  /** Clicou num lugar da fazenda (canteiro, árvore, bicho ou a mina de água). */
+  onCanteiro(i: number): void;
+  /** Clicou na caixa do correio (ou no envelope em cima dela). */
+  onCorreio(): void;
+}
+
+const ESCALA = 0.62; // tamanho do HOKI no mundo (1 = um bloco do chão)
+/** Quanto dura cada animação, em segundos (para repetir as que ficam rodando). */
+const DURACAO: Partial<Record<Reacao, number>> = {
+  acenar: 2,
+  girar: 1,
+  rolar: 1.2,
+  dancar: 3,
+  dancinha: 4,
+  rebolar: 3.6,
+  robo: 3.6,
+  onda: 3,
+  pulinhos: 2.6,
+  disco: 3.8,
+  correr: 2.6,
+  mortal: 1.1,
+  cumprimentar: 1.7,
+  festa: 1.6,
+};
+const VELOCIDADE = 3.4; // blocos por segundo
+// classes dos rótulos (ficam aqui, por extenso, para o Tailwind gerar o CSS)
+const CL_ROTULO = "absolute left-0 top-0 flex flex-col items-center will-change-transform";
+const CL_FALA =
+  "mb-1 w-max max-w-[180px] break-words rounded-2xl rounded-bl-sm bg-white px-2.5 py-1 text-[11px] font-medium leading-snug text-black shadow-[0_6px_16px_rgba(0,0,0,0.45)]";
+const CL_NOME = "max-w-[150px] truncate rounded-full px-1.5 py-px text-[10px] font-medium";
+const CL_STATUS =
+  "mt-0.5 max-w-[130px] truncate rounded-full bg-black/75 px-1.5 py-px text-[9.5px] font-medium text-red-400";
+
+interface Avatar {
+  id: string;
+  souEu: boolean;
+  grupo: TH.Group;
+  mascote: ReturnType<typeof criarMascote>;
+  sombra: TH.Mesh;
+  chave: string;
+  /** Onde ele está na caminhada. */
+  pos: Ponto;
+  /** Onde aparece na tela (acompanha `pos`, ou o assento quando está sentado). */
+  mostra: { x: number; y: number; z: number };
+  rota: Ponto[];
+  alvo: { x: number; z: number; banco: number | null };
+  sentado: boolean;
+  /** Deitado no berço, e em qual vaga. */
+  dorme: boolean;
+  vaga: number;
+  /** Quando começou a acordar (levanta, pula para o escorregador, desce e pousa). */
+  acorda: number | null;
+  /** Dupla em andamento (esta pessoa é quem acompanha) e se está andando neste quadro. */
+  par: Par | null;
+  andando: boolean;
+  /** Animação em repetição (até parar). */
+  anim: Reacao | null;
+  mosquitos: ReturnType<typeof criarMosquitos> | null;
+  rumo: number;
+  truque: { tipo: Reacao; inicio: number } | null;
+  rotulo: HTMLDivElement;
+  nome: HTMLSpanElement;
+  tag: HTMLSpanElement;
+  texto: HTMLSpanElement;
+  status: HTMLSpanElement;
+  fala: HTMLParagraphElement;
+}
+
+/** Motor do mundo 3D: cena, câmera, HOKIs andando e os rótulos por cima. */
+function criarMotor(
+  THREE: typeof TH,
+  el: HTMLDivElement,
+  camada: HTMLDivElement,
+  modelo: Modelo | undefined,
+  eventos: Eventos,
+) {
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio));
+  prepararDesenho(THREE, renderer);
+  el.appendChild(renderer.domElement);
+  renderer.domElement.style.cssText = "width:100%;height:100%;display:block";
+
+  const cena = new THREE.Scene();
+  const texCeu = ceu(THREE);
+  cena.background = texCeu;
+  cena.fog = new THREE.Fog(COR_NEVOA, 70, 190);
+  const FOV = 40;
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 260);
+
+  const luzes = montarLuzes(THREE, cena, {
+    alvo: { x: 8, y: 1, z: 0 },
+    area: [38, 26],
+    distancia: 60,
+    mapa: 2048,
+    maciez: 2.2,
+  });
+
+  const mundo = criarMundo(THREE);
+  cena.add(mundo.grupo);
+
+  // ---------------- noite: de tempos em tempos escurece, com estrelas e uma lua grande e clara ----------------
+  // (o relógio da noite é o do mundo real e fica em luz.ts, para as duas telas do HOKI andarem juntas)
+  const corDaNevoa = { dia: new THREE.Color(COR_NEVOA), noite: new THREE.Color(COR_NEVOA_NOITE) };
+  // lua: um disco claro com crateras suaves e um halo grande em volta
+  const telaLua = document.createElement("canvas");
+  telaLua.width = telaLua.height = 256;
+  const pl = telaLua.getContext("2d");
+  if (pl) {
+    const g = pl.createRadialGradient(108, 100, 10, 128, 128, 124);
+    g.addColorStop(0, "#fffdf2");
+    g.addColorStop(0.7, "#f3ecd2");
+    g.addColorStop(1, "#d9cfae");
+    pl.fillStyle = g;
+    pl.beginPath();
+    pl.arc(128, 128, 122, 0, Math.PI * 2);
+    pl.fill();
+    pl.fillStyle = "rgba(160,150,120,0.22)";
+    for (const [x, y, r] of [
+      [92, 88, 22],
+      [158, 120, 30],
+      [118, 168, 18],
+      [176, 70, 12],
+      [70, 148, 12],
+      [150, 182, 10],
+    ] as const) {
+      pl.beginPath();
+      pl.arc(x, y, r, 0, Math.PI * 2);
+      pl.fill();
+    }
+  }
+  const tLua = new THREE.CanvasTexture(telaLua);
+  tLua.colorSpace = THREE.SRGBColorSpace;
+  const telaHalo = document.createElement("canvas");
+  telaHalo.width = telaHalo.height = 128;
+  const ph = telaHalo.getContext("2d");
+  if (ph) {
+    const g = ph.createRadialGradient(64, 64, 8, 64, 64, 64);
+    g.addColorStop(0, "rgba(255,250,225,0.9)");
+    g.addColorStop(0.3, "rgba(200,215,255,0.32)");
+    g.addColorStop(1, "rgba(160,190,255,0)");
+    ph.fillStyle = g;
+    ph.fillRect(0, 0, 128, 128);
+  }
+  const tHalo = new THREE.CanvasTexture(telaHalo);
+  const mLua = new THREE.SpriteMaterial({
+    map: tLua,
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    toneMapped: false,
+    depthWrite: false,
+  });
+  const mHalo = new THREE.SpriteMaterial({
+    map: tHalo,
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    toneMapped: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const lua = new THREE.Sprite(mLua);
+  const halo = new THREE.Sprite(mHalo);
+  lua.position.set(-33, 8, -62);
+  halo.position.set(-33, 8, -62.5);
+  lua.scale.setScalar(11);
+  halo.scale.setScalar(46);
+  // estrelas: pontinhos espalhados no fundo do céu
+  const gEstrelas = new THREE.BufferGeometry();
+  const pontosDoCeu = new Float32Array(320 * 3);
+  for (let i = 0; i < 320; i++) {
+    const s1 = Math.sin(i * 127.1) * 43758.5453;
+    const s2 = Math.sin(i * 311.7) * 43758.5453;
+    const s3 = Math.sin(i * 74.7) * 43758.5453;
+    pontosDoCeu[i * 3] = (s1 - Math.floor(s1) - 0.5) * 260;
+    pontosDoCeu[i * 3 + 1] = -14 + (s2 - Math.floor(s2)) * 62;
+    pontosDoCeu[i * 3 + 2] = -70 - (s3 - Math.floor(s3)) * 60;
+  }
+  gEstrelas.setAttribute("position", new THREE.BufferAttribute(pontosDoCeu, 3));
+  const mEstrelas = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 1.7,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const estrelas = new THREE.Points(gEstrelas, mEstrelas);
+  estrelas.frustumCulled = false;
+  estrelas.renderOrder = -2;
+  halo.renderOrder = -1;
+  cena.add(estrelas, halo, lua);
+  let noiteAtual = -1;
+  // holofote da noite (fica na cena o tempo todo, apagado de dia, para não recompilar os materiais)
+  const holofote = new THREE.SpotLight(0xfff0d2, 0, 0, 0.36, 0.7, 0);
+  cena.add(holofote, holofote.target);
+  const tPoca = texturaMancha(THREE);
+  const mPoca = new THREE.MeshBasicMaterial({
+    map: tPoca,
+    color: 0xffd9a0,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false,
+  });
+  const poca = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.8), mPoca);
+  poca.rotation.x = -Math.PI / 2;
+  poca.renderOrder = 3;
+  poca.visible = false;
+  cena.add(poca);
+  const anoitecer = (v: number) => {
+    if (Math.abs(v - noiteAtual) < 0.003) return;
+    noiteAtual = v;
+    cena.backgroundIntensity = 1 - 0.9 * v;
+    if (cena.fog) cena.fog.color.copy(corDaNevoa.dia).lerp(corDaNevoa.noite, v);
+    anoitecerLuzes(luzes, v);
+    mLua.opacity = v;
+    mHalo.opacity = v * 0.95;
+    mEstrelas.opacity = v * 0.9;
+    lua.visible = halo.visible = estrelas.visible = v > 0.01;
+    mundo.noite(v);
+  };
+
+  // marca no chão para onde você mandou o seu HOKI ir
+  const gMarca = new THREE.RingGeometry(0.28, 0.42, 28);
+  const mMarca = new THREE.MeshBasicMaterial({
+    color: 0xce0e0e,
+    transparent: true,
+    opacity: 0.9,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const marca = new THREE.Mesh(gMarca, mMarca);
+  marca.rotation.x = -Math.PI / 2;
+  marca.visible = false;
+  cena.add(marca);
+
+  // sombra de contato embaixo de cada HOKI (uma mancha macia no chão)
+  const tSombra = texturaMancha(THREE);
+  const gSombra = new THREE.PlaneGeometry(2, 2);
+  gSombra.rotateX(-Math.PI / 2);
+  const mSombra = new THREE.MeshBasicMaterial({
+    map: tSombra,
+    color: 0x1d150c,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+    fog: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+
+  // símbolo do termômetro: pisca em cima do totem e mostra para quantas pessoas ainda dá para entregar emoji hoje
+  const blip = document.createElement("div");
+  blip.className = CL_ROTULO;
+  blip.innerHTML =
+    '<span class="relative grid size-6 place-items-center">' +
+    '<span class="absolute inset-0 animate-ping rounded-full bg-[#e5231b] opacity-60"></span>' +
+    '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-white bg-[#e5231b] text-white shadow-[0_4px_12px_rgba(229,35,27,0.75)]">' +
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>' +
+    "</span>" +
+    '<span data-n hidden class="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-white px-[3px] text-[8px] font-bold leading-none text-black"></span>' +
+    "</span>";
+  camada.appendChild(blip);
+  const blipN = blip.querySelector<HTMLSpanElement>("[data-n]");
+  /** Onde o símbolo está na tela (para o clique). */
+  const blipTela = { x: 0, y: 0, visivel: false };
+  const noTermometro = (px: number, py: number) =>
+    blipTela.visivel && Math.hypot(blipTela.x - px, blipTela.y - 12 - py) < 22;
+
+  // ---------------- fazenda: o que cresce em cada lugar (blocos que brotam, crescem e somem na colheita) ----------------
+  // cada cultura são uns poucos blocos: [dx, y, dz, largura, altura, fundura, cor]
+  type BlocoDePlanta = [number, number, number, number, number, number, number];
+  const VERDE = 0x4f9c35;
+  const FRUTA = (cor: number): BlocoDePlanta[] => [
+    [0.45, 1.7, 0.4, 0.2, 0.2, 0.2, cor],
+    [-0.4, 2.0, 0.45, 0.2, 0.2, 0.2, cor],
+    [0.1, 2.3, 0.6, 0.2, 0.2, 0.2, cor],
+  ];
+  const PLANTAS: Record<Cultura, BlocoDePlanta[]> = {
+    milho: [
+      [0, 0, 0, 0.14, 1.0, 0.14, VERDE],
+      [0.13, 0.5, 0, 0.14, 0.32, 0.14, 0xf4d03f],
+    ],
+    cenoura: [
+      [0, 0, 0, 0.18, 0.16, 0.18, 0xf08a24],
+      [0, 0.16, 0, 0.3, 0.26, 0.3, 0x58a83b],
+    ],
+    tomate: [
+      [0, 0, 0, 0.42, 0.5, 0.42, VERDE],
+      [0.17, 0.3, 0.15, 0.15, 0.15, 0.15, 0xe5231b],
+      [-0.15, 0.16, -0.1, 0.15, 0.15, 0.15, 0xe5231b],
+    ],
+    batata: [
+      [0, 0, 0, 0.44, 0.26, 0.44, 0x58a83b],
+      [0.22, 0, 0.2, 0.2, 0.13, 0.16, 0xb98b5a],
+    ],
+    morango: [
+      [0, 0, 0, 0.38, 0.2, 0.38, 0x58a83b],
+      [0.15, 0.12, 0.13, 0.11, 0.11, 0.11, 0xe5231b],
+      [-0.13, 0.1, -0.1, 0.11, 0.11, 0.11, 0xe5231b],
+    ],
+    abobora: [
+      [0, 0, 0, 0.62, 0.44, 0.62, 0xf08a24],
+      [0, 0.44, 0, 0.1, 0.12, 0.1, VERDE],
+    ],
+    melancia: [
+      [0, 0, 0, 0.72, 0.42, 0.52, 0x2f8f3a],
+      [0, 0.14, 0, 0.74, 0.1, 0.54, 0x1f6a2a],
+    ],
+    uva: [
+      [0, 0.6, 0, 0.52, 0.3, 0.32, VERDE],
+      [0, 0.34, 0.12, 0.22, 0.28, 0.16, 0x7b3fa0],
+    ],
+    maca: FRUTA(0xe5231b),
+    laranja: FRUTA(0xf08a24),
+    banana: [
+      [0.2, 1.9, 0.2, 0.16, 0.4, 0.16, 0xf4d03f],
+      [0.36, 1.85, 0.12, 0.16, 0.4, 0.16, 0xf4d03f],
+      [0.28, 1.8, 0.34, 0.16, 0.4, 0.16, 0xf4d03f],
+    ],
+    coco: [
+      [0.22, 2.0, 0.2, 0.26, 0.26, 0.26, 0x7a5230],
+      [-0.2, 2.0, 0.22, 0.26, 0.26, 0.26, 0x7a5230],
+    ],
+    cafe: [
+      [0.3, 0.3, 0.3, 0.12, 0.12, 0.12, 0xe5231b],
+      [-0.28, 0.45, 0.32, 0.12, 0.12, 0.12, 0xe5231b],
+      [0.05, 0.6, 0.38, 0.12, 0.12, 0.12, 0xe5231b],
+    ],
+    ovo: [
+      [0.85, 0, -0.3, 0.16, 0.2, 0.16, 0xfff6e0],
+      [1.05, 0, -0.1, 0.16, 0.2, 0.16, 0xfff6e0],
+    ],
+    leite: [
+      [0.2, 0, 0.7, 0.2, 0.36, 0.2, 0xffffff],
+      [0.2, 0.36, 0.7, 0.12, 0.07, 0.12, 0xe5231b],
+    ],
+    agua: [[0, 0.75, 0, 0.26, 0.34, 0.26, 0x7fd0ff]],
+    // flores em cima do vaso (o vaso tem 0,44 de altura)
+    rosa: [
+      [0, 0.44, 0, 0.06, 0.42, 0.06, VERDE],
+      [0, 0.82, 0, 0.2, 0.18, 0.2, 0xd8281f],
+      [0.12, 0.6, 0, 0.14, 0.06, 0.08, VERDE],
+    ],
+    girassol: [
+      [0, 0.44, 0, 0.07, 0.62, 0.07, VERDE],
+      [0, 1.0, 0.02, 0.36, 0.36, 0.08, 0xf4c430],
+      [0, 1.08, 0.06, 0.14, 0.14, 0.06, 0x6b4526],
+    ],
+    tulipa: [
+      [0, 0.44, 0, 0.06, 0.38, 0.06, VERDE],
+      [0, 0.78, 0, 0.18, 0.22, 0.18, 0xff8fc8],
+      [-0.11, 0.56, 0, 0.12, 0.06, 0.08, VERDE],
+    ],
+    // doces em cima do carrinho (o tampo fica a 0,8)
+    chocolate: [
+      [-0.15, 0.8, 0, 0.3, 0.08, 0.2, 0x5a3220],
+      [0.18, 0.8, 0.05, 0.22, 0.08, 0.16, 0x7a4a2c],
+    ],
+    bala: [
+      [-0.2, 0.8, 0, 0.12, 0.12, 0.12, 0xff5a8a],
+      [0, 0.8, 0.08, 0.12, 0.12, 0.12, 0x5ad8ff],
+      [0.2, 0.8, -0.04, 0.12, 0.12, 0.12, 0xffd84a],
+    ],
+    // ursinho sentado na prateleira (o tampo fica a 0,96)
+    ursinho: [
+      [0, 0.96, 0, 0.3, 0.28, 0.22, 0xb07a4a],
+      [0, 1.24, 0, 0.24, 0.22, 0.2, 0xb07a4a],
+      [-0.1, 1.44, 0, 0.08, 0.08, 0.06, 0x8a5a34],
+      [0.1, 1.44, 0, 0.08, 0.08, 0.06, 0x8a5a34],
+    ],
+  };
+  /** Na horta a planta vai crescendo aos poucos; nas árvores, nos bichos e na mina o fruto só aparece quando está pronto. */
+  const DA_HORTA = new Set<Cultura>([
+    "milho",
+    "cenoura",
+    "tomate",
+    "batata",
+    "morango",
+    "abobora",
+    "melancia",
+    "uva",
+    "rosa",
+    "girassol",
+    "tulipa",
+  ]);
+  const gPlanta = new THREE.BoxGeometry(1, 1, 1);
+  gPlanta.translate(0, 0.5, 0);
+  const mPlanta = new THREE.MeshLambertMaterial();
+  const totalDeBlocos = CANTEIROS.reduce((n, c) => n + PLANTAS[c.cultura].length, 0);
+  const plantas = new THREE.InstancedMesh(gPlanta, mPlanta, totalDeBlocos);
+  plantas.frustumCulled = false;
+  {
+    const tinta = new THREE.Color();
+    let k = 0;
+    for (const c of CANTEIROS)
+      for (const b of PLANTAS[c.cultura]) plantas.setColorAt(k++, tinta.setHex(b[6]));
+  }
+  cena.add(plantas);
+  let colheitas: Record<string, number> = {};
+  const tamanhos = new Float32Array(CANTEIROS.length).fill(-1);
+  const auxPlanta = new THREE.Object3D();
+  let proximaRega = 0;
+  /** Recalcula o tamanho de cada planta pelo tempo desde a última colheita (só mexe nas que mudaram). */
+  const regar = (agora: number) => {
+    if (agora < proximaRega) return;
+    proximaRega = agora + 400;
+    const relogio = Date.now();
+    let mudou = false;
+    let k = 0;
+    CANTEIROS.forEach((c, i) => {
+      const p = crescimento(c.cultura, colheitas[String(i)], relogio);
+      const g = DA_HORTA.has(c.cultura)
+        ? Math.pow(Math.max(0, (p - 0.1) / 0.9), 0.7)
+        : p >= 1
+          ? 1
+          : 0;
+      const blocos = PLANTAS[c.cultura];
+      if (Math.abs(g - tamanhos[i]!) > 0.01) {
+        tamanhos[i] = g;
+        mudou = true;
+        blocos.forEach((b, n) => {
+          auxPlanta.position.set(c.x + b[0] * g, b[1] * g, c.z + b[2] * g);
+          auxPlanta.scale.set(b[3] * g, b[4] * g, b[5] * g);
+          auxPlanta.updateMatrix();
+          plantas.setMatrixAt(k + n, auxPlanta.matrix);
+        });
+      }
+      k += blocos.length;
+    });
+    if (mudou) plantas.instanceMatrix.needsUpdate = true;
+  };
+
+  // envelope em cima da caixa do correio, com quantas cartas não lidas
+  const blipCarta = document.createElement("div");
+  blipCarta.className = CL_ROTULO;
+  blipCarta.innerHTML =
+    '<span class="relative grid size-6 place-items-center">' +
+    '<span data-pisca class="absolute inset-0 hidden animate-ping rounded-full bg-[#e5231b] opacity-60"></span>' +
+    '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-white bg-[#e5231b] text-white shadow-[0_4px_12px_rgba(229,35,27,0.6)]">' +
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>' +
+    "</span>" +
+    '<span data-n hidden class="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-white px-[3px] text-[8px] font-bold leading-none text-black"></span>' +
+    "</span>";
+  camada.appendChild(blipCarta);
+  const cartaN = blipCarta.querySelector<HTMLSpanElement>("[data-n]");
+  const cartaPisca = blipCarta.querySelector<HTMLSpanElement>("[data-pisca]");
+  const cartaTela = { x: 0, y: 0, visivel: false };
+  const noCorreio = (px: number, py: number) =>
+    cartaTela.visivel && Math.hypot(cartaTela.x - px, cartaTela.y - 12 - py) < 22;
+
+  // símbolo do parkour: uma bandeirinha em cima do portal
+  const blipPk = document.createElement("div");
+  blipPk.className = CL_ROTULO;
+  blipPk.innerHTML =
+    '<span class="relative grid size-6 place-items-center">' +
+    '<span class="absolute inset-0 animate-ping rounded-full bg-white opacity-40"></span>' +
+    '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-[#e5231b] bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.5)]">' +
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.3 2A6.5 6.5 0 0 0 19 3a1 1 0 0 1 1 1v9a1 1 0 0 1-.4.8A6 6 0 0 1 16 15c-3 0-5-2-8-2a6 6 0 0 0-4 1.5"/></svg>' +
+    "</span></span>";
+  camada.appendChild(blipPk);
+  const pkTela = { x: 0, y: 0, visivel: false };
+  const noParkour = (px: number, py: number) =>
+    pkTela.visivel && Math.hypot(pkTela.x - px, pkTela.y - 12 - py) < 22;
+
+  const avatares = new Map<string, Avatar>();
+  let dentro = false;
+  let zoomUsuario = 0.52;
+  let zoom = 1;
+  let distMax = 40;
+  // câmera: ângulo em volta do HOKI (arrastando o mouse) e altura do olhar
+  const ALTURA_PADRAO = 0.512;
+  let giroCam = 0;
+  let alturaCam = ALTURA_PADRAO;
+  // o centro da vista fica um pouco a leste, para a ilha e o escritório caberem juntos
+  const CENTRO = new THREE.Vector3(9, 2.2, -3);
+  const olhar = CENTRO.clone();
+  const vetor = new THREE.Vector3();
+
+  const medir = () => {
+    const w = el.clientWidth || 1;
+    const h = el.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    // de longe, a ilha inteira precisa caber na largura
+    distMax = Math.max(56, 36 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect));
+  };
+  const observador = new ResizeObserver(medir);
+  observador.observe(el);
+  medir();
+
+  const montar = (visual: Visual) => {
+    const m = criarMascote(THREE, visual, {
+      modelo,
+      mundo: true,
+    });
+    m.raiz.traverse((o) => {
+      if (o instanceof THREE.Mesh && !(o.material as TH.Material).transparent) o.castShadow = true;
+    });
+    return m;
+  };
+  const assento = (i: number) => {
+    const b = BANCOS[i];
+    return b ? { x: b.x, y: ASSENTO, z: b.z, ang: b.ang } : null;
+  };
+
+  function criarAvatar(p: PessoaMundo): Avatar {
+    const grupo = new THREE.Group();
+    grupo.scale.setScalar(ESCALA);
+    const mascote = montar(p.visual);
+    grupo.add(mascote.raiz);
+    cena.add(grupo);
+    const sombra = new THREE.Mesh(gSombra, mSombra);
+    sombra.renderOrder = 2;
+    cena.add(sombra);
+    const rotulo = document.createElement("div");
+    rotulo.className = CL_ROTULO;
+    const fala = document.createElement("p");
+    fala.className = CL_FALA;
+    fala.hidden = true;
+    const nome = document.createElement("span");
+    nome.className = cn(CL_NOME, p.souEu ? "bg-white text-black" : "bg-black/70 text-white");
+    const status = document.createElement("span");
+    status.className = CL_STATUS;
+    const tag = document.createElement("span");
+    tag.className =
+      "mr-1 rounded-full bg-[#ce0e0e] px-1 text-[8.5px] font-bold tracking-wide text-white";
+    const texto = document.createElement("span");
+    nome.append(tag, texto);
+    rotulo.append(fala, nome, status);
+    camada.appendChild(rotulo);
+    const s = !p.dorme && p.banco !== null ? assento(p.banco) : null;
+    const v = p.dorme ? VAGAS[0] : undefined;
+    return {
+      id: p.id,
+      souEu: !!p.souEu,
+      grupo,
+      mascote,
+      sombra,
+      chave: JSON.stringify(p.visual),
+      pos: s ? { x: s.x, z: s.z } : { x: p.x, z: p.z },
+      mostra: v ? { ...v } : s ? { x: s.x, y: s.y, z: s.z } : { x: p.x, y: 0, z: p.z },
+      rota: [],
+      alvo: { x: p.x, z: p.z, banco: p.banco },
+      sentado: !!s,
+      dorme: !!p.dorme,
+      vaga: 0,
+      acorda: null,
+      par: null,
+      andando: false,
+      anim: null,
+      mosquitos: null,
+      rumo: s ? s.ang : 0,
+      truque: null,
+      rotulo,
+      nome,
+      tag,
+      texto,
+      status,
+      fala,
+    };
+  }
+  function removerAvatar(a: Avatar) {
+    if (a.mosquitos) {
+      cena.remove(a.mosquitos.pontos);
+      a.mosquitos.descartar();
+    }
+    cena.remove(a.grupo, a.sombra);
+    a.mascote.descartar();
+    a.rotulo.remove();
+    avatares.delete(a.id);
+  }
+
+  /** Recebe quem está na praça. Quem é novo aparece; quem mudou de destino começa a andar. */
+  function setPessoas(lista: PessoaMundo[]) {
+    const vivos = new Set<string>();
+    // cada um que dorme ganha uma vaga do berço, sempre na mesma ordem para todo mundo
+    const noBerco = lista
+      .filter((p) => p.dorme)
+      .map((p) => p.id)
+      .sort();
+    for (const p of lista) {
+      vivos.add(p.id);
+      let a = avatares.get(p.id);
+      const vaga = Math.max(0, noBerco.indexOf(p.id));
+      if (!a) {
+        a = criarAvatar(p);
+        avatares.set(p.id, a);
+        if (a.dorme) {
+          const v = VAGAS[vaga % VAGAS.length];
+          if (v) a.mostra = { ...v };
+        }
+      } else {
+        const chave = JSON.stringify(p.visual);
+        if (chave !== a.chave) {
+          a.grupo.remove(a.mascote.raiz);
+          a.mascote.descartar();
+          a.mascote = montar(p.visual);
+          a.grupo.add(a.mascote.raiz);
+          a.chave = chave;
+        }
+        if (p.dorme && !a.dorme) {
+          // voltou a dormir: deita de novo no berço
+          a.dorme = true;
+          a.acorda = null;
+          a.rota = [];
+          a.sentado = false;
+          a.truque = null;
+        } else if (!p.dorme && a.dorme) {
+          // acordou: levanta, desce o escorregador e só então anda até onde quer ir
+          a.dorme = false;
+          a.acorda = performance.now();
+          a.rota = [];
+          a.sentado = false;
+          a.alvo = { x: p.x, z: p.z, banco: p.banco };
+        } else if (a.dorme || a.acorda !== null) {
+          // dormindo ou descendo: só guarda para onde ir depois
+          a.alvo = { x: p.x, z: p.z, banco: p.banco };
+        } else if (a.alvo.x !== p.x || a.alvo.z !== p.z || a.alvo.banco !== p.banco) {
+          const banco = p.banco !== null ? BANCOS[p.banco] : undefined;
+          const destino = banco ? frenteDoBanco(banco) : { x: p.x, z: p.z };
+          a.pos = { x: a.mostra.x, z: a.mostra.z };
+          a.rota = planejar(a.pos, destino);
+          if (!a.rota.length) a.pos = destino; // sem caminho possível: aparece direto lá
+          a.sentado = false;
+          a.alvo = { x: p.x, z: p.z, banco: p.banco };
+        }
+      }
+      a.vaga = vaga;
+      a.par = p.dorme ? null : (p.par ?? null);
+      // sujo: aparece (ou some) a nuvem de mosquitos
+      if (p.sujo && !a.mosquitos) {
+        a.mosquitos = criarMosquitos(THREE, 7, 0.36, 0.05);
+        cena.add(a.mosquitos.pontos);
+      } else if (!p.sujo && a.mosquitos) {
+        cena.remove(a.mosquitos.pontos);
+        a.mosquitos.descartar();
+        a.mosquitos = null;
+      }
+      // animação em repetição: começa quando chega e para quando some
+      const anim = p.dorme ? null : (p.anim ?? null);
+      if (anim !== a.anim) {
+        a.anim = anim;
+        a.truque = anim ? { tipo: anim, inicio: performance.now() } : null;
+      }
+      a.texto.textContent = p.nome;
+      a.tag.textContent = p.tag ?? "";
+      a.tag.hidden = !p.tag;
+      a.status.textContent = p.dorme ? "💤 dormindo" : p.status;
+      a.status.hidden = !p.dorme && !p.status;
+      a.rotulo.style.opacity = p.dorme ? "0.82" : "";
+    }
+    for (const a of [...avatares.values()]) if (!vivos.has(a.id)) removerAvatar(a);
+  }
+
+  // ---------------- clique: escolher alguém, sentar num banco ou andar ----------------
+  const raio = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  /** Onde o raio do clique cruza um plano horizontal na altura `y`. */
+  const noPlano = (y: number): Ponto | null => {
+    const d = raio.ray.direction;
+    if (Math.abs(d.y) < 0.0001) return null;
+    const t = (y - raio.ray.origin.y) / d.y;
+    return t > 0 ? { x: raio.ray.origin.x + d.x * t, z: raio.ray.origin.z + d.z * t } : null;
+  };
+  let baixou: { x: number; y: number } | null = null;
+  let ultimo: { x: number; y: number } | null = null;
+  const aoBaixar = (e: PointerEvent) => {
+    baixou = { x: e.clientX, y: e.clientY };
+    ultimo = { x: e.clientX, y: e.clientY };
+    el.setPointerCapture(e.pointerId);
+  };
+  // arrastar gira a câmera em volta do seu HOKI (e sobe/desce o olhar)
+  const aoArrastar = (e: PointerEvent) => {
+    if (!ultimo) {
+      // sem arrastar: a mãozinha aparece em cima do termômetro
+      const r = el.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      el.style.cursor =
+        noTermometro(mx, my) || noParkour(mx, my) || noCorreio(mx, my) ? "pointer" : "";
+      return;
+    }
+    if (!dentro) return;
+    giroCam -= (e.clientX - ultimo.x) * 0.007;
+    alturaCam = Math.max(0.04, Math.min(1.25, alturaCam + (e.clientY - ultimo.y) * 0.005));
+    ultimo = { x: e.clientX, y: e.clientY };
+  };
+  const aoRolar = (e: WheelEvent) => {
+    if (!dentro) return;
+    e.preventDefault();
+    zoomUsuario = Math.max(0, Math.min(1, zoomUsuario + e.deltaY * 0.001));
+  };
+  const aoSoltar = (e: PointerEvent) => {
+    const inicio = baixou;
+    baixou = null;
+    ultimo = null;
+    if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8) return;
+    const r = el.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    // o termômetro (o símbolo que pisca ou o próprio totem)?
+    vetor.set(TERMOMETRO.x, 1.7, TERMOMETRO.z).project(camera);
+    if (
+      noTermometro(px, py) ||
+      (vetor.z < 1 &&
+        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
+          24)
+    ) {
+      eventos.onTermometro();
+      return;
+    }
+    // a caixa do correio?
+    vetor.set(CORREIO.x, 1.1, CORREIO.z).project(camera);
+    if (
+      noCorreio(px, py) ||
+      (vetor.z < 1 &&
+        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
+          22)
+    ) {
+      eventos.onCorreio();
+      return;
+    }
+    // o portal do parkour?
+    vetor.set(PARKOUR.x, 1.3, PARKOUR.z).project(camera);
+    if (
+      noParkour(px, py) ||
+      (vetor.z < 1 &&
+        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
+          26)
+    ) {
+      eventos.onParkour();
+      return;
+    }
+    // alguém embaixo do clique?
+    for (const a of avatares.values()) {
+      if (a.souEu) continue;
+      vetor.set(a.mostra.x, a.mostra.y + 0.6, a.mostra.z).project(camera);
+      if (
+        vetor.z < 1 &&
+        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
+          34
+      ) {
+        eventos.onPessoa(a.id);
+        return;
+      }
+    }
+    if (!dentro) return;
+    ndc.set((px / r.width) * 2 - 1, -(py / r.height) * 2 + 1);
+    raio.setFromCamera(ndc, camera);
+    const naAltura = noPlano(ASSENTO);
+    if (naAltura) {
+      const i = BANCOS.findIndex((b) => Math.hypot(b.x - naAltura.x, b.z - naAltura.z) < 0.85);
+      if (i >= 0) {
+        eventos.onBanco(i);
+        return;
+      }
+    }
+    // um lugar da fazenda (canteiro, árvore, bicho ou a mina)?
+    for (let i = 0; i < CANTEIROS.length; i++) {
+      const c = CANTEIROS[i]!;
+      vetor.set(c.x, 0.5, c.z).project(camera);
+      if (
+        vetor.z < 1 &&
+        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
+          20
+      ) {
+        eventos.onCanteiro(i);
+        return;
+      }
+    }
+    const chao = noPlano(0);
+    // perto da ponte da fazenda (até no vazio ao lado dela) conta como clique na ponte
+    if (chao && cliqueNaPonteDaFazenda(chao.x, chao.z)) {
+      eventos.onChao(chao);
+      return;
+    }
+    const destino = chao && ajustar(chao);
+    if (!destino) return;
+    marca.position.set(destino.x, 0.03, destino.z);
+    marca.visible = true;
+    eventos.onChao(destino);
+  };
+  el.addEventListener("pointerdown", aoBaixar);
+  el.addEventListener("pointermove", aoArrastar);
+  el.addEventListener("pointerup", aoSoltar);
+  el.addEventListener("wheel", aoRolar, { passive: false });
+
+  let visivel = true;
+  const olheiro = new IntersectionObserver((e) => (visivel = e[0]?.isIntersecting ?? true));
+  olheiro.observe(el);
+  const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const parado = { x: 0, y: 0 };
+  let antes = performance.now();
+  let raf = 0;
+
+  /** O outro da dupla, se der para fazer a interação agora (acordado, na praça e sem acompanhar ninguém). */
+  const parceiro = (a: Avatar) => {
+    const b = a.par ? avatares.get(a.par.com) : undefined;
+    return b && b !== a && !b.dorme && b.acorda === null && !b.par ? b : null;
+  };
+  /** Quem está sendo acompanhado neste quadro, e em qual interação. */
+  const acompanhados = new Map<string, Dupla>();
+  const POSE_DO_ACOMPANHADO = {
+    maos: "maoD",
+    corda: "corda",
+    abraco: "abraco",
+    cavalinho: "carrega",
+  } as const;
+  // cordas de pular: uma linha por dupla, refeita a cada quadro
+  const PONTOS_DA_CORDA = 18;
+  const mCorda = new THREE.LineBasicMaterial({ color: 0xf4f1ea });
+  const cordas = new Map<string, TH.Line>();
+  const girarCorda = (a: Avatar, b: Avatar, t: number) => {
+    let linha = cordas.get(a.id);
+    if (!linha) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array(PONTOS_DA_CORDA * 3), 3),
+      );
+      linha = new THREE.Line(g, mCorda);
+      linha.frustumCulled = false;
+      cena.add(linha);
+      cordas.set(a.id, linha);
+    }
+    const r = b.grupo.rotation.y;
+    const dx = Math.cos(r);
+    const dz = -Math.sin(r);
+    // as pontas ficam nas mãos de fora de cada um; a corda gira em volta dos dois
+    const x0 = b.mostra.x - dx * 0.28;
+    const z0 = b.mostra.z - dz * 0.28;
+    const x1 = a.mostra.x + dx * 0.28;
+    const z1 = a.mostra.z + dz * 0.28;
+    const giro = t * 9.4;
+    const pos = linha.geometry.getAttribute("position") as TH.BufferAttribute;
+    for (let i = 0; i < PONTOS_DA_CORDA; i++) {
+      const f = i / (PONTOS_DA_CORDA - 1);
+      const barriga = Math.sin(f * Math.PI) * 0.95;
+      pos.setXYZ(
+        i,
+        x0 + (x1 - x0) * f + Math.sin(r) * Math.cos(giro) * barriga,
+        Math.max(0.04, 0.44 + Math.sin(giro) * barriga),
+        z0 + (z1 - z0) * f + Math.cos(r) * Math.cos(giro) * barriga,
+      );
+    }
+    pos.needsUpdate = true;
+  };
+
+  // chuveirão: quando alguém para embaixo da ducha, a água cai e sobem bolhas em volta
+  const GOTAS_DA_DUCHA = 46;
+  const gDucha = new THREE.BufferGeometry();
+  const pDucha = new Float32Array(GOTAS_DA_DUCHA * 3);
+  gDucha.setAttribute("position", new THREE.BufferAttribute(pDucha, 3));
+  const mDucha = new THREE.PointsMaterial({
+    color: 0xcfeaff,
+    size: 0.07,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+  });
+  const ducha = new THREE.Points(gDucha, mDucha);
+  ducha.frustumCulled = false;
+  ducha.visible = false;
+  cena.add(ducha);
+  const regarDucha = (t: number, ligada: boolean) => {
+    ducha.visible = ligada;
+    if (!ligada) return;
+    for (let i = 0; i < GOTAS_DA_DUCHA; i++) {
+      const bolha = i >= 34;
+      const f = (t * (bolha ? 0.45 : 1.6) + i * 0.137) % 1;
+      const ang = i * 2.399;
+      const r = bolha ? 0.25 + (i % 4) * 0.06 : (i % 5) * 0.035;
+      pDucha[i * 3] = CHUVEIRO.x + Math.cos(ang + (bolha ? t : 0)) * r;
+      pDucha[i * 3 + 1] = bolha ? 0.25 + f * 0.9 : 2.2 - f * 2.2;
+      pDucha[i * 3 + 2] = CHUVEIRO.z + Math.sin(ang + (bolha ? t : 0)) * r;
+    }
+    (gDucha.getAttribute("position") as TH.BufferAttribute).needsUpdate = true;
+  };
+
+  // tempos do despertar, em segundos: levantar, pular até o escorregador, descer e pousar
+  const T_LEVANTA = 0.6;
+  const T_PULO = 0.65;
+  const T_DESCE = 1.35;
+  const T_POUSA = 0.4;
+  const suave = (x: number) => x * x * (3 - 2 * x);
+
+  /** HOKI no berço: deitado dormindo, ou acordando (levanta, pula para o escorregador, desce e pousa no gramado). */
+  function animarBerco(a: Avatar, agora: number, t: number, dt: number) {
+    const v = VAGAS[a.vaga % VAGAS.length] ?? VAGAS[0]!;
+    a.sombra.visible = false;
+    if (a.dorme) {
+      const k = 1 - Math.exp(-dt * 6);
+      a.mostra.x += (v.x - a.mostra.x) * k;
+      a.mostra.y += (v.y - a.mostra.y) * k;
+      a.mostra.z += (v.z - a.mostra.z) * k;
+      // deitado de costas, com a cabeça para o fundo (no travesseiro)
+      a.grupo.position.set(a.mostra.x, a.mostra.y + 0.17, a.mostra.z + 0.3);
+      a.grupo.rotation.set(-Math.PI / 2, 0, 0);
+      a.mascote.atualizar({
+        t: t + a.vaga * 0.7,
+        humor: "dormindo",
+        reacao: null,
+        p: 0,
+        mouse: parado,
+        calmo,
+        deitado: true,
+      });
+      return;
+    }
+    const s = (agora - (a.acorda ?? agora)) / 1000;
+    const { topo, pe } = ESCORREGADOR;
+    let x = v.x;
+    let y = v.y;
+    let z = v.z;
+    let deita = 0;
+    let giro = Math.PI;
+    let sentado = false;
+    if (s < T_LEVANTA) {
+      // levanta do colchão com um pulinho
+      const f = suave(s / T_LEVANTA);
+      deita = 1 - f;
+      giro = 0;
+      y = v.y + Math.sin(f * Math.PI) * 0.45;
+    } else if (s < T_LEVANTA + T_PULO) {
+      // pula em arco até o topo do escorregador, virando para a praça
+      const f = (s - T_LEVANTA) / T_PULO;
+      giro = Math.PI * suave(f);
+      x = v.x + (topo.x - v.x) * f;
+      z = v.z + (topo.z - v.z) * f;
+      y = v.y + (topo.y - v.y) * f + Math.sin(f * Math.PI) * 1.1;
+    } else if (s < T_LEVANTA + T_PULO + T_DESCE) {
+      // desce sentado, cada vez mais rápido
+      const f = Math.pow((s - T_LEVANTA - T_PULO) / T_DESCE, 1.7);
+      x = topo.x + (pe.x - topo.x) * f;
+      y = topo.y + (pe.y - topo.y) * f;
+      z = topo.z + (pe.z - topo.z) * f;
+      sentado = true;
+    } else {
+      // sai da calha com um pulinho e pousa no gramado
+      const f = Math.min(1, (s - T_LEVANTA - T_PULO - T_DESCE) / T_POUSA);
+      x = pe.x + (CHEGADA.x - pe.x) * f;
+      z = pe.z + (CHEGADA.z - pe.z) * f;
+      y = pe.y * (1 - f) + Math.sin(f * Math.PI) * 0.5;
+      if (f >= 1) {
+        // acabou: daqui em diante anda normalmente até onde queria ir
+        a.acorda = null;
+        a.pos = { ...CHEGADA };
+        a.rumo = Math.PI;
+        const banco = a.alvo.banco !== null ? BANCOS[a.alvo.banco] : undefined;
+        a.rota = planejar(a.pos, banco ? frenteDoBanco(banco) : { x: a.alvo.x, z: a.alvo.z });
+        a.sombra.visible = true;
+      }
+    }
+    a.mostra.x = x;
+    a.mostra.y = y;
+    a.mostra.z = z;
+    a.grupo.position.set(x, y + deita * 0.17, z + deita * 0.3);
+    a.grupo.rotation.set((-deita * Math.PI) / 2, giro, 0);
+    a.mascote.atualizar({
+      t,
+      humor: "feliz",
+      reacao: null,
+      p: 0,
+      mouse: parado,
+      calmo,
+      sentado,
+      deitado: deita > 0.5,
+    });
+  }
+
+  const quadro = (agora: number) => {
+    raf = requestAnimationFrame(quadro);
+    const dt = Math.min(0.05, (agora - antes) / 1000);
+    antes = agora;
+    if (!visivel || document.hidden) return;
+    const t = agora / 1000;
+    anoitecer(nivelDaNoite());
+    regar(agora);
+    mundo.atualizar(t);
+
+    let eu: Avatar | undefined;
+    acompanhados.clear();
+    for (const a of avatares.values()) {
+      const b = a.par && !a.dorme && a.acorda === null ? parceiro(a) : null;
+      if (b && a.par) acompanhados.set(b.id, a.par.tipo);
+    }
+    const comCorda = new Set<string>();
+    for (const a of avatares.values()) {
+      if (a.souEu) eu = a;
+      if (a.dorme || a.acorda !== null) {
+        animarBerco(a, agora, t, dt);
+        continue;
+      }
+      let andando = false;
+      const proximo = a.rota[0];
+      if (proximo) {
+        // na ponte da fazenda o HOKI dispara, na ida e na volta
+        const turbo = naPonteDaFazenda(a.pos.x, a.pos.z);
+        const n = avancar(a.pos, proximo, VELOCIDADE * (turbo ? 5.5 : 1) * dt);
+        if (Math.hypot(n.x - a.pos.x, n.z - a.pos.z) > 0.0005)
+          a.rumo = Math.atan2(n.x - a.pos.x, n.z - a.pos.z);
+        a.pos = { x: n.x, z: n.z };
+        if (n.chegou) a.rota.shift();
+        andando = true;
+        if (!a.rota.length && a.alvo.banco !== null) a.sentado = true;
+        if (!a.rota.length && a.souEu) eventos.onParou(a.pos);
+      }
+      // dupla: quem acompanha fica colado no outro (de mãos dadas, na corda, no abraço ou de cavalinho)
+      const tipoDeAcompanhado = acompanhados.get(a.id);
+      let pose: "maoE" | "maoD" | "abraco" | "corda" | "carrega" | "montado" | undefined =
+        tipoDeAcompanhado ? POSE_DO_ACOMPANHADO[tipoDeAcompanhado] : undefined;
+      const outro = a.par ? parceiro(a) : null;
+      let chao = 0;
+      if (outro && a.par) {
+        const r = outro.grupo.rotation.y;
+        const frente = { x: Math.sin(r), z: Math.cos(r) };
+        const direita = { x: Math.cos(r), z: -Math.sin(r) };
+        let ox = direita.x * 0.6;
+        let oz = direita.z * 0.6;
+        a.rumo = r;
+        pose = "maoE";
+        if (a.par.tipo === "corda") {
+          ox = direita.x * 1.25;
+          oz = direita.z * 1.25;
+          pose = "corda";
+          comCorda.add(a.id);
+        } else if (a.par.tipo === "abraco") {
+          ox = frente.x * 0.4;
+          oz = frente.z * 0.4;
+          a.rumo = r + Math.PI;
+          pose = "abraco";
+        } else if (a.par.tipo === "cavalinho") {
+          ox = -frente.x * 0.1;
+          oz = -frente.z * 0.1;
+          chao = outro.mostra.y + 0.47;
+          pose = "montado";
+        }
+        a.rota = [];
+        a.sentado = false;
+        a.pos = { x: outro.mostra.x + ox, z: outro.mostra.z + oz };
+        andando = a.par.tipo === "maos" && outro.andando;
+      }
+      a.andando = andando;
+      // sentado: sobe para o assento e vira para onde o banco olha; senão acompanha a caminhada
+      const s = a.sentado && a.alvo.banco !== null ? assento(a.alvo.banco) : null;
+      const k = 1 - Math.exp(-dt * 10);
+      const cola = s || outro ? k : 1;
+      a.mostra.x += ((s ? s.x : a.pos.x) - a.mostra.x) * cola;
+      a.mostra.z += ((s ? s.z : a.pos.z) - a.mostra.z) * cola;
+      a.mostra.y += ((s ? s.y : chao) - a.mostra.y) * k;
+      const alvoRumo = s ? s.ang : a.rumo;
+      const giro = Math.atan2(
+        Math.sin(alvoRumo - a.grupo.rotation.y),
+        Math.cos(alvoRumo - a.grupo.rotation.y),
+      );
+      a.grupo.rotation.y += giro * k;
+      a.grupo.position.set(a.mostra.x, a.mostra.y, a.mostra.z);
+      // animação: a avulsa acaba sozinha; a que está em repetição recomeça até a pessoa parar
+      if (a.truque && agora - a.truque.inicio > (DURACAO[a.truque.tipo] ?? 3) * 1000) {
+        if (a.anim && !andando && !s && !outro) a.truque.inicio = agora;
+        else a.truque = null;
+      }
+      const salto = a.mascote.atualizar({
+        t,
+        humor: "normal",
+        reacao: a.truque?.tipo ?? null,
+        p: a.truque ? (agora - a.truque.inicio) / 1000 : 0,
+        mouse: parado,
+        calmo,
+        andando,
+        sentado: !!s,
+        pose:
+          andando && naPonteDaFazenda(a.pos.x, a.pos.z)
+            ? "turbo"
+            : s && a.alvo.banco !== null && BANCOS[a.alvo.banco]?.trabalho
+              ? "trabalha"
+              : pose,
+      });
+      a.sombra.visible = pose !== "montado";
+      const raio = 0.5 * (1 - Math.min(0.5, salto * 0.5));
+      a.sombra.position.set(a.mostra.x, a.mostra.y + 0.035, a.mostra.z);
+      a.sombra.scale.set(raio, 1, raio);
+    }
+    // mosquitos de quem está sujo e a ducha (ligada se alguém está parado embaixo dela)
+    let alguemNaDucha = false;
+    for (const a of avatares.values()) {
+      if (a.mosquitos)
+        a.mosquitos.atualizar(
+          t,
+          a.grupo.position.x,
+          a.grupo.position.y + (a.dorme ? 0.45 : a.mascote.topo * ESCALA * 0.95),
+          a.grupo.position.z,
+        );
+      if (
+        !a.dorme &&
+        !a.andando &&
+        Math.hypot(a.mostra.x - CHUVEIRO.x, a.mostra.z - CHUVEIRO.z) < 0.6
+      )
+        alguemNaDucha = true;
+    }
+    regarDucha(t, alguemNaDucha);
+    // cordas de pular: gira as que estão em uso e tira as que acabaram
+    for (const id of comCorda) {
+      const a = avatares.get(id);
+      const b = a ? parceiro(a) : null;
+      if (a && b) girarCorda(a, b, t);
+    }
+    for (const [id, linha] of cordas)
+      if (!comCorda.has(id)) {
+        cena.remove(linha);
+        linha.geometry.dispose();
+        cordas.delete(id);
+      }
+    if (eu && !eu.rota.length) marca.visible = false;
+    if (marca.visible) marca.scale.setScalar(1 + Math.sin(t * 7) * 0.15);
+
+    // câmera: de longe mostra a ilha toda; dentro da praça, chega perto e acompanha o seu HOKI
+    const alvoZoom = dentro && eu ? zoomUsuario : 1;
+    const kc = 1 - Math.exp(-dt * 2.6);
+    zoom += (alvoZoom - zoom) * kc;
+    const peso = zoom * zoom;
+    const fx = eu ? eu.mostra.x : 0;
+    const fz = eu ? eu.mostra.z : 0;
+    // acordado, a vista fica centrada no seu HOKI (na fazenda e no escritório também);
+    // só com o zoom quase todo para fora, e perto da ilha, ela volta para o meio da ilha
+    const longeDaIlha = Math.min(
+      1,
+      Math.max(0, (Math.hypot(fx - CENTRO.x, fz - CENTRO.z) - 16) / 10),
+    );
+    const centra =
+      dentro && eu ? Math.pow(Math.max(0, (zoom - 0.8) / 0.2), 2) * (1 - longeDaIlha) : 1;
+    vetor.set(
+      fx + (CENTRO.x - fx) * centra + (dentro ? 0 : Math.sin(t * 0.12) * 1.2),
+      // bem de perto a câmera mira o rosto; de longe, o corpo inteiro
+      (zoom < 0.3 ? 0.8 + (1 - zoom / 0.3) * 0.32 : 0.8) +
+        (CENTRO.y - 0.8) * peso +
+        // acompanha a altura do HOKI (no escorregador, por exemplo)
+        (eu ? eu.mostra.y * (1 - peso) : 0),
+      fz + (CENTRO.z - fz) * centra,
+    );
+    olhar.lerp(vetor, 1 - Math.exp(-dt * 5));
+    // o sol (e a área das sombras) vai junto com a vista, em passos, para a fazenda e o escritório também terem sombra
+    const solX = Math.round(olhar.x / 6) * 6;
+    const solZ = Math.round(olhar.z / 6) * 6;
+    if (solX !== luzes.sol.target.position.x || solZ !== luzes.sol.target.position.z) {
+      luzes.sol.target.position.set(solX, 1, solZ);
+      luzes.sol.position.set(solX + SOL.x * 60, 1 + SOL.y * 60, solZ + SOL.z * 60);
+    }
+    // à noite, um holofote acompanha o seu HOKI e deixa uma poça de luz no chão
+    const luzDoHoki = eu ? noiteAtual : 0;
+    holofote.intensity = luzDoHoki * 5.5;
+    poca.visible = luzDoHoki > 0.02;
+    if (eu && luzDoHoki > 0.02) {
+      holofote.position.set(eu.mostra.x + 0.8, eu.mostra.y + 5.6, eu.mostra.z + 1.6);
+      holofote.target.position.set(eu.mostra.x, eu.mostra.y + 0.4, eu.mostra.z);
+      poca.position.set(eu.mostra.x, eu.mostra.y + 0.045, eu.mostra.z);
+      mPoca.opacity = luzDoHoki * 0.55;
+    }
+    // do rosto (2,3) até a ilha inteira; a curva deixa o ajuste fino quando está perto
+    const dist = 2.3 + (distMax - 2.3) * zoom * zoom;
+    // de fora, a vista volta sozinha para a frente da ilha
+    if (!dentro) {
+      giroCam += (Math.round(giroCam / (Math.PI * 2)) * Math.PI * 2 - giroCam) * kc;
+      alturaCam += (ALTURA_PADRAO - alturaCam) * kc;
+    }
+    const subida = ALTURA_PADRAO + (alturaCam - ALTURA_PADRAO) * (1 - peso);
+    const plano = Math.cos(subida) * dist;
+    camera.position.set(
+      olhar.x + Math.sin(giroCam) * plano,
+      olhar.y + Math.sin(subida) * dist,
+      olhar.z + Math.cos(giroCam) * plano,
+    );
+    camera.lookAt(olhar);
+    renderer.render(cena, camera);
+
+    // rótulos (nome, status e balão) por cima de cada HOKI
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    for (const a of avatares.values()) {
+      vetor.set(a.mostra.x, a.mostra.y + a.mascote.topo * ESCALA + 0.2, a.mostra.z).project(camera);
+      const fora = vetor.z > 1 || Math.abs(vetor.x) > 1.15 || Math.abs(vetor.y) > 1.25;
+      a.rotulo.style.display = fora ? "none" : "";
+      if (!fora)
+        a.rotulo.style.transform = `translate3d(${((vetor.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-vetor.y * 0.5 + 0.5) * h).toFixed(1)}px, 0) translate(-50%, -100%)`;
+    }
+    vetor.set(TERMOMETRO.x, 4.75, TERMOMETRO.z).project(camera);
+    blipTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
+    blipTela.x = (vetor.x * 0.5 + 0.5) * w;
+    blipTela.y = (-vetor.y * 0.5 + 0.5) * h;
+    vetor.set(CORREIO.x, 2.0, CORREIO.z).project(camera);
+    cartaTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
+    cartaTela.x = (vetor.x * 0.5 + 0.5) * w;
+    cartaTela.y = (-vetor.y * 0.5 + 0.5) * h;
+    blipCarta.style.display = cartaTela.visivel ? "" : "none";
+    if (cartaTela.visivel)
+      blipCarta.style.transform = `translate3d(${cartaTela.x.toFixed(1)}px, ${cartaTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+    vetor.set(PARKOUR.x, 3.5, PARKOUR.z).project(camera);
+    pkTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
+    pkTela.x = (vetor.x * 0.5 + 0.5) * w;
+    pkTela.y = (-vetor.y * 0.5 + 0.5) * h;
+    blipPk.style.display = pkTela.visivel ? "" : "none";
+    if (pkTela.visivel)
+      blipPk.style.transform = `translate3d(${pkTela.x.toFixed(1)}px, ${pkTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+    blip.style.display = blipTela.visivel ? "" : "none";
+    if (blipTela.visivel)
+      blip.style.transform = `translate3d(${blipTela.x.toFixed(1)}px, ${blipTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+  };
+  raf = requestAnimationFrame(quadro);
+
+  return {
+    setPessoas,
+    /** Só para testes: onde cada HOKI está e para onde vai. */
+    estado: () =>
+      [...avatares.values()].map((a) => ({
+        id: a.id.slice(0, 6),
+        eu: a.souEu,
+        mostra: [+a.mostra.x.toFixed(2), +a.mostra.z.toFixed(2)],
+        rota: a.rota.map((r) => [+r.x.toFixed(1), +r.z.toFixed(1)]),
+        alvo: a.alvo,
+        dorme: a.dorme,
+        acorda: a.acorda,
+      })),
+    camera: () => ({
+      olhar: olhar.toArray().map((v) => +v.toFixed(1)),
+      zoom: +zoom.toFixed(2),
+      dentro,
+    }),
+    /** Só para testes: onde um ponto do mundo aparece na página (em pixels). */
+    tela: (x: number, y: number, z: number) => {
+      const r = el.getBoundingClientRect();
+      const v = new THREE.Vector3(x, y, z).project(camera);
+      return [
+        Math.round(r.left + (v.x * 0.5 + 0.5) * r.width),
+        Math.round(r.top + (-v.y * 0.5 + 0.5) * r.height),
+      ];
+    },
+    /** Quando cada lugar da fazenda foi colhido pela última vez (para desenhar o que já cresceu). */
+    setColheitas(mapa: Record<string, number>) {
+      colheitas = mapa;
+      proximaRega = 0;
+    },
+    /** Cartas não lidas: aparecem no envelope em cima da caixa do correio (e ele pisca). */
+    setCartas(n: number) {
+      if (cartaN) {
+        cartaN.hidden = n <= 0;
+        cartaN.textContent = n > 9 ? "9+" : String(n);
+      }
+      if (cartaPisca) cartaPisca.classList.toggle("hidden", n <= 0);
+    },
+    setPendentes(n: number) {
+      if (!blipN) return;
+      blipN.hidden = n <= 0;
+      blipN.textContent = n > 9 ? "9+" : String(n);
+    },
+    setFalas(falas: Record<string, string>) {
+      for (const a of avatares.values()) {
+        const texto = falas[a.id] ?? "";
+        a.fala.textContent = texto;
+        a.fala.hidden = !texto;
+      }
+    },
+    setDentro(v: boolean) {
+      dentro = v;
+      if (!v) marca.visible = false;
+    },
+    truque(id: string, tipo: Reacao) {
+      const a = avatares.get(id);
+      if (a && !a.sentado && !a.dorme && a.acorda === null)
+        a.truque = { tipo, inicio: performance.now() };
+    },
+    zoom(delta: number) {
+      zoomUsuario = Math.max(0, Math.min(1, zoomUsuario + delta));
+    },
+    descartar() {
+      cancelAnimationFrame(raf);
+      observador.disconnect();
+      olheiro.disconnect();
+      el.removeEventListener("pointerdown", aoBaixar);
+      el.removeEventListener("pointerup", aoSoltar);
+      el.removeEventListener("pointermove", aoArrastar);
+      el.removeEventListener("wheel", aoRolar);
+      for (const a of [...avatares.values()]) removerAvatar(a);
+      blip.remove();
+      blipPk.remove();
+      blipCarta.remove();
+      gPlanta.dispose();
+      mPlanta.dispose();
+      gDucha.dispose();
+      mDucha.dispose();
+      for (const linha of cordas.values()) linha.geometry.dispose();
+      tLua.dispose();
+      tPoca.dispose();
+      mPoca.dispose();
+      poca.geometry.dispose();
+      tHalo.dispose();
+      mLua.dispose();
+      mHalo.dispose();
+      gEstrelas.dispose();
+      mEstrelas.dispose();
+      mCorda.dispose();
+      mundo.descartar();
+      texCeu.dispose();
+      tSombra.dispose();
+      gSombra.dispose();
+      mSombra.dispose();
+      gMarca.dispose();
+      mMarca.dispose();
+      // solta o contexto 3D na hora: sem isso, depois de recriar a tela várias vezes o navegador passa do limite
+      renderer.forceContextLoss();
+      renderer.dispose();
+      renderer.domElement.remove();
+    },
+  };
+}
+
+/**
+ * Praça HOST em 3D. Quem só olha vê a ilha inteira; quem entra tem a câmera
+ * por perto, acompanhando o próprio HOKI. Clique no chão para andar e num banco para sentar.
+ */
+export const Mundo3D = forwardRef<
+  Mundo3DRef,
+  {
+    pessoas: PessoaMundo[];
+    falas: Record<string, string>;
+    dentro: boolean;
+    /** Para quantas pessoas ainda dá para entregar emoji hoje (aparece no símbolo do termômetro). */
+    pendentes?: number;
+    /** Fazenda: quando cada lugar foi colhido pela última vez (o que já cresceu aparece no mundo). */
+    colheitas?: Record<string, number>;
+    /** Cartas não lidas no correio. */
+    cartas?: number;
+    className?: string;
+  } & Eventos
+>(function Mundo3D(props, ref) {
+  const caixa = useRef<HTMLDivElement>(null);
+  const camada = useRef<HTMLDivElement>(null);
+  const motor = useRef<ReturnType<typeof criarMotor> | null>(null);
+  const atual = useRef(props);
+  atual.current = props;
+  const [estado, setEstado] = useState<"carregando" | "pronto" | "falhou">("carregando");
+
+  useEffect(() => {
+    const el = caixa.current;
+    const rotulos = camada.current;
+    if (!el || !rotulos) return;
+    let vivo = true;
+    void import("three")
+      .then(async (THREE) => {
+        // as letras do letreiro são desenhadas com a fonte do site: espera ela chegar
+        const [modelo] = await Promise.all([
+          modeloLeve(THREE),
+          document.fonts?.load("800 40px Manrope").catch(() => undefined),
+        ]);
+        if (!vivo) return;
+        const m = criarMotor(THREE, el, rotulos, modelo, {
+          onChao: (p) => atual.current.onChao(p),
+          onBanco: (i) => atual.current.onBanco(i),
+          onPessoa: (id) => atual.current.onPessoa(id),
+          onTermometro: () => atual.current.onTermometro(),
+          onParou: (p) => atual.current.onParou(p),
+          onParkour: () => atual.current.onParkour(),
+          onCanteiro: (i) => atual.current.onCanteiro(i),
+          onCorreio: () => atual.current.onCorreio(),
+        });
+        motor.current = m;
+        // em desenvolvimento, o motor fica à mão no console para testes
+        if (import.meta.env.DEV) (window as unknown as { __mundo?: typeof m }).__mundo = m;
+        m.setDentro(atual.current.dentro);
+        m.setPessoas(atual.current.pessoas);
+        m.setFalas(atual.current.falas);
+        m.setPendentes(atual.current.pendentes ?? 0);
+        m.setColheitas(atual.current.colheitas ?? {});
+        m.setCartas(atual.current.cartas ?? 0);
+        setEstado("pronto");
+      })
+      .catch(() => vivo && setEstado("falhou"));
+    return () => {
+      vivo = false;
+      motor.current?.descartar();
+      motor.current = null;
+    };
+  }, []);
+
+  useEffect(() => motor.current?.setPessoas(props.pessoas), [props.pessoas]);
+  useEffect(() => motor.current?.setFalas(props.falas), [props.falas, props.pessoas]);
+  useEffect(() => motor.current?.setDentro(props.dentro), [props.dentro]);
+  useEffect(() => motor.current?.setPendentes(props.pendentes ?? 0), [props.pendentes]);
+  useEffect(() => motor.current?.setColheitas(props.colheitas ?? {}), [props.colheitas]);
+  useEffect(() => motor.current?.setCartas(props.cartas ?? 0), [props.cartas]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      truque: (id, tipo) => motor.current?.truque(id, tipo),
+      zoom: (d) => motor.current?.zoom(d),
+    }),
+    [],
+  );
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden bg-[#6fb8f7]",
+        props.dentro && "cursor-grab touch-none active:cursor-grabbing",
+        props.className,
+      )}
+    >
+      <div ref={caixa} className="absolute inset-0" role="img" aria-label="Praça HOST em 3D" />
+      <div ref={camada} className="pointer-events-none absolute inset-0 overflow-hidden" />
+      {estado !== "pronto" && (
+        <p className="absolute inset-0 grid place-items-center text-sm font-medium text-white/90">
+          {estado === "falhou"
+            ? "Não foi possível abrir a praça em 3D neste navegador."
+            : "Abrindo a praça…"}
+        </p>
+      )}
+    </div>
+  );
+});

@@ -541,7 +541,7 @@ function EquipePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10 space-y-6">
+    <div className="pagina space-y-6">
       <PageHeader
         title="Equipe"
         subtitle="Usuários do painel organizados por cargo, áreas e controle de casting."

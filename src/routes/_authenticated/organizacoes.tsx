@@ -43,7 +43,7 @@ function OrganizacoesLivres() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[1560px] px-4 pb-10 pt-6 md:px-8 xl:px-10">
+    <div className="pagina">
       <PageHeader
         kicker="HOST · Equipe"
         title="Organizações livres"

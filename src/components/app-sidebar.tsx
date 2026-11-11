@@ -1,8 +1,7 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   Home,
-  Megaphone,
   ShieldCheck,
   Skull,
   Code2,
@@ -21,22 +20,43 @@ import {
   Contact,
   Clapperboard,
   Map as MapIcon,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeft,
+  Search,
+  Volume2,
+  VolumeX,
+  Sun,
+  Moon,
+  ChevronsUpDown,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
-import { NotificationsBell } from "@/components/notifications-bell";
 import { Logo } from "@/components/dashboard/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { DevMiniCounts } from "@/components/dev-mini-counts";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { QuickPendenciaButton } from "@/components/quick-pendencia";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { usePrefetchRoute } from "@/lib/prefetch";
+import { playSfx, setSfxMuted, sfxMuted } from "@/lib/sfx";
 import {
   canAccessCombined,
   useMyAreas,
@@ -47,7 +67,7 @@ import {
   type CategoryKey,
 } from "@/lib/permissions";
 
-interface NavEntry {
+export interface NavEntry {
   title: string;
   icon: LucideIcon;
   url?: string;
@@ -71,157 +91,44 @@ const nav: NavEntry[] = [
   { title: "Eventos e Cronograma", icon: PartyPopper, url: "/eventos" },
   { title: "Punições", icon: Gavel, url: "/punicoes", category: "punicoes" },
   { title: "Tarefas", icon: NotebookPen, url: "/tarefas" },
-  { title: "Desenvolvimento", icon: Code2, url: "/desenvolvimento", category: "desenvolvimento", trailing: <DevMiniCounts /> },
+  {
+    title: "Desenvolvimento",
+    icon: Code2,
+    url: "/desenvolvimento",
+    category: "desenvolvimento",
+    trailing: <DevMiniCounts />,
+  },
 ];
 
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
-const founderOnly: NavEntry[] = [
-  { title: "Financeiro", icon: Wallet, url: "/financeiro" },
+const founderOnly: NavEntry[] = [{ title: "Financeiro", icon: Wallet, url: "/financeiro" }];
+
+const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" }];
+
+/** Grupos do menu, na ordem em que aparecem. Item que não estiver aqui cai em "Outros". */
+export const GRUPOS: { nome: string; itens: string[] }[] = [
+  { nome: "Geral", itens: ["Home", "Áreas", "Eventos e Cronograma", "Tarefas"] },
+  {
+    nome: "Operação",
+    itens: ["Comandos Staffs", "Ilegal", "Captações", "Peds", "Players", "Punições"],
+  },
+  {
+    nome: "Gestão",
+    itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
+  },
+  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Configurações", "Usuários"] },
 ];
+export const grupoDe = (titulo: string) =>
+  GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
+export const ehAtual = (item: NavEntry, pathname: string) =>
+  pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"));
 
-const ops: NavEntry[] = [
-  { title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" },
-];
-
-/* ---- Icon-only button (rail style, used in footer + collapsed) ---- */
-
-function RailIcon({
-  item,
-  active,
-}: {
-  item: NavEntry;
-  active: boolean;
-}) {
-  const classes = cn(
-    "group relative flex size-8 items-center justify-center rounded-lg transition-colors",
-    item.url === "/update"
-      ? active ? "bg-update/15 text-update ring-1 ring-update/25" : "text-update/80 hover:bg-update/10 hover:text-update"
-      : active
-      ? "bg-white/[0.08] text-foreground ring-1 ring-white/[0.06]"
-      : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground"
-  );
-
-  const dot = active && (
-    <span className={cn("absolute -left-[11px] top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full", item.url === "/update" ? "bg-update" : "bg-primary")} />
-  );
-
-  const label = (
-    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 hidden -translate-y-1/2 whitespace-nowrap glass-elevated rounded-lg px-2.5 py-1 text-[11px] font-medium text-foreground group-hover:block">
-      {item.title}
-    </span>
-  );
-
-  const icon = <item.icon className="size-4" strokeWidth={1.9} />;
-
-  if (!item.url) {
-    return (
-      <button type="button" className={classes}>
-        {dot}
-        {icon}
-        {label}
-      </button>
-    );
-  }
-
-  return (
-    <Link to={item.url} className={classes}>
-      {dot}
-      {icon}
-      {label}
-    </Link>
-  );
-}
-
-/* ---- Aligned row: icon cell (rail) + label cell (panel) ---- */
-
-function NavRow({ item, active }: { item: NavEntry; active: boolean }) {
-  const prefetch = usePrefetchRoute(item.url);
-  const iconClasses = cn(
-    "group relative mx-auto flex size-8 items-center justify-center rounded-lg transition-colors",
-    item.url === "/update"
-      ? active ? "bg-update/15 text-update ring-1 ring-update/25" : "text-update/80 hover:bg-update/10 hover:text-update"
-      : active
-      ? "bg-white/[0.08] text-foreground ring-1 ring-white/[0.06]"
-      : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground"
-  );
-
-  const dot = active && (
-    <span className={cn("absolute -left-[13px] top-1/2 h-5 w-1 -translate-y-1/2 rounded-full", item.url === "/update" ? "bg-update" : "bg-primary")} />
-  );
-
-  const tooltip = (
-    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[11px] font-medium text-neutral-200 shadow-lg group-hover:block">
-      {item.title}
-    </span>
-  );
-
-  const iconEl = item.url ? (
-    <Link to={item.url} className={iconClasses} {...prefetch}>
-      {dot}
-      <item.icon className="size-4" strokeWidth={1.9} />
-      {tooltip}
-    </Link>
-  ) : (
-    <button type="button" className={iconClasses}>
-      {dot}
-      <item.icon className="size-4" strokeWidth={1.9} />
-      {tooltip}
-    </button>
-  );
-
-  const labelClasses = cn(
-    "flex w-full items-center rounded-xl px-3 py-1.5 text-left text-[13.5px] font-medium leading-tight transition-colors duration-200",
-    item.url === "/update"
-      ? active ? "bg-update/10 text-update ring-1 ring-update/20" : "text-update/80 hover:bg-update/5 hover:text-update"
-      : active
-      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-      : "text-sidebar-foreground hover:bg-white/[0.04] hover:text-foreground"
-  );
-
-  const labelText = (
-    <span className="flex min-w-0 flex-1 flex-col gap-1">
-      <span className="truncate">{item.title}</span>
-      {item.trailing}
-    </span>
-  );
-
-  const labelEl = item.url ? (
-    <Link to={item.url} className={labelClasses} {...prefetch}>
-      {labelText}
-    </Link>
-  ) : (
-    <button type="button" className={labelClasses}>
-      {labelText}
-    </button>
-  );
-
-  return (
-    <>
-      <div className="flex items-center justify-center">{iconEl}</div>
-      <div className="px-2">{labelEl}</div>
-    </>
-  );
-}
-
-export function AppSidebar() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+/** O que o usuário pode abrir no menu e quem ele é. */
+export function useMenu() {
   const { data: myRole } = useMyRole();
   const { data: perms } = usePermissions();
   const { data: areaPerms } = useAreaPermissions();
   const { data: myAreas } = useMyAreas();
-
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setCollapsed(localStorage.getItem("host-sidebar-collapsed") === "1");
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("host-sidebar-collapsed", collapsed ? "1" : "0");
-  }, [collapsed]);
-
   const { data: profile } = useQuery({
     queryKey: ["my-username"],
     queryFn: async () => {
@@ -236,184 +143,355 @@ export function AppSidebar() {
     },
     staleTime: 60_000,
   });
-
   const role = myRole ?? "staff";
-  const username = profile?.username ?? "";
-  const avatarUrl = profile?.avatar_url || DEFAULT_AVATAR_URL;
-
-  const visibleNav = [
-    ...nav.filter(
-      (i) => !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms)
-    ),
+  const pode = (i: NavEntry) =>
+    !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms);
+  const todos: NavEntry[] = [
+    ...nav.filter(pode),
     ...(role === "founder" ? founderOnly : []),
+    ...ops.filter(pode),
+    { title: "Configurações", icon: Settings, url: "/configuracoes" },
+    ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms)
+      ? [{ title: "Usuários", icon: Users, url: "/usuarios" } satisfies NavEntry]
+      : []),
   ];
-  const visibleOps = ops.filter(
-    (i) => !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms)
+  return {
+    role,
+    username: profile?.username ?? "",
+    avatarUrl: profile?.avatar_url || DEFAULT_AVATAR_URL,
+    todos,
+  };
+}
+
+/** Um item do menu. Aberto: ícone e nome numa linha fina. Fechado: só o ícone, com o nome numa dica ao lado. */
+function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fechado: boolean }) {
+  const prefetch = usePrefetchRoute(item.url);
+  const classes = cn(
+    "item-menu w-full text-left",
+    active && "item-menu-ativo",
+    fechado && "justify-center !px-0",
   );
-  const podeUsuarios = canAccessCombined(role, myAreas, "usuarios", perms, areaPerms);
-
-  const settingsEntry: NavEntry = { title: "Configurações", icon: Settings, url: "/configuracoes" };
-  const usersEntry: NavEntry = { title: "Usuários", icon: Users, url: "/usuarios" };
-
-  const ToggleButton = (
+  const miolo = (
+    <>
+      <item.icon className="size-[15px] shrink-0" strokeWidth={1.6} />
+      {!fechado && (
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate">{item.title}</span>
+          {item.trailing}
+        </span>
+      )}
+    </>
+  );
+  const peca = item.url ? (
+    <Link
+      to={item.url}
+      className={classes}
+      aria-label={item.title}
+      aria-current={active ? "page" : undefined}
+      data-sem-elastico
+      data-som-passar
+      {...prefetch}
+    >
+      {miolo}
+    </Link>
+  ) : (
     <button
       type="button"
-      onClick={() => setCollapsed((c) => !c)}
-      aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-      title={collapsed ? "Expandir menu" : "Recolher menu"}
-      className="flex size-8 items-center justify-center rounded-lg border border-white/[0.08] text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+      className={classes}
+      aria-label={item.title}
+      data-sem-elastico
+      data-som-passar
     >
-      {collapsed ? (
-        <PanelLeftOpen className="size-4" strokeWidth={1.9} />
-      ) : (
-        <PanelLeftClose className="size-4" strokeWidth={1.9} />
-      )}
+      {miolo}
+    </button>
+  );
+  if (!fechado) return peca;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{peca}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={14}>
+        {item.title}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Menu lateral: a única barra do painel. Um painel de vidro solto da borda,
+ * com letras pequenas e ícones finos. O botão de abrir e fechar fica sempre
+ * no topo. Aqui também moram a busca (Ctrl K), o sino, a pendência rápida e a conta.
+ */
+export function AppSidebar() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const { role, username, avatarUrl, todos } = useMenu();
+  const [fechado, setFechado] = useState(false);
+  const [busca, setBusca] = useState(false);
+  const [mudo, setMudo] = useState(false);
+  const [escuro, setEscuro] = useState(true);
+
+  useEffect(() => {
+    const salvo = localStorage.getItem("host-sidebar-collapsed");
+    setFechado(salvo === null ? window.innerWidth < 900 : salvo === "1");
+    setMudo(sfxMuted());
+    setEscuro(document.documentElement.classList.contains("dark"));
+    const tecla = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setBusca((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, []);
+
+  const alternarMenu = () =>
+    setFechado((f) => {
+      localStorage.setItem("host-sidebar-collapsed", f ? "0" : "1");
+      return !f;
+    });
+  const alternarSom = () => {
+    const novo = !mudo;
+    setSfxMuted(novo);
+    setMudo(novo);
+    if (!novo) playSfx("success");
+  };
+  const alternarTema = () => {
+    const novo = !escuro;
+    setEscuro(novo);
+    localStorage.setItem("host-theme", novo ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", novo);
+  };
+  const sair = () => void supabase.auth.signOut();
+
+  const grupos = GRUPOS.map((g) => ({
+    nome: g.nome,
+    itens: todos.filter((i) => g.itens.includes(i.title)),
+  })).filter((g) => g.itens.length > 0);
+  const semGrupo = todos.filter((i) => !GRUPOS.some((g) => g.itens.includes(i.title)));
+  if (semGrupo.length) grupos.push({ nome: "Outros", itens: semGrupo });
+  const paginas = todos.filter((i) => i.url);
+  // dois itens podem levar à mesma tela: só o primeiro fica marcado
+  const tituloAtual = todos.find((i) => ehAtual(i, pathname))?.title;
+
+  const alternar = (
+    <button
+      type="button"
+      onClick={alternarMenu}
+      aria-label={fechado ? "Abrir menu" : "Fechar menu"}
+      aria-expanded={!fechado}
+      title={fechado ? "Abrir menu" : "Fechar menu"}
+      className="grid size-8 shrink-0 place-items-center rounded-[10px] text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
+    >
+      <PanelLeft className="size-[15px]" strokeWidth={1.6} />
     </button>
   );
 
-  /* ---------------- Collapsed: icon rail only ---------------- */
-  if (collapsed) {
-    return (
-      <div className="glass-elevated sticky top-3 z-30 my-3 ml-3 flex h-[calc(100svh-1.5rem)] w-14 shrink-0 flex-col items-center overflow-hidden rounded-[22px]">
-      <div className="flex flex-col items-center gap-2 pt-2.5">
-          <Link
-            to="/"
-            className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-            title="HOST"
-          >
-            <Logo className="h-[22px]" />
-          </Link>
-          <NotificationsBell />
-          <QuickPendenciaButton />
-          {ToggleButton}
-        </div>
-
-        <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:none]">
-          <div className="flex flex-col items-center gap-1 py-1">
-            {visibleNav.map((item) => (
-              <RailIcon key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
-            ))}
+  const conta = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Sua conta"
+          data-sem-elastico
+          className={cn(
+            "flex items-center rounded-xl text-left outline-none hover:bg-white/[0.06]",
+            fechado ? "size-9 justify-center" : "min-w-0 flex-1 gap-2 p-1",
+          )}
+        >
+          <img
+            src={avatarUrl}
+            alt=""
+            className="size-7 shrink-0 rounded-[9px] object-cover ring-1 ring-white/10"
+          />
+          {!fechado && (
+            <>
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block truncate text-[12px] font-semibold text-foreground">
+                  {username || "…"}
+                </span>
+                <span className="block truncate text-[10px] text-ink-3">{ROLE_LABELS[role]}</span>
+              </span>
+              <ChevronsUpDown className="size-3 shrink-0 text-ink-3" strokeWidth={1.8} />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" sideOffset={12} className="w-[214px] p-1.5">
+        <div className="flex items-center gap-2.5 px-2 pb-2 pt-1.5">
+          <img
+            src={avatarUrl}
+            alt=""
+            className="size-8 rounded-[10px] object-cover ring-1 ring-white/10"
+          />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[12.5px] font-semibold">{username || "…"}</p>
+            <p className="truncate text-[10.5px] text-muted-foreground">{ROLE_LABELS[role]}</p>
           </div>
         </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => void navigate({ to: "/configuracoes" })}>
+          <Settings strokeWidth={1.6} /> Minha conta
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          data-sem-som
+          onSelect={(e) => {
+            e.preventDefault();
+            alternarSom();
+          }}
+        >
+          {mudo ? <VolumeX strokeWidth={1.6} /> : <Volume2 strokeWidth={1.6} />} Sons
+          <span className="ml-auto text-[10.5px] text-muted-foreground">
+            {mudo ? "desligados" : "ligados"}
+          </span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            alternarTema();
+          }}
+        >
+          {escuro ? <Sun strokeWidth={1.6} /> : <Moon strokeWidth={1.6} />}{" "}
+          {escuro ? "Modo claro" : "Modo noturno"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={sair} className="text-[#ff8f85] focus:text-[#ff8f85]">
+          <LogOut strokeWidth={1.6} /> Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
-        {visibleOps.length > 0 && (
-          <div className="w-full border-t border-white/5 py-1.5">
-            <div className="flex flex-col items-center gap-1">
-              {visibleOps.map((item) => (
-                <RailIcon key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
-              ))}
-            </div>
+  return (
+    <TooltipProvider delayDuration={60} skipDelayDuration={300}>
+      <aside
+        data-fechado={fechado}
+        className={cn(
+          "menu-lateral glass z-30 my-2.5 ml-2.5 flex h-[calc(100svh-1.25rem)] shrink-0 flex-col overflow-hidden rounded-[24px]",
+          fechado ? "w-[58px]" : "w-[226px]",
+        )}
+      >
+        {/* topo: a marca e o botão de abrir e fechar, que nunca sai daqui */}
+        {fechado ? (
+          <div className="flex shrink-0 flex-col items-center gap-2 pt-2.5">
+            {alternar}
+            <Link to="/" title="HOST" className="grid size-8 place-items-center">
+              <Logo className="h-[17px]" />
+            </Link>
+          </div>
+        ) : (
+          <div className="flex h-[52px] shrink-0 items-center gap-2 pl-4 pr-2.5">
+            <Link to="/" title="HOST" className="flex min-w-0 items-center gap-2.5">
+              <Logo className="h-[18px] shrink-0" />
+              <span className="font-display text-[15px] font-semibold tracking-[-0.01em]">
+                HOST
+              </span>
+            </Link>
+            <div className="ml-auto">{alternar}</div>
           </div>
         )}
 
-        <div className="w-full border-t border-white/5 py-1.5">
-          <div className="flex flex-col items-center gap-1">
-            <RailIcon item={settingsEntry} active={pathname === "/configuracoes"} />
-            {podeUsuarios && <RailIcon item={usersEntry} active={pathname === "/usuarios"} />}
-            <ThemeToggle compact />
-            <button
-              type="button"
-              onClick={() => void supabase.auth.signOut()}
-              aria-label="Sair"
-              title="Sair"
-              className="flex size-8 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-destructive/10 hover:text-destructive"
-            >
-              <LogOut className="size-4" strokeWidth={1.9} />
-            </button>
-            <img
-              src={avatarUrl}
-              alt={username}
-              className="mt-0.5 size-7 rounded-full border border-white/10 object-cover"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- Expanded: rail + panel ---------------- */
-  return (
-    <div className="glass-elevated sticky top-3 z-30 my-3 ml-3 flex h-[calc(100svh-1.5rem)] shrink-0 overflow-hidden rounded-[22px]">
-      {/* Persistent column backgrounds (do not scroll) */}
-      <div className="pointer-events-none absolute inset-y-0 left-14 w-px bg-white/[0.05]" aria-hidden />
-
-      <div className="relative grid h-full w-[264px] shrink-0 grid-cols-[56px_208px] grid-rows-[auto_minmax(0,1fr)_auto_auto]">
-        {/* ---- Header row ---- */}
-        <div className="flex flex-col items-center gap-2 pt-2.5">
-          <Link
-            to="/"
-            className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-            title="HOST"
-          >
-            <Logo className="h-[22px]" />
-          </Link>
-          <NotificationsBell />
-          <QuickPendenciaButton />
-          {ToggleButton}
-        </div>
-        <div className="flex items-start justify-between gap-2 px-4 pb-2 pt-4">
-          <div className="min-w-0">
-            <p className="truncate font-display text-[15px] font-semibold leading-tight text-foreground">
-              {username || "..."}
-            </p>
-            <p className="text-[11px] leading-tight text-muted-foreground">{ROLE_LABELS[role]}</p>
-          </div>
+        {/* busca */}
+        <div className={cn("shrink-0", fechado ? "flex justify-center pt-2" : "px-2.5 pb-1.5")}>
           <button
             type="button"
-            onClick={() => setCollapsed(true)}
-            aria-label="Recolher menu"
-            title="Recolher menu"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-sidebar-border text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            onClick={() => setBusca(true)}
+            aria-label="Buscar página"
+            title="Buscar página (Ctrl K)"
+            className={cn(
+              "glass-inset flex items-center border text-muted-foreground hover:text-foreground",
+              fechado
+                ? "size-9 justify-center rounded-xl"
+                : "h-[34px] w-full gap-2 rounded-xl px-2.5 text-left text-[12px]",
+            )}
           >
-            <PanelLeftClose className="size-4" strokeWidth={2} />
+            <Search className="size-[14px] shrink-0" strokeWidth={1.7} />
+            {!fechado && (
+              <>
+                <span className="min-w-0 flex-1 truncate">Buscar</span>
+                <kbd className="rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-px font-sans text-[9.5px] font-medium text-foreground/70">
+                  Ctrl K
+                </kbd>
+              </>
+            )}
           </button>
         </div>
 
-        {/* ---- Nav (single area keeps both columns aligned) ---- */}
-        <div className="col-span-2 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-width:thin]">
-          <div className="grid grid-cols-[56px_208px] gap-y-1 py-0.5">
+        <nav
+          aria-label="Menu principal"
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            fechado ? "px-[10px] pt-2" : "px-2.5 pt-1.5",
+          )}
+        >
+          {grupos.map((g, n) => (
+            <div
+              key={g.nome}
+              className={cn(n > 0 && (fechado ? "mt-2 border-t border-white/[0.06] pt-2" : "mt-4"))}
+            >
+              {!fechado && (
+                <p className="px-[9px] pb-1.5 text-[9.5px] font-medium uppercase tracking-[0.2em] text-ink-3">
+                  {g.nome}
+                </p>
+              )}
+              <div className="space-y-px">
+                {g.itens.map((item) => (
+                  <Item
+                    key={item.title}
+                    item={item}
+                    active={item.title === tituloAtual}
+                    fechado={fechado}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
 
-            {visibleNav.map((item) => (
-              <NavRow key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
-            ))}
+        {/* rodapé: conta, sino e pendência rápida */}
+        {fechado ? (
+          <div className="flex shrink-0 flex-col items-center gap-1 border-t border-white/[0.06] pb-2.5 pt-2">
+            <NotificationsBell />
+            <QuickPendenciaButton />
+            {conta}
           </div>
-        </div>
-
-        {/* ---- Ops (pinned bottom, aligned) ---- */}
-        {visibleOps.length > 0 && (
-          <div className="col-span-2 border-t border-sidebar-border">
-            <div className="grid grid-cols-[56px_208px] gap-y-1 py-1.5">
-              {visibleOps.map((item) => (
-                <NavRow key={item.title} item={item} active={pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"))} />
-              ))}
+        ) : (
+          <div className="shrink-0 p-2.5 pt-1.5">
+            <div className="glass-inset flex items-center gap-0.5 rounded-2xl border p-1">
+              {conta}
+              <NotificationsBell />
+              <QuickPendenciaButton />
             </div>
           </div>
         )}
+      </aside>
 
-        {/* ---- Footer ---- */}
-        <div className="col-span-2 border-t border-sidebar-border">
-          <div className="grid grid-cols-[56px_208px]">
-            <div className="flex flex-col items-center gap-1 py-1.5">
-              <RailIcon item={settingsEntry} active={pathname === "/configuracoes"} />
-              {podeUsuarios && <RailIcon item={usersEntry} active={pathname === "/usuarios"} />}
-              <img
-                src={avatarUrl}
-                alt={username}
-                className="mt-0.5 size-7 rounded-full border border-white/10 object-cover"
-              />
-            </div>
-            <div className="flex flex-col gap-1 px-2.5 py-2.5">
-              <ThemeToggle />
-              <button
-                onClick={() => void supabase.auth.signOut()}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium leading-none text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <LogOut className="size-4 shrink-0" /> <span className="truncate">Sair</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <CommandDialog open={busca} onOpenChange={setBusca}>
+        <CommandInput placeholder="Para onde você quer ir?" />
+        <CommandList>
+          <CommandEmpty>Nada encontrado.</CommandEmpty>
+          {[...GRUPOS.map((g) => g.nome), "Outros"].map((nome) => {
+            const itens = paginas.filter((i) => grupoDe(i.title) === nome);
+            if (!itens.length) return null;
+            return (
+              <CommandGroup key={nome} heading={nome}>
+                {itens.map((i) => (
+                  <CommandItem
+                    key={i.title}
+                    value={i.title}
+                    onSelect={() => {
+                      setBusca(false);
+                      void navigate({ to: i.url as string });
+                    }}
+                  >
+                    <i.icon className="size-4" strokeWidth={1.6} /> {i.title}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            );
+          })}
+        </CommandList>
+      </CommandDialog>
+    </TooltipProvider>
   );
 }

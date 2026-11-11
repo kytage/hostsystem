@@ -12,7 +12,10 @@ import { useRealtimeTable } from "@/lib/realtime";
 
 export function NotificationsBell() {
   const [aberto, setAberto] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number }>({
+    left: 0,
+    top: 0,
+  });
   const btnRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   useRealtimeTable("notificacoes", [["notificacoes"]]);
@@ -27,21 +30,27 @@ export function NotificationsBell() {
 
   const marcar = useMutation({
     mutationFn: marcarNotificacoesLidas,
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
   });
 
   const limpar = useMutation({
     mutationFn: limparNotificacoesLidas,
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["notificacoes"] }),
   });
 
   const abrir = () => {
     const rect = btnRef.current?.getBoundingClientRect();
     if (rect) {
-      const left = Math.min(rect.left, window.innerWidth - 400);
-      setPos({ top: rect.bottom + 10, left: Math.max(8, left) });
+      // no menu lateral o painel abre ao lado do botão; embaixo da tela, abre para cima
+      const aoLado = rect.left < 300;
+      const left = aoLado
+        ? rect.right + 16
+        : Math.max(8, Math.min(rect.left, window.innerWidth - 400));
+      setPos(
+        rect.top > window.innerHeight / 2
+          ? { left, bottom: Math.max(12, window.innerHeight - rect.bottom) }
+          : { left, top: rect.bottom + 10 },
+      );
     }
     setAberto((v) => !v);
     if (!aberto && naoLidas > 0) marcar.mutate();
@@ -54,11 +63,12 @@ export function NotificationsBell() {
         onClick={abrir}
         aria-label="Notificações"
         title="Notificações"
-        className="relative flex size-9 items-center justify-center rounded-xl border border-sidebar-border text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+        data-sem-elastico
+        className="relative grid size-8 shrink-0 place-items-center rounded-[10px] text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
       >
-        <Bell className="size-4" />
+        <Bell className="size-[15px]" strokeWidth={1.6} />
         {naoLidas > 0 && (
-          <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-semibold text-primary-foreground">
+          <span className="absolute -right-0.5 -top-0.5 flex size-[15px] items-center justify-center rounded-full bg-[#e5231b] text-[8.5px] font-semibold text-white shadow-[0_0_10px_rgba(229,35,27,0.7)]">
             {naoLidas > 9 ? "9+" : naoLidas}
           </span>
         )}
@@ -73,7 +83,7 @@ export function NotificationsBell() {
           />
           <div
             className="fixed z-50 w-96 overflow-hidden rounded-2xl glass-modal shadow-black/60"
-            style={{ top: pos.top, left: pos.left }}
+            style={{ left: pos.left, top: pos.top, bottom: pos.bottom }}
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <p className="text-sm font-semibold text-foreground">Notificações</p>
@@ -110,7 +120,7 @@ export function NotificationsBell() {
                   key={n.id}
                   className={cn(
                     "border-b border-border/50 px-4 py-3.5 text-[13px] leading-relaxed last:border-0",
-                    n.lida ? "text-muted-foreground" : "text-foreground"
+                    n.lida ? "text-muted-foreground" : "text-foreground",
                   )}
                 >
                   {!n.lida && (

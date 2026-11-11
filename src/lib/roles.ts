@@ -15,6 +15,14 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   support: "Support", contributor: "Contributor", dev: "Dev",
 };
 
+/** Sigla do cargo, mostrada como tag antes do nome (praça do HOKI). */
+export const ROLE_TAG: Record<AppRole, string> = {
+  founder: "FND", c_level: "CEO", direcao: "DIR",
+  coordinator: "COORD", manager: "MNG",
+  head_moderator: "HEAD", staff: "MOD",
+  support: "SUP", contributor: "CTB", dev: "DEV",
+};
+
 export const ROLE_DOT: Record<AppRole, string> = {
   founder: "bg-primary", c_level: "bg-warning", direcao: "bg-primary",
   coordinator: "bg-primary", manager: "bg-primary",

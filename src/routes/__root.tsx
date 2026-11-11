@@ -8,11 +8,13 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppSidebar } from "@/components/app-sidebar";
+import { instalarBordaElastica } from "@/lib/borda-elastica";
+import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { Toaster } from "@/components/ui/sonner";
@@ -162,26 +164,16 @@ function RootComponent() {
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
 
-  // Luz que acompanha o ponteiro nos cartões de vidro (.glass lê --mx/--my).
+  // Sons da interface: aperto, menu e janelas (ligados uma vez só) e um sopro a cada troca de página.
+  useEffect(() => instalarSonsDaInterface(), []);
+  const primeiraPagina = useRef(true);
   useEffect(() => {
-    let raf = 0;
-    const mover = (e: PointerEvent) => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const alvo = e.target instanceof Element ? e.target.closest<HTMLElement>(".glass") : null;
-        if (!alvo) return;
-        const r = alvo.getBoundingClientRect();
-        alvo.style.setProperty("--mx", `${e.clientX - r.left}px`);
-        alvo.style.setProperty("--my", `${e.clientY - r.top}px`);
-      });
-    };
-    window.addEventListener("pointermove", mover, { passive: true });
-    return () => {
-      window.removeEventListener("pointermove", mover);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, []);
+    if (primeiraPagina.current) primeiraPagina.current = false;
+    else playSfx("nav");
+  }, [pathname]);
+
+  // Borda elástica: o fio de luz que estica na moldura dos componentes, perto do ponteiro.
+  useEffect(() => instalarBordaElastica(), []);
 
   if (isAuthPage) {
     return (
@@ -206,9 +198,9 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="relative z-10 flex h-screen w-full overflow-hidden">
+      <div className="moldura relative z-10 flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <main key={pathname} className="page-main min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main key={pathname} className="page-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

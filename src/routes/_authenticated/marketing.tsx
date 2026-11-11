@@ -84,7 +84,7 @@ function MarketingPage() {
   }
   if (!pode) {
     return (
-      <div className="mx-auto max-w-screen-xl px-4 py-8 md:px-8">
+      <div className="pagina">
         <PageHeader kicker="REDES SOCIAIS" title="Marketing" />
         <p className="glass-inset mt-6 flex items-center justify-center gap-2 rounded-2xl px-4 py-14 text-sm text-muted-foreground">
           <Lock className="size-4" /> Área restrita a Coordinator+ e à equipe de Marketing.
