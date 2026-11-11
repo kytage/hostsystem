@@ -278,8 +278,8 @@ export const CHEGADA: Ponto = { x: BERCO.x - 0.15, z: 8.4 };
 /** Totem do termômetro (queridômetro), no gramado ao lado da praça, e o ponto em frente onde o HOKI para. */
 export const TERMOMETRO: Ponto = { x: -7.8, z: 6.8 };
 export const FRENTE_DO_TERMOMETRO: Ponto = { x: -6.95, z: 5.95 };
-/** Caixa do correio (cartão postal), no anel de pedra em volta da fonte. */
-export const CORREIO: Ponto = { x: FONTE.x + 4.2, z: FONTE.z + 4.2 };
+/** Caixa do correio (cartão postal), no canto da frente à esquerda da ilha, longe do meio da praça. */
+export const CORREIO: Ponto = { x: -18.8, z: 8.6 };
 /** Chuveirão: na beira do caminho do leste, antes da ponte do rio. O HOKI fica embaixo da ducha para tomar banho. */
 export const CHUVEIRO: Ponto = { x: 11.2, z: -2.9 };
 /** Portal do parkour, na beirada da frente da ilha, e o ponto onde o HOKI para diante dele. */

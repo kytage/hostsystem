@@ -51,7 +51,10 @@ type Evento =
   | "chamar"
   | "presente"
   | "presente-resposta"
-  | "presente-entregue";
+  | "presente-entregue"
+  | "estado"
+  | "ola"
+  | "tchau";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -62,7 +65,12 @@ const EVENTOS: Evento[] = [
   "presente",
   "presente-resposta",
   "presente-entregue",
+  "estado",
+  "ola",
+  "tchau",
 ];
+/** Eventos internos da presença (não passam para quem ouve a praça). */
+const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
 /** O que chega numa fala ou num truque (sempre conferir os tipos antes de usar). */
 export interface Mensagem {
   id?: unknown;
@@ -89,6 +97,19 @@ const NO_BERCO: Lugar = {
   anim: null,
   sujo: false,
 };
+
+/**
+ * Além da presença, cada aba manda o próprio estado por mensagem direta a cada
+ * mudança e a cada 10 s. Se a lista de presença do servidor atrasar ou cair por
+ * um tempo (já aconteceu: as mensagens chegavam e a lista ficava vazia), a praça
+ * continua vendo todo mundo andar. Quem não manda nada há 25 s some.
+ */
+const BATIDA_MS = 10_000;
+const VALIDADE_MS = 25_000;
+/** Identifica esta aba (a mesma pessoa pode ter várias abas abertas). */
+const MINHA_ABA = Math.random().toString(36).slice(2, 10);
+const porMensagem = new Map<string, Map<string, { dados: Partial<PresencaHoki>; visto: number }>>();
+let batida: ReturnType<typeof setInterval> | null = null;
 
 let canal: RealtimeChannel | null = null;
 let meuId = "";
@@ -134,45 +155,92 @@ function publicar() {
     if (!canal || !pronto || !identidade) return;
     ultimoEnvio = Date.now();
     void canal.track({ ...identidade, ...lugar });
+    enviarEstado();
   }, espera);
 }
+
+/** Confere e arruma o que chegou de uma pessoa (pela presença ou por mensagem). */
+function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
+  // quem ainda está na versão antiga só aparece quando entra na praça: conta como acordado
+  const dorme = p.dorme === true;
+  const x = numero(p.x, -79, 44);
+  const z = numero(p.z, -16, 16);
+  if (!dorme && (x === null || z === null)) return null;
+  const banco = numero(p.banco, 0, 63);
+  return {
+    id,
+    nome: String(p.nome ?? "staff").slice(0, 24),
+    tag: String(p.tag ?? "")
+      .replace(/[^A-Za-z]/g, "")
+      .slice(0, 5)
+      .toUpperCase(),
+    pet: String(p.pet ?? "").slice(0, 24),
+    visual: lerVisual(p.visual),
+    x: x ?? NO_BERCO.x,
+    z: z ?? NO_BERCO.z,
+    banco: dorme || banco === null ? null : Math.round(banco),
+    status: limpar(String(p.status ?? "")),
+    dorme,
+    par: lerPar(p.par, dorme),
+    anim: !dorme && typeof p.anim === "string" && p.anim.length < 24 ? p.anim : null,
+    sujo: p.sujo === true,
+  };
+}
+
+/** Com mais de uma aba aberta, vale a que está acordada na praça. */
+const escolher = (lista: Partial<PresencaHoki>[]) =>
+  lista.find((m) => m.dorme === false) ?? lista[lista.length - 1];
 
 function lerEstado() {
   if (!canal) return;
   const estado = canal.presenceState() as Record<string, Partial<PresencaHoki>[]>;
+  const agora = Date.now();
+  const ids = new Set([...Object.keys(estado), ...porMensagem.keys()]);
   const proximo: Record<string, PresencaHoki> = {};
-  for (const [id, lista] of Object.entries(estado)) {
+  for (const id of ids) {
     if (id === meuId) continue;
-    // com mais de uma aba aberta, vale a que está acordada na praça
-    const p = lista.find((m) => m.dorme === false) ?? lista[lista.length - 1];
-    if (!p) continue;
-    // quem ainda está na versão antiga só aparece quando entra na praça: conta como acordado
-    const dorme = p.dorme === true;
-    const x = numero(p.x, -79, 44);
-    const z = numero(p.z, -16, 16);
-    if (!dorme && (x === null || z === null)) continue;
-    const banco = numero(p.banco, 0, 63);
-    proximo[id] = {
-      id,
-      nome: String(p.nome ?? "staff").slice(0, 24),
-      tag: String(p.tag ?? "")
-        .replace(/[^A-Za-z]/g, "")
-        .slice(0, 5)
-        .toUpperCase(),
-      pet: String(p.pet ?? "").slice(0, 24),
-      visual: lerVisual(p.visual),
-      x: x ?? NO_BERCO.x,
-      z: z ?? NO_BERCO.z,
-      banco: dorme || banco === null ? null : Math.round(banco),
-      status: limpar(String(p.status ?? "")),
-      dorme,
-      par: lerPar(p.par, dorme),
-      anim: !dorme && typeof p.anim === "string" && p.anim.length < 24 ? p.anim : null,
-      sujo: p.sujo === true,
-    };
+    // a mensagem direta é a mais nova; a presença fica de reserva
+    const abas = porMensagem.get(id);
+    const frescas: Partial<PresencaHoki>[] = [];
+    for (const [aba, m] of abas ?? []) {
+      if (agora - m.visto < VALIDADE_MS) frescas.push(m.dados);
+      else abas?.delete(aba);
+    }
+    if (abas && abas.size === 0) porMensagem.delete(id);
+    const p = escolher(frescas.length ? frescas : (estado[id] ?? []));
+    const pessoa = p && lerPessoa(id, p);
+    if (pessoa) proximo[id] = pessoa;
   }
   avisar(proximo);
 }
+
+/** Guarda o estado que alguém mandou por mensagem. */
+function receberEstado(m: Mensagem & Partial<PresencaHoki> & { aba?: unknown }) {
+  const id = typeof m.id === "string" && m.id.length < 64 ? m.id : "";
+  const aba = typeof m.aba === "string" ? m.aba.slice(0, 16) : "";
+  if (!id || !aba || id === meuId) return;
+  let abas = porMensagem.get(id);
+  if (!abas) porMensagem.set(id, (abas = new Map()));
+  abas.set(aba, { dados: m, visto: Date.now() });
+  lerEstado();
+}
+
+/** Manda meu estado por mensagem (além da presença). */
+function enviarEstado() {
+  if (!canal || !pronto || !identidade || !meuId) return;
+  void canal.send({
+    type: "broadcast",
+    event: "estado",
+    payload: { ...identidade, ...lugar, id: meuId, aba: MINHA_ABA },
+  });
+}
+
+/** Aviso de que esta aba fechou: some na hora para os outros. */
+function avisarSaida() {
+  if (!canal || !pronto || !meuId) return;
+  void canal.send({ type: "broadcast", event: "tchau", payload: { id: meuId, aba: MINHA_ABA } });
+}
+if (typeof window !== "undefined") window.addEventListener("pagehide", avisarSaida);
 
 /** Liga a presença deste usuário (uma vez só; chamar de novo com o mesmo id não faz nada). */
 export function conectarPresenca(id: string) {
@@ -199,19 +267,85 @@ function abrirCanal(id: string) {
   const ch = supabase.channel(CANAL, { config: { presence: { key: id } } });
   ch.on("presence", { event: "sync" }, lerEstado);
   for (const evento of EVENTOS)
-    ch.on("broadcast", { event: evento }, ({ payload }) =>
-      ouvintes[evento].forEach((f) => f((payload ?? {}) as Mensagem)),
-    );
+    ch.on("broadcast", { event: evento }, ({ payload }) => {
+      const dados = (payload ?? {}) as Mensagem & Partial<PresencaHoki> & { aba?: unknown };
+      if (evento === "estado") receberEstado(dados);
+      else if (evento === "ola") {
+        // alguém acabou de entrar: mando meu estado (com um atraso sorteado para não chegarem todos juntos)
+        setTimeout(enviarEstado, 200 + Math.random() * 900);
+      } else if (evento === "tchau") {
+        const abas = typeof dados.id === "string" ? porMensagem.get(dados.id) : undefined;
+        if (abas && typeof dados.aba === "string") abas.delete(dados.aba);
+        lerEstado();
+      }
+      if (!INTERNOS.has(evento)) ouvintes[evento].forEach((f) => f(dados));
+    });
   canal = ch;
   ch.subscribe((s) => {
     if (canal !== ch) return;
     pronto = s === "SUBSCRIBED";
-    if (pronto) publicar();
+    if (pronto) {
+      publicar();
+      void ch.send({ type: "broadcast", event: "ola", payload: { id } });
+    }
     avisar(foto.outros);
   });
+  // batida: reenvia o estado a cada 10 s, tira da praça quem parou de mandar e religa o canal se ele caiu
+  if (batida) clearInterval(batida);
+  batida = setInterval(() => {
+    vigiar();
+    enviarEstado();
+    if (porMensagem.size) lerEstado();
+  }, BATIDA_MS);
 }
 
+/**
+ * Se o canal fechou ou deu erro (internet caiu, aba ficou muito tempo em segundo
+ * plano), abre de novo sem perder quem eu sou nem onde estou.
+ */
+let quedaDesde = 0;
+function vigiar() {
+  const ch = canal;
+  if (!ch || !meuId) return;
+  const caiu =
+    !supabase.getChannels().includes(ch) || ch.state === "closed" || ch.state === "errored";
+  if (!caiu) {
+    quedaDesde = 0;
+    return;
+  }
+  // dá um tempinho para a própria biblioteca religar sozinha
+  if (!quedaDesde) quedaDesde = Date.now();
+  if (Date.now() - quedaDesde < 4000 && supabase.getChannels().includes(ch)) return;
+  quedaDesde = 0;
+  const id = meuId;
+  canal = null;
+  pronto = false;
+  void supabase
+    .removeChannel(ch)
+    .catch(() => undefined)
+    .then(() => {
+      if (meuId !== id || canal) return;
+      try {
+        abrirCanal(id);
+      } catch {
+        // tenta de novo na próxima batida
+      }
+    });
+}
+if (typeof document !== "undefined")
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    // voltou para a aba: confere o canal na hora e manda onde estou
+    quedaDesde = quedaDesde ? quedaDesde - 4000 : 0;
+    vigiar();
+    enviarEstado();
+  });
+
 export function desconectarPresenca() {
+  avisarSaida();
+  if (batida) clearInterval(batida);
+  batida = null;
+  porMensagem.clear();
   if (envioMarcado) clearTimeout(envioMarcado);
   envioMarcado = null;
   const ch = canal;

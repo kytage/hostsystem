@@ -5,11 +5,13 @@ import { Abertura } from "@/components/abertura";
 import { useDevSolicitacaoNotify } from "@/hooks/use-dev-solicitacao-notify";
 import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
 import { useHokiOnline } from "@/hooks/use-hoki-online";
+import { useVersaoNova } from "@/hooks/use-versao-nova";
 
 function AuthenticatedLayout() {
   useDevSolicitacaoNotify();
   useIlegalAvisoNotify();
   useHokiOnline();
+  useVersaoNova();
 
   return (
     <>
