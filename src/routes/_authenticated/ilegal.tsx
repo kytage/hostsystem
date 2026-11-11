@@ -245,12 +245,15 @@ function CopyInput({
 interface EditModalProps {
   org: IlegalOrg;
   categoriaNome: string;
+  /** Lista de categorias para escolher (troca a categoria da organização). */
+  categorias?: { id: string; nome: string }[];
+  isNew?: boolean;
   onClose: () => void;
   onSave: (updated: IlegalOrg) => void;
   saving: boolean;
 }
 
-function EditModal({ org, categoriaNome, onClose, onSave, saving }: EditModalProps) {
+function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose, onSave, saving }: EditModalProps) {
   const [form, setForm] = useState<IlegalOrg>({ ...org });
   const set = <K extends keyof IlegalOrg>(key: K, value: IlegalOrg[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -264,10 +267,10 @@ function EditModal({ org, categoriaNome, onClose, onSave, saving }: EditModalPro
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold text-foreground font-display">
-              Editar {org.setagem}
+              {isNew ? "Nova organização" : `Editar ${org.setagem || org.local}`}
             </h2>
             <p className="text-xs text-muted-foreground">
-              {categoriaNome} · {org.local}
+              {isNew ? "Preencha os dados da setagem. Deixe a organização vazia se estiver livre." : `${categoriaNome} · ${org.local}`}
             </p>
           </div>
           <button
@@ -289,6 +292,18 @@ function EditModal({ org, categoriaNome, onClose, onSave, saving }: EditModalPro
               onChange={(e) => set("setagem", e.target.value)}
             />
           </label>
+          {categorias.length > 0 && (
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                Categoria
+              </span>
+              <MinimalSelect
+                value={form.categoria}
+                onChange={(v) => set("categoria", v)}
+                options={categorias.map((c) => ({ value: c.id, label: c.nome }))}
+              />
+            </label>
+          )}
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-muted-foreground">
               Localização (nome)
@@ -311,7 +326,7 @@ function EditModal({ org, categoriaNome, onClose, onSave, saving }: EditModalPro
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-semibold text-muted-foreground">
-              Organização
+              Nome da organização
             </span>
             <input
               className={inputCls}
@@ -1186,10 +1201,10 @@ function IlegalDashboard() {
       id: `custom-${Date.now()}`,
       categoria: categoria.id,
       ordem: categoria.orgs.length,
-      setagem: `${categoria.nome}${String(categoria.orgs.length + 1).padStart(2, "0")}`,
-      local: "Novo local",
-      grupo: "#",
-      cds: "0,0,0,0",
+      setagem: "",
+      local: "",
+      grupo: "",
+      cds: "",
       organizacao: "",
       status: "Livre",
       situacao: ".",
@@ -1206,7 +1221,7 @@ function IlegalDashboard() {
         title="Painel Ilegal"
         subtitle="Sincronizado na nuvem — toda a equipe vê as mesmas informações em tempo real"
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <IlegalLogButton />
             <div className="flex items-center gap-1 rounded-full glass p-1">
               {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon }) => (
@@ -1249,13 +1264,13 @@ function IlegalDashboard() {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar org, local, grupo..."
-                  className="w-64 rounded-full glass py-2 pl-9 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
+                  className="w-56 rounded-full glass py-2 pl-9 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
                 />
               </div>
             )}
 
-            {/* Solicitações — isolado à direita e em destaque */}
-            <div className="ml-auto flex items-center gap-2 border-l border-border pl-3">
+            {/* Solicitações — em destaque */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setView("solicitacoes")}
                 className={cn(
@@ -1368,7 +1383,7 @@ function IlegalDashboard() {
       ) : (
         <>
           {/* Tabs de categoria */}
-          <nav className="mt-8 flex flex-wrap gap-2">
+          <nav className="mt-8 flex flex-wrap items-center gap-2">
             {[{ id: "todas", nome: "Todas" }, ...categorias].map((c) => (
               <button
                 key={c.id}
@@ -1383,13 +1398,21 @@ function IlegalDashboard() {
                 {c.nome}
               </button>
             ))}
+            {canEdit && (
+              <button
+                onClick={() => handleAdd(categorias.find((c) => c.id === aba) ?? categorias.find((c) => c.id === "a_definir") ?? categorias[0]!)}
+                className="ml-auto flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Plus className="size-4" /> Nova organização
+              </button>
+            )}
           </nav>
 
           {/* Categorias */}
           <div className="mt-6 space-y-8">
             {visiveis.length === 0 && (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-                Nenhum resultado para a busca.
+                {busca.trim() || filtroStat !== "todas" ? "Nenhum resultado para a busca." : canEdit ? "Nenhuma organização cadastrada ainda. Use “Nova organização” para criar." : "Nenhuma organização cadastrada ainda."}
               </div>
             )}
             {visiveis.map((cat) => (
@@ -1587,6 +1610,8 @@ function IlegalDashboard() {
         <EditModal
           org={editando.org}
           categoriaNome={editando.categoriaNome}
+          categorias={categorias}
+          isNew={editando.isNew}
           onClose={() => setEditando(null)}
           onSave={handleSave}
           saving={saveMutation.isPending}

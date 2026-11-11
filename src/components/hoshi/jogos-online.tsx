@@ -48,9 +48,19 @@ export function VelhaDialog({ jogoId, eu, onClose }: { jogoId: string; eu: Pesso
     });
     atualizar();
   };
+  // Revanche vira um convite novo: o outro jogador precisa aceitar (ninguém entra numa partida sem querer).
+  // Quem pede a revanche começa como "x".
   const revanche = async () => {
-    await mutarJogo<Velha>(jogoId, (est) => ({ estado: { ...est, tab: Array<null>(9).fill(null), vez: est.vencedor === "x" ? "o" : "x", vencedor: null }, status: "jogando" }));
+    await mutarJogo<Velha>(jogoId, (est) => {
+      const outro = est.x.id === eu.id ? est.o : est.x;
+      return { estado: { x: eu, o: outro, tab: Array<null>(9).fill(null), vez: "x", vencedor: null }, status: "aberto" };
+    });
     atualizar();
+  };
+  const encerrar = async () => {
+    await mutarJogo<Velha>(jogoId, (est, j) => (j.status === "fim" ? null : { estado: est, status: "fim" }));
+    atualizar();
+    onClose();
   };
 
   const status = !e
@@ -95,9 +105,14 @@ export function VelhaDialog({ jogoId, eu, onClose }: { jogoId: string; eu: Pesso
         <p className="text-center text-sm" aria-live="polite">
           {status}
         </p>
-        {e?.vencedor && minha && (
+        {e?.vencedor && minha && jogo?.status !== "aberto" && (
           <button onClick={() => void revanche()} className="h-10 rounded-full bg-primary text-sm font-semibold text-white">
-            Revanche
+            Pedir revanche
+          </button>
+        )}
+        {minha && jogo && jogo.status !== "fim" && !e?.vencedor && (
+          <button onClick={() => void encerrar()} className="text-xs text-ink-3 underline-offset-4 hover:text-foreground hover:underline">
+            {jogo.status === "aberto" ? "Cancelar convite" : "Encerrar partida"}
           </button>
         )}
       </DialogContent>

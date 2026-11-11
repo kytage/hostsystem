@@ -11,6 +11,7 @@ const IMAGENS: [prefixo: string, imagem: string][] = [
   ["/update", "cubos"],
   ["/marketing", "curvas"],
   ["/areas", "curvas"],
+  ["/organizacoes", "curvas"],
   ["/eventos", "curvas"],
   ["/captacoes", "curvas"],
   ["/financeiro", "ondas"],

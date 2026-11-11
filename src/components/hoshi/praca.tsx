@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoExtenso } from "@/components/dashboard/Logo";
-import { PECAS, PELOS, type HoshiPet } from "@/lib/hoshi";
+import { lerVisual, type HoshiPet, type Visual } from "@/lib/hoshi";
 import { criarJogo, gravarJogo, jogosAtivos, type Cartas, type Jogo, type Pessoa, type Velha } from "@/lib/hoshi-jogos";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
+import { Hoshi2D } from "./hoshi-2d";
 import { CartasDialog, VelhaDialog } from "./jogos-online";
 
 /** Quem está na praça (enviado pelo canal de presença). Posições em % do mapa. */
@@ -16,10 +17,8 @@ interface Presenca {
   id: string;
   nome: string;
   pet: string;
-  /** Cor da roupa; vazio = sem roupa. */
-  cor: string;
-  /** Cor do pelo. */
-  pelo: string;
+  /** Visual completo do pet, igual ao do boneco 3D. */
+  visual: Visual;
   x: number;
   y: number;
   banco: number | null;
@@ -32,33 +31,38 @@ const STATUS_PRONTOS = ["📘 Lendo", "💻 Trabalhando", "☕ Pausa pro café",
 const CHAVE_STATUS = "hoshi-praca-status";
 const limparStatus = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, 32);
 
-/** 20 bancos: 6 em cima, 6 embaixo, 4 de cada lado. */
+/** 20 bancos: 8 em cima, 8 embaixo e 2 de cada lado. Posições em % do mapa. */
 const BANCOS: { x: number; y: number; deitado: boolean }[] = [
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 15 + i * 14, y: 15, deitado: false })),
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 15 + i * 14, y: 89, deitado: false })),
-  ...Array.from({ length: 4 }, (_, i) => ({ x: 6, y: 33 + i * 13, deitado: true })),
-  ...Array.from({ length: 4 }, (_, i) => ({ x: 94, y: 33 + i * 13, deitado: true })),
+  ...Array.from({ length: 8 }, (_, i) => ({ x: 12 + i * (76 / 7), y: 14, deitado: false })),
+  ...Array.from({ length: 8 }, (_, i) => ({ x: 12 + i * (76 / 7), y: 87, deitado: false })),
+  ...[36, 65].map((y) => ({ x: 4.5, y, deitado: true })),
+  ...[36, 65].map((y) => ({ x: 95.5, y, deitado: true })),
 ];
-/* ---------------- cenário: pracinha 2D vista de cima ---------------- */
-// Desenhada em SVG numa prancheta de 200×138 (as posições das pessoas e dos
-// bancos continuam em % do mapa; PX(%) e PY(%) convertem para a prancheta).
-const PX = (pct: number) => pct * 2;
-const PY = (pct: number) => pct * 1.38;
+
+/* ---------------- cenário: pracinha panorâmica, vista de cima ---------------- */
+// Desenhada em SVG numa prancheta de 260×120 (proporção 13:6). O mapa na tela
+// mantém sempre essa proporção, então nada é esticado. Pessoas e bancos usam
+// % do mapa; PX(%) e PY(%) convertem para a prancheta.
+const PROPORCAO = 13 / 6;
+const PX = (pct: number) => pct * 2.6;
+const PY = (pct: number) => pct * 1.2;
 const GRAMA = "#6aaa3f";
 const TERRA = "#e2c48d";
 const TERRA_BORDA = "#b9965f";
 const FOLHA_BORDA = "#245a26";
+const MEIO = { x: 130, y: 60.6 };
+const LAGO = { x: 203, y: 40, rx: 21, ry: 8 };
 
 const ARVORES: [x: number, y: number, tipo: "redonda" | "pinheiro" | "outono"][] = [
-  [26, 37, "pinheiro"], [36, 46, "redonda"], [62, 39, "redonda"], [80, 42, "pinheiro"],
-  [174, 38, "pinheiro"], [172, 56, "outono"], [118, 40, "redonda"],
-  [30, 108, "pinheiro"], [38, 97, "redonda"], [58, 106, "outono"], [74, 100, "pinheiro"],
-  [122, 100, "pinheiro"], [142, 106, "redonda"], [166, 97, "redonda"], [176, 108, "pinheiro"],
-  [5, 9, "pinheiro"], [195, 9, "pinheiro"], [5, 131, "redonda"], [195, 131, "redonda"],
+  [26, 34, "pinheiro"], [40, 44, "redonda"], [58, 36, "outono"], [76, 43, "pinheiro"], [98, 33, "redonda"],
+  [160, 34, "pinheiro"], [234, 36, "redonda"], [232, 50, "pinheiro"], [174, 46, "redonda"],
+  [28, 86, "redonda"], [44, 78, "pinheiro"], [62, 88, "redonda"], [82, 80, "outono"], [100, 90, "pinheiro"],
+  [160, 88, "redonda"], [178, 79, "pinheiro"], [198, 89, "outono"], [216, 80, "redonda"], [236, 88, "pinheiro"],
+  [5, 8, "pinheiro"], [255, 8, "pinheiro"], [5, 114, "redonda"], [255, 114, "redonda"],
 ];
-const PEDRAS: [number, number][] = [[72, 57], [118, 91], [84, 92], [156, 60]];
-const COGUMELOS: [number, number][] = [[46, 57], [152, 111], [66, 93], [128, 58]];
-const POSTES: [number, number][] = [[62, 52], [138, 52], [62, 95], [138, 95]];
+const PEDRAS: [number, number][] = [[88, 50], [170, 74], [50, 74], [222, 54], [112, 78]];
+const COGUMELOS: [number, number][] = [[34, 50], [206, 76], [92, 76], [150, 44], [70, 52]];
+const POSTES: [number, number][] = [[84, 46], [176, 46], [84, 78], [176, 78]];
 const CORES_FLOR = ["#ffffff", "#ff5a5a", "#ffd84a", "#ff8fc8"];
 /** Sorteio com semente fixa: todo mundo vê as flores e os tufos nos mesmos lugares. */
 function sorteador(semente: number) {
@@ -66,20 +70,20 @@ function sorteador(semente: number) {
   return () => (s = (s * 9301 + 49297) % 233280) / 233280;
 }
 const noCaminho = (x: number, y: number) =>
-  Math.abs(y - 73) < 9 || Math.abs(x - 100) < 9 || y < 30 || y > 114 || x < 21 || x > 179 || Math.hypot((x - 100) / 44, (y - 73) / 30) < 1 || Math.hypot((x - 142) / 21, (y - 46) / 11) < 1;
+  Math.abs(y - MEIO.y) < 8 || Math.abs(x - MEIO.x) < 8 || y < 25 || y > 96 || x < 20 || x > 240 || Math.hypot((x - MEIO.x) / 48, (y - MEIO.y) / 25) < 1 || Math.hypot((x - LAGO.x) / (LAGO.rx + 3), (y - LAGO.y) / (LAGO.ry + 3)) < 1;
 const FLORES = (() => {
   const r = sorteador(11);
   const lista: { x: number; y: number; cor: string }[] = [];
-  while (lista.length < 46) {
-    const x = 22 + r() * 156;
-    const y = 31 + r() * 82;
+  while (lista.length < 60) {
+    const x = 20 + r() * 220;
+    const y = 25 + r() * 71;
     if (!noCaminho(x, y)) lista.push({ x, y, cor: CORES_FLOR[Math.floor(r() * CORES_FLOR.length)] ?? "#ffffff" });
   }
   return lista;
 })();
 const TUFOS = (() => {
   const r = sorteador(5);
-  return Array.from({ length: 90 }, () => ({ x: r() * 200, y: r() * 138 }));
+  return Array.from({ length: 110 }, () => ({ x: r() * 260, y: r() * 120 }));
 })();
 
 function Arvore({ x, y, tipo }: { x: number; y: number; tipo: "redonda" | "pinheiro" | "outono" }) {
@@ -120,7 +124,7 @@ function Banco({ b, i }: { b: (typeof BANCOS)[number]; i: number }) {
       </g>
     );
   }
-  const fora = i < 6 ? -1 : 1;
+  const fora = i < 8 ? -1 : 1;
   return (
     <g>
       <rect x={x - 6} y={y - 2.6} width={12} height={5.2} rx={0.8} fill="#b9793a" stroke="#5a3515" strokeWidth={0.7} />
@@ -133,39 +137,39 @@ function Banco({ b, i }: { b: (typeof BANCOS)[number]; i: number }) {
 function Pracinha() {
   const caminho = (d: string) => (
     <>
-      <path d={d} fill="none" stroke={TERRA_BORDA} strokeWidth={17} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke={TERRA} strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={TERRA_BORDA} strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={TERRA} strokeWidth={13} strokeLinecap="round" strokeLinejoin="round" />
     </>
   );
   return (
-    <svg aria-hidden viewBox="0 0 200 138" preserveAspectRatio="none" shapeRendering="crispEdges" className="pointer-events-none absolute inset-0 size-full">
-      <rect width={200} height={138} fill={GRAMA} />
+    <svg aria-hidden viewBox="0 0 260 120" preserveAspectRatio="none" shapeRendering="crispEdges" className="pointer-events-none absolute inset-0 size-full">
+      <rect width={260} height={120} fill={GRAMA} />
       {TUFOS.map((t, i) => (
         <path key={i} d={`M${t.x} ${t.y}l1 -1.6l1 1.6`} fill="none" stroke="#56923a" strokeWidth={0.6} />
       ))}
 
       {/* caminhos de terra: a volta dos bancos e a cruz no meio */}
-      {caminho("M22 21H178Q188 21 188 31V113Q188 123 178 123H22Q12 123 12 113V31Q12 21 22 21Z")}
-      {caminho("M12 73H188")}
-      {caminho("M100 21V123")}
+      {caminho("M22 17H238Q248 17 248 27V94Q248 104 238 104H22Q12 104 12 94V27Q12 17 22 17Z")}
+      {caminho(`M12 ${MEIO.y}H248`)}
+      {caminho(`M${MEIO.x} 17V104`)}
 
       {/* largo de pedra no centro, onde fica o letreiro */}
-      <ellipse cx={100} cy={73} rx={41} ry={27} fill="#a59f8f" />
-      <ellipse cx={100} cy={72.4} rx={40} ry={26} fill="#d9d3c4" />
-      {[-24, -12, 0, 12, 24].map((d) => (
-        <line key={d} x1={100 + d} x2={100 + d} y1={48} y2={98} stroke="#c3bcab" strokeWidth={0.4} />
+      <ellipse cx={MEIO.x} cy={MEIO.y + 0.6} rx={46} ry={24} fill="#a59f8f" />
+      <ellipse cx={MEIO.x} cy={MEIO.y} rx={45} ry={23} fill="#d9d3c4" />
+      {[-30, -15, 0, 15, 30].map((d) => (
+        <line key={d} x1={MEIO.x + d} x2={MEIO.x + d} y1={39} y2={82} stroke="#c3bcab" strokeWidth={0.4} />
       ))}
-      {[-14, 0, 14].map((d) => (
-        <line key={d} x1={62} x2={138} y1={73 + d} y2={73 + d} stroke="#c3bcab" strokeWidth={0.4} />
+      {[-12, 0, 12].map((d) => (
+        <line key={d} x1={88} x2={172} y1={MEIO.y + d} y2={MEIO.y + d} stroke="#c3bcab" strokeWidth={0.4} />
       ))}
-      <ellipse cx={100} cy={80} rx={30} ry={5} fill="rgba(0,0,0,0.18)" />
+      <ellipse cx={MEIO.x} cy={MEIO.y + 8} rx={32} ry={4.4} fill="rgba(0,0,0,0.18)" />
 
       {/* laguinho */}
-      <ellipse cx={142} cy={46.6} rx={19} ry={9.4} fill="#4f86b8" />
-      <ellipse cx={142} cy={46} rx={18} ry={8.6} fill="#77b3e0" />
-      <path d="M131 44h7M146 49h8M138 50h4" stroke="#a9d3f2" strokeWidth={0.7} fill="none" />
-      <circle cx={150} cy={43.5} r={1.7} fill="#3f9a3c" stroke={FOLHA_BORDA} strokeWidth={0.4} />
-      <circle cx={135} cy={48.5} r={1.4} fill="#3f9a3c" stroke={FOLHA_BORDA} strokeWidth={0.4} />
+      <ellipse cx={LAGO.x} cy={LAGO.y + 0.6} rx={LAGO.rx + 1} ry={LAGO.ry + 0.8} fill="#4f86b8" />
+      <ellipse cx={LAGO.x} cy={LAGO.y} rx={LAGO.rx} ry={LAGO.ry} fill="#77b3e0" />
+      <path d={`M${LAGO.x - 12} ${LAGO.y - 2}h7M${LAGO.x + 4} ${LAGO.y + 3}h8M${LAGO.x - 4} ${LAGO.y + 4}h4`} stroke="#a9d3f2" strokeWidth={0.7} fill="none" />
+      <circle cx={LAGO.x + 9} cy={LAGO.y - 2.5} r={1.7} fill="#3f9a3c" stroke={FOLHA_BORDA} strokeWidth={0.4} />
+      <circle cx={LAGO.x - 8} cy={LAGO.y + 2.5} r={1.4} fill="#3f9a3c" stroke={FOLHA_BORDA} strokeWidth={0.4} />
 
       {/* flores, pedras e cogumelos */}
       {FLORES.map((f, i) => (
@@ -202,40 +206,19 @@ function Pracinha() {
   );
 }
 
-/** Miniatura do HOSHI para o mapa: a mesma gotinha, com a cor do pelo e da roupa de cada um. */
-function Bichinho({ pelo, roupa }: { pelo: string; roupa: string | null }) {
-  return (
-    <svg viewBox="0 0 32 36" className="h-9 w-8" aria-hidden>
-      <ellipse cx="16" cy="34" rx="9" ry="1.8" fill="rgba(0,0,0,0.28)" />
-      <circle cx="8" cy="7" r="3.6" fill={pelo} stroke="#3a2a2a" strokeWidth="1" />
-      <circle cx="24" cy="7" r="3.6" fill={pelo} stroke="#3a2a2a" strokeWidth="1" />
-      <ellipse cx="16" cy="19.5" rx="12" ry="13.5" fill={pelo} stroke="#3a2a2a" strokeWidth="1" />
-      {roupa && <path d="M4.6 23.5h22.8a12 13.5 0 0 1-3.6 6.6H8.2a12 13.5 0 0 1-3.6-6.6z" fill={roupa} stroke="#3a2a2a" strokeWidth="0.7" />}
-      <circle cx="11.4" cy="15.5" r="3.9" fill="#fff" stroke="#3a2a2a" strokeWidth="0.6" />
-      <circle cx="20.6" cy="15.5" r="3.9" fill="#fff" stroke="#3a2a2a" strokeWidth="0.6" />
-      <circle cx="11.8" cy="15.9" r="2" fill="#1a1010" />
-      <circle cx="20.2" cy="15.9" r="2" fill="#1a1010" />
-      <circle cx="12.5" cy="15.1" r="0.7" fill="#fff" />
-      <circle cx="20.9" cy="15.1" r="0.7" fill="#fff" />
-      <ellipse cx="16" cy="19.6" rx="1.2" ry="0.9" fill="#1a1010" />
-      <path d="M13.8 21.4q2.2 2 4.4 0" stroke="#7d1a26" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 const FALA_MS = 6500;
 const limitar = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
-const ehCor = (v: unknown) => /^#[0-9a-f]{6}$/i.test(String(v));
 
 export function Praca({ pet }: { pet: HoshiPet }) {
   const qc = useQueryClient();
   const euPessoa = useMemo<Pessoa>(() => ({ id: pet.user_id, nome: pet.username || pet.nome }), [pet.user_id, pet.username, pet.nome]);
-  const cor = pet.visual.roupa === "nenhuma" ? "" : (PECAS.find((p) => p.grupo === "roupa" && p.valor === pet.visual.roupa)?.cor ?? "#ce0e0e");
-  const pelo = PELOS.find((x) => x.id === pet.visual.pelo)?.cor ?? "#fff6ec";
+  // Texto estável do visual: só muda (e só reenvia a presença) quando o pet troca de aparência.
+  const visualTxt = JSON.stringify(pet.visual);
+  const meuVisual = useMemo(() => JSON.parse(visualTxt) as Visual, [visualTxt]);
 
   const [dentro, setDentro] = useState(false);
   const [pronto, setPronto] = useState(false);
-  const [eu, setEu] = useState<{ x: number; y: number; banco: number | null }>({ x: 50, y: 60, banco: null });
+  const [eu, setEu] = useState<{ x: number; y: number; banco: number | null }>({ x: 50, y: 72, banco: null });
   const [outros, setOutros] = useState<Record<string, Presenca>>({});
   const [falas, setFalas] = useState<Record<string, { texto: string; ate: number }>>({});
   const [texto, setTexto] = useState("");
@@ -264,6 +247,20 @@ export function Praca({ pet }: { pet: HoshiPet }) {
   const [velhaId, setVelhaId] = useState<string | null>(null);
   const [cartas, setCartas] = useState(false);
   const canal = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const moldura = useRef<HTMLDivElement>(null);
+  const [mapa, setMapa] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = moldura.current;
+    if (!el) return;
+    const medir = () => {
+      const w = Math.min(el.clientWidth, el.clientHeight * PROPORCAO);
+      setMapa({ w: Math.floor(w), h: Math.floor(w / PROPORCAO) });
+    };
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    medir();
+    return () => observador.disconnect();
+  }, []);
   const ultimaFala = useRef(0);
   const vistas = useRef(new Set<string>());
 
@@ -276,7 +273,7 @@ export function Praca({ pet }: { pet: HoshiPet }) {
       for (const [id, lista] of Object.entries(estado)) {
         const p = lista[lista.length - 1];
         if (id === euPessoa.id || !p || typeof p.x !== "number" || typeof p.y !== "number") continue;
-        proximo[id] = { id, nome: String(p.nome ?? "staff").slice(0, 24), pet: String(p.pet ?? "").slice(0, 24), cor: ehCor(p.cor) ? String(p.cor) : "", pelo: ehCor(p.pelo) ? String(p.pelo) : "#fff6ec", x: limitar(p.x, 0, 100), y: limitar(p.y, 0, 100), banco: typeof p.banco === "number" ? p.banco : null, status: limparStatus(String(p.status ?? "")) };
+        proximo[id] = { id, nome: String(p.nome ?? "staff").slice(0, 24), pet: String(p.pet ?? "").slice(0, 24), visual: lerVisual(p.visual), x: limitar(p.x, 0, 100), y: limitar(p.y, 0, 100), banco: typeof p.banco === "number" ? p.banco : null, status: limparStatus(String(p.status ?? "")) };
       }
       setOutros(proximo);
     })
@@ -297,9 +294,9 @@ export function Praca({ pet }: { pet: HoshiPet }) {
   useEffect(() => {
     const ch = canal.current;
     if (!ch || !pronto) return;
-    if (dentro) void ch.track({ nome: euPessoa.nome, pet: pet.nome, cor, pelo, x: eu.x, y: eu.y, banco: eu.banco, status });
+    if (dentro) void ch.track({ nome: euPessoa.nome, pet: pet.nome, visual: meuVisual, x: eu.x, y: eu.y, banco: eu.banco, status });
     else void ch.untrack();
-  }, [dentro, pronto, eu, euPessoa.nome, pet.nome, cor, pelo, status]);
+  }, [dentro, pronto, eu, euPessoa.nome, pet.nome, meuVisual, status]);
 
   // Apaga os balões vencidos.
   const temFalas = Object.keys(falas).length > 0;
@@ -318,9 +315,14 @@ export function Praca({ pet }: { pet: HoshiPet }) {
   const enviado = velhas.find((j) => j.status === "aberto" && j.estado.x.id === euPessoa.id);
   const emJogo = velhas.find((j) => j.status === "jogando" && (j.estado.x.id === euPessoa.id || j.estado.o.id === euPessoa.id));
 
-  // Quando um desafio meu é aceito, a partida abre sozinha (uma vez por partida).
+  // A partida só abre sozinha quando um desafio que EU mandei nesta visita é aceito.
+  // Partidas antigas em andamento não abrem ao entrar: ficam no botão "Voltar à velha".
+  const meusConvites = useRef(new Set<string>());
   useEffect(() => {
-    if (emJogo && !vistas.current.has(emJogo.id)) {
+    if (enviado) meusConvites.current.add(enviado.id);
+  }, [enviado]);
+  useEffect(() => {
+    if (emJogo && meusConvites.current.has(emJogo.id) && !vistas.current.has(emJogo.id)) {
       vistas.current.add(emJogo.id);
       setVelhaId(emJogo.id);
     }
@@ -341,15 +343,20 @@ export function Praca({ pet }: { pet: HoshiPet }) {
     void qc.invalidateQueries({ queryKey: ["hoshi-jogos"] });
   };
   const responder = async (j: Jogo<Velha>, aceita: boolean) => {
-    await gravarJogo(j, j.estado, aceita ? "jogando" : "fim").catch(() => false);
+    const ok = await gravarJogo(j, j.estado, aceita ? "jogando" : "fim").catch(() => false);
     void qc.invalidateQueries({ queryKey: ["hoshi-jogos"] });
+    // quem aceitou entra direto na partida
+    if (ok && aceita) {
+      vistas.current.add(j.id);
+      setVelhaId(j.id);
+    }
   };
 
   /* ---------- andar, sentar e falar ---------- */
   const andar = (e: MouseEvent<HTMLDivElement>) => {
     if (!dentro) return;
     const r = e.currentTarget.getBoundingClientRect();
-    setEu({ x: limitar(((e.clientX - r.left) / r.width) * 100, 4, 96), y: limitar(((e.clientY - r.top) / r.height) * 100, 12, 94), banco: null });
+    setEu({ x: limitar(((e.clientX - r.left) / r.width) * 100, 3, 97), y: limitar(((e.clientY - r.top) / r.height) * 100, 13, 95), banco: null });
     setAlvo(null);
   };
   const sentar = (i: number) => {
@@ -360,7 +367,7 @@ export function Praca({ pet }: { pet: HoshiPet }) {
       return;
     }
     playSfx("click");
-    setEu({ x: b.x, y: b.y - 2.5, banco: i });
+    setEu({ x: b.x, y: b.y - 1, banco: i });
   };
   const falar = (e: FormEvent) => {
     e.preventDefault();
@@ -372,13 +379,13 @@ export function Praca({ pet }: { pet: HoshiPet }) {
     void canal.current?.send({ type: "broadcast", event: "fala", payload: { id: euPessoa.id, texto: t } });
   };
 
-  const pessoas: (Presenca & { souEu?: boolean })[] = [...Object.values(outros), ...(dentro ? [{ id: euPessoa.id, nome: euPessoa.nome, pet: pet.nome, cor, pelo, ...eu, status, souEu: true }] : [])];
+  const pessoas: (Presenca & { souEu?: boolean })[] = [...Object.values(outros), ...(dentro ? [{ id: euPessoa.id, nome: euPessoa.nome, pet: pet.nome, visual: meuVisual, ...eu, status, souEu: true }] : [])];
   const online = Object.keys(outros).length + (dentro ? 1 : 0);
 
   return (
-    <div className="flex h-full min-h-[440px] flex-col">
+    <div className="flex h-full min-h-[400px] flex-col">
       {/* barra de cima */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2">
         <p className="font-display text-[15px] font-semibold">Praça HOST</p>
         {!dentro && (
           <button onClick={() => setDentro(true)} disabled={!pronto} className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-[11px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-60">
@@ -434,10 +441,11 @@ export function Praca({ pet }: { pet: HoshiPet }) {
       )}
 
       {/* mapa */}
-      <div onClick={andar} className={cn("relative mx-4 flex-1 select-none overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#6aaa3f]", dentro && "cursor-pointer")}>
+      <div ref={moldura} className="mx-3 grid min-h-0 flex-1 place-items-center overflow-hidden rounded-[20px] border border-white/[0.07] bg-[#6aaa3f]">
+      <div onClick={andar} style={{ width: mapa.w, height: mapa.h }} className={cn("relative select-none", dentro && "cursor-pointer")}>
         <Pracinha />
         {/* letreiro HOST com volume, no largo central */}
-        <div aria-hidden className="pointer-events-none absolute left-1/2 top-[51%] w-[31%] -translate-x-1/2 -translate-y-1/2">
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-[49%] w-[25%] -translate-x-1/2 -translate-y-1/2">
           <LogoExtenso cor="#e8112d" className="w-full [filter:drop-shadow(0_1px_0_#7d0909)_drop-shadow(0_1px_0_#7d0909)_drop-shadow(0_1px_0_#7d0909)_drop-shadow(0_1px_0_#5a0606)_drop-shadow(0_2px_0_#3a0404)_drop-shadow(0_5px_3px_rgba(0,0,0,0.45))]" />
         </div>
 
@@ -456,7 +464,7 @@ export function Praca({ pet }: { pet: HoshiPet }) {
               title={ocupado ? "Ocupado" : "Sentar"}
               className={cn(
                 "absolute -translate-x-1/2 -translate-y-1/2 rounded-[5px] border-2 border-transparent transition-colors duration-200",
-                b.deitado ? "h-[9%] w-[3.4%] min-w-3" : "h-[5%] min-h-3 w-[7%]",
+                b.deitado ? "h-[11%] w-[2.6%] min-w-3" : "h-[6%] min-h-3 w-[5.4%]",
                 !ocupado && "enabled:hover:border-white enabled:hover:bg-white/25",
               )}
               style={{ left: `${b.x}%`, top: `${b.y}%` }}
@@ -486,7 +494,7 @@ export function Praca({ pet }: { pet: HoshiPet }) {
                 aria-label={p.souEu ? "Você" : `${p.nome}: desafiar`}
                 className={cn("flex flex-col items-center", p.souEu ? "cursor-default" : "cursor-pointer")}
               >
-                <Bichinho pelo={p.pelo} roupa={p.cor || null} />
+                <Hoshi2D visual={p.visual} />
                 <span className={cn("mt-0.5 max-w-[90px] truncate rounded-full px-1.5 py-px text-[10px] font-medium", p.souEu ? "bg-white text-black" : "bg-black/70 text-white")}>{p.nome}</span>
                 {p.status && <span className="mt-0.5 max-w-[120px] truncate rounded-full bg-black/75 px-1.5 py-px text-[9.5px] font-medium text-red-400">{p.status}</span>}
               </button>
@@ -517,9 +525,10 @@ export function Praca({ pet }: { pet: HoshiPet }) {
           </p>
         )}
       </div>
+      </div>
 
       {/* chat */}
-      <form onSubmit={falar} className="flex items-center gap-2 px-4 py-3">
+      <form onSubmit={falar} className="flex items-center gap-2 px-3 py-2">
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

@@ -36,6 +36,8 @@ export const CATEGORIAS_META: { id: string; nome: string }[] = [
   { id: "garagem", nome: "Garagem" },
   { id: "drogas", nome: "Drogas" },
   { id: "hpi", nome: "HPI" },
+  // Locais cadastrados sem tipo definido: aparecem aqui até alguém escolher a categoria.
+  { id: "a_definir", nome: "A definir" },
 ];
 
 /** Item VIP da facção (garagem com veículo específico, pounder, etc.). */
@@ -194,6 +196,7 @@ export async function updateOrg(org: IlegalOrg): Promise<void> {
   const { error } = await supabase
     .from("ilegal_orgs")
     .update({
+      categoria: org.categoria,
       setagem: org.setagem,
       local: org.local,
       grupo: org.grupo,

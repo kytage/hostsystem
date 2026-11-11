@@ -23,6 +23,7 @@ import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
+import { Route as AuthenticatedOrganizacoesRouteImport } from './routes/_authenticated/organizacoes'
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
@@ -107,6 +108,12 @@ const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
   path: '/marketing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedOrganizacoesRoute =
+  AuthenticatedOrganizacoesRouteImport.update({
+    id: '/organizacoes',
+    path: '/organizacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPedsRoute = AuthenticatedPedsRouteImport.update({
   id: '/peds',
   path: '/peds',
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
@@ -202,6 +210,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/marketing': typeof AuthenticatedMarketingRoute
+  '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
@@ -230,6 +239,7 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
+  '/_authenticated/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/ilegal'
     | '/marketing'
+    | '/organizacoes'
     | '/peds'
     | '/players'
     | '/punicoes'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/ilegal'
     | '/marketing'
+    | '/organizacoes'
     | '/peds'
     | '/players'
     | '/punicoes'
@@ -311,6 +323,7 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/ilegal'
     | '/_authenticated/marketing'
+    | '/_authenticated/organizacoes'
     | '/_authenticated/peds'
     | '/_authenticated/players'
     | '/_authenticated/punicoes'
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMarketingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/organizacoes': {
+      id: '/_authenticated/organizacoes'
+      path: '/organizacoes'
+      fullPath: '/organizacoes'
+      preLoaderRoute: typeof AuthenticatedOrganizacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/peds': {
       id: '/_authenticated/peds'
       path: '/peds'
@@ -525,6 +545,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
+  AuthenticatedOrganizacoesRoute: typeof AuthenticatedOrganizacoesRoute
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
@@ -546,6 +567,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
+  AuthenticatedOrganizacoesRoute: AuthenticatedOrganizacoesRoute,
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,

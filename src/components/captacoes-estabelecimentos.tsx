@@ -33,10 +33,13 @@ const STATUS_CORES: Record<EstabStatus, string> = {
 };
 
 interface Props {
-  onCaptar: (est: Estabelecimento, categoria: string) => void;
+  /** Sem `onCaptar` o botão "Captar" some (ex.: na página pública de Organizações livres). */
+  onCaptar?: (est: Estabelecimento, categoria: string) => void;
+  /** `false` esconde criar, editar e remover (quem só pode ver). */
+  podeEditar?: boolean;
 }
 
-export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
+export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props) {
   const qc = useQueryClient();
   const [novaCategoria, setNovaCategoria] = useState(false);
   const [novoEstab, setNovoEstab] = useState(false);
@@ -100,7 +103,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
           </p>
           <p className="text-2xl font-semibold text-foreground font-display">{totais.desativados}</p>
         </div>
-        <div className="ml-auto flex gap-2">
+        {podeEditar && <div className="ml-auto flex gap-2">
           <button
             type="button"
             onClick={() => setNovaCategoria(true)}
@@ -115,7 +118,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
           >
             <Plus className="size-3.5" /> Novo estabelecimento
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Categorias */}
@@ -139,7 +142,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
                       </span>
                     ))}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                {podeEditar && <div className="flex shrink-0 items-center gap-1">
                   <button
                     type="button"
                     title="Adicionar estabelecimento"
@@ -159,7 +162,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
                   >
                     <MoreHorizontal className="size-3.5" />
                   </button>
-                </div>
+                </div>}
               </div>
               <p className="mb-2 text-[11px] text-muted-foreground">
                 {livres} livre{livres === 1 ? "" : "s"},{" "}
@@ -200,7 +203,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
                       )}
                       <td className="py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {e.status === "livre" && (
+                          {e.status === "livre" && onCaptar && (
                             <button
                               type="button"
                               onClick={() => onCaptar(e, cat.nome)}
@@ -209,6 +212,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
                               <Plus className="size-3" /> Captar
                             </button>
                           )}
+                          {podeEditar && <>
                           <button
                             type="button"
                             title="Editar"
@@ -231,6 +235,7 @@ export function CaptacoesEstabelecimentos({ onCaptar }: Props) {
                           >
                             <Trash2 className="size-3.5" />
                           </button>
+                          </>}
                         </div>
                       </td>
                     </tr>

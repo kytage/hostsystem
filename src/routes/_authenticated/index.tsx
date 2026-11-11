@@ -30,6 +30,7 @@ import { Termometro } from "@/components/termometro";
 import { HoshiCard } from "@/components/hoshi/hoshi-card";
 import { TemasCarousel } from "@/components/temas-carousel";
 import { AvisosHero } from "@/components/avisos-hero";
+import { OrganizacoesDestaque } from "@/components/organizacoes-destaque";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -210,6 +211,8 @@ function Dashboard() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-3">
+          <OrganizacoesDestaque />
           <div className="flex flex-wrap gap-2">
             {quickActions.map((a) => (
               <button
@@ -223,6 +226,7 @@ function Dashboard() {
                 {a.badge > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">{a.badge}</span>}
               </button>
             ))}
+          </div>
           </div>
         </div>
       </section>
