@@ -33,6 +33,8 @@ import {
   POCA,
   PONTE,
   PONTE_DA_FAZENDA,
+  PISTA,
+  PONTE_DA_PISTA,
   PONTE_DO_ESCRITORIO,
   POSTES,
   RIO,
@@ -1218,6 +1220,113 @@ export function criarMundo(THREE: typeof TH) {
           aceso.add(tx + (i - 3) * 0.13, 4.15 - j * 0.13, tz, 0.13, 0.13, 0.16, 0xff3b30, 0);
       }),
     );
+  }
+
+  // ---------------- ilha da pista de corrida: ao norte, ligada pela ponte que sai ao lado do morro ----------------
+  {
+    const A = PISTA;
+    const P = PONTE_DA_PISTA;
+    const cx = (A.x0 + A.x1) / 2;
+    const cz = (A.z0 + A.z1) / 2;
+    const largura = A.x1 - A.x0;
+    const fundura = A.z1 - A.z0;
+    for (let k = 1; k <= 4; k++) {
+      const f = 1 - k * 0.19;
+      encosta.base(
+        cx,
+        -0.4 - k,
+        cz,
+        largura * f,
+        1,
+        fundura * f,
+        escolhe(k < 3 ? TERRA : ROCHA),
+        0.05,
+      );
+    }
+    // piso: grama, com um circuito oval de asfalto, zebras vermelhas e brancas e a faixa xadrez da largada
+    const RA = 7.4;
+    const RB = 4.4;
+    for (let x = A.x0 + 0.5; x < A.x1; x += 1)
+      for (let z = A.z0 + 0.5; z < A.z1; z += 1) {
+        const d = Math.hypot((x - cx) / RA, (z - cz) / RB);
+        const naPista = d > 0.72 && d < 1.28;
+        const zebra = (d > 0.6 && d <= 0.72) || (d >= 1.28 && d < 1.4);
+        const largada = naPista && Math.abs(x - cx) < 0.6 && z > cz;
+        const cor = largada
+          ? Math.round(z * 2) % 2
+            ? 0xf2f2f2
+            : 0x1b1b1e
+          : naPista
+            ? 0x3b3e45
+            : zebra
+              ? Math.round(x + z) % 2
+                ? 0xd8281f
+                : 0xf2f2f2
+              : escolhe([0x63b34c, 0x5aa845, 0x6bbd52]);
+        piso3d.base(x, -0.4, z, 1, 0.4, 1, cor, naPista ? 0.02 : 0.04);
+      }
+    // ponte de pedra (vai no sentido norte-sul), com muretas e lanternas
+    const lajes = Math.round(P.z1 - P.z0);
+    const passo = (P.z1 - P.z0) / lajes;
+    for (let i = 0; i < lajes; i++) {
+      const z = P.z0 + (i + 0.5) * passo;
+      piso3d.base(P.x, -0.4, z, P.meia * 2, 0.4, passo, escolhe(PAVE), 0.04);
+      for (const l of [-1, 1])
+        pedra.base(P.x + l * P.meia, 0, z, 0.2, 0.45, passo, escolhe(PEDRA_CLARA), 0.04);
+      if (i % 3 === 1)
+        for (const l of [-1, 1]) {
+          pedra.base(P.x + l * P.meia, 0.45, z, 0.3, 0.5, 0.3, escolhe(PEDRA_CLARA), 0.03);
+          aceso.base(P.x + l * P.meia, 0.95, z, 0.22, 0.22, 0.22, 0xffe2a8, 0);
+        }
+    }
+    // arco da largada na chegada da ponte: dois postes e a faixa xadrez em cima
+    for (const l of [-1, 1]) pedra.base(P.x + l * 1.9, 0, A.z1 - 0.9, 0.3, 3, 0.3, 0x2b2d32, 0.02);
+    for (let i = 0; i < 12; i++)
+      for (let j = 0; j < 2; j++)
+        pedra.base(
+          P.x - 1.75 + i * 0.32 + 0.0,
+          2.4 + j * 0.32,
+          A.z1 - 0.9,
+          0.32,
+          0.32,
+          0.14,
+          (i + j) % 2 ? 0xf2f2f2 : 0x1b1b1e,
+          0,
+        );
+    // pilhas de pneus nos cantos, arquibancada no fundo e bandeirinhas
+    for (const [px, pz] of [
+      [A.x0 + 1.2, A.z0 + 1.2],
+      [A.x1 - 1.2, A.z0 + 1.2],
+      [A.x0 + 1.2, A.z1 - 1.2],
+      [A.x1 - 1.2, A.z1 - 1.2],
+    ] as const)
+      for (let k = 0; k < 3; k++)
+        pedra.base(px, k * 0.3, pz, 0.7 - k * 0.08, 0.28, 0.7 - k * 0.08, 0x202024, 0.02);
+    for (let degrau = 0; degrau < 3; degrau++)
+      madeira.base(
+        cx,
+        degrau * 0.4,
+        A.z0 + 0.6 + degrau * 0.5 - 0.5,
+        8,
+        0.4,
+        0.5,
+        degrau % 2 ? 0xd8281f : 0xf2f2f2,
+        0.03,
+      );
+    for (let i = 0; i < 6; i++) {
+      const fx = cx - 5 + i * 2;
+      madeira.base(fx, 1.2, A.z0 + 0.2, 0.08, 1.6, 0.08, 0x2b2d32, 0);
+      aceso.base(
+        fx + 0.28,
+        2.5,
+        A.z0 + 0.2,
+        0.5,
+        0.3,
+        0.04,
+        [0xd8281f, 0xffd84a, 0x4fd1ff][i % 3]!,
+        0,
+      );
+    }
   }
 
   // ---------------- Escritório HOST: anexo vermelho a leste, ligado à ilha pela ponte no fim do caminho ----------------

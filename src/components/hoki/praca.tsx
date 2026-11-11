@@ -24,9 +24,18 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CONTAGEM_MS, LOBBY_MS } from "@/lib/hoki-corrida";
+import { Corrida } from "./corrida";
 import { SHOWS, infoDoShow, type Show, type TipoShow } from "@/lib/hoki-shows";
 import { cn } from "@/lib/utils";
-import { SUJO_ABAIXO_DE, todosPets, VISUAL_PADRAO, type HokiPet, type Visual } from "@/lib/hoki";
+import {
+  coresDe,
+  SUJO_ABAIXO_DE,
+  todosPets,
+  VISUAL_PADRAO,
+  type HokiPet,
+  type Visual,
+} from "@/lib/hoki";
 import { Hoki2D } from "./hoki-2d";
 import {
   definirLugar,
@@ -66,6 +75,8 @@ import {
   ajustar,
   BANCOS,
   EMBARQUE_DO_BALANCO,
+  LARGADA,
+  naIlhaDaPista,
   LUGARES_DO_BALANCO,
   CANTEIROS,
   CHEGADA,
@@ -232,7 +243,7 @@ export function Praca({
   >([]);
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
-    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" }
+    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" | "pista" }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
   >(null);
@@ -745,6 +756,8 @@ export function Praca({
       return { tipo: "parkour" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
+    // no arco da largada, na ilha da pista: abrir uma corrida
+    if (Math.hypot(p.x - LARGADA.x, p.z - LARGADA.z) < 2.4) return { tipo: "pista" as const };
     // na beira de trás da ilha, embaixo do letreiro: o balanço
     if (Math.abs(p.x - EMBARQUE_DO_BALANCO.x) < 5.2 && p.z < EMBARQUE_DO_BALANCO.z + 1.5)
       return { tipo: "balanco" as const };
@@ -947,6 +960,7 @@ export function Praca({
     else if (perto.tipo === "chuveiro") tomarBanho();
     else if (perto.tipo === "correio") setCorreioAberto(true);
     else if (perto.tipo === "balanco") sentarNoBalanco();
+    else if (perto.tipo === "pista") abrirCorrida();
     else setQueridometro(true);
   };
   useEffect(() => {
@@ -1045,6 +1059,98 @@ export function Praca({
     if (BANCOS[i]?.trabalho) setTrabalhando(true);
     setEu((e) => ({ ...e, banco: i }));
   };
+  /* ---------- corrida de kart: lobby de 60 s (quem estiver na ilha da pista quando fechar, corre) ---------- */
+  const [lobby, setLobby] = useState<{ id: string; de: string; nome: string; fim: number } | null>(
+    null,
+  );
+  const [agoraDoLobby, setAgoraDoLobby] = useState(() => Date.now());
+  const [corrida, setCorrida] = useState<{ id: string; largada: number } | null>(null);
+  useEffect(
+    () =>
+      ouvirNaPraca("corrida", (m) => {
+        const { id, de, faltam } = m;
+        if (typeof id !== "string" || id.length > 40 || typeof de !== "string") return;
+        if (typeof faltam !== "number" || !(faltam > 0) || faltam > LOBBY_MS + 2000) return;
+        const nome = String(m.nome ?? "alguém").slice(0, 24);
+        const fim = Date.now() + faltam;
+        setLobby((l) => {
+          // o mesmo lobby chega várias vezes (para quem entrou depois): só adianta se for "largar agora"
+          if (l && l.id === id) return fim < l.fim - 1500 ? { ...l, fim } : l;
+          if (l) return l;
+          playSfx("apito");
+          toast(`🏁 ${nome} abriu uma corrida!`, {
+            description: "Vá até a pista (ponte no fundo da ilha) em 60 segundos para correr.",
+            duration: 7000,
+          });
+          return { id, de, nome, fim };
+        });
+      }),
+    [],
+  );
+  const abrirCorrida = () => {
+    if (!dentro || corrida) return;
+    if (lobby) {
+      toast.info("Já tem uma corrida abrindo. Fique na pista que você entra.");
+      return;
+    }
+    const novo = {
+      id: Math.random().toString(36).slice(2, 10),
+      de: euPessoa.id,
+      nome: euPessoa.nome,
+      fim: Date.now() + LOBBY_MS,
+    };
+    playSfx("apito");
+    setLobby(novo);
+    enviarNaPraca("corrida", { id: novo.id, de: novo.de, nome: novo.nome, faltam: LOBBY_MS });
+  };
+  /** Quem abriu pode largar antes dos 60 s. */
+  const largarAgora = () => {
+    if (!lobby || lobby.de !== euPessoa.id) return;
+    const fim = Date.now() + 3000;
+    setLobby({ ...lobby, fim });
+    enviarNaPraca("corrida", { id: lobby.id, de: lobby.de, nome: lobby.nome, faltam: 3000 });
+  };
+  const euRef = useRef(eu);
+  euRef.current = eu;
+  const dentroAgora = useRef(dentro);
+  dentroAgora.current = dentro;
+  useEffect(() => {
+    if (!lobby) return;
+    const meu = lobby.de === euPessoa.id;
+    let ultimoAviso = Date.now();
+    const id = setInterval(() => {
+      const agora = Date.now();
+      setAgoraDoLobby(agora);
+      // quem abriu repete o aviso a cada 5 s, para quem chegou na praça depois
+      if (meu && agora - ultimoAviso > 5000 && lobby.fim - agora > 1500) {
+        ultimoAviso = agora;
+        enviarNaPraca("corrida", {
+          id: lobby.id,
+          de: lobby.de,
+          nome: lobby.nome,
+          faltam: lobby.fim - agora,
+        });
+      }
+      if (agora < lobby.fim) return;
+      // fechou: corre quem está acordado na ilha da pista
+      setLobby(null);
+      const e = euRef.current;
+      if (dentroAgora.current && naIlhaDaPista(e.x, e.z, 0.6))
+        setCorrida({ id: lobby.id, largada: lobby.fim + CONTAGEM_MS });
+      else if (meu) toast.info("A corrida começou sem você: fique na ilha da pista até a largada.");
+    }, 250);
+    return () => clearInterval(id);
+  }, [lobby, euPessoa.id]);
+  const irParaAPista = () => {
+    if (!dentro) {
+      toast.info("Acorde o seu HOKI para ir até a pista.");
+      return;
+    }
+    largarTudo();
+    setAlvo(null);
+    setEu({ ...LARGADA, banco: null });
+  };
+
   /** Balanço do letreiro: senta no lugar livre mais perto (são 10). */
   const sentarNoBalanco = () => {
     if (!dentro) {
@@ -1962,6 +2068,46 @@ export function Praca({
           {naoLidas === 1 ? "1 carta nova" : `${naoLidas} cartas novas`} · leia na caixa do correio
         </button>
       )}
+      {/* corrida abrindo: contagem para todos, com o atalho para ir até a pista */}
+      {lobby && !corrida && (
+        <div className="pf-pop absolute left-1/2 top-12 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 py-1 pl-3 pr-1 text-[12px] text-white backdrop-blur-md">
+          <span>🏁</span>
+          <span className="whitespace-nowrap">
+            Corrida de <b>{lobby.nome}</b> em{" "}
+            <b className="tabular-nums text-[#ff8a72]">
+              {Math.max(0, Math.ceil((lobby.fim - agoraDoLobby) / 1000))} s
+            </b>
+          </span>
+          {naIlhaDaPista(eu.x, eu.z, 0.6) && dentro ? (
+            <span className="whitespace-nowrap rounded-full bg-emerald-500/20 px-2 py-1 text-[11px] text-emerald-300">
+              você está na pista
+            </span>
+          ) : (
+            <button
+              onClick={irParaAPista}
+              className="h-7 whitespace-nowrap rounded-full bg-white px-3 text-[11.5px] font-semibold text-black"
+            >
+              Ir para a pista
+            </button>
+          )}
+          {lobby.de === euPessoa.id && lobby.fim - agoraDoLobby > 3500 && (
+            <button
+              onClick={largarAgora}
+              className="h-7 whitespace-nowrap rounded-full border border-white/20 px-3 text-[11.5px] font-medium hover:bg-white/10"
+            >
+              Largar agora
+            </button>
+          )}
+        </div>
+      )}
+      {corrida && (
+        <Corrida
+          id={corrida.id}
+          largada={corrida.largada}
+          eu={{ id: euPessoa.id, nome: euPessoa.nome, cor: coresDe(meuVisual).principal }}
+          onClose={() => setCorrida(null)}
+        />
+      )}
       {/* sentado no balanço: a tecla E desce */}
       {dentro && noBalanco && (
         <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
@@ -1989,7 +2135,11 @@ export function Praca({
                     ? "abrir o correio"
                     : perto.tipo === "balanco"
                       ? "sentar no balanço"
-                      : "abrir o queridômetro"}
+                      : perto.tipo === "pista"
+                        ? lobby
+                          ? "corrida abrindo: fique na pista"
+                          : "abrir corrida (60 s para a galera chegar)"
+                        : "abrir o queridômetro"}
           {perto.tipo === "parkour" && (
             <>
               <kbd className="ml-1 rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">

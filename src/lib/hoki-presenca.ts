@@ -57,7 +57,8 @@ type Evento =
   | "ola"
   | "tchau"
   | "reiniciar"
-  | "show";
+  | "show"
+  | "corrida";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -73,6 +74,7 @@ const EVENTOS: Evento[] = [
   "tchau",
   "reiniciar",
   "show",
+  "corrida",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -86,6 +88,8 @@ export interface Mensagem {
   para?: unknown;
   nome?: unknown;
   aceita?: unknown;
+  /** Corrida: quanto falta (ms) para o lobby fechar. */
+  faltam?: unknown;
   /** Presentes: qual item e quantos. */
   item?: unknown;
   n?: unknown;
@@ -194,7 +198,7 @@ function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
   // quem ainda está na versão antiga só aparece quando entra na praça: conta como acordado
   const dorme = p.dorme === true;
   const x = numero(p.x, -79, 44);
-  const z = numero(p.z, -16, 16);
+  const z = numero(p.z, -41, 16);
   if (!dorme && (x === null || z === null)) return null;
   const banco = numero(p.banco, 0, 63);
   return {

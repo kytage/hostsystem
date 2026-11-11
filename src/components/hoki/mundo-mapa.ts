@@ -170,8 +170,23 @@ const OCUPA: Partial<Record<Cultura, number>> = {
   ursinho: 0.45,
 };
 
+/** Ilha da pista de corrida, atrás da ilha (ao norte), ligada por uma ponte que sai ao lado do morro. */
+export const PISTA = { x0: 1, x1: 21, z0: -40, z1: -26 };
+export const PONTE_DA_PISTA = { x: 10, meia: 1.25, z0: PISTA.z1, z1: -13.4 };
+/** Arco da largada: ali o HOKI abre (ou entra em) uma corrida, com a tecla E. */
+export const LARGADA: Ponto = { x: 10, z: -29.5 };
+export const naIlhaDaPista = (x: number, z: number, folga = 0) =>
+  x >= PISTA.x0 + 0.6 - folga &&
+  x <= PISTA.x1 - 0.6 + folga &&
+  z >= PISTA.z0 + 0.6 - folga &&
+  z <= PISTA.z1 - 0.1 + folga;
+
 /** Dá para pisar no anexo? (as pontes, o piso do escritório e o da fazenda, com `folga` a mais em volta) */
 export const noAnexo = (x: number, z: number, folga = 0) =>
+  (Math.abs(x - PONTE_DA_PISTA.x) < PONTE_DA_PISTA.meia - 0.4 + folga &&
+    z >= PONTE_DA_PISTA.z0 - 0.3 &&
+    z <= PONTE_DA_PISTA.z1 + folga) ||
+  naIlhaDaPista(x, z, folga) ||
   (x >= PONTE_DA_FAZENDA.x0 - 0.3 &&
     x <= PONTE_DA_FAZENDA.x1 + folga &&
     Math.abs(z) < PONTE_DA_FAZENDA.meia - 0.4 + folga) ||
@@ -381,9 +396,9 @@ export function livre(x: number, z: number) {
 // Grade de caminhada: a ilha dividida em quadradinhos de meio bloco, marcados como livres ou não.
 const PASSO = 0.5;
 const X0 = -79; // começa na fazenda, a oeste
-const Z0 = -16;
+const Z0 = -41; // começa na ilha da pista, ao norte
 const NX = 247; // de x = -79 (fazenda) até x = 44 (escritório)
-const NZ = 65;
+const NZ = 115; // de z = -41 (pista) até z = 16
 let grade: Uint8Array | null = null;
 function celulas() {
   if (!grade) {
