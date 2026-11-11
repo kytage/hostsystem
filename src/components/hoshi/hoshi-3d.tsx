@@ -24,7 +24,8 @@ export function Hoshi3D({
   const caixa = useRef<HTMLDivElement>(null);
   const estado = useRef({ humor, reacao, inicio: 0 });
   const [falhou, setFalhou] = useState(false);
-  const { roupa, chapeu, oculos, pescoco, capa, efeito } = visual;
+  // O mascote é refeito sempre que alguma parte do visual muda.
+  const chave = JSON.stringify(visual);
 
   useEffect(() => {
     estado.current.humor = humor;
@@ -50,8 +51,8 @@ export function Hoshi3D({
 
         const cena = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-        camera.position.set(0, 1.25, 5.6);
-        camera.lookAt(0, 1.12, 0);
+        camera.position.set(0, 1.15, 5.4);
+        camera.lookAt(0, 0.86, 0);
 
         cena.add(new THREE.HemisphereLight(0xffffff, 0x2a1414, 1.3));
         const sol = new THREE.DirectionalLight(0xffffff, 1.8);
@@ -61,7 +62,7 @@ export function Hoshi3D({
         contraluz.position.set(-2.4, 1.6, -2.2);
         cena.add(contraluz);
 
-        const mascote = criarMascote(THREE, { roupa, chapeu, oculos, pescoco, capa, efeito });
+        const mascote = criarMascote(THREE, JSON.parse(chave) as Visual);
         cena.add(mascote.raiz);
 
         const geoSombra = new THREE.CircleGeometry(0.8, 40);
@@ -121,7 +122,7 @@ export function Hoshi3D({
       vivo = false;
       limpar();
     };
-  }, [roupa, chapeu, oculos, pescoco, capa, efeito]);
+  }, [chave]);
 
   return (
     <div ref={caixa} className={cn("relative", className)} role="img" aria-label="HOSHI, o pet da HOST">

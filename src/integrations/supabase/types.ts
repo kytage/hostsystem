@@ -757,13 +757,48 @@ export type Database = {
           },
         ]
       }
+      hoshi_jogos: {
+        Row: {
+          created_at: string
+          criado_por: string
+          estado: Json
+          id: string
+          status: string
+          tipo: string
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string
+          estado?: Json
+          id?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string
+          estado?: Json
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: []
+      }
       hoshi_pets: {
         Row: {
           carinho: number
+          coins: number
           created_at: string
           cuidado_em: string
           energia: number
           fome: number
+          itens: Json
           nome: string
           recorde_petiscos: number
           recorde_reflexo: number
@@ -776,10 +811,12 @@ export type Database = {
         }
         Insert: {
           carinho?: number
+          coins?: number
           created_at?: string
           cuidado_em?: string
           energia?: number
           fome?: number
+          itens?: Json
           nome?: string
           recorde_petiscos?: number
           recorde_reflexo?: number
@@ -792,10 +829,12 @@ export type Database = {
         }
         Update: {
           carinho?: number
+          coins?: number
           created_at?: string
           cuidado_em?: string
           energia?: number
           fome?: number
+          itens?: Json
           nome?: string
           recorde_petiscos?: number
           recorde_reflexo?: number
