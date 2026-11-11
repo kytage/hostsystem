@@ -6,9 +6,17 @@
  */
 import type * as TH from "three";
 import { coresDe, peca as pecaPorId, trajeDe, type Humor, type Visual } from "@/lib/hoki";
-import { criarEsqueleto, materialDeSombra, materialDoCorpo, TEMPO } from "./corpo";
+import {
+  criarEsqueleto,
+  materialDeSombra,
+  materialDoCorpo,
+  materialDoPed,
+  MEDIDAS_PED,
+  TEMPO,
+} from "./corpo";
+import { criarFogo } from "./fogo";
 import { criarEfeito, type Efeito } from "./efeitos";
-import { pecasVestidas, vestirModelo } from "./pecas3d";
+import { pecasVestidas, PONTAS_DAS_ASAS_DE_ACO, vestirModelo } from "./pecas3d";
 import type { Modelo } from "./modelo";
 
 export type Reacao =
@@ -68,6 +76,8 @@ const MODELO = { altura: 0.979, cabeca: { y: 0.7, rx: 0.33, ry: 0.28, rz: 0.25 }
 export interface OpcoesMascote {
   /** Malha do HOKI clássico (com textura ou leve). Sem ela, o clássico usa o boneco montado por formas. */
   modelo?: Modelo | undefined;
+  /** Malha do ped exclusivo (traje "Bonne"). Sem ela, quem usa o ped aparece como o HOKI clássico. */
+  ped?: Modelo | undefined;
   /** Na praça há vários HOKIs: sem luz própria, para não pesar. */
   mundo?: boolean;
 }
@@ -385,11 +395,90 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
   // ---------------- modelo 3D do HOKI clássico ----------------
   // Com o modelo, o corpo montado por formas sai e entra a malha com textura; a "cabeça" do
   // boneco continua existindo (vazia) só para segurar chapéus e óculos no lugar certo.
-  const usaModelo = !!modelo && tipo === "redonda";
+  const pedDoTraje = traje.ped ? opcoes.ped : undefined;
+  const usaPed = !!pedDoTraje;
+  const usaModelo = usaPed || (!!modelo && tipo === "redonda");
+  /** Fogos (asas de aço e olhos do ped) e o que precisa acompanhar o tronco e a cabeça do ped. */
+  const fogos: ReturnType<typeof criarFogo>[] = [];
+  let costasDoPed: TH.Group | null = null;
+  let olhosDoPed: TH.Group | null = null;
+  const FOGO_DOURADO = {
+    cores: [0xfff3c4, 0xffb520, 0xff5a00] as [number, number, number],
+    porPonto: opcoes.mundo ? 3 : 7,
+    altura: 0.22,
+    abre: 0.035,
+    tamanho: opcoes.mundo ? 0.5 : 0.52,
+  };
   // Braços, pernas, cabeça e tronco do modelo (malha única) dobram direto no desenho.
   const esqueleto = criarEsqueleto(THREE);
   let efeitoDoModelo: Efeito | null = null;
-  if (usaModelo && modelo) {
+  if (usaPed && pedDoTraje) {
+    // ped exclusivo: o corpo inteiro é a malha do ped; dele só as asas (costas) aparecem
+    const formas: TH.Object3D[] = [];
+    corpo.traverse((o) => {
+      if (o instanceof THREE.Mesh) formas.push(o);
+    });
+    formas.forEach((o) => o.parent?.remove(o));
+    // um pouco mais alto que o HOKI clássico (é um boneco em formato de gente)
+    const s = ((PESCOCO + TOPO_CAPUZ + 0.14) / MODELO.altura) * 1.12;
+    const matPed = materialDoPed(THREE, pedDoTraje, esqueleto, !!opcoes.mundo);
+    const sombraDoPed = materialDeSombra(THREE, esqueleto, false, MEDIDAS_PED);
+    lixo.push(matPed, sombraDoPed);
+    const malha = new THREE.Mesh(pedDoTraje.geo, matPed);
+    malha.customDepthMaterial = sombraDoPed;
+    malha.scale.setScalar(s);
+    corpo.add(malha);
+
+    // asas: ficam num grupo preso na cintura do ped, que inclina junto com o tronco
+    const asasDoPed = vestirModelo(
+      THREE,
+      pedDoTraje.geo,
+      criarEsqueleto(THREE),
+      pecasVestidas({ costas: visual.costas }),
+      !!opcoes.mundo,
+    );
+    lixo.push({ dispose: asasDoPed.descartar });
+    costasDoPed = new THREE.Group();
+    costasDoPed.position.set(0, MEDIDAS_PED.cintura * s, 0);
+    asasDoPed.grupo.scale.setScalar(s);
+    // as asas foram desenhadas para as costas do HOKI clássico (altura 0,31): sobem para as costas do ped
+    asasDoPed.grupo.position.set(0, (0.4 - MEDIDAS_PED.cintura) * s, 0.04 * s);
+    costasDoPed.add(asasDoPed.grupo);
+    corpo.add(costasDoPed);
+    if (visual.costas === "costas:asas-aco" && PONTAS_DAS_ASAS_DE_ACO.length) {
+      const fogo = criarFogo(THREE, [...PONTAS_DAS_ASAS_DE_ACO], FOGO_DOURADO);
+      asasDoPed.grupo.add(fogo.malha);
+      fogos.push(fogo);
+    }
+
+    // olhos pegando fogo branco: a chama sai de cada olho e acompanha a cabeça
+    const pescoco = MEDIDAS_PED.pescoco;
+    olhosDoPed = new THREE.Group();
+    // (fica dentro do grupo do tronco: quando o corpo inclina, o pescoço vai junto)
+    olhosDoPed.position.set(0, (pescoco - MEDIDAS_PED.cintura) * s, 0);
+    olhosDoPed.scale.setScalar(s);
+    const fogoDosOlhos = criarFogo(
+      THREE,
+      [
+        [-0.052, 0.9 - pescoco, 0.088],
+        [0.052, 0.9 - pescoco, 0.088],
+        [-0.066, 0.905 - pescoco, 0.082],
+        [0.066, 0.905 - pescoco, 0.082],
+      ],
+      {
+        cores: [0xffffff, 0xeaf2ff, 0x9fb4d9],
+        porPonto: opcoes.mundo ? 5 : 11,
+        altura: 0.19,
+        abre: 0.02,
+        tamanho: opcoes.mundo ? 0.4 : 0.42,
+        rumo: [0, 1, -0.25],
+      },
+    );
+    olhosDoPed.add(fogoDosOlhos.malha);
+    fogos.push(fogoDosOlhos);
+    costasDoPed.add(olhosDoPed);
+    largura = Math.max(largura, s * 0.6 + 0.1);
+  } else if (usaModelo && modelo) {
     const formas: TH.Object3D[] = [];
     corpo.traverse((o) => {
       if (o instanceof THREE.Mesh) formas.push(o);
@@ -430,6 +519,12 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
     }
     malha.scale.setScalar(s);
     corpo.add(malha);
+    // asas de aço: fogo dourado nas pontas das penas
+    if (visual.costas === "costas:asas-aco" && PONTAS_DAS_ASAS_DE_ACO.length) {
+      const fogo = criarFogo(THREE, [...PONTAS_DAS_ASAS_DE_ACO], FOGO_DOURADO);
+      roupas.grupo.add(fogo.malha);
+      fogos.push(fogo);
+    }
 
     // alinha a "cabeça" invisível com a cabeça do modelo
     const c = MODELO.cabeca;
@@ -720,6 +815,16 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
     const { t, humor, reacao, p, mouse } = q;
     TEMPO.value = t;
     efeitoDoModelo?.atualizar(t);
+    for (const fogo of fogos) fogo.atualizar(t);
+    // no ped, as asas inclinam com o tronco e o fogo dos olhos gira com a cabeça
+    if (costasDoPed) {
+      const tr = esqueleto.tronco.value;
+      costasDoPed.rotation.set(tr.x, tr.y, tr.z);
+    }
+    if (olhosDoPed) {
+      const c = esqueleto.cabeca.value;
+      olhosDoPed.rotation.set(c.x, c.y, c.z);
+    }
     const dorme = humor === "dormindo";
     const feliz = humor === "feliz";
     const triste = humor === "triste";
@@ -1090,5 +1195,14 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
     return salto;
   }
 
-  return { raiz, atualizar, topo, largura, descartar: () => lixo.forEach((l) => l.dispose()) };
+  return {
+    raiz,
+    atualizar,
+    topo,
+    largura,
+    descartar: () => {
+      lixo.forEach((l) => l.dispose());
+      fogos.forEach((fogo) => fogo.descartar());
+    },
+  };
 }

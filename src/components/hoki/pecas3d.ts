@@ -880,6 +880,156 @@ export const asas =
     }
   };
 
+/** Junta várias formas numa malha só (as asas de aço têm dezenas de penas). */
+function juntar(formas: TH.BufferGeometry[]): TH.BufferGeometry {
+  const base = formas[0]!.clone();
+  for (const nome of ["position", "normal", "uv"] as const) {
+    const primeiro = formas[0]!.getAttribute(nome);
+    const total = formas.reduce((n, g) => n + g.getAttribute(nome).array.length, 0);
+    const dados = new Float32Array(total);
+    let o = 0;
+    for (const g of formas) {
+      dados.set(g.getAttribute(nome).array as Float32Array, o);
+      o += g.getAttribute(nome).array.length;
+    }
+    const copia = primeiro.clone();
+    copia.array = dados;
+    (copia as { count: number }).count = total / primeiro.itemSize;
+    base.setAttribute(nome, copia);
+  }
+  base.clearGroups();
+  formas.forEach((g) => g.dispose());
+  return base;
+}
+/** Contorno de uma pena (ponta fina, um pouco curva), saindo de (0,0) na direção `ang`. */
+const PENA: [number, number][] = [
+  [0, 0],
+  [0.1, 0.4],
+  [0.34, 0.5],
+  [0.66, 0.42],
+  [0.88, 0.22],
+  [1, 0.02],
+  [0.9, -0.14],
+  [0.66, -0.34],
+  [0.32, -0.46],
+  [0.08, -0.32],
+];
+const pena = (x: number, y: number, ang: number, comp: number, larg: number, s: number) => {
+  const c = Math.cos(ang);
+  const sn = Math.sin(ang);
+  return PENA.map(([px, py]) => {
+    const a = px * comp;
+    const b = py * larg;
+    return [(x + a * c - b * sn) * s, y + a * sn + b * c] as const;
+  });
+};
+/** Onde ficam as pontas das penas grandes de cada asa (nas medidas do modelo): é dali que sai o fogo dourado. */
+export const PONTAS_DAS_ASAS_DE_ACO: [number, number, number][] = [];
+/**
+ * Asas de aço (exclusivas): penas escuras em três camadas, cada uma com a borda
+ * prateada aparecendo por trás, abrindo para cima como uma lua crescente.
+ */
+export const asasDeAco = (): Monta => (k) => {
+  const GRAU = Math.PI / 180;
+  // osso da asa: sai das costas, vai para fora e sobe
+  const osso = (u: number): [number, number] => [
+    0.04 + 0.5 * Math.pow(u, 0.9),
+    0.3 * u + 0.16 * u * u,
+  ];
+  const camadas: {
+    n: number;
+    u0: number;
+    u1: number;
+    a0: number;
+    a1: number;
+    c0: number;
+    c1: number;
+    l: number;
+    z: number;
+  }[] = [
+    // penas grandes da ponta (apontam para cima e para fora)
+    { n: 10, u0: 0.42, u1: 1, a0: -8, a1: 80, c0: 0.3, c1: 0.46, l: 0.085, z: 0 },
+    // penas de baixo (abrem para o lado e para baixo)
+    { n: 9, u0: 0.08, u1: 0.62, a0: -82, a1: -18, c0: 0.2, c1: 0.3, l: 0.08, z: -0.006 },
+    // penas médias, por cima das outras
+    { n: 10, u0: 0.1, u1: 0.96, a0: -70, a1: 62, c0: 0.15, c1: 0.24, l: 0.07, z: -0.014 },
+    // penas curtas, cobrindo o osso
+    { n: 11, u0: 0.02, u1: 0.9, a0: -64, a1: 50, c0: 0.09, c1: 0.13, l: 0.055, z: -0.022 },
+  ];
+  PONTAS_DAS_ASAS_DE_ACO.length = 0;
+  for (const s of [-1, 1]) {
+    const escuras: TH.BufferGeometry[] = [];
+    const prata: TH.BufferGeometry[] = [];
+    for (const cam of camadas)
+      for (let i = 0; i < cam.n; i++) {
+        const f = cam.n > 1 ? i / (cam.n - 1) : 0;
+        const [x, y] = osso(cam.u0 + (cam.u1 - cam.u0) * f);
+        const ang = (cam.a0 + (cam.a1 - cam.a0) * f) * GRAU;
+        const comp = cam.c0 + (cam.c1 - cam.c0) * f;
+        // cada pena fica um fio à frente da vizinha, para as bordas prateadas aparecerem em escama
+        const z = -0.145 + cam.z - i * 0.0012;
+        // pena escura na frente e atrás, com a prateada (um pouco maior) no meio: a borda prata aparece dos dois lados
+        const lugar = [0.008, s * 0.045, 0.31] as const;
+        for (const dz of [0.0065, -0.0065])
+          escuras.push(
+            k.chapa(
+              pena(x, y, ang, comp, cam.l, s),
+              lugar[0],
+              lugar[1],
+              lugar[2],
+              z + dz,
+              0,
+              s * 0.42,
+            ),
+          );
+        prata.push(
+          k.chapa(
+            pena(
+              x - 0.008 * Math.cos(ang),
+              y - 0.008 * Math.sin(ang),
+              ang,
+              comp + 0.026,
+              cam.l + 0.026,
+              s,
+            ),
+            0.005,
+            lugar[1],
+            lugar[2],
+            z,
+            0,
+            s * 0.42,
+          ),
+        );
+        // pontas das penas grandes e de algumas médias: de onde sai o fogo
+        if (cam.z === 0 || (cam.z === -0.006 && i % 2 === 0)) {
+          const px = (x + Math.cos(ang) * comp) * s;
+          const py = y + Math.sin(ang) * comp;
+          const giro = s * 0.42;
+          PONTAS_DAS_ASAS_DE_ACO.push([
+            s * 0.045 + px * Math.cos(giro),
+            0.31 + py,
+            z - px * Math.sin(giro),
+          ]);
+        }
+      }
+    const balanca = (p: readonly [number, number, number]) => Math.abs(p[0]) / 0.55;
+    k.forma(
+      juntar(prata),
+      0xdfe3ea,
+      TRONCO,
+      { aspereza: 0.24, metal: 0.55, duplo: true, brilho: 0x8f96a3, forcaDoBrilho: 0.35 },
+      balanca,
+    );
+    k.forma(
+      juntar(escuras),
+      0x1b1c21,
+      TRONCO,
+      { aspereza: 0.34, metal: 0.6, duplo: true },
+      balanca,
+    );
+  }
+};
+
 // ---------------- monta as peças vestidas por cima do modelo ----------------
 /**
  * Cria as malhas de todas as peças em `montas` (pela ordem) em cima da pele do
@@ -1309,6 +1459,7 @@ export const PECAS_3D: Record<string, readonly Monta[]> = {
   "bandeira:trans": [bandeira(listras(["#5bcefa", "#f5a9b8", "#ffffff", "#f5a9b8", "#5bcefa"]))],
   "bandeira:brasil": [bandeira(bandeiraBrasil)],
   "costas:asas": [asas()],
+  "costas:asas-aco": [asasDeAco()],
   // efeitos presos ao corpo (os que flutuam em volta ficam em efeitos.ts)
   "efeito:aureola": [
     (k) =>

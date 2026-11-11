@@ -141,6 +141,7 @@ function criarPalco(
 
   let mascote: ReturnType<typeof criarMascote> | null = null;
   let modelo: Modelo | undefined;
+  let ped: Modelo | undefined;
   let podio: ReturnType<typeof criarPodio> | null = null;
   let letreiro: ReturnType<typeof criarLetreiro> | null = null;
   const chaves = { visual: "", podio: "", nome: "" };
@@ -192,10 +193,16 @@ function criarPalco(
 
     if (chaveVisual !== chaves.visual) {
       // todo visual usa o modelo 3D original; as roupas vestem por cima dele
-      const novo = await modeloCompleto(THREE);
+      // o traje "Bonne" troca o corpo inteiro pelo modelo do ped
+      const [novo, novoPed] = await Promise.all([
+        modeloCompleto(THREE),
+        peca(visual.traje)?.ped ? modeloCompleto(THREE, "bonne") : undefined,
+      ]);
       if (meu !== pedido || morto) {
         novo?.geo.dispose();
         novo?.tex?.dispose();
+        novoPed?.geo.dispose();
+        novoPed?.tex?.dispose();
         return;
       }
       if (mascote) {
@@ -205,7 +212,10 @@ function criarPalco(
       modelo?.geo.dispose();
       modelo?.tex?.dispose();
       modelo = novo;
-      mascote = criarMascote(THREE, visual, { modelo });
+      ped?.geo.dispose();
+      ped?.tex?.dispose();
+      ped = novoPed;
+      mascote = criarMascote(THREE, visual, { modelo, ped });
       comSombra(mascote.raiz);
       suporte.add(mascote.raiz);
       chaves.visual = chaveVisual;
@@ -401,6 +411,8 @@ function criarPalco(
       mascote?.descartar();
       modelo?.geo.dispose();
       modelo?.tex?.dispose();
+      ped?.geo.dispose();
+      ped?.tex?.dispose();
       podio?.descartar();
       letreiro?.descartar();
       fundo?.descartar();

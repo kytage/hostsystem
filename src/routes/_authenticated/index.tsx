@@ -24,7 +24,6 @@ import {
 import { fetchEventos } from "@/lib/eventos";
 import { CalendarMonth, dayKey } from "@/components/calendar-month";
 import { TarefasPreview } from "@/components/home-pessoal";
-import { Termometro } from "@/components/termometro";
 import { HokiCard } from "@/components/hoki/hoki-card";
 import { AtalhosCard } from "@/components/atalhos-card";
 import { AvisosHero } from "@/components/avisos-hero";
@@ -480,13 +479,9 @@ function Dashboard() {
         </section>
       )}
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-2">
-        <div className="animate-rise" style={{ animationDelay: "420ms" }}>
-          <TarefasPreview />
-        </div>
-        <div className="animate-rise" style={{ animationDelay: "480ms" }}>
-          <Termometro />
-        </div>
+      {/* o queridômetro fica só dentro do HOKI (no termômetro da praça) */}
+      <div className="mt-3 animate-rise" style={{ animationDelay: "420ms" }}>
+        <TarefasPreview />
       </div>
     </div>
   );

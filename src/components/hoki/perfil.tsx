@@ -6,6 +6,7 @@ import { QUERIDOMETRO } from "@/lib/termometro";
 import { cn } from "@/lib/utils";
 import { Hoki3D, type Reacao } from "./hoki-3d";
 import { useQueridometro } from "./queridometro";
+import { useSouVisita } from "@/lib/hoki-visita";
 
 /**
  * Perfil do HOKI de alguém: o mascote em 3D no pódio, o nível, os recordes,
@@ -28,9 +29,12 @@ export function PerfilHoki({
   const prog = progresso(pet.xp);
   const vestindo = ESPACOS.map((g) => peca(pet.visual[g])).filter((p) => !!p);
   const [aceno] = useState<{ tipo: Reacao; n: number }>({ tipo: "acenar", n: 1 });
-  const { quadro } = useQueridometro("");
+  const { quadro, tags } = useQueridometro("");
   const linha = quadro.find((l) => l.perfil.id === pet.user_id);
-  const tag = linha?.perfil.tag ?? "";
+  const tag = tags.get(pet.user_id) ?? "";
+  // o queridômetro é só da equipe: visita não vê, e perfil de visita não tem
+  const souVisita = useSouVisita();
+  const comQueridometro = !souVisita && !!linha;
   const numeros = [
     { k: "Staff Coins", v: pet.coins, Icone: Coins },
     { k: "Petiscos", v: pet.recorde_petiscos || "—", Icone: Cookie },
@@ -113,10 +117,15 @@ export function PerfilHoki({
             </dl>
 
             {/* queridômetro de hoje */}
-            <p className="mt-4 text-[10.5px] font-medium uppercase tracking-[0.18em] text-ink-3">
+            <p
+              className={cn(
+                "mt-4 text-[10.5px] font-medium uppercase tracking-[0.18em] text-ink-3",
+                !comQueridometro && "hidden",
+              )}
+            >
               Queridômetro de hoje
             </p>
-            <div className="mt-1.5 flex gap-1.5">
+            <div className={cn("mt-1.5 flex gap-1.5", !comQueridometro && "hidden")}>
               {QUERIDOMETRO.map((e, i) => {
                 const n = linha?.contagem[i] ?? 0;
                 return (

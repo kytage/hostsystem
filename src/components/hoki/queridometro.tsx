@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Thermometer } from "lucide-react";
+import { Check, Heart, Loader2, Thermometer } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ export function useQueridometro(euId: string) {
             id: p.id,
             username: p.username ?? "",
             tag: cargo ? ROLE_TAG[cargo] : p.visita ? "VIS" : "",
+            visita: p.visita === true && !cargo,
           };
         });
       }
@@ -74,7 +75,12 @@ export function useQueridometro(euId: string) {
         doUsuario.set(c.user_id, [...(doUsuario.get(c.user_id) ?? []), c.role]);
       return (perfis.data ?? []).map((p) => {
         const cargo = ROLE_ORDER.find((r) => doUsuario.get(p.id)?.includes(r));
-        return { id: p.id, username: p.username ?? "", tag: cargo ? ROLE_TAG[cargo] : "" };
+        return {
+          id: p.id,
+          username: p.username ?? "",
+          tag: cargo ? ROLE_TAG[cargo] : "",
+          visita: false,
+        };
       });
     },
     staleTime: 300_000,
@@ -86,8 +92,13 @@ export function useQueridometro(euId: string) {
   });
   const perfis = useMemo<Perfil[]>(() => {
     const visuais = new Map(pets.map((p) => [p.user_id, p.visual]));
-    return contas.map((c) => ({ ...c, visual: visuais.get(c.id) ?? VISUAL_PADRAO }));
+    // o queridômetro é só da equipe: visitas não entram no quadro nem recebem emojis
+    return contas
+      .filter((c) => !c.visita)
+      .map((c) => ({ ...c, visual: visuais.get(c.id) ?? VISUAL_PADRAO }));
   }, [contas, pets]);
+  /** Sigla de cada pessoa (equipe e visitas), para o cartão de perfil. */
+  const tags = useMemo(() => new Map(contas.map((c) => [c.id, c.tag])), [contas]);
   const { data: votos = [] } = useQuery({ queryKey: ["termometro"], queryFn: fetchTermometroHoje });
   const { data: meus = [] } = useQuery({
     queryKey: ["meus-votos-termometro"],
@@ -126,7 +137,7 @@ export function useQueridometro(euId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return { perfis, quadro, entregues, pendentes, entregar };
+  return { perfis, quadro, entregues, pendentes, entregar, tags };
 }
 
 /** A "foto" da pessoa: o busto do HOKI dela. */
@@ -216,7 +227,7 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex h-[min(90dvh,700px)] w-[calc(100vw-1.5rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[92dvh] w-[calc(100vw-2rem)] max-w-[1760px] flex-col gap-0 overflow-hidden p-0"
       >
         <div className="brilho relative flex shrink-0 flex-wrap items-center gap-3 border-b border-white/[0.07] px-5 py-3.5 pr-14">
           <span className="icone-quadro size-10 text-[#ff6a57]">
@@ -231,24 +242,38 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
               {String(falta.minutos).padStart(2, "0")}min).
             </p>
           </div>
-          <div className="segmentos" role="tablist" aria-label="O que mostrar">
+          <div className="flex items-center gap-2" role="tablist" aria-label="O que mostrar">
             <button
               type="button"
               role="tab"
               aria-selected={aba === "quadro"}
               onClick={() => setAba("quadro")}
-              data-sem-elastico
+              className={cn("pilula rounded-full", aba === "quadro" && "pilula-ativa")}
             >
               Quadro de hoje
             </button>
+            {/* entregar em destaque: vermelho, com brilho e a contagem de quem ainda falta */}
             <button
               type="button"
               role="tab"
               aria-selected={aba === "entregar"}
               onClick={() => setAba("entregar")}
-              data-sem-elastico
+              className={cn(
+                "relative flex h-9 items-center gap-2 rounded-full px-4 text-[12.5px] font-semibold text-white transition-transform duration-200 hover:-translate-y-px active:scale-[0.97]",
+                "bg-gradient-to-b from-[#ff4a3d] to-[#ce0e0e] shadow-[0_8px_26px_-6px_rgba(229,35,27,0.85),inset_0_1px_0_rgba(255,255,255,0.3)]",
+                aba === "entregar" && "ring-2 ring-white/70",
+              )}
             >
-              Entregar{pendentes > 0 ? ` · ${pendentes}` : ""}
+              <Heart className="size-3.5" fill="currentColor" />
+              Entregar emojis
+              {pendentes > 0 && (
+                <span className="relative grid h-[18px] min-w-[18px] place-items-center rounded-full bg-white px-1 text-[10.5px] font-bold tabular-nums text-[#ce0e0e]">
+                  {aba !== "entregar" && (
+                    <span className="absolute inset-0 animate-ping rounded-full bg-white/70" />
+                  )}
+                  <span className="relative">{pendentes}</span>
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -265,21 +290,21 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
           ))}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3.5">
           {aba === "entregar" ? (
             pessoas.length === 0 ? (
               <p className="grid h-full place-items-center text-sm text-muted-foreground">
                 Ainda não há outros perfis para receber emojis.
               </p>
             ) : (
-              <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(204px,1fr))] gap-2">
                 {pessoas.map((p) => {
                   const dado = entregues.get(p.id);
                   const enviando = entregar.isPending && entregar.variables?.para.id === p.id;
                   return (
                     <li
                       key={p.id}
-                      className={cn("glass-inset rounded-2xl border p-3", dado && "opacity-60")}
+                      className={cn("glass-inset rounded-2xl border p-2.5", dado && "opacity-60")}
                     >
                       <div className="flex items-center gap-2.5">
                         <Foto visual={p.visual} className="size-10" />
@@ -299,7 +324,7 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
                           <Loader2 className="size-4 animate-spin text-muted-foreground" />
                         )}
                       </div>
-                      <div className="mt-2.5 grid grid-cols-6 gap-1">
+                      <div className="mt-2 grid grid-cols-6 gap-1">
                         {QUERIDOMETRO.map((e) => (
                           <button
                             key={e.nome}
@@ -324,10 +349,10 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
               </ul>
             )
           ) : (
-            <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(204px,1fr))] gap-2">
               {quadro.map((l) => (
                 <li key={l.perfil.id}>
-                  <CartaoDoQuadro linha={l} />
+                  <CartaoDoQuadro linha={l} compacto />
                 </li>
               ))}
             </ul>

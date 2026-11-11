@@ -1,9 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type * as TH from "three";
 import { cn } from "@/lib/utils";
-import { type Visual } from "@/lib/hoki";
+import { peca, type Visual } from "@/lib/hoki";
 import { crescimento, type Cultura } from "@/lib/hoki-itens";
 import { criarMosquitos } from "./mosquitos";
+import { criarShows, type PoseShow } from "./mundo-show";
+import type { Show } from "@/lib/hoki-shows";
 import type { Dupla, Par } from "@/lib/hoki-presenca";
 import { criarMascote, type Reacao } from "./mascote";
 import { modeloLeve, type Modelo } from "./modelo";
@@ -64,6 +66,10 @@ export interface Mundo3DRef {
   truque(id: string, tipo: Reacao): void;
   /** Aproxima (negativo) ou afasta (positivo) a câmera. */
   zoom(delta: number): void;
+  /** Começa um evento do Founder daqui a `atrasoMs` (todos na praça participam). */
+  iniciarShow(show: Show, atrasoMs: number): void;
+  /** Há um evento rodando agora? */
+  showRodando(): boolean;
 }
 interface Eventos {
   onChao(p: Ponto): void;
@@ -79,6 +85,8 @@ interface Eventos {
   onCanteiro(i: number): void;
   /** Clicou na caixa do correio (ou no envelope em cima dela). */
   onCorreio(): void;
+  /** Recado curto de um evento da praça (quem explodiu, quem venceu, "espere acabar"…). */
+  onAviso?(texto: string): void;
 }
 
 const ESCALA = 0.62; // tamanho do HOKI no mundo (1 = um bloco do chão)
@@ -332,6 +340,7 @@ function criarMotor(
   });
 
   // símbolo do termômetro: pisca em cima do totem e mostra para quantas pessoas ainda dá para entregar emoji hoje
+  let semBlip = false;
   const blip = document.createElement("div");
   blip.className = CL_ROTULO;
   blip.innerHTML =
@@ -572,9 +581,24 @@ function criarMotor(
   observador.observe(el);
   medir();
 
+  // ped exclusivo (traje "Bonne"): a versão leve só é carregada quando alguém na praça usa
+  let pedLeve: Modelo | undefined;
+  let pedindoPed = false;
+  let ultimaLista: PessoaMundo[] = [];
   const montar = (visual: Visual) => {
+    if (peca(visual.traje)?.ped && !pedLeve && !pedindoPed) {
+      pedindoPed = true;
+      void modeloLeve(THREE, "bonne").then((m) => {
+        if (!m) return;
+        pedLeve = m;
+        // refaz quem estava esperando o ped (até aqui apareceu como o HOKI clássico)
+        for (const a of avatares.values()) a.chave = "";
+        setPessoas(ultimaLista);
+      });
+    }
     const m = criarMascote(THREE, visual, {
       modelo,
+      ped: pedLeve,
       mundo: true,
     });
     m.raiz.traverse((o) => {
@@ -656,6 +680,7 @@ function criarMotor(
 
   /** Recebe quem está na praça. Quem é novo aparece; quem mudou de destino começa a andar. */
   function setPessoas(lista: PessoaMundo[]) {
+    ultimaLista = lista;
     const vivos = new Set<string>();
     // cada um que dorme ganha uma vaga do berço, sempre na mesma ordem para todo mundo
     const noBerco = lista
@@ -778,6 +803,15 @@ function criarMotor(
     baixou = null;
     ultimo = null;
     if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8) return;
+    // preso num evento (ou congelado na batata quente): não anda até acabar
+    for (const a of avatares.values())
+      if (a.souEu) {
+        const motivo = shows.ocupado(a.id, performance.now());
+        if (motivo) {
+          eventos.onAviso?.(motivo);
+          return;
+        }
+      }
     const r = el.getBoundingClientRect();
     const px = e.clientX - r.left;
     const py = e.clientY - r.top;
@@ -871,6 +905,67 @@ function criarMotor(
   let visivel = true;
   const olheiro = new IntersectionObserver((e) => (visivel = e[0]?.isIntersecting ?? true));
   olheiro.observe(el);
+  // ---------------- eventos do Founder (trovão, avião, mergulho, batata quente…) ----------------
+  const shows = criarShows(THREE, cena, el, {
+    posicao: (id) => {
+      const a = avatares.get(id);
+      return a && !a.dorme && a.acorda === null ? { ...a.mostra } : null;
+    },
+    nome: (id) => avatares.get(id)?.texto.textContent || "alguém",
+    aviso: (texto) => eventos.onAviso?.(texto),
+    truque: (id, tipo) => {
+      const a = avatares.get(id);
+      if (a && !a.sentado && !a.dorme && a.acorda === null)
+        a.truque = { tipo, inicio: performance.now() };
+    },
+  });
+  /** Quem está sendo comandado por um evento neste momento (para devolver a caminhada quando acabar). */
+  const noShow = new Set<string>();
+  /** Coloca o HOKI na pose que o evento manda. */
+  function aplicarShow(a: Avatar, sp: PoseShow, t: number, dt: number) {
+    a.mostra.x = sp.x;
+    a.mostra.y = sp.y;
+    a.mostra.z = sp.z;
+    a.pos = { x: sp.x, z: sp.z };
+    a.rota = [];
+    a.sentado = false;
+    a.truque = null;
+    a.andando = !!sp.andando;
+    const giro = Math.atan2(
+      Math.sin(sp.rumo - a.grupo.rotation.y),
+      Math.cos(sp.rumo - a.grupo.rotation.y),
+    );
+    a.grupo.rotation.y += sp.congelado ? 0 : giro * (1 - Math.exp(-dt * 12));
+    a.grupo.position.set(sp.x, sp.y, sp.z);
+    a.grupo.scale.setScalar(ESCALA);
+    if (!sp.congelado)
+      a.mascote.atualizar({
+        t,
+        humor: "normal",
+        reacao: sp.reacao ?? null,
+        p: sp.p ?? 0,
+        mouse: parado,
+        calmo,
+        andando: !!sp.andando,
+        sentado: !!sp.sentado,
+      });
+    a.sombra.visible = sp.sombra !== false && sp.y < 0.05;
+    a.sombra.position.set(sp.x, 0.035, sp.z);
+    a.sombra.scale.set(0.5, 1, 0.5);
+  }
+  /** Fim do evento para esta pessoa: volta andando para onde estava indo. */
+  function voltarDoShow(a: Avatar) {
+    a.grupo.scale.setScalar(ESCALA);
+    const aqui = ajustar({ x: a.mostra.x, z: a.mostra.z }) ?? { x: a.mostra.x, z: a.mostra.z };
+    a.pos = aqui;
+    const banco = a.alvo.banco !== null ? BANCOS[a.alvo.banco] : undefined;
+    const destino = banco ? frenteDoBanco(banco) : { x: a.alvo.x, z: a.alvo.z };
+    a.rota = planejar(a.pos, destino);
+    if (!a.rota.length) a.pos = destino;
+    a.sentado = false;
+    a.truque = null;
+  }
+
   const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const parado = { x: 0, y: 0 };
   let antes = performance.now();
@@ -1060,6 +1155,7 @@ function criarMotor(
     anoitecer(nivelDaNoite());
     regar(agora);
     mundo.atualizar(t);
+    shows.quadro(agora, dt);
 
     let eu: Avatar | undefined;
     acompanhados.clear();
@@ -1071,9 +1167,18 @@ function criarMotor(
     for (const a of avatares.values()) {
       if (a.souEu) eu = a;
       if (a.dorme || a.acorda !== null) {
+        if (noShow.delete(a.id)) a.grupo.scale.setScalar(ESCALA);
         animarBerco(a, agora, t, dt);
         continue;
       }
+      // num evento do Founder, quem manda na posição e na pose é o evento
+      const sp = shows.pose(a.id, agora);
+      if (sp) {
+        noShow.add(a.id);
+        aplicarShow(a, sp, t, dt);
+        continue;
+      }
+      if (noShow.delete(a.id)) voltarDoShow(a);
       let andando = false;
       const proximo = a.rota[0];
       if (proximo) {
@@ -1138,6 +1243,7 @@ function criarMotor(
       );
       a.grupo.rotation.y += giro * k;
       a.grupo.position.set(a.mostra.x, a.mostra.y, a.mostra.z);
+      a.grupo.scale.setScalar(ESCALA * shows.escala(a.id, agora));
       // animação: a avulsa acaba sozinha; a que está em repetição recomeça até a pessoa parar
       if (a.truque && agora - a.truque.inicio > (DURACAO[a.truque.tipo] ?? 3) * 1000) {
         if (a.anim && !andando && !s && !outro) a.truque.inicio = agora;
@@ -1253,6 +1359,13 @@ function criarMotor(
       olhar.y + Math.sin(subida) * dist,
       olhar.z + Math.cos(giroCam) * plano,
     );
+    // raio, explosões e gigantes: a tela treme
+    const tremor = shows.tremor(agora);
+    if (tremor > 0) {
+      camera.position.x += (Math.random() - 0.5) * tremor;
+      camera.position.y += (Math.random() - 0.5) * tremor;
+      camera.position.z += (Math.random() - 0.5) * tremor;
+    }
     camera.lookAt(olhar);
     renderer.render(cena, camera);
 
@@ -1260,7 +1373,9 @@ function criarMotor(
     const w = el.clientWidth;
     const h = el.clientHeight;
     for (const a of avatares.values()) {
-      vetor.set(a.mostra.x, a.mostra.y + a.mascote.topo * ESCALA + 0.2, a.mostra.z).project(camera);
+      vetor
+        .set(a.mostra.x, a.mostra.y + a.mascote.topo * a.grupo.scale.y + 0.2, a.mostra.z)
+        .project(camera);
       const fora = vetor.z > 1 || Math.abs(vetor.x) > 1.15 || Math.abs(vetor.y) > 1.25;
       a.rotulo.style.display = fora ? "none" : "";
       if (!fora)
@@ -1284,7 +1399,7 @@ function criarMotor(
     blipPk.style.display = pkTela.visivel ? "" : "none";
     if (pkTela.visivel)
       blipPk.style.transform = `translate3d(${pkTela.x.toFixed(1)}px, ${pkTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
-    blip.style.display = blipTela.visivel ? "" : "none";
+    blip.style.display = blipTela.visivel && !semBlip ? "" : "none";
     if (blipTela.visivel)
       blip.style.transform = `translate3d(${blipTela.x.toFixed(1)}px, ${blipTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
   };
@@ -1298,6 +1413,8 @@ function criarMotor(
         id: a.id.slice(0, 6),
         eu: a.souEu,
         mostra: [+a.mostra.x.toFixed(2), +a.mostra.z.toFixed(2)],
+        y: +a.mostra.y.toFixed(2),
+        escala: +a.grupo.scale.y.toFixed(2),
         rota: a.rota.map((r) => [+r.x.toFixed(1), +r.z.toFixed(1)]),
         alvo: a.alvo,
         dorme: a.dorme,
@@ -1330,6 +1447,9 @@ function criarMotor(
       }
       if (cartaPisca) cartaPisca.classList.toggle("hidden", n <= 0);
     },
+    setSemTermometro(v: boolean) {
+      semBlip = v;
+    },
     setPendentes(n: number) {
       if (!blipN) return;
       blipN.hidden = n <= 0;
@@ -1354,8 +1474,13 @@ function criarMotor(
     zoom(delta: number) {
       zoomUsuario = Math.max(0, Math.min(1, zoomUsuario + delta));
     },
+    iniciarShow(show: Show, atrasoMs: number) {
+      shows.iniciar(show, atrasoMs);
+    },
+    showRodando: () => shows.rodando(performance.now()),
     descartar() {
       cancelAnimationFrame(raf);
+      shows.descartar();
       observador.disconnect();
       olheiro.disconnect();
       el.removeEventListener("pointerdown", aoBaixar);
@@ -1412,6 +1537,8 @@ export const Mundo3D = forwardRef<
     colheitas?: Record<string, number>;
     /** Cartas não lidas no correio. */
     cartas?: number;
+    /** Esconde o símbolo do termômetro (para visitas, que não usam o queridômetro). */
+    semTermometro?: boolean;
     className?: string;
   } & Eventos
 >(function Mundo3D(props, ref) {
@@ -1444,6 +1571,7 @@ export const Mundo3D = forwardRef<
           onParkour: () => atual.current.onParkour(),
           onCanteiro: (i) => atual.current.onCanteiro(i),
           onCorreio: () => atual.current.onCorreio(),
+          onAviso: (texto) => atual.current.onAviso?.(texto),
         });
         motor.current = m;
         // em desenvolvimento, o motor fica à mão no console para testes
@@ -1454,6 +1582,7 @@ export const Mundo3D = forwardRef<
         m.setPendentes(atual.current.pendentes ?? 0);
         m.setColheitas(atual.current.colheitas ?? {});
         m.setCartas(atual.current.cartas ?? 0);
+        m.setSemTermometro(!!atual.current.semTermometro);
         setEstado("pronto");
       })
       .catch(() => vivo && setEstado("falhou"));
@@ -1470,11 +1599,14 @@ export const Mundo3D = forwardRef<
   useEffect(() => motor.current?.setPendentes(props.pendentes ?? 0), [props.pendentes]);
   useEffect(() => motor.current?.setColheitas(props.colheitas ?? {}), [props.colheitas]);
   useEffect(() => motor.current?.setCartas(props.cartas ?? 0), [props.cartas]);
+  useEffect(() => motor.current?.setSemTermometro(!!props.semTermometro), [props.semTermometro]);
   useImperativeHandle(
     ref,
     () => ({
       truque: (id, tipo) => motor.current?.truque(id, tipo),
       zoom: (d) => motor.current?.zoom(d),
+      iniciarShow: (show, atraso) => motor.current?.iniciarShow(show, atraso),
+      showRodando: () => motor.current?.showRodando() ?? false,
     }),
     [],
   );

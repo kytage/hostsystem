@@ -17,18 +17,21 @@ import {
   Plus,
   Send,
   Smile,
+  Sparkles,
   Sunrise,
   Swords,
   Trophy,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SHOWS, infoDoShow, type Show, type TipoShow } from "@/lib/hoki-shows";
 import { cn } from "@/lib/utils";
 import { SUJO_ABAIXO_DE, todosPets, VISUAL_PADRAO, type HokiPet, type Visual } from "@/lib/hoki";
 import { Hoki2D } from "./hoki-2d";
 import {
   definirLugar,
   enviarNaPraca,
+  enviarShow,
   ouvirNaPraca,
   reiniciarPraca,
   meuLugar,
@@ -553,6 +556,43 @@ export function Praca({
     [],
   );
   const souFounder = cargo === "founder";
+
+  /* ---------- eventos do Founder: chegam pelo canal (já conferidos) e começam em 1,5 s em todas as telas ---------- */
+  const [poderesAberto, setPoderesAberto] = useState(false);
+  useEffect(
+    () =>
+      ouvirNaPraca("show", (m) => {
+        const show = m as unknown as Show;
+        const info = infoDoShow(show.tipo);
+        mundo.current?.iniciarShow(show, 1500);
+        if (info) {
+          playSfx("pop");
+          toast(`${info.emoji} ${info.nome}!`, { description: info.texto, duration: 4000 });
+        }
+      }),
+    [],
+  );
+  // quem participa: todo mundo acordado na praça (e eu, se estou acordado)
+  const participantesDoShow = useMemo(
+    () => [
+      ...(dentro ? [euPessoa.id] : []),
+      ...Object.values(outros)
+        .filter((o) => !o.dorme)
+        .map((o) => o.id),
+    ],
+    [outros, dentro, euPessoa.id],
+  );
+  const dispararShow = (tipo: TipoShow) => {
+    if (mundo.current?.showRodando()) {
+      toast.info("Já tem um evento rodando. Espere ele acabar.");
+      return;
+    }
+    if (!enviarShow(tipo, participantesDoShow)) {
+      toast.error("A praça ainda está conectando. Tente de novo.");
+      return;
+    }
+    setPoderesAberto(false);
+  };
   const [conviteVisita, setConviteVisita] = useState<ConviteHoki | null>(null);
   const [gerandoConvite, setGerandoConvite] = useState(false);
   const gerarConvite = async () => {
@@ -692,7 +732,7 @@ export function Praca({
   };
   /** O que fica ao alcance de quem está parado neste ponto. */
   const pertoDe = (p: Ponto) => {
-    if (Math.hypot(p.x - FRENTE_DO_TERMOMETRO.x, p.z - FRENTE_DO_TERMOMETRO.z) < 1.7)
+    if (!souVisita && Math.hypot(p.x - FRENTE_DO_TERMOMETRO.x, p.z - FRENTE_DO_TERMOMETRO.z) < 1.7)
       return { tipo: "termometro" as const };
     if (Math.hypot(p.x - FRENTE_DO_PARKOUR.x, p.z - FRENTE_DO_PARKOUR.z) < 1.9)
       return { tipo: "parkour" as const };
@@ -822,6 +862,11 @@ export function Praca({
   });
   const petDoPerfil = perfilDe ? pets.find((x) => x.user_id === perfilDe) : undefined;
   const irAoTermometro = () => {
+    // o queridômetro é só da equipe
+    if (souVisita) {
+      toast.info("O queridômetro é só para a equipe.");
+      return;
+    }
     if (!dentro) {
       toast.info("Acorde o seu HOKI para ir até o termômetro.");
       return;
@@ -1029,11 +1074,13 @@ export function Praca({
         onChao={andar}
         onBanco={sentar}
         onPessoa={aoClicarPessoa}
-        pendentes={pendentes}
+        pendentes={souVisita ? 0 : pendentes}
+        semTermometro={souVisita}
         onTermometro={irAoTermometro}
         onParkour={irAoParkour}
         colheitas={pet.colheitas}
         cartas={naoLidas}
+        onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
         onCorreio={() => {
           playSfx("open");
           setCorreioAberto(true);
@@ -1068,6 +1115,61 @@ export function Praca({
       />
 
       {/* jogos (só ícones, sem textos no topo) */}
+      {/* poderes do Founder: eventos com todo mundo que está na praça */}
+      {souFounder && (
+        <button
+          onClick={() => setPoderesAberto((v) => !v)}
+          aria-label="Eventos do Founder"
+          title="Eventos do Founder (todos na praça participam)"
+          className={cn(
+            flutuante,
+            "absolute right-[54px] top-3 z-10 text-amber-200",
+            poderesAberto && "border-amber-300/60 bg-amber-500/20",
+          )}
+        >
+          <Sparkles className="size-4" />
+        </button>
+      )}
+      {souFounder && poderesAberto && (
+        <div className="pf-pop absolute right-[54px] top-[52px] z-20 w-[310px] rounded-2xl border border-white/15 bg-[#0d0d0d]/95 p-2 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+          <div className="flex items-center justify-between px-1.5 pb-1.5 pt-0.5">
+            <div>
+              <p className="text-[13px] font-semibold">Eventos do Founder</p>
+              <p className="text-[11px] text-white/55">
+                {participantesDoShow.length} acordado(s) na praça participam
+              </p>
+            </div>
+            <button
+              onClick={() => setPoderesAberto(false)}
+              aria-label="Fechar"
+              className="grid size-7 place-items-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <div className="max-h-[300px] space-y-0.5 overflow-y-auto pr-0.5">
+            {SHOWS.map((sh) => {
+              const falta = sh.minimo - participantesDoShow.length;
+              return (
+                <button
+                  key={sh.id}
+                  disabled={falta > 0}
+                  onClick={() => dispararShow(sh.id)}
+                  className="flex w-full items-start gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="mt-0.5 text-[18px] leading-none">{sh.emoji}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-semibold">{sh.nome}</span>
+                    <span className="block text-[11px] leading-snug text-white/55">
+                      {falta > 0 ? `Precisa de ${sh.minimo} acordado(s) na praça.` : sh.texto}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="absolute right-3 top-3 flex flex-col-reverse gap-1.5">
         {aoCoins && (
           <button
@@ -1812,7 +1914,9 @@ export function Praca({
         <FestaDialog salas={festas} eu={euPessoa} onClose={() => setFestaAberta(false)} />
       )}
       {cartas && <CartasDialog eu={euPessoa} salas={salas} onClose={() => setCartas(false)} />}
-      {queridometro && <Queridometro euId={euPessoa.id} onClose={() => setQueridometro(false)} />}
+      {queridometro && !souVisita && (
+        <Queridometro euId={euPessoa.id} onClose={() => setQueridometro(false)} />
+      )}
     </div>
   );
 }

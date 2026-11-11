@@ -171,6 +171,8 @@ export interface Peca {
   raridade?: Raridade;
   /** Peça exclusiva: só este usuário (nome de login, em minúsculas) vê e usa. Não está à venda. */
   exclusivo?: string;
+  /** Traje que troca o corpo inteiro por outro modelo 3D (ped). Com ele só as asas funcionam. */
+  ped?: "bonne";
 }
 export type Raridade = "comum" | "raro" | "epico" | "lendario";
 export const RARIDADES: Record<Raridade, { nome: string; cor: string }> = {
@@ -263,6 +265,22 @@ export const PECAS: Peca[] = [
     ]),
     raridade: "lendario",
     exclusivo: "henrique",
+  },
+  // ped exclusivo do henrique: o corpo inteiro é outro modelo (encapuzado, de capa); só as asas combinam com ele
+  {
+    ...fantasia("traje:bonne", "Bonne", 0, 0, "#0c0c0e", [
+      "roupa",
+      "calca",
+      "calcado",
+      "luvas",
+      "chapeu",
+      "oculos",
+      "efeito",
+    ]),
+    recolore: [],
+    raridade: "lendario",
+    exclusivo: "henrique",
+    ped: "bonne",
   },
   fantasia("traje:coelho", "Doce Candy", 0, 10, "#f7a8c8", [
     "roupa",
@@ -601,6 +619,17 @@ export const PECAS: Peca[] = [
     cor: "#1f9a48",
   },
   { id: "costas:asas", grupo: "costas", nome: "Asas", preco: 0, nivel: 15, cor: "#ffffff" },
+  // asas exclusivas do henrique: penas de aço escuro com a borda prateada e fogo dourado nas pontas
+  {
+    id: "costas:asas-aco",
+    grupo: "costas",
+    nome: "Asas de aço",
+    preco: 0,
+    nivel: 0,
+    cor: "#c9ced6",
+    raridade: "lendario",
+    exclusivo: "henrique",
+  },
 
   // efeitos: auras que contornam o corpo, brilhos e coisas flutuando em volta
   {
@@ -836,8 +865,11 @@ export const ehBasica = (p: Pick<Peca, "preco" | "nivel" | "exclusivo">) =>
 export const apareceNaLoja = (p: Peca, username: string) =>
   !p.exclusivo || p.exclusivo === username.trim().toLowerCase();
 /** O pet tem a peça? */
-export const tem = (pet: Pick<HokiPet, "itens">, p: Peca) =>
-  ehBasica(p) || pet.itens.includes(p.id);
+export const tem = (pet: Pick<HokiPet, "itens"> & { username?: string }, p: Peca) =>
+  ehBasica(p) ||
+  pet.itens.includes(p.id) ||
+  // as exclusivas já são do dono, sem precisar comprar
+  (!!p.exclusivo && p.exclusivo === (pet.username ?? "").trim().toLowerCase());
 
 const HEX = /^#[0-9a-f]{6}$/i;
 export const ehHex = (v: unknown): v is string => typeof v === "string" && HEX.test(v);

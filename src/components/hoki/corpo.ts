@@ -33,9 +33,63 @@ export function criarEsqueleto(THREE: typeof TH): Esqueleto {
 /** Relógio das coisas que balançam sozinhas (capas, bandeiras, auras). Quem anima o HOKI acerta a hora. */
 export const TEMPO = { value: 0 };
 
+/**
+ * Medidas do corpo que o esqueleto dobra (nas unidades do modelo): onde ficam o
+ * ombro, o pescoço, a cintura e o quadril, e em que faixa cada parte começa a
+ * dobrar. O HOKI clássico e o ped exclusivo têm corpos diferentes, então cada
+ * um tem as suas.
+ */
+export interface Medidas {
+  /** Braço: a partir de que distância do meio (x) e entre que alturas (y). */
+  bracoX: [number, number];
+  bracoBaixo: [number, number];
+  bracoCima: [number, number];
+  ombro: [number, number];
+  /** Somado ao ângulo de subir o braço (o ped já nasce de braços para baixo). */
+  bracoRepouso: number;
+  cabeca: [number, number];
+  pescoco: number;
+  tronco: [number, number];
+  cintura: number;
+  /** Altura em que a torção da cintura chega ao máximo. */
+  torce: number;
+  perna: [number, number];
+  quadril: number;
+}
+export const MEDIDAS_HOKI: Medidas = {
+  bracoX: [0.125, 0.19],
+  bracoBaixo: [0.215, 0.25],
+  bracoCima: [0.385, 0.42],
+  ombro: [0.125, 0.33],
+  bracoRepouso: 0,
+  cabeca: [0.4, 0.46],
+  pescoco: 0.43,
+  tronco: [0.19, 0.3],
+  cintura: 0.235,
+  torce: 0.2,
+  perna: [0.17, 0.235],
+  quadril: 0.235,
+};
+/** Ped exclusivo (boneco em formato humano, de braços para baixo, com capa). */
+export const MEDIDAS_PED: Medidas = {
+  bracoX: [0.105, 0.15],
+  bracoBaixo: [0.43, 0.47],
+  bracoCima: [0.735, 0.775],
+  ombro: [0.1, 0.725],
+  bracoRepouso: 0.38,
+  cabeca: [0.775, 0.815],
+  pescoco: 0.795,
+  tronco: [0.46, 0.57],
+  cintura: 0.5,
+  torce: 0.25,
+  perna: [0.44, 0.52],
+  quadril: 0.5,
+};
+const f = (n: number) => n.toFixed(4);
+
 // `hkBase` é o ponto do corpo que decide como dobrar: no corpo é o próprio ponto;
 // na roupa é o ponto do corpo de onde aquele pedaço de pano saiu.
-export const GLSL_ESQUELETO = /* glsl */ `
+export const glslEsqueleto = (m: Medidas) => /* glsl */ `
 uniform vec2 uHkBracoE;
 uniform vec2 uHkBracoD;
 uniform vec2 uHkPernas;
@@ -56,51 +110,53 @@ vec2 hkGira( vec2 v, float a ) { float c = cos( a ); float s = sin( a ); return 
 void hkDobrar( inout vec3 p, inout vec3 n, vec3 base ) {
   float lado = base.x < 0.0 ? -1.0 : 1.0;
   // braços: giram no ombro
-  float wB = smoothstep( 0.125, 0.19, abs( base.x ) ) * smoothstep( 0.215, 0.25, base.y ) * ( 1.0 - smoothstep( 0.385, 0.42, base.y ) );
+  float wB = smoothstep( ${f(m.bracoX[0])}, ${f(m.bracoX[1])}, abs( base.x ) ) * smoothstep( ${f(m.bracoBaixo[0])}, ${f(m.bracoBaixo[1])}, base.y ) * ( 1.0 - smoothstep( ${f(m.bracoCima[0])}, ${f(m.bracoCima[1])}, base.y ) );
   if ( wB > 0.0 ) {
     vec2 br = lado < 0.0 ? uHkBracoE : uHkBracoD;
-    vec3 o = vec3( lado * 0.125, 0.33, 0.0 );
+    br.x += ${f(m.bracoRepouso)};
+    vec3 o = vec3( lado * ${f(m.ombro[0])}, ${f(m.ombro[1])}, 0.0 );
     vec3 d = p - o;
-    vec3 m = n;
-    d.xy = hkGira( d.xy, lado * br.x ); m.xy = hkGira( m.xy, lado * br.x );
-    d.yz = hkGira( d.yz, br.y ); m.yz = hkGira( m.yz, br.y );
-    p = mix( p, o + d, wB ); n = mix( n, m, wB );
+    vec3 q = n;
+    d.xy = hkGira( d.xy, lado * br.x ); q.xy = hkGira( q.xy, lado * br.x );
+    d.yz = hkGira( d.yz, br.y ); q.yz = hkGira( q.yz, br.y );
+    p = mix( p, o + d, wB ); n = mix( n, q, wB );
   }
   // cabeça: gira no pescoço
-  float wC = smoothstep( 0.4, 0.46, base.y );
+  float wC = smoothstep( ${f(m.cabeca[0])}, ${f(m.cabeca[1])}, base.y );
   if ( wC > 0.0 ) {
-    vec3 o = vec3( 0.0, 0.43, 0.0 );
+    vec3 o = vec3( 0.0, ${f(m.pescoco)}, 0.0 );
     vec3 d = p - o;
-    vec3 m = n;
-    d.yz = hkGira( d.yz, uHkCabeca.x ); m.yz = hkGira( m.yz, uHkCabeca.x );
-    d.zx = hkGira( d.zx, uHkCabeca.y ); m.zx = hkGira( m.zx, uHkCabeca.y );
-    d.xy = hkGira( d.xy, uHkCabeca.z ); m.xy = hkGira( m.xy, uHkCabeca.z );
-    p = mix( p, o + d, wC ); n = mix( n, m, wC );
+    vec3 q = n;
+    d.yz = hkGira( d.yz, uHkCabeca.x ); q.yz = hkGira( q.yz, uHkCabeca.x );
+    d.zx = hkGira( d.zx, uHkCabeca.y ); q.zx = hkGira( q.zx, uHkCabeca.y );
+    d.xy = hkGira( d.xy, uHkCabeca.z ); q.xy = hkGira( q.xy, uHkCabeca.z );
+    p = mix( p, o + d, wC ); n = mix( n, q, wC );
   }
   // tronco: da cintura para cima inclina, torce e pende
-  float wT = smoothstep( 0.19, 0.3, base.y );
+  float wT = smoothstep( ${f(m.tronco[0])}, ${f(m.tronco[1])}, base.y );
   if ( wT > 0.0 ) {
-    vec3 o = vec3( 0.0, 0.235, 0.0 );
+    vec3 o = vec3( 0.0, ${f(m.cintura)}, 0.0 );
     vec3 d = p - o;
-    vec3 m = n;
-    float torce = uHkTronco.y * clamp( ( base.y - 0.235 ) / 0.2, 0.0, 1.0 );
-    d.zx = hkGira( d.zx, torce ); m.zx = hkGira( m.zx, torce );
-    d.yz = hkGira( d.yz, uHkTronco.x ); m.yz = hkGira( m.yz, uHkTronco.x );
-    d.xy = hkGira( d.xy, uHkTronco.z ); m.xy = hkGira( m.xy, uHkTronco.z );
-    p = mix( p, o + d, wT ); n = mix( n, m, wT );
+    vec3 q = n;
+    float torce = uHkTronco.y * clamp( ( base.y - ${f(m.cintura)} ) / ${f(m.torce)}, 0.0, 1.0 );
+    d.zx = hkGira( d.zx, torce ); q.zx = hkGira( q.zx, torce );
+    d.yz = hkGira( d.yz, uHkTronco.x ); q.yz = hkGira( q.yz, uHkTronco.x );
+    d.xy = hkGira( d.xy, uHkTronco.z ); q.xy = hkGira( q.xy, uHkTronco.z );
+    p = mix( p, o + d, wT ); n = mix( n, q, wT );
   }
   // pernas: giram no quadril
-  float wP = 1.0 - smoothstep( 0.17, 0.235, base.y );
+  float wP = 1.0 - smoothstep( ${f(m.perna[0])}, ${f(m.perna[1])}, base.y );
   if ( wP > 0.0 ) {
-    vec3 o = vec3( 0.0, 0.235, 0.0 );
+    vec3 o = vec3( 0.0, ${f(m.quadril)}, 0.0 );
     vec3 d = p - o;
-    vec3 m = n;
+    vec3 q = n;
     float a = lado < 0.0 ? uHkPernas.x : uHkPernas.y;
-    d.yz = hkGira( d.yz, a ); m.yz = hkGira( m.yz, a );
-    p = mix( p, o + d, wP ); n = mix( n, m, wP );
+    d.yz = hkGira( d.yz, a ); q.yz = hkGira( q.yz, a );
+    p = mix( p, o + d, wP ); n = mix( n, q, wP );
   }
 }
 `;
+export const GLSL_ESQUELETO = glslEsqueleto(MEDIDAS_HOKI);
 const V_SEM_NORMAL =
   "#include <begin_vertex>\n  vec3 hkN = vec3( 0.0, 1.0, 0.0 );\n  hkDobrar( transformed, hkN, hkBase );\n  vHkObj = hkBase;";
 const V_NORMAL =
@@ -112,6 +168,7 @@ export function comEsqueleto(
   sh: { uniforms: Record<string, unknown>; vertexShader: string },
   e: Esqueleto,
   semNormal = false,
+  medidas: Medidas = MEDIDAS_HOKI,
 ) {
   sh.uniforms["uHkBracoE"] = e.bracoE;
   sh.uniforms["uHkBracoD"] = e.bracoD;
@@ -121,7 +178,7 @@ export function comEsqueleto(
   sh.uniforms["uHkTempo"] = TEMPO;
   sh.vertexShader = sh.vertexShader.replace(
     "#include <common>",
-    "#include <common>" + GLSL_ESQUELETO,
+    "#include <common>" + (medidas === MEDIDAS_HOKI ? GLSL_ESQUELETO : glslEsqueleto(medidas)),
   );
   if (semNormal) sh.vertexShader = sh.vertexShader.replace("#include <begin_vertex>", V_SEM_NORMAL);
   else
@@ -131,11 +188,17 @@ export function comEsqueleto(
 }
 
 /** Material só para a sombra: faz a sombra acompanhar os braços e as pernas dobrados. */
-export function materialDeSombra(THREE: typeof TH, e: Esqueleto, roupa = false) {
+export function materialDeSombra(
+  THREE: typeof TH,
+  e: Esqueleto,
+  roupa = false,
+  medidas: Medidas = MEDIDAS_HOKI,
+) {
   const m = new THREE.MeshDepthMaterial();
   if (roupa) m.defines = { HK_ROUPA: "" };
-  m.onBeforeCompile = (sh) => comEsqueleto(sh, e, true);
-  m.customProgramCacheKey = () => "hk-sombra" + (roupa ? "|roupa" : "");
+  m.onBeforeCompile = (sh) => comEsqueleto(sh, e, true, medidas);
+  m.customProgramCacheKey = () =>
+    "hk-sombra" + (roupa ? "|roupa" : "") + (medidas === MEDIDAS_PED ? "|ped" : "");
   return m;
 }
 
@@ -206,3 +269,35 @@ export function materialDoCorpo(
     },
   };
 }
+
+// olhos do ped: o branco da textura da cabeça acende sozinho (brilho frio, pulsando de leve)
+const F_OLHOS_PED = /* glsl */ `
+  // só na região dos olhos (na textura eles são cinza-claro): viram branco aceso
+  if ( vHkObj.y > 0.835 && vHkObj.y < 0.955 && vHkObj.z > 0.035 && abs( vHkObj.x ) < 0.118 ) {
+    float hkBranco = smoothstep( 0.16, 0.3, min( diffuseColor.r, min( diffuseColor.g, diffuseColor.b ) ) );
+    outgoingLight = mix( outgoingLight, vec3( 1.0 ) * ( 1.5 + 0.3 * sin( uHkTempo * 5.0 ) ), hkBranco );
+  }
+  float hkContorno = pow( 1.0 - saturate( dot( normal, normalize( vViewPosition ) ) ), 3.0 );
+  outgoingLight += vec3( 0.75, 0.8, 0.9 ) * hkContorno * uHkRealce.w;
+`;
+/**
+ * Material do ped exclusivo: a textura dele como veio (sem troca de cor), com o
+ * esqueleto nas medidas do ped, um realce frio no contorno e os olhos brancos acesos.
+ */
+export function materialDoPed(THREE: typeof TH, modelo: Modelo, e: Esqueleto, leve: boolean) {
+  const material = modelo.tex
+    ? new THREE.MeshStandardMaterial({ map: modelo.tex, roughness: 0.62, metalness: 0.12 })
+    : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.1 });
+  const realce = { value: new THREE.Vector4(1, 1, 1, leve ? 0.18 : 0.3) };
+  material.onBeforeCompile = (sh) => {
+    comEsqueleto(sh, e, false, MEDIDAS_PED);
+    sh.uniforms["uHkRealce"] = realce;
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", F_DECL_PED)
+      .replace("#include <opaque_fragment>", F_OLHOS_PED + "#include <opaque_fragment>");
+  };
+  material.customProgramCacheKey = () => `hk-ped|${modelo.tex ? "tex" : "cor"}`;
+  return material;
+}
+const F_DECL_PED =
+  "#include <common>\nuniform vec4 uHkRealce;\nuniform float uHkTempo;\nvarying vec3 vHkObj;";

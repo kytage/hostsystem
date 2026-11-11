@@ -81,7 +81,44 @@ function sopro(dur: number, de: number, ate: number, gain = 0.012) {
   fonte.start();
 }
 
-export type Sfx = "check" | "uncheck" | "complete" | "add" | "remove" | "click" | "tap" | "hover" | "nav" | "open" | "close" | "toggle" | "success" | "error" | "pop" | "toc";
+export type Sfx = "check" | "uncheck" | "complete" | "add" | "remove" | "click" | "tap" | "hover" | "nav" | "open" | "close" | "toggle" | "success" | "error" | "pop" | "toc"
+  // eventos da praça do HOKI
+  | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito";
+
+/**
+ * Ruído filtrado com ataque e queda: a base do trovão, do mergulho, dos fogos e
+ * da explosão. `tipo` é o filtro; a frequência vai de `de` até `ate`.
+ */
+function ruido(
+  dur: number,
+  tipo: BiquadFilterType,
+  de: number,
+  ate: number,
+  gain: number,
+  inicio = 0,
+  ataque = 0.01,
+) {
+  const ac = audio();
+  if (!ac || !saida) return;
+  const t = ac.currentTime + inicio;
+  const n = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, n, ac.sampleRate);
+  const dados = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) dados[i] = Math.random() * 2 - 1;
+  const fonte = ac.createBufferSource();
+  fonte.buffer = buf;
+  const filtro = ac.createBiquadFilter();
+  filtro.type = tipo;
+  filtro.Q.value = 0.8;
+  filtro.frequency.setValueAtTime(de, t);
+  filtro.frequency.exponentialRampToValueAtTime(ate, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + ataque);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  fonte.connect(filtro).connect(g).connect(saida);
+  fonte.start(t);
+}
 
 let ultimoToque = 0;
 export function playSfx(kind: Sfx) {
@@ -136,6 +173,49 @@ export function playSfx(kind: Sfx) {
         break;
       case "pop":
         tone(880, 0, 0.06, 0.03, "sine", 1320);
+        break;
+      case "trovao":
+        // estalo seco e um ronco grave que rola por uns segundos
+        ruido(0.35, "highpass", 3000, 900, 0.32, 0, 0.004);
+        ruido(3.4, "lowpass", 900, 60, 0.42, 0.05, 0.06);
+        ruido(2.6, "lowpass", 380, 50, 0.25, 0.9, 0.3);
+        tone(55, 0.05, 2.2, 0.16, "sawtooth", 32);
+        break;
+      case "splash":
+        ruido(0.55, "bandpass", 2600, 500, 0.2, 0, 0.005);
+        ruido(0.9, "lowpass", 1400, 200, 0.12, 0.05);
+        break;
+      case "fogos":
+        // assobio subindo e o estouro
+        tone(900, 0, 0.5, 0.025, "sine", 2400);
+        ruido(0.9, "lowpass", 2200, 90, 0.26, 0.55, 0.004);
+        ruido(1.2, "highpass", 4000, 6000, 0.04, 0.62, 0.05);
+        break;
+      case "explosao":
+        ruido(1.3, "lowpass", 1800, 50, 0.38, 0, 0.004);
+        tone(90, 0, 0.8, 0.2, "sine", 30);
+        break;
+      case "aviao":
+        // motor de hélice: zumbido grave com tremido, subindo
+        for (let i = 0; i < 14; i++) tone(70 + i * 3, i * 0.18, 0.24, 0.05, "sawtooth", 76 + i * 3);
+        ruido(2.6, "bandpass", 300, 900, 0.07, 0, 0.4);
+        break;
+      case "tique":
+        tone(1300, 0, 0.04, 0.05, "square", 900);
+        break;
+      case "gelo":
+        [2093, 2637, 3136, 2349].forEach((f, i) => tone(f, i * 0.045, 0.32, 0.03, "triangle"));
+        ruido(0.4, "highpass", 5000, 8000, 0.05, 0, 0.01);
+        break;
+      case "vitoria":
+        [523, 659, 784, 1047, 784, 1047].forEach((f, i) =>
+          tone(f, i * 0.11, i === 5 ? 0.5 : 0.16, 0.06, "triangle"),
+        );
+        break;
+      case "apito":
+        // "piuí" do trenzinho
+        tone(1180, 0, 0.18, 0.05, "square", 1320);
+        tone(1320, 0.22, 0.34, 0.05, "square", 1180);
         break;
       case "check":
         tone(880, 0, 0.09, 0.06, "triangle", 1320);

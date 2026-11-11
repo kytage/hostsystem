@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { lerVisual, type Visual } from "@/lib/hoki";
+import { TIPOS_SHOW, type Show, type TipoShow } from "@/lib/hoki-shows";
 
 /**
  * Presença dos HOKIs, ao vivo. Um canal só para o site inteiro: enquanto a
@@ -55,7 +56,8 @@ type Evento =
   | "estado"
   | "ola"
   | "tchau"
-  | "reiniciar";
+  | "reiniciar"
+  | "show";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -70,6 +72,7 @@ const EVENTOS: Evento[] = [
   "ola",
   "tchau",
   "reiniciar",
+  "show",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -306,6 +309,9 @@ function abrirCanal(id: string) {
         // alguém acabou de entrar: quem está acordado manda o estado na hora (com um atraso
         // sorteado para não chegarem todos juntos); quem dorme aparece pela presença e pela batida
         if (!lugar.dorme) setTimeout(enviarEstado, 200 + Math.random() * 900);
+      } else if (evento === "show") {
+        void aplicarShow(dados);
+        return;
       } else if (evento === "reiniciar") {
         void aplicarReinicio(dados.de);
         return;
@@ -416,6 +422,36 @@ async function aplicarReinicio(de: unknown) {
 }
 
 /** Raio do Founder: manda todo mundo (inclusive eu) voltar para o berço e sincronizar de novo. */
+/** Evento do Founder recebido: confere tudo e entrega para a praça (que monta a coreografia). */
+async function aplicarShow(dados: Mensagem & { ids?: unknown; semente?: unknown }) {
+  const { de, tipo, ids, semente } = dados;
+  if (typeof de !== "string" || de.length > 64) return;
+  if (typeof tipo !== "string" || !TIPOS_SHOW.includes(tipo as TipoShow)) return;
+  if (typeof semente !== "number" || !Number.isFinite(semente)) return;
+  if (
+    !Array.isArray(ids) ||
+    ids.length > 60 ||
+    ids.some((i) => typeof i !== "string" || i.length > 64)
+  )
+    return;
+  if (!(await ehFounder(de))) return;
+  const show: Show = { de, tipo: tipo as TipoShow, ids: ids as string[], semente };
+  ouvintes.show.forEach((f) => f(show as unknown as Mensagem));
+}
+
+/**
+ * Evento do Founder (trovão, avião, batata quente…): manda para todo mundo e
+ * começa aqui também. Quem recebe confere no banco se veio mesmo de um Founder.
+ */
+export function enviarShow(tipo: TipoShow, ids: string[]) {
+  if (!canal || !meuId) return false;
+  const semente = Math.floor(Math.random() * 2 ** 31);
+  const payload = { de: meuId, tipo, ids, semente };
+  void canal.send({ type: "broadcast", event: "show", payload });
+  void aplicarShow(payload);
+  return true;
+}
+
 export function reiniciarPraca() {
   if (!canal || !meuId) return false;
   void canal.send({ type: "broadcast", event: "reiniciar", payload: { de: meuId } });

@@ -82,24 +82,32 @@ export function Categorias({
   onMudar,
   contar,
   inicio,
+  fim,
 }: {
   atual: string;
   onMudar: (id: string) => void;
   contar: (c: CategoriaDaVitrine) => number;
   /** Uma entrada extra no começo da lista (as cores, no guarda-roupa). */
   inicio?: { id: string; nome: string; Icone: LucideIcon; n: number };
+  /** Uma entrada extra no fim, em dourado (os itens exclusivos de quem tem). */
+  fim?: { id: string; nome: string; Icone: LucideIcon; n: number };
 }) {
-  const lista = inicio
-    ? [{ ...inicio, grupos: [] as CategoriaDaVitrine["grupos"] }, ...CATEGORIAS_DA_VITRINE]
-    : CATEGORIAS_DA_VITRINE;
+  const semGrupos = [] as CategoriaDaVitrine["grupos"];
+  const lista = [
+    ...(inicio ? [{ ...inicio, grupos: semGrupos }] : []),
+    ...CATEGORIAS_DA_VITRINE,
+    ...(fim ? [{ ...fim, grupos: semGrupos }] : []),
+  ];
   return (
     <nav
       aria-label="Categorias"
       className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto border-b border-white/[0.07] p-2 md:w-[224px] md:flex-col md:overflow-y-auto md:border-b-0 md:border-r md:p-3"
     >
       {lista.map((c) => {
-        const n = inicio && c.id === inicio.id ? inicio.n : contar(c);
+        const n =
+          inicio && c.id === inicio.id ? inicio.n : fim && c.id === fim.id ? fim.n : contar(c);
         const ativa = c.id === atual;
+        const dourada = !!fim && c.id === fim.id;
         return (
           <button
             key={c.id}
@@ -110,9 +118,18 @@ export function Categorias({
               ativa
                 ? "bg-white/[0.1] text-foreground"
                 : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
+              dourada &&
+                "border border-amber-400/30 bg-amber-400/[0.07] font-semibold uppercase tracking-[0.08em] text-amber-200 hover:bg-amber-400/[0.12] hover:text-amber-100",
+              dourada && ativa && "!bg-amber-400/[0.18]",
             )}
           >
-            <c.Icone className={cn("size-4 shrink-0", ativa && "text-primary")} strokeWidth={1.8} />
+            <c.Icone
+              className={cn(
+                "size-4 shrink-0",
+                dourada ? "text-amber-300" : ativa && "text-primary",
+              )}
+              strokeWidth={1.8}
+            />
             <span className="min-w-0 flex-1 truncate">{c.nome}</span>
             <span
               className={cn(

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Coins, Loader2, Lock, Palette, Store } from "lucide-react";
+import { Check, Coins, Gem, Loader2, Lock, Palette, Store } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -76,9 +76,12 @@ export function Loja({
       ),
     [pecas, pet, filtro],
   );
+  // as peças exclusivas ficam só na aba EXCLUSIVO (que aparece para quem tem alguma)
+  const temExclusivas = pecas.some((p) => p.exclusivo);
   const naCategoria = (id: string) => {
+    if (id === "exclusivo") return noFiltro.filter((p) => p.exclusivo);
     const grupos = CATEGORIAS_DA_VITRINE.find((c) => c.id === id)?.grupos ?? [];
-    return noFiltro.filter((p) => grupos.includes(p.grupo));
+    return noFiltro.filter((p) => grupos.includes(p.grupo) && !p.exclusivo);
   };
   // primeiro o que está em uso, depois o que já é seu, depois o que está à venda
   const ordem = (p: Peca) => (visual[p.grupo] === p.id ? 0 : tem(pet, p) ? 1 : 2);
@@ -186,6 +189,16 @@ export function Loja({
             }}
             contar={(c) => naCategoria(c.id).length}
             inicio={{ id: "cores", nome: "Cores", Icone: Palette, n: PALETA.length }}
+            {...(temExclusivas
+              ? {
+                  fim: {
+                    id: "exclusivo",
+                    nome: "Exclusivo",
+                    Icone: Gem,
+                    n: naCategoria("exclusivo").length,
+                  },
+                }
+              : {})}
           />
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4" onMouseLeave={() => setOlhando(null)}>

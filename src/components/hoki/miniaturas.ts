@@ -77,7 +77,9 @@ async function fotografar(p: Peca): Promise<string> {
     camera.lookAt(0, 0.42, 0);
   } else {
     const visual = vestirPeca(VISUAL_PADRAO, p).visual;
-    const mascote = criarMascote(THREE, visual, { modelo });
+    // peças do ped exclusivo aparecem na miniatura já no corpo dele
+    const ped = p.ped ? await modeloCompleto(THREE, "bonne").catch(() => undefined) : undefined;
+    const mascote = criarMascote(THREE, visual, { modelo, ped });
     mascote.atualizar({
       t: 0,
       humor: "normal",

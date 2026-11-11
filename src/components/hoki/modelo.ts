@@ -17,10 +17,14 @@ export interface Modelo {
   tex?: TH.Texture;
 }
 
-let dados: Promise<DadosModelo | null> | null = null;
+/** Modelos disponíveis: o HOKI clássico e o ped exclusivo ("bonne"). */
+export type QualModelo = "hoki" | "bonne";
+const dados = new Map<QualModelo, Promise<DadosModelo | null>>();
 /** Lê o binário do modelo uma vez só; as próximas chamadas reaproveitam. */
-export function lerModelo() {
-  dados ??= fetch("/hoki/hoki.bin")
+export function lerModelo(qual: QualModelo = "hoki") {
+  const guardado = dados.get(qual);
+  if (guardado) return guardado;
+  const novo = fetch(`/hoki/${qual}.bin`)
     .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error("modelo"))))
     .then((buf) => {
       const dv = new DataView(buf);
@@ -48,23 +52,30 @@ export function lerModelo() {
       return { pos, uv, nor, idx };
     })
     .catch(() => null);
-  return dados;
+  dados.set(qual, novo);
+  return novo;
 }
 
-let imagem: Promise<HTMLImageElement | null> | null = null;
-function lerImagem() {
-  imagem ??= new Promise((ok) => {
+const imagens = new Map<QualModelo, Promise<HTMLImageElement | null>>();
+function lerImagem(qual: QualModelo = "hoki") {
+  const guardada = imagens.get(qual);
+  if (guardada) return guardada;
+  const nova = new Promise<HTMLImageElement | null>((ok) => {
     const im = new Image();
     im.onload = () => ok(im);
     im.onerror = () => ok(null);
-    im.src = "/hoki/hoki.webp";
+    im.src = `/hoki/${qual}.webp`;
   });
-  return imagem;
+  imagens.set(qual, nova);
+  return nova;
 }
 
 /** Malha completa com textura. Cada palco monta a sua; os dados brutos são os mesmos. */
-export async function modeloCompleto(THREE: typeof TH): Promise<Modelo | undefined> {
-  const [d, im] = await Promise.all([lerModelo(), lerImagem()]);
+export async function modeloCompleto(
+  THREE: typeof TH,
+  qual: QualModelo = "hoki",
+): Promise<Modelo | undefined> {
+  const [d, im] = await Promise.all([lerModelo(qual), lerImagem(qual)]);
   if (!d || !im) return undefined;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(d.pos, 3));
@@ -88,7 +99,7 @@ interface Leve {
  * grade e copia a cor da textura para cada vértice. Fica com uma fração dos
  * triângulos e sem textura: ideal para o HOKI visto de longe, na praça.
  */
-function simplificar(d: DadosModelo, im: HTMLImageElement, celulas = 60): Leve {
+function simplificar(d: DadosModelo, im: HTMLImageElement, celulas = 60, T = 256): Leve {
   const n = d.pos.length / 3;
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
@@ -98,7 +109,6 @@ function simplificar(d: DadosModelo, im: HTMLImageElement, celulas = 60): Leve {
     if (v > max[i % 3]!) max[i % 3] = v;
   }
   const lado = Math.max(max[0]! - min[0]!, max[1]! - min[1]!, max[2]! - min[2]!) / celulas;
-  const T = 256;
   const tela = document.createElement("canvas");
   tela.width = tela.height = T;
   const ctx = tela.getContext("2d", { willReadFrequently: true });
@@ -162,12 +172,22 @@ function simplificar(d: DadosModelo, im: HTMLImageElement, celulas = 60): Leve {
   return { pos, cor, idx: new Uint32Array(idx) };
 }
 
-let leve: Promise<Leve | null> | null = null;
+const leves = new Map<QualModelo, Promise<Leve | null>>();
 /** Versão leve do modelo, com cores nos vértices. Calculada uma vez e reaproveitada. */
-export async function modeloLeve(THREE: typeof TH): Promise<Modelo | undefined> {
-  leve ??= Promise.all([lerModelo(), lerImagem()]).then(([d, im]) =>
-    d && im ? simplificar(d, im) : null,
-  );
+export async function modeloLeve(
+  THREE: typeof TH,
+  qual: QualModelo = "hoki",
+): Promise<Modelo | undefined> {
+  let leve = leves.get(qual);
+  if (!leve) {
+    // o ped é mais fino e detalhado que o HOKI clássico: grade mais apertada e textura maior na amostra
+    leve = Promise.all([lerModelo(qual), lerImagem(qual)]).then(([d, im]) =>
+      d && im
+        ? simplificar(d, im, qual === "bonne" ? 110 : 60, qual === "bonne" ? 1024 : 256)
+        : null,
+    );
+    leves.set(qual, leve);
+  }
   const l = await leve;
   if (!l) return undefined;
   const geo = new THREE.BufferGeometry();

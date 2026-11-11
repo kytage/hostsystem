@@ -35,7 +35,6 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { Logo } from "@/components/dashboard/Logo";
 import { supabase } from "@/integrations/supabase/client";
-import { DevMiniCounts } from "@/components/dev-mini-counts";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { QuickPendenciaButton } from "@/components/quick-pendencia";
 import {
@@ -91,13 +90,7 @@ const nav: NavEntry[] = [
   { title: "Eventos e Cronograma", icon: PartyPopper, url: "/eventos" },
   { title: "Punições", icon: Gavel, url: "/punicoes", category: "punicoes" },
   { title: "Tarefas", icon: NotebookPen, url: "/tarefas" },
-  {
-    title: "Desenvolvimento",
-    icon: Code2,
-    url: "/desenvolvimento",
-    category: "desenvolvimento",
-    trailing: <DevMiniCounts />,
-  },
+  { title: "Desenvolvimento", icon: Code2, url: "/desenvolvimento", category: "desenvolvimento" },
 ];
 
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
