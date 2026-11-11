@@ -968,3 +968,14 @@ img.foto-metal[src$="curvas.jpg"] { filter: grayscale(1) invert(1) contrast(1.2)
 .dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.11); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); background-clip: padding-box; }
 .dark ::-webkit-scrollbar-track { background: transparent; }
+
+/* HOKI flutuante (fora da tela inicial): surge do desfoque, boia de leve e tem um brilho pulsando atrás */
+@keyframes hoki-surge { from { opacity: 0; transform: translateY(22px) scale(0.5); filter: blur(12px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes hoki-boia { 0%, 100% { transform: translateY(0) rotate(-2.5deg); } 50% { transform: translateY(-7px) rotate(2.5deg); } }
+@keyframes hoki-halo { 0%, 100% { opacity: 0.5; transform: scale(0.96); } 50% { opacity: 0.95; transform: scale(1.2); } }
+.hoki-flutuante { animation: hoki-surge 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.hoki-flutuante .hoki-boia { animation: hoki-boia 3.6s ease-in-out infinite; }
+.hoki-flutuante .hoki-halo { animation: hoki-halo 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hoki-flutuante, .hoki-flutuante .hoki-boia, .hoki-flutuante .hoki-halo { animation: none; }
+}

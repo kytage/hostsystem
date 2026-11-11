@@ -317,7 +317,7 @@ export function HokiCard() {
   const acao =
     "grid h-9 place-items-center rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-90";
   const quadrado =
-    "grid size-12 place-items-center rounded-2xl border border-white/10 bg-black text-white shadow-[0_10px_24px_rgba(0,0,0,0.5)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-95";
+    "grid size-9 place-items-center rounded-xl border border-white/10 bg-black/85 text-white/85 shadow-[0_6px_16px_rgba(0,0,0,0.45)] backdrop-blur-md transition-[transform,color,border-color] duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:text-white active:scale-95";
 
   return (
     <section
@@ -434,7 +434,7 @@ export function HokiCard() {
           </div>
 
           {/* botões flutuantes: mudar o nome e abrir a loja (comprar e usar) */}
-          <div className="absolute right-3 top-3 z-20 flex flex-col gap-2 lg:-right-7 lg:top-5">
+          <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5 lg:-right-[18px] lg:top-4">
             <button
               onClick={() => {
                 setNome(pet.nome.slice(0, NOME_MAX));
@@ -445,7 +445,7 @@ export function HokiCard() {
               title="Mudar o nome (até 6 letras)"
               className={quadrado}
             >
-              <Pencil className="size-5" strokeWidth={2} />
+              <Pencil className="size-4" strokeWidth={1.7} />
             </button>
             <button
               onClick={() => setMochila("tudo")}
@@ -453,7 +453,7 @@ export function HokiCard() {
               title="Mochila (até 50 kg)"
               className={quadrado}
             >
-              <Backpack className="size-5" strokeWidth={2} />
+              <Backpack className="size-4" strokeWidth={1.7} />
             </button>
             <button
               onClick={() => setLojaAberta(true)}
@@ -461,10 +461,21 @@ export function HokiCard() {
               title="Loja (comprar e usar)"
               className={quadrado}
             >
-              <Store className="size-5" strokeWidth={2} />
+              <Store className="size-4" strokeWidth={1.7} />
             </button>
+            {/* acordado na praça: o botão de dormir fica aqui, só o ícone */}
+            {naPraca && (
+              <button
+                onClick={alternarPraca}
+                aria-label="Dormir (voltar para o berço)"
+                title="Dormir"
+                className={quadrado}
+              >
+                <Moon className="size-4" strokeWidth={1.7} />
+              </button>
+            )}
             {editando && (
-              <div className="pf-pop absolute right-[56px] top-0 flex w-[214px] items-center gap-1.5 rounded-2xl border border-white/15 bg-black/90 p-2 backdrop-blur-xl lg:left-[56px] lg:right-auto">
+              <div className="pf-pop absolute right-[44px] top-0 flex w-[214px] items-center gap-1.5 rounded-2xl border border-white/15 bg-black/90 p-2 backdrop-blur-xl lg:left-[44px] lg:right-auto">
                 <input
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}

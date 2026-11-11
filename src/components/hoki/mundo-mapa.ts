@@ -65,7 +65,32 @@ export interface Banco extends Ponto {
   de?: Ponto;
   /** Cadeira de escritório: quem senta fica trabalhando no computador. */
   trabalho?: boolean;
+  /** Lugar do balanço do letreiro HOST (o assento se mexe; a posição vem do mundo 3D). */
+  balanco?: boolean;
 }
+
+/**
+ * Balanço pendurado no letreiro HOST: um banco comprido, para 10, que balança
+ * para a frente e para trás sobre a beira de trás da ilha. O vai e vem sai do
+ * relógio do mundo real, então todo mundo vê o balanço no mesmo ponto.
+ */
+export const BALANCO = {
+  /** Onde as cordas prendem: no pé das letras do letreiro. */
+  eixo: { x: 0, y: 9.8, z: -19 },
+  /** Comprimento das cordas (do pé das letras até o assento). */
+  corda: 8.6,
+  lugares: 10,
+  /** Distância entre um lugar e outro. */
+  passo: 0.84,
+  /** O quanto ele abre (em radianos) e quanto dura um vai e vem (ms). */
+  amplitude: 0.4,
+  periodoMs: 5200,
+};
+/** Ângulo do balanço agora (positivo = para a frente, na direção da ilha). */
+export const anguloDoBalanco = (agoraMs = Date.now()) =>
+  BALANCO.amplitude * Math.sin((agoraMs / BALANCO.periodoMs) * Math.PI * 2);
+/** Na beira de trás da ilha, embaixo do balanço: dali o HOKI pula para o assento (tecla E). */
+export const EMBARQUE_DO_BALANCO: Ponto = { x: 0, z: -14.3 };
 
 /** Escritório HOST: um anexo flutuante a leste, ligado à ilha por uma ponte no fim do caminho. */
 export const ESCRITORIO = { x0: 33, x1: 43, z0: -4.5, z1: 4.5 };
@@ -189,7 +214,21 @@ export const BANCOS: Banco[] = [
     de: { x: m.x + (m.x > ESCRITORIO.x1 - 2 ? -1.0 : 1.0), z: m.z + 1.0 },
     trabalho: true,
   })),
+  // os 10 lugares do balanço do letreiro (ficam no fim da lista para não mudar o número dos outros bancos)
+  ...Array.from({ length: BALANCO.lugares }, (_, i) => {
+    const x = (i - (BALANCO.lugares - 1) / 2) * BALANCO.passo;
+    return {
+      x,
+      z: BALANCO.eixo.z,
+      ang: 0,
+      // cada um sobe por um ponto da beira da ilha, na direção do seu lugar
+      de: { x: x * 0.62, z: EMBARQUE_DO_BALANCO.z },
+      balanco: true,
+    };
+  }),
 ];
+/** Números (na lista de bancos) dos lugares do balanço. */
+export const LUGARES_DO_BALANCO = BANCOS.flatMap((b, i) => (b.balanco ? [i] : []));
 /** Ponto em frente ao banco, de onde o HOKI "sobe" para sentar. */
 export const frenteDoBanco = (b: Banco): Ponto =>
   b.de ?? {
@@ -293,8 +332,9 @@ export const CHEGADA: Ponto = { x: BERCO.x - 0.15, z: 8.4 };
 /** Totem do termômetro (queridômetro), no gramado ao lado da praça, e o ponto em frente onde o HOKI para. */
 export const TERMOMETRO: Ponto = { x: -7.8, z: 6.8 };
 export const FRENTE_DO_TERMOMETRO: Ponto = { x: -6.95, z: 5.95 };
-/** Caixa do correio (cartão postal), no canto da frente à esquerda da ilha, longe do meio da praça. */
-export const CORREIO: Ponto = { x: -18.8, z: 8.6 };
+/** Caixa do correio (cartão postal), na beira do anel da fonte (lado de cima, à esquerda), e o ponto em frente onde o HOKI para. */
+export const CORREIO: Ponto = { x: -7.3, z: -6.3 };
+export const FRENTE_DO_CORREIO: Ponto = { x: -6.45, z: -5.45 };
 /** Chuveirão: na beira do caminho do leste, antes da ponte do rio. O HOKI fica embaixo da ducha para tomar banho. */
 export const CHUVEIRO: Ponto = { x: 11.2, z: -2.9 };
 /** Portal do parkour, na beirada da frente da ilha, e o ponto onde o HOKI para diante dele. */
@@ -309,7 +349,8 @@ const OBSTACULOS: (Ponto & { r: number })[] = [
   ...PILARES.map((p) => ({ ...p, r: 0.4 })),
   ...PEDRAS.map((p) => ({ ...p, r: 0.6 })),
   { ...POCA, r: 1.3 },
-  ...BANCOS.map((b) => ({ x: b.x, z: b.z, r: b.trabalho ? 0.42 : 0.7 })),
+  // (os lugares do balanço ficam no ar, fora da ilha: não bloqueiam o chão)
+  ...BANCOS.filter((b) => !b.balanco).map((b) => ({ x: b.x, z: b.z, r: b.trabalho ? 0.42 : 0.7 })),
   // tampos das mesas do escritório
   ...MESAS.flatMap((m) => [-0.42, 0.42].map((d) => ({ x: m.x + d, z: m.z, r: 0.42 }))),
   ...PERGOLAS.flatMap(postesDaPergola).map((p) => ({ ...p, r: 0.2 })),

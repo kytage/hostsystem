@@ -13,7 +13,12 @@ import { ASSENTO, criarMundo } from "./mundo-cena";
 import {
   ajustar,
   avancar,
+  BALANCO,
   BANCOS,
+  BERCO,
+  CORETO,
+  FONTE,
+  POSTES,
   CANTEIROS,
   CHEGADA,
   CHUVEIRO,
@@ -85,11 +90,15 @@ interface Eventos {
   onCanteiro(i: number): void;
   /** Clicou na caixa do correio (ou no envelope em cima dela). */
   onCorreio(): void;
+  /** Clicou no balanço do letreiro HOST. */
+  onBalanco?(): void;
   /** Recado curto de um evento da praça (quem explodiu, quem venceu, "espere acabar"…). */
   onAviso?(texto: string): void;
 }
 
 const ESCALA = 0.62; // tamanho do HOKI no mundo (1 = um bloco do chão)
+/** Número (na lista de bancos) do primeiro lugar do balanço do letreiro. */
+const PRIMEIRO_DO_BALANCO = BANCOS.findIndex((b) => b.balanco);
 /** Quanto dura cada animação, em segundos (para repetir as que ficam rodando). */
 const DURACAO: Partial<Record<Reacao, number>> = {
   acenar: 2,
@@ -140,6 +149,8 @@ interface Avatar {
   andando: boolean;
   /** Animação em repetição (até parar). */
   anim: Reacao | null;
+  /** Já está sentado (colado) num lugar do balanço do letreiro. */
+  noBalanco: boolean;
   mosquitos: ReturnType<typeof criarMosquitos> | null;
   rumo: number;
   truque: { tipo: Reacao; inicio: number } | null;
@@ -291,6 +302,46 @@ function criarMotor(
     depthWrite: false,
     fog: false,
   });
+  // luzes da praça à noite: lampiões de verdade (sem sombra, para não pesar) nos pontos principais.
+  // Ficam na cena desde o começo, apagados de dia, para não recompilar os materiais.
+  const LAMPIOES: [number, number, number, number][] = [
+    // x, altura, z, força
+    [FONTE.x, 5.2, FONTE.z, 1.5],
+    [FONTE.x + 9.4, 3.6, FONTE.z, 1],
+    [FONTE.x - 9.4, 3.6, FONTE.z, 1],
+    [FONTE.x, 3.6, FONTE.z + 9.4, 1],
+    [FONTE.x, 3.6, FONTE.z - 9.4, 1],
+    [FONTE.x, 3.4, FONTE.z + 13.5, 0.8],
+    [CORETO.x, 4, CORETO.z, 0.8],
+    [BERCO.x, BERCO.y + 3.4, BERCO.z, 0.8],
+  ];
+  const lampioes = LAMPIOES.map(([x, y, z, forca]) => {
+    const luz = new THREE.PointLight(0xffd9a3, 0, 17, 1.6);
+    luz.position.set(x, y, z);
+    cena.add(luz);
+    return { luz, forca };
+  });
+  // clarão quente no chão embaixo de cada poste (uma mancha de luz, bem leve de desenhar)
+  const mClarao = new THREE.MeshBasicMaterial({
+    map: tPoca,
+    color: 0xffcf8f,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    fog: false,
+  });
+  const gClarao = new THREE.PlaneGeometry(6.4, 6.4);
+  gClarao.rotateX(-Math.PI / 2);
+  const claroes = new THREE.Group();
+  for (const p of POSTES) {
+    const c = new THREE.Mesh(gClarao, mClarao);
+    c.position.set(p.x, 0.05, p.z);
+    c.renderOrder = 2;
+    claroes.add(c);
+  }
+  claroes.visible = false;
+  cena.add(claroes);
   const poca = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.8), mPoca);
   poca.rotation.x = -Math.PI / 2;
   poca.renderOrder = 3;
@@ -299,7 +350,11 @@ function criarMotor(
   const anoitecer = (v: number) => {
     if (Math.abs(v - noiteAtual) < 0.003) return;
     noiteAtual = v;
-    cena.backgroundIntensity = 1 - 0.9 * v;
+    // céu da noite mais claro (antes ficava quase preto)
+    cena.backgroundIntensity = 1 - 0.72 * v;
+    for (const l of lampioes) l.luz.intensity = v * 26 * l.forca;
+    mClarao.opacity = v * 0.5;
+    claroes.visible = v > 0.02;
     if (cena.fog) cena.fog.color.copy(corDaNevoa.dia).lerp(corDaNevoa.noite, v);
     anoitecerLuzes(luzes, v);
     mLua.opacity = v;
@@ -531,7 +586,7 @@ function criarMotor(
     '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-white bg-[#e5231b] text-white shadow-[0_4px_12px_rgba(229,35,27,0.6)]">' +
     '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>' +
     "</span>" +
-    '<span data-n hidden class="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-white px-[3px] text-[8px] font-bold leading-none text-black"></span>' +
+    '<span data-n hidden class="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[9.5px] font-bold leading-none text-black shadow-[0_2px_6px_rgba(0,0,0,0.5)]"></span>' +
     "</span>";
   camada.appendChild(blipCarta);
   const cartaN = blipCarta.querySelector<HTMLSpanElement>("[data-n]");
@@ -608,7 +663,13 @@ function criarMotor(
   };
   const assento = (i: number) => {
     const b = BANCOS[i];
-    return b ? { x: b.x, y: ASSENTO, z: b.z, ang: b.ang } : null;
+    if (!b) return null;
+    // lugar do balanço do letreiro: o assento se mexe, então a posição vem do mundo a cada quadro
+    if (b.balanco) {
+      const l = mundo.lugarDoBalanco(i - PRIMEIRO_DO_BALANCO);
+      return l ? { x: l.x, y: l.y, z: l.z, ang: b.ang, inclina: l.inclina, balanco: true } : null;
+    }
+    return { x: b.x, y: ASSENTO, z: b.z, ang: b.ang, inclina: 0, balanco: false };
   };
 
   function criarAvatar(p: PessoaMundo): Avatar {
@@ -656,6 +717,7 @@ function criarMotor(
       par: null,
       andando: false,
       anim: null,
+      noBalanco: false,
       mosquitos: null,
       rumo: s ? s.ang : 0,
       truque: null,
@@ -862,6 +924,34 @@ function criarMotor(
       }
     }
     if (!dentro) return;
+    // o balanço do letreiro? (clique perto do banco, de uma ponta à outra)
+    const pontaE = mundo.lugarDoBalanco(0);
+    const pontaD = mundo.lugarDoBalanco(BALANCO.lugares - 1);
+    if (pontaE && pontaD) {
+      const naTela = (l: { x: number; y: number; z: number }) => {
+        vetor.set(l.x, l.y + 0.45, l.z).project(camera);
+        return {
+          x: (vetor.x * 0.5 + 0.5) * r.width,
+          y: (-vetor.y * 0.5 + 0.5) * r.height,
+          z: vetor.z,
+        };
+      };
+      const a = naTela(pontaE);
+      const b = naTela(pontaD);
+      if (a.z < 1 && b.z < 1) {
+        // distância do clique até a linha do banco na tela
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const u = Math.max(
+          0,
+          Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / (dx * dx + dy * dy || 1)),
+        );
+        if (Math.hypot(a.x + dx * u - px, a.y + dy * u - py) < 26) {
+          eventos.onBalanco?.();
+          return;
+        }
+      }
+    }
     ndc.set((px / r.width) * 2 - 1, -(py / r.height) * 2 + 1);
     raio.setFromCamera(ndc, camera);
     const naAltura = noPlano(ASSENTO);
@@ -1236,12 +1326,23 @@ function criarMotor(
       a.mostra.x += ((s ? s.x : a.pos.x) - a.mostra.x) * cola;
       a.mostra.z += ((s ? s.z : a.pos.z) - a.mostra.z) * cola;
       a.mostra.y += ((s ? s.y : chao) - a.mostra.y) * k;
+      // no balanço: depois de pular para o assento, fica colado nele (senão ficaria sempre um pouco atrás)
+      if (s?.balanco) {
+        if (a.noBalanco || Math.hypot(s.x - a.mostra.x, s.y - a.mostra.y, s.z - a.mostra.z) < 0.4) {
+          a.noBalanco = true;
+          a.mostra.x = s.x;
+          a.mostra.y = s.y;
+          a.mostra.z = s.z;
+        }
+      } else a.noBalanco = false;
       const alvoRumo = s ? s.ang : a.rumo;
       const giro = Math.atan2(
         Math.sin(alvoRumo - a.grupo.rotation.y),
         Math.cos(alvoRumo - a.grupo.rotation.y),
       );
       a.grupo.rotation.y += giro * k;
+      // sentado no balanço, o corpo inclina junto com o banco
+      a.grupo.rotation.x = a.noBalanco && s ? s.inclina : 0;
       a.grupo.position.set(a.mostra.x, a.mostra.y, a.mostra.z);
       a.grupo.scale.setScalar(ESCALA * shows.escala(a.id, agora));
       // animação: a avulsa acaba sozinha; a que está em repetição recomeça até a pessoa parar
@@ -1498,6 +1599,8 @@ function criarMotor(
       for (const linha of cordas.values()) linha.geometry.dispose();
       tLua.dispose();
       tPoca.dispose();
+      mClarao.dispose();
+      gClarao.dispose();
       mPoca.dispose();
       poca.geometry.dispose();
       tHalo.dispose();
@@ -1572,6 +1675,7 @@ export const Mundo3D = forwardRef<
           onCanteiro: (i) => atual.current.onCanteiro(i),
           onCorreio: () => atual.current.onCorreio(),
           onAviso: (texto) => atual.current.onAviso?.(texto),
+          onBalanco: () => atual.current.onBalanco?.(),
         });
         motor.current = m;
         // em desenvolvimento, o motor fica à mão no console para testes

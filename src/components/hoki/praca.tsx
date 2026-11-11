@@ -65,10 +65,13 @@ import { Mundo3D, type Mundo3DRef, type PessoaMundo } from "./mundo-3d";
 import {
   ajustar,
   BANCOS,
+  EMBARQUE_DO_BALANCO,
+  LUGARES_DO_BALANCO,
   CANTEIROS,
   CHEGADA,
   CHUVEIRO,
   CORREIO,
+  FRENTE_DO_CORREIO,
   FRENTE_DO_PARKOUR,
   FRENTE_DO_TERMOMETRO,
   cliqueNaPonteDaFazenda,
@@ -207,6 +210,7 @@ export function Praca({
   };
   const [alvo, setAlvo] = useState<Presenca | null>(null);
   const [indoAoTermometro, setIndoAoTermometro] = useState(false);
+  const [indoAoCorreio, setIndoAoCorreio] = useState(false);
   const [queridometro, setQueridometro] = useState(false);
   /** Indo até alguém para abrir as ações (o id da pessoa). */
   const [indoAte, setIndoAte] = useState<string | null>(null);
@@ -228,7 +232,7 @@ export function Praca({
   >([]);
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
-    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" }
+    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
   >(null);
@@ -240,7 +244,9 @@ export function Praca({
     const l = meuLugar();
     return !l.dorme && l.banco !== null && l.status === "💻 Trabalhando";
   });
-  const statusAtual = trabalhando ? "💻 Trabalhando" : status;
+  // sentado no balanço do letreiro, o status mostra isso (como "Trabalhando" no escritório)
+  const noBalanco = eu.banco !== null && !!BANCOS[eu.banco]?.balanco;
+  const statusAtual = trabalhando ? "💻 Trabalhando" : noBalanco ? "🎠 No balanço" : status;
   const [velhaId, setVelhaId] = useState<string | null>(null);
   /** Partida aberta de dama, ligue 4 ou pedra-papel-tesoura. */
   const [desafioId, setDesafioId] = useState<string | null>(null);
@@ -722,6 +728,7 @@ export function Praca({
   /** Qualquer movimento meu encerra o que estava em andamento (animação, dupla, ida até alguém). */
   const largarTudo = () => {
     setIndoAoTermometro(false);
+    setIndoAoCorreio(false);
     setIndoAoParkour(false);
     setIndoAoCanteiro(null);
     setIndoAte(null);
@@ -738,6 +745,9 @@ export function Praca({
       return { tipo: "parkour" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
+    // na beira de trás da ilha, embaixo do letreiro: o balanço
+    if (Math.abs(p.x - EMBARQUE_DO_BALANCO.x) < 5.2 && p.z < EMBARQUE_DO_BALANCO.z + 1.5)
+      return { tipo: "balanco" as const };
     const i = BANCOS.findIndex((b) => b.trabalho && Math.hypot(b.x - p.x, b.z - p.z) < 1.6);
     if (i >= 0) return { tipo: "cadeira" as const, i };
     // na fazenda: o lugar de colher mais perto
@@ -851,7 +861,7 @@ export function Praca({
   useEffect(() => {
     if (naoLidasAntes.current !== null && naoLidas > naoLidasAntes.current) {
       playSfx("pop");
-      toast("Chegou carta no correio da praça.", { icon: "✉️" });
+      toast("Chegou carta para você. Vá até a caixa do correio, ao lado da fonte.", { icon: "✉️" });
     }
     naoLidasAntes.current = naoLidas;
   }, [naoLidas]);
@@ -861,6 +871,28 @@ export function Praca({
     staleTime: 60_000,
   });
   const petDoPerfil = perfilDe ? pets.find((x) => x.user_id === perfilDe) : undefined;
+  /** Correio: só abre na caixa. Clicar nela (ou no aviso de carta nova) leva o HOKI até lá. */
+  const irAoCorreio = () => {
+    if (!dentro) {
+      toast.info("Acorde o seu HOKI para ir até o correio.");
+      return;
+    }
+    // já estou em frente à caixa: abre direto
+    if (
+      Math.hypot(eu.x - FRENTE_DO_CORREIO.x, eu.z - FRENTE_DO_CORREIO.z) < 0.3 &&
+      eu.banco === null
+    ) {
+      if (!indoAoCorreio) {
+        playSfx("open");
+        setCorreioAberto(true);
+      }
+      return;
+    }
+    largarTudo();
+    setAlvo(null);
+    setIndoAoCorreio(true);
+    setEu({ ...FRENTE_DO_CORREIO, banco: null });
+  };
   const irAoTermometro = () => {
     // o queridômetro é só da equipe
     if (souVisita) {
@@ -888,9 +920,25 @@ export function Praca({
     setEu({ ...FRENTE_DO_TERMOMETRO, banco: null });
   };
 
+  // A barra de fala fica escondida: T abre, Enter envia (e fecha), Esc fecha.
+  const [falando, setFalando] = useState(false);
+  const abrirFala = useRef<() => boolean>(() => false);
+  abrirFala.current = () => {
+    if (!dentro) return false;
+    setFalando(true);
+    return true;
+  };
+  useEffect(() => {
+    if (!dentro) setFalando(false);
+  }, [dentro]);
   // Teclas: E usa o que está ao alcance; R abre o ranking do parkour. Não valem enquanto se digita ou com uma janela aberta.
   const usar = useRef<(tecla: "e" | "r") => void>(() => undefined);
   usar.current = (tecla) => {
+    // sentado no balanço, a tecla E desce
+    if (dentro && noBalanco) {
+      if (tecla === "e") sairDoBalanco();
+      return;
+    }
     if (!dentro || !perto || eu.banco !== null) return;
     if (perto.tipo === "parkour") setParkour(tecla === "r" ? "ranking" : "jogar");
     else if (tecla !== "e") return;
@@ -898,18 +946,24 @@ export function Praca({
     else if (perto.tipo === "canteiro") colher(perto.i);
     else if (perto.tipo === "chuveiro") tomarBanho();
     else if (perto.tipo === "correio") setCorreioAberto(true);
+    else if (perto.tipo === "balanco") sentarNoBalanco();
     else setQueridometro(true);
   };
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if ((k !== "e" && k !== "r") || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((k !== "e" && k !== "r" && k !== "t") || e.ctrlKey || e.metaKey || e.altKey) return;
       const alvoDaTecla = e.target as HTMLElement | null;
       if (
         alvoDaTecla?.closest("input, textarea, [contenteditable='true']") ||
         document.querySelector("[role='dialog']")
       )
         return;
+      // T abre a barra de fala (o campo já recebe o foco; a própria letra não entra no texto)
+      if (k === "t") {
+        if (abrirFala.current()) e.preventDefault();
+        return;
+      }
       usar.current(k);
     };
     window.addEventListener("keydown", aoTeclar);
@@ -991,12 +1045,41 @@ export function Praca({
     if (BANCOS[i]?.trabalho) setTrabalhando(true);
     setEu((e) => ({ ...e, banco: i }));
   };
+  /** Balanço do letreiro: senta no lugar livre mais perto (são 10). */
+  const sentarNoBalanco = () => {
+    if (!dentro) {
+      toast.info("Acorde o seu HOKI para ir ao balanço.");
+      return;
+    }
+    if (noBalanco) return;
+    const ocupados = new Set(Object.values(outros).map((o) => o.banco));
+    const livres = LUGARES_DO_BALANCO.filter((i) => !ocupados.has(i));
+    if (!livres.length) {
+      toast.info("O balanço está cheio (cabem 10).");
+      return;
+    }
+    const maisPerto = livres.reduce((a, b) =>
+      Math.abs((BANCOS[a]?.x ?? 0) - eu.x) <= Math.abs((BANCOS[b]?.x ?? 0) - eu.x) ? a : b,
+    );
+    sentar(maisPerto);
+  };
+  /** Desce do balanço: volta para a beira da ilha, de onde subiu. */
+  const sairDoBalanco = () => {
+    const b = eu.banco !== null ? BANCOS[eu.banco] : undefined;
+    playSfx("click");
+    largarTudo();
+    setEu({ ...(b?.de ?? EMBARQUE_DO_BALANCO), banco: null });
+    setPerto({ tipo: "balanco" });
+  };
   const falar = (e: FormEvent) => {
     e.preventDefault();
     const t = texto.trim().slice(0, 90);
+    // Enter com o campo vazio só fecha a barra
+    if (!t) setFalando(false);
     if (!t || !dentro || Date.now() - ultimaFala.current < 700) return;
     ultimaFala.current = Date.now();
     setTexto("");
+    setFalando(false);
     setFalas((f) => ({ ...f, [euPessoa.id]: { texto: t, ate: Date.now() + FALA_MS } }));
     anotarFala({ nome: euPessoa.nome, tag: minhaTag, visual: meuVisual }, t);
     enviarNaPraca("fala", { id: euPessoa.id, texto: t });
@@ -1073,6 +1156,7 @@ export function Praca({
         dentro={dentro}
         onChao={andar}
         onBanco={sentar}
+        onBalanco={sentarNoBalanco}
         onPessoa={aoClicarPessoa}
         pendentes={souVisita ? 0 : pendentes}
         semTermometro={souVisita}
@@ -1081,10 +1165,7 @@ export function Praca({
         colheitas={pet.colheitas}
         cartas={naoLidas}
         onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
-        onCorreio={() => {
-          playSfx("open");
-          setCorreioAberto(true);
-        }}
+        onCorreio={irAoCorreio}
         onCanteiro={irAoCanteiro}
         onParou={(p) => {
           // cheguei perto de quem eu queria: abre as ações
@@ -1103,6 +1184,13 @@ export function Praca({
             setIndoAoParkour(false);
             if (Math.hypot(p.x - FRENTE_DO_PARKOUR.x, p.z - FRENTE_DO_PARKOUR.z) < 1.9)
               setParkour("jogar");
+          }
+          if (indoAoCorreio) {
+            setIndoAoCorreio(false);
+            if (Math.hypot(p.x - FRENTE_DO_CORREIO.x, p.z - FRENTE_DO_CORREIO.z) < 1.6) {
+              playSfx("open");
+              setCorreioAberto(true);
+            }
           }
           if (!indoAoTermometro) return;
           setIndoAoTermometro(false);
@@ -1213,19 +1301,7 @@ export function Praca({
         >
           <Trophy className="size-4" />
         </button>
-        <button
-          onClick={() => setCorreioAberto(true)}
-          aria-label="Correio"
-          title="Correio da praça"
-          className={cn(flutuante, "relative")}
-        >
-          <Mail className="size-4" />
-          {naoLidas > 0 && (
-            <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#e5231b] px-1 text-[10px] font-semibold">
-              {naoLidas}
-            </span>
-          )}
-        </button>
+        {/* (o correio só abre indo até a caixa, na beira do anel da fonte) */}
         <button
           onClick={aoTelaCheia}
           aria-label={telaCheia ? "Sair da tela cheia" : "Abrir o HOKI em tela cheia"}
@@ -1566,7 +1642,7 @@ export function Praca({
         <div
           className={cn(
             "pointer-events-none absolute left-3 z-10 flex max-w-[min(420px,60%)] flex-col items-start gap-1",
-            dentro ? "top-[52px]" : "top-3",
+            "top-3",
           )}
         >
           {conversa.map((m) => (
@@ -1588,14 +1664,7 @@ export function Praca({
           ))}
         </div>
       )}
-      {dentro && (
-        <button
-          onClick={aoAlternar}
-          className="absolute left-3 top-3 flex h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-black/70 px-3 text-[12px] font-medium text-white backdrop-blur-md transition-transform duration-200 hover:-translate-y-0.5 active:scale-95"
-        >
-          <Moon className="size-3.5" strokeWidth={2} /> Dormir
-        </button>
-      )}
+      {/* (o botão de dormir fica na divisa, junto do lápis, da mochila e da loja) */}
 
       {dentro && (
         <>
@@ -1624,16 +1693,57 @@ export function Praca({
           {/* chat e status */}
           <form
             onSubmit={falar}
-            className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/75 p-1.5 backdrop-blur-xl"
+            className={cn(
+              "absolute bottom-3 right-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/75 p-1.5 backdrop-blur-xl",
+              falando && "left-3",
+            )}
           >
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              maxLength={90}
-              placeholder="Fale algo: aparece em cima do seu nick"
-              aria-label="Mensagem para a praça"
-              className="h-9 min-w-0 flex-1 rounded-full bg-transparent px-3 text-[13px] text-white outline-none placeholder:text-white/45"
-            />
+            {falando ? (
+              <input
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setFalando(false);
+                  }
+                }}
+                onBlur={() => {
+                  if (!texto.trim()) setFalando(false);
+                }}
+                autoFocus
+                maxLength={90}
+                placeholder="Fale algo e aperte Enter (Esc fecha)"
+                aria-label="Mensagem para a praça"
+                className="pf-pop h-9 min-w-0 flex-1 rounded-full bg-transparent px-3 text-[13px] text-white outline-none placeholder:text-white/45"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setFalando(true)}
+                title="Falar na praça (tecla T)"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[11.5px] text-white/60 transition-colors hover:text-white"
+              >
+                <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[10.5px] font-bold text-black">
+                  T
+                </kbd>
+                falar
+              </button>
+            )}
+            {/* quantos estão acordados na praça e quantos dormem no berço */}
+            <span
+              title={`${acordados} na praça · ${dormindo} dormindo · ${acordados + dormindo} online`}
+              className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 px-2.5 text-[11.5px] tabular-nums text-white/85"
+            >
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
+                {acordados}
+              </span>
+              <span className="flex items-center gap-1 text-white/55">
+                <Moon className="size-3" strokeWidth={1.8} />
+                {dormindo}
+              </span>
+            </span>
             {animacao ? (
               <button
                 type="button"
@@ -1756,14 +1866,16 @@ export function Praca({
                 </div>
               )}
             </div>
-            <button
-              type="submit"
-              disabled={!texto.trim()}
-              aria-label="Enviar"
-              className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-white disabled:opacity-40"
-            >
-              <Send className="size-4" />
-            </button>
+            {falando && (
+              <button
+                type="submit"
+                disabled={!texto.trim()}
+                aria-label="Enviar"
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-white disabled:opacity-40"
+              >
+                <Send className="size-4" />
+              </button>
+            )}
           </form>
         </>
       )}
@@ -1836,6 +1948,29 @@ export function Praca({
           </div>
         </div>
       )}
+      {/* carta nova: aviso discreto no topo (clicar leva o HOKI até a caixa) */}
+      {naoLidas > 0 && !correioAberto && (
+        <button
+          onClick={irAoCorreio}
+          title="Ir até a caixa do correio"
+          className="pf-pop absolute left-1/2 top-3 z-10 flex h-7 -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/70 pl-2 pr-3 text-[11.5px] text-white/90 backdrop-blur-md transition-colors hover:border-white/30 hover:text-white"
+        >
+          <span className="relative grid size-4 place-items-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#e5231b] opacity-60" />
+            <Mail className="relative size-3 text-[#ff6a57]" strokeWidth={2.2} />
+          </span>
+          {naoLidas === 1 ? "1 carta nova" : `${naoLidas} cartas novas`} · leia na caixa do correio
+        </button>
+      )}
+      {/* sentado no balanço: a tecla E desce */}
+      {dentro && noBalanco && (
+        <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
+          <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
+            E
+          </kbd>
+          sair do balanço
+        </div>
+      )}
       {/* ao alcance: o que a tecla E (e a R, no parkour) faz aqui */}
       {dentro && perto && eu.banco === null && (
         <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
@@ -1852,7 +1987,9 @@ export function Praca({
                   ? `tomar banho (higiene ${pet.higiene}%)`
                   : perto.tipo === "correio"
                     ? "abrir o correio"
-                    : "abrir o queridômetro"}
+                    : perto.tipo === "balanco"
+                      ? "sentar no balanço"
+                      : "abrir o queridômetro"}
           {perto.tipo === "parkour" && (
             <>
               <kbd className="ml-1 rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">

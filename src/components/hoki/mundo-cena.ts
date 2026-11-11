@@ -10,6 +10,8 @@ import { acabamento, criarManchas, texturaMancha, type Mancha } from "./luz";
 import {
   ANEL,
   ARVORES,
+  anguloDoBalanco,
+  BALANCO,
   BANCOS,
   BERCO,
   CANTEIROS,
@@ -419,6 +421,8 @@ export function criarMundo(THREE: typeof TH) {
 
   // ---------------- bancos de madeira com pés de ferro ----------------
   for (const bc of BANCOS) {
+    // o balanço do letreiro tem o seu próprio banco (lá embaixo, junto do letreiro)
+    if (bc.balanco) continue;
     const peca = (
       b: Blocos,
       lx: number,
@@ -1546,7 +1550,7 @@ export function criarMundo(THREE: typeof TH) {
   const placa = new THREE.Group();
   placa.position.set(0, 9.4, -19);
   const letras = new Blocos(r);
-  letrasDePedra(letras, "HOST", 0.42, 1.5, { linhas: 12, relevo: 0.8 });
+  const medidaDasLetras = letrasDePedra(letras, "HOST", 0.42, 1.5, { linhas: 12, relevo: 0.8 });
   const mLetras = letras.construir(THREE, {
     recebe: false,
     acabamento: { chanfro: 0.08, junta: 0.22, pe: 0, grao: 0.04 },
@@ -1631,10 +1635,99 @@ export function criarMundo(THREE: typeof TH) {
   for (const n of [...ceu.nuvens, ...mar.nuvens]) grupo.add(n.malha);
   lixo.push({ dispose: ceu.descartar }, { dispose: mar.descartar });
 
+  // ---------------- balanço do letreiro: um banco comprido, para 10, pendurado por cordas ----------------
+  // fica num grupo que gira no eixo (embaixo do letreiro); os "lugares" são pontos do banco que o
+  // mundo consulta a cada quadro para sentar os HOKIs no lugar certo enquanto ele balança
+  const eixoDoBalanco = new THREE.Group();
+  eixoDoBalanco.position.set(BALANCO.eixo.x, BALANCO.eixo.y, BALANCO.eixo.z);
+  grupo.add(eixoDoBalanco);
+  const larguraDoBalanco = BALANCO.lugares * BALANCO.passo + 0.5;
+  const pecaDoBalanco = (
+    w: number,
+    h: number,
+    d: number,
+    x: number,
+    y: number,
+    z: number,
+    cor: number,
+    pai: TH.Object3D = eixoDoBalanco,
+  ) => {
+    const g = new THREE.BoxGeometry(w, h, d);
+    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.8 });
+    const o = new THREE.Mesh(g, m);
+    o.position.set(x, y, z);
+    o.castShadow = true;
+    pai.add(o);
+    lixo.push(g, m);
+    return o;
+  };
+  const MADEIRA_DO_BALANCO = 0x9a6a3c;
+  const CORDA_DO_BALANCO = 0xd9c9a3;
+  const L = BALANCO.corda;
+  // só as cordas das pontas, presas direto nas letras: a da esquerda no pé do H e a da direita no pé do T
+  const meiaLetra = medidaDasLetras.largura / 2;
+  const presas = [
+    { lado: -1, topo: -meiaLetra + 0.42 },
+    { lado: 1, topo: meiaLetra - 0.42 * 2.5 },
+  ];
+  for (const { lado, topo } of presas)
+    for (const dz of [-0.24, 0.24]) {
+      const base = lado * (larguraDoBalanco / 2);
+      // a corda vai do pé da letra até a ponta do banco (um pouco inclinada)
+      const comprimento = Math.hypot(base - topo, L, dz);
+      const corda = pecaDoBalanco(
+        0.09,
+        comprimento,
+        0.09,
+        (base + topo) / 2,
+        -L / 2,
+        dz / 2,
+        CORDA_DO_BALANCO,
+      );
+      corda.rotation.z = Math.atan2(base - topo, L);
+      corda.rotation.x = -Math.atan2(dz, L);
+      corda.castShadow = false;
+    }
+  // assento (três tábuas), encosto e os braços nas pontas
+  for (const dz of [-0.2, 0, 0.2])
+    pecaDoBalanco(larguraDoBalanco, 0.08, 0.17, 0, -L, dz, MADEIRA_DO_BALANCO);
+  for (const dy of [0.3, 0.52])
+    pecaDoBalanco(larguraDoBalanco, 0.14, 0.07, 0, -L + dy, -0.3, MADEIRA_DO_BALANCO);
+  for (const lado of [-1, 1]) {
+    pecaDoBalanco(0.1, 0.62, 0.1, lado * (larguraDoBalanco / 2), -L + 0.3, -0.3, 0x6f4a28);
+    pecaDoBalanco(0.1, 0.1, 0.62, lado * (larguraDoBalanco / 2), -L + 0.34, 0, 0x6f4a28);
+  }
+  const lugaresDoBalanco = Array.from({ length: BALANCO.lugares }, (_, i) => {
+    const o = new THREE.Object3D();
+    // o HOKI senta com a base um pouco abaixo do tampo, como nos bancos da praça
+    o.position.set((i - (BALANCO.lugares - 1) / 2) * BALANCO.passo, -L + 0.01, 0.02);
+    eixoDoBalanco.add(o);
+    return o;
+  });
+  const pontoDoBalanco = new THREE.Vector3();
+  let anguloAtual = 0;
+
   let nivelNoite = 0;
   return {
     grupo,
+    /** Onde está agora o lugar `i` do balanço (0 a 9) e o quanto o banco está inclinado. */
+    lugarDoBalanco(i: number) {
+      const o = lugaresDoBalanco[i];
+      if (!o) return null;
+      o.getWorldPosition(pontoDoBalanco);
+      return {
+        x: pontoDoBalanco.x,
+        y: pontoDoBalanco.y,
+        z: pontoDoBalanco.z,
+        inclina: -anguloAtual,
+      };
+    },
     atualizar(t: number) {
+      // o balanço segue o relógio do mundo real (igual para todos) e sobe e desce junto com o letreiro
+      anguloAtual = anguloDoBalanco();
+      eixoDoBalanco.rotation.x = -anguloAtual;
+      eixoDoBalanco.position.y = BALANCO.eixo.y + Math.sin(t * 0.6) * 0.25;
+      eixoDoBalanco.updateMatrixWorld(true);
       tAgua.offset.y = t * 0.42;
       tQueda.offset.y = t * 0.9;
       tParada.offset.set(Math.sin(t * 0.25) * 0.06, Math.cos(t * 0.2) * 0.06);

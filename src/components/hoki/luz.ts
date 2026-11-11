@@ -84,11 +84,12 @@ export const COR_NEVOA_NOITE = 0x0a1024;
 /** Leva as luzes do dia para o luar (v de 0 a 1): o sol vira luz azulada e fraca, e o céu escurece. */
 export function anoitecerLuzes(luzes: ReturnType<typeof montarLuzes>, v: number) {
   luzes.sol.color.setHex(0xffe2b4).lerp(luzes.contra.color.clone().setHex(0x9fb6ff), v);
-  luzes.sol.intensity = 3.1 - 2.35 * v;
-  luzes.ceu.color.setHex(0xcfe2ff).lerp(luzes.contra.color.clone().setHex(0x4a62b8), v);
-  luzes.ceu.groundColor.setHex(0xb9a47e).lerp(luzes.contra.color.clone().setHex(0x141c33), v);
-  luzes.ceu.intensity = 1.15 - 0.62 * v;
-  luzes.contra.intensity = 0.5 - 0.3 * v;
+  // noite clara de lua cheia: o luar ilumina bem e o céu não apaga (dava para ver pouco antes)
+  luzes.sol.intensity = 3.1 - 1.6 * v;
+  luzes.ceu.color.setHex(0xcfe2ff).lerp(luzes.contra.color.clone().setHex(0x7d95e6), v);
+  luzes.ceu.groundColor.setHex(0xb9a47e).lerp(luzes.contra.color.clone().setHex(0x2f3a5e), v);
+  luzes.ceu.intensity = 1.15 - 0.22 * v;
+  luzes.contra.intensity = 0.5 - 0.12 * v;
 }
 
 /** Ajustes do desenho: cores mais fiéis nas áreas claras e sombras com borda macia. */

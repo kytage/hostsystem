@@ -1,18 +1,19 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { ehVisita, useSouVisita } from "@/lib/hoki-visita";
 import { getAuthUser } from "@/lib/auth-cache";
-import { ChatWidget } from "@/components/chat-widget";
+import { HokiFlutuante } from "@/components/hoki/hoki-flutuante";
 import { Abertura } from "@/components/abertura";
 import { useDevSolicitacaoNotify } from "@/hooks/use-dev-solicitacao-notify";
 import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
 import { useHokiOnline } from "@/hooks/use-hoki-online";
 import { useVersaoNova } from "@/hooks/use-versao-nova";
 
-/** Avisos e chat da equipe: a visita do HOKI não tem nada disso. */
+/** Avisos da equipe (a visita do HOKI não tem) e o HOKI flutuante, que aparece fora da tela inicial. */
 function SoDaEquipe() {
   useDevSolicitacaoNotify();
   useIlegalAvisoNotify();
-  return <ChatWidget />;
+  // (o botão de mensagens saiu do canto; no lugar dele fica o HOKI flutuante)
+  return <HokiFlutuante />;
 }
 
 function AuthenticatedLayout() {
