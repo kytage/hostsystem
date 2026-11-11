@@ -205,6 +205,14 @@ function AuthPage() {
           </form>
         )}
 
+        {!criandoSenha && (
+          <p className="mt-4 text-center text-[11px] text-muted-foreground">
+            Recebeu um convite do HOKI?{" "}
+            <a href="/visita" className="text-foreground underline-offset-2 hover:underline">
+              Entrar com o código
+            </a>
+          </p>
+        )}
         <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] text-ink-3">
           <ShieldCheck className="size-3.5" /> Conexão segura
         </p>

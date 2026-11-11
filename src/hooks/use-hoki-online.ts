@@ -14,6 +14,7 @@ import {
 import { playSfx } from "@/lib/sfx";
 import { useMyRole } from "@/lib/permissions";
 import { ROLE_TAG } from "@/lib/roles";
+import { useSouVisita } from "@/lib/hoki-visita";
 
 /** Pede (uma vez só) para o navegador deixar o painel mostrar avisos no computador. */
 function pedirAvisosNoComputador() {
@@ -94,7 +95,8 @@ export function useHokiOnline() {
     },
   });
   const { data: cargo } = useMyRole();
-  const tag = cargo ? ROLE_TAG[cargo] : "";
+  const visita = useSouVisita();
+  const tag = visita ? "VIS" : cargo ? ROLE_TAG[cargo] : "";
   const id = pet?.user_id ?? (semPet ? reserva?.id : undefined);
   const nome = pet ? pet.username || pet.nome : (reserva?.nome ?? "");
   const nomeDoPet = pet?.nome ?? "";

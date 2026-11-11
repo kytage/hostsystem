@@ -45,6 +45,25 @@ export function useQueridometro(euId: string) {
   const { data: contas = [] } = useQuery({
     queryKey: ["termometro-perfis"],
     queryFn: async () => {
+      // todo mundo da equipe e as visitas (a função do banco devolve só nome e cargos)
+      const lista = await supabase.rpc("hoki_pessoas" as never);
+      if (!lista.error && Array.isArray(lista.data)) {
+        const pessoas = lista.data as {
+          id: string;
+          username: string | null;
+          cargos: string[] | null;
+          visita: boolean;
+        }[];
+        return pessoas.map((p) => {
+          const cargo = ROLE_ORDER.find((r) => p.cargos?.includes(r));
+          return {
+            id: p.id,
+            username: p.username ?? "",
+            tag: cargo ? ROLE_TAG[cargo] : p.visita ? "VIS" : "",
+          };
+        });
+      }
+      // sem a função (versão antiga do banco): lê as tabelas, que mostram só o que cada um pode ver
       const [perfis, cargos] = await Promise.all([
         supabase.from("profiles").select("id, username").order("username", { ascending: true }),
         supabase.from("user_roles").select("user_id, role"),

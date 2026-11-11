@@ -391,8 +391,9 @@ const founders = new Map<string, Promise<boolean>>();
 function ehFounder(id: string) {
   let c = founders.get(id);
   if (!c) {
-    c = Promise.resolve(supabase.from("user_roles").select("role").eq("user_id", id)).then(
-      ({ data }) => (data ?? []).some((r) => r.role === "founder"),
+    // cada um só consegue ler o próprio cargo na tabela; a função has_role do banco responde por qualquer um
+    c = Promise.resolve(supabase.rpc("has_role", { _user_id: id, _role: "founder" })).then(
+      ({ data, error }) => !error && data === true,
       () => false,
     );
     founders.set(id, c);

@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { SUJO_ABAIXO_DE, todosPets, type HokiPet, type Visual } from "@/lib/hoki";
+import { SUJO_ABAIXO_DE, todosPets, VISUAL_PADRAO, type HokiPet, type Visual } from "@/lib/hoki";
+import { Hoki2D } from "./hoki-2d";
 import {
   definirLugar,
   enviarNaPraca,
@@ -52,7 +53,9 @@ import { CartasDialog, VelhaDialog } from "./jogos-online";
 import { DesafioDialog, FestaDialog, novoDesafio } from "./minijogos-online";
 import { DESAFIOS, NOME_DO_JOGO, participantes, type Festa } from "@/lib/hoki-minijogos";
 import type { Reacao } from "./mascote";
-import { Coins, Zap } from "lucide-react";
+import { Coins, Copy, Link2, Loader2, UserPlus, Zap } from "lucide-react";
+import { criarConviteHoki, useSouVisita, type ConviteHoki } from "@/lib/hoki-visita";
+import { copiarTexto } from "@/lib/copiar";
 import { ROLE_TAG } from "@/lib/roles";
 import { isCoordinatorPlus, useMyRole } from "@/lib/permissions";
 import { Mundo3D, type Mundo3DRef, type PessoaMundo } from "./mundo-3d";
@@ -114,6 +117,9 @@ const INTERACOES: Record<Dupla, { nome: string; convite: string; emoji: string; 
   abraco: { nome: "Abraço", convite: "te dar um abraço", emoji: "💞", dura: 4_500 },
 };
 const CONVITE_MS = 20_000;
+/** Quantas mensagens ficam no canto da praça e por quanto tempo. */
+const MAX_CONVERSA = 4;
+const CONVERSA_MS = 60_000;
 const limparStatus = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, 32);
 /**
  * Praça HOST: o mundo 3D compartilhado. Quem está com o site aberto aparece
@@ -154,7 +160,8 @@ export function Praca({
   aoTelaCheia: () => void;
 }) {
   const { data: cargo } = useMyRole();
-  const minhaTag = cargo ? ROLE_TAG[cargo] : "";
+  const souVisita = useSouVisita();
+  const minhaTag = souVisita ? "VIS" : cargo ? ROLE_TAG[cargo] : "";
   const [emotesAberto, setEmotesAberto] = useState(false);
   useEffect(() => setEmotesAberto(false), [dentro]);
   const qc = useQueryClient();
@@ -242,12 +249,51 @@ export function Praca({
   const ultimaFala = useRef(0);
   const vistas = useRef(new Set<string>());
 
+  /* ---------- mensagens da praça: as últimas aparecem no canto, com o nome e a fotinha de quem mandou ---------- */
+  const [conversa, setConversa] = useState<
+    { chave: string; nome: string; tag: string; visual: Visual; texto: string; em: number }[]
+  >([]);
+  const outrosRef = useRef(outros);
+  outrosRef.current = outros;
+  const anotarFala = useRef((quem: { nome: string; tag: string; visual: Visual }, texto: string) =>
+    setConversa((l) =>
+      [
+        ...l,
+        {
+          ...quem,
+          texto,
+          em: Date.now(),
+          chave: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        },
+      ].slice(-MAX_CONVERSA),
+    ),
+  ).current;
+  // cada mensagem some do canto depois de um minuto
+  const temConversa = conversa.length > 0;
+  useEffect(() => {
+    if (!temConversa) return;
+    const id = setInterval(
+      () => setConversa((l) => l.filter((m) => Date.now() - m.em < CONVERSA_MS)),
+      2000,
+    );
+    return () => clearInterval(id);
+  }, [temConversa]);
+
   /* ---------- ao vivo: falas e truques dos outros (a presença vem do canal único do site) ---------- */
   useEffect(() => {
     const pararFala = ouvirNaPraca("fala", (p) => {
       const { id, texto } = p;
       if (typeof id !== "string" || typeof texto !== "string") return;
       setFalas((f) => ({ ...f, [id]: { texto: texto.slice(0, 90), ate: Date.now() + FALA_MS } }));
+      const quem = outrosRef.current[id];
+      anotarFala(
+        {
+          nome: quem?.nome ?? "alguém",
+          tag: quem?.tag ?? "",
+          visual: quem?.visual ?? VISUAL_PADRAO,
+        },
+        texto.slice(0, 90),
+      );
     });
     const pararTruque = ouvirNaPraca("truque", (p) => {
       const { id } = p;
@@ -258,7 +304,7 @@ export function Praca({
       pararFala();
       pararTruque();
     };
-  }, []);
+  }, [anotarFala]);
 
   /* ---------- interações em dupla: convite, resposta e soltar ---------- */
   useEffect(() => {
@@ -507,6 +553,24 @@ export function Praca({
     [],
   );
   const souFounder = cargo === "founder";
+  const [conviteVisita, setConviteVisita] = useState<ConviteHoki | null>(null);
+  const [gerandoConvite, setGerandoConvite] = useState(false);
+  const gerarConvite = async () => {
+    if (gerandoConvite) return;
+    setGerandoConvite(true);
+    try {
+      setConviteVisita(await criarConviteHoki());
+      playSfx("pop");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para gerar o convite agora.");
+    } finally {
+      setGerandoConvite(false);
+    }
+  };
+  const copiar = async (texto: string, oque: string) => {
+    if (await copiarTexto(texto)) toast.success(`${oque} copiado.`);
+    else toast.error("Não deu para copiar. Selecione e copie à mão.");
+  };
   const raio = () =>
     toast("Mandar todo mundo de volta para o berço?", {
       description: "Todos os HOKIs voltam a dormir e a praça sincroniza de novo.",
@@ -889,6 +953,7 @@ export function Praca({
     ultimaFala.current = Date.now();
     setTexto("");
     setFalas((f) => ({ ...f, [euPessoa.id]: { texto: t, ate: Date.now() + FALA_MS } }));
+    anotarFala({ nome: euPessoa.nome, tag: minhaTag, visual: meuVisual }, t);
     enviarNaPraca("fala", { id: euPessoa.id, texto: t });
   };
 
@@ -926,6 +991,22 @@ export function Praca({
     "flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 font-medium hover:bg-white/[0.14]";
   const flutuante =
     "grid size-9 place-items-center rounded-xl border border-white/15 bg-black/70 text-white backdrop-blur-md transition-transform duration-200 hover:-translate-y-0.5 active:scale-95";
+  // convite de visita: só Coordinator+ gera (código e link que só abrem o HOKI)
+  const botaoConvidar =
+    !souVisita && isCoordinatorPlus(cargo) ? (
+      <button
+        onClick={() => (conviteVisita ? setConviteVisita(null) : void gerarConvite())}
+        aria-label="Convidar visita para o HOKI"
+        title="Convidar visita (só o HOKI)"
+        className={cn(flutuante, conviteVisita && "border-white/40")}
+      >
+        {gerandoConvite ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <UserPlus className="size-4" />
+        )}
+      </button>
+    ) : null;
   // raio do Founder: só aparece para quem é Founder
   const botaoRaio = souFounder ? (
     <button
@@ -1294,7 +1375,61 @@ export function Praca({
       )}
 
       {/* dormindo: quantos estão acordados e no berço, e o botão de acordar */}
-      {!dentro && botaoRaio && <div className="absolute bottom-[68px] right-3">{botaoRaio}</div>}
+      {!dentro && (botaoRaio || botaoConvidar) && (
+        <div className="absolute bottom-[68px] right-3 flex flex-col gap-1.5">
+          {botaoConvidar}
+          {botaoRaio}
+        </div>
+      )}
+      {conviteVisita && (
+        <div className="pf-pop absolute bottom-[68px] right-14 z-20 w-[300px] rounded-2xl border border-white/15 bg-[#0d0d0d]/95 p-3.5 text-white shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[13px] font-semibold">Convite de visita</p>
+              <p className="mt-0.5 text-[11px] text-white/60">
+                Só dá acesso ao HOKI. Vale 7 dias e até {conviteVisita.maxUsos} contas.
+              </p>
+            </div>
+            <button
+              onClick={() => setConviteVisita(null)}
+              aria-label="Fechar"
+              className="grid size-7 place-items-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/50">Código</p>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="flex-1 select-all rounded-lg bg-white/[0.06] px-2.5 py-1.5 font-mono text-[15px] tracking-[0.12em]">
+              {conviteVisita.token}
+            </code>
+            <button
+              onClick={() => void copiar(conviteVisita.token, "Código")}
+              aria-label="Copiar código"
+              className="grid size-8 place-items-center rounded-lg border border-white/15 hover:bg-white/10"
+            >
+              <Copy className="size-3.5" />
+            </button>
+          </div>
+          <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-white/50">Link</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="flex-1 select-all truncate rounded-lg bg-white/[0.06] px-2.5 py-1.5 text-[12px] text-white/80">
+              {conviteVisita.link}
+            </span>
+            <button
+              onClick={() => void copiar(conviteVisita.link, "Link")}
+              aria-label="Copiar link"
+              className="grid size-8 place-items-center rounded-lg border border-white/15 hover:bg-white/10"
+            >
+              <Link2 className="size-3.5" />
+            </button>
+          </div>
+          <p className="mt-3 text-[11px] text-white/55">
+            Quem tiver só o código entra em <span className="text-white/80">/visita</span> no site e
+            cola ele lá.
+          </p>
+        </div>
+      )}
       {!dentro && (
         <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -1325,6 +1460,32 @@ export function Praca({
           </button>
         </div>
       )}
+      {conversa.length > 0 && (
+        <div
+          className={cn(
+            "pointer-events-none absolute left-3 z-10 flex max-w-[min(420px,60%)] flex-col items-start gap-1",
+            dentro ? "top-[52px]" : "top-3",
+          )}
+        >
+          {conversa.map((m) => (
+            <div
+              key={m.chave}
+              className="pf-pop flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/60 py-0.5 pl-0.5 pr-2.5 text-[11.5px] text-white backdrop-blur-md"
+            >
+              <span className="block size-5 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50">
+                <Hoki2D visual={m.visual} busto />
+              </span>
+              {m.tag && (
+                <span className="shrink-0 rounded bg-primary px-1 text-[8.5px] font-bold leading-[13px]">
+                  {m.tag}
+                </span>
+              )}
+              <span className="shrink-0 font-semibold">{m.nome}</span>
+              <span className="truncate text-white/85">{m.texto}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {dentro && (
         <button
           onClick={aoAlternar}
@@ -1338,6 +1499,7 @@ export function Praca({
         <>
           {/* zoom da câmera */}
           <div className="absolute bottom-[68px] right-3 flex flex-col gap-1.5">
+            {botaoConvidar}
             {botaoRaio}
             <button
               onClick={() => mundo.current?.zoom(-0.12)}

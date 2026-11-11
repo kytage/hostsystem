@@ -21,6 +21,7 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_authenticated/desenvolvimento'
 import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedHokiRouteImport } from './routes/_authenticated/hoki'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOrganizacoesRouteImport } from './routes/_authenticated/organizacoes'
@@ -31,6 +32,8 @@ import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as ConviteSlugRouteImport } from './routes/convite.$slug'
+import { Route as VisitaIndexRouteImport } from './routes/visita.index'
+import { Route as VisitaTokenRouteImport } from './routes/visita.$token'
 import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
 import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
@@ -98,6 +101,11 @@ const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   path: '/financeiro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHokiRoute = AuthenticatedHokiRouteImport.update({
+  id: '/hoki',
+  path: '/hoki',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIlegalRoute = AuthenticatedIlegalRouteImport.update({
   id: '/ilegal',
   path: '/ilegal',
@@ -149,6 +157,16 @@ const ConviteSlugRoute = ConviteSlugRouteImport.update({
   path: '/convite/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VisitaIndexRoute = VisitaIndexRouteImport.update({
+  id: '/visita/',
+  path: '/visita/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VisitaTokenRoute = VisitaTokenRouteImport.update({
+  id: '/visita/$token',
+  path: '/visita/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAreasIndexRoute = AuthenticatedAreasIndexRouteImport.update({
   id: '/areas/',
   path: '/areas/',
@@ -182,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
@@ -192,6 +211,8 @@ export interface FileRoutesByFullPath {
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
+  '/visita/$token': typeof VisitaTokenRoute
+  '/visita/': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -208,6 +229,7 @@ export interface FileRoutesByTo {
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
@@ -218,7 +240,9 @@ export interface FileRoutesByTo {
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
+  '/visita/$token': typeof VisitaTokenRoute
   '/': typeof AuthenticatedIndexRoute
+  '/visita': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -237,6 +261,7 @@ export interface FileRoutesById {
   '/_authenticated/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/_authenticated/eventos': typeof AuthenticatedEventosRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/hoki': typeof AuthenticatedHokiRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/organizacoes': typeof AuthenticatedOrganizacoesRoute
@@ -247,7 +272,9 @@ export interface FileRoutesById {
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
+  '/visita/$token': typeof VisitaTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/visita/': typeof VisitaIndexRoute
   '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -267,6 +294,7 @@ export interface FileRouteTypes {
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
+    | '/hoki'
     | '/ilegal'
     | '/marketing'
     | '/organizacoes'
@@ -277,6 +305,8 @@ export interface FileRouteTypes {
     | '/update'
     | '/usuarios'
     | '/convite/$slug'
+    | '/visita/$token'
+    | '/visita/'
     | '/areas/$area'
     | '/areas/'
     | '/api/public/webhook/online'
@@ -293,6 +323,7 @@ export interface FileRouteTypes {
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
+    | '/hoki'
     | '/ilegal'
     | '/marketing'
     | '/organizacoes'
@@ -303,7 +334,9 @@ export interface FileRouteTypes {
     | '/update'
     | '/usuarios'
     | '/convite/$slug'
+    | '/visita/$token'
     | '/'
+    | '/visita'
     | '/areas/$area'
     | '/areas'
     | '/api/public/webhook/online'
@@ -321,6 +354,7 @@ export interface FileRouteTypes {
     | '/_authenticated/desenvolvimento'
     | '/_authenticated/eventos'
     | '/_authenticated/financeiro'
+    | '/_authenticated/hoki'
     | '/_authenticated/ilegal'
     | '/_authenticated/marketing'
     | '/_authenticated/organizacoes'
@@ -331,7 +365,9 @@ export interface FileRouteTypes {
     | '/_authenticated/update'
     | '/_authenticated/usuarios'
     | '/convite/$slug'
+    | '/visita/$token'
     | '/_authenticated/'
+    | '/visita/'
     | '/_authenticated/areas/$area'
     | '/_authenticated/areas/'
     | '/api/public/webhook/online'
@@ -344,6 +380,8 @@ export interface RootRouteChildren {
   LiderRoute: typeof LiderRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ConviteSlugRoute: typeof ConviteSlugRoute
+  VisitaTokenRoute: typeof VisitaTokenRoute
+  VisitaIndexRoute: typeof VisitaIndexRoute
   ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
   ApiPublicWebhookPlayersRoute: typeof ApiPublicWebhookPlayersRoute
 }
@@ -434,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/hoki': {
+      id: '/_authenticated/hoki'
+      path: '/hoki'
+      fullPath: '/hoki'
+      preLoaderRoute: typeof AuthenticatedHokiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ilegal': {
       id: '/_authenticated/ilegal'
       path: '/ilegal'
@@ -504,6 +549,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConviteSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/visita/': {
+      id: '/visita/'
+      path: '/visita'
+      fullPath: '/visita/'
+      preLoaderRoute: typeof VisitaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/visita/$token': {
+      id: '/visita/$token'
+      path: '/visita/$token'
+      fullPath: '/visita/$token'
+      preLoaderRoute: typeof VisitaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/areas/': {
       id: '/_authenticated/areas/'
       path: '/areas'
@@ -543,6 +602,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDesenvolvimentoRoute: typeof AuthenticatedDesenvolvimentoRoute
   AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedHokiRoute: typeof AuthenticatedHokiRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOrganizacoesRoute: typeof AuthenticatedOrganizacoesRoute
@@ -565,6 +625,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDesenvolvimentoRoute: AuthenticatedDesenvolvimentoRoute,
   AuthenticatedEventosRoute: AuthenticatedEventosRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedHokiRoute: AuthenticatedHokiRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOrganizacoesRoute: AuthenticatedOrganizacoesRoute,
@@ -588,6 +649,8 @@ const rootRouteChildren: RootRouteChildren = {
   LiderRoute: LiderRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ConviteSlugRoute: ConviteSlugRoute,
+  VisitaTokenRoute: VisitaTokenRoute,
+  VisitaIndexRoute: VisitaIndexRoute,
   ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,
   ApiPublicWebhookPlayersRoute: ApiPublicWebhookPlayersRoute,
 }

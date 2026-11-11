@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -18,6 +18,8 @@ import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { Toaster } from "@/components/ui/sonner";
+import { getAuthUser } from "@/lib/auth-cache";
+import { ehVisita } from "@/lib/hoki-visita";
 
 
 function NotFoundComponent() {
@@ -147,6 +149,19 @@ function RootComponent() {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAuthPage = pathname === "/auth";
+  // Visita do HOKI: não vê o menu da equipe (só a tela do HOKI)
+  const [visita, setVisita] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    void getAuthUser()
+      .then((u) => (u ? ehVisita(u.id) : false))
+      .then((v) => {
+        if (vivo) setVisita(v);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [pathname]);
 
   usePresenceHeartbeat();
 
@@ -185,7 +200,7 @@ function RootComponent() {
 
   // Páginas abertas a quem não tem conta: painel do líder (entra por código) e
   // link de afiliação. Ficam sem o menu da equipe.
-  if (pathname === "/lider" || pathname.startsWith("/convite/")) {
+  if (pathname === "/lider" || pathname.startsWith("/convite/") || pathname.startsWith("/visita")) {
     return (
       <QueryClientProvider client={queryClient}>
         <main className="relative z-10 min-h-screen w-full">
@@ -199,7 +214,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="moldura relative z-10 flex h-screen w-full overflow-hidden">
-        <AppSidebar />
+        {!visita && <AppSidebar />}
         <main key={pathname} className="page-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
