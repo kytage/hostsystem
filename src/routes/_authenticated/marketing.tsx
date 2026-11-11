@@ -329,12 +329,16 @@ function Proximos({ titulo, icon: Icon, itens, campo, onAbrir }: {
 }) {
   return (
     <section>
-      <h2 className="mb-2 flex items-center gap-1.5 font-display text-sm font-semibold"><Icon className="size-3.5 text-ink-3" /> {titulo}</h2>
+      <h2 className="mb-2 flex items-center gap-1.5 font-display text-sm font-semibold">
+        <Icon className="size-3.5 text-ink-3" /> {titulo}
+        {itens.length > 0 && <span className="font-sans text-[11px] font-normal tabular-nums text-ink-3">{itens.length}</span>}
+      </h2>
       {itens.length === 0 ? (
         <p className="text-xs text-ink-3">Nada agendado.</p>
       ) : (
-        <ul className="space-y-0.5">
-          {itens.slice(0, 5).map((c) => {
+        // todos os itens aparecem; se a lista ficar comprida, ela rola dentro da coluna
+        <ul className="-mr-1 max-h-[46vh] space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+          {itens.map((c) => {
             const d = new Date(c[campo]!);
             return (
               <li key={c.id}>

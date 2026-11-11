@@ -73,6 +73,9 @@ import { IlegalRelatorioMultiModal } from "@/components/ilegal-relatorio-multi-m
 import { IlegalLimparFacModal } from "@/components/ilegal-limpar-fac-modal";
 import { IlegalTransferirModal } from "@/components/ilegal-transferir-modal";
 import { IlegalExcluirModal } from "@/components/ilegal-excluir-modal";
+import { IlegalPlanilha } from "@/components/ilegal-planilha";
+import { IlegalResumo, type FiltroIlegal } from "@/components/ilegal-resumo";
+import { HEX_SERIE, HEX_SITUACAO, HEX_STATUS } from "@/lib/ilegal-cores";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft } from "lucide-react";
 import { IlegalCoroasModal } from "@/components/ilegal-coroas-modal";
@@ -1041,12 +1044,15 @@ const ILEGAL_VIEWS: {
   id: IlegalView;
   label: string;
   Icon: typeof Skull;
+  /** Cor do ícone (e do fundo quando a aba está aberta). */
+  cor: string;
+  ativa: string;
 }[] = [
-  { id: "orgs", label: "Organizações", Icon: Skull },
-  { id: "anotacoes", label: "Anotações", Icon: StickyNote },
-  { id: "cronograma", label: "Cronograma de RP", Icon: CalendarClock },
-  { id: "online", label: "Online", Icon: Activity },
-  { id: "paineis", label: "Painéis dos líderes", Icon: KeyRound },
+  { id: "orgs", label: "Organizações", Icon: Skull, cor: "text-red-400", ativa: "bg-red-500/15 ring-red-500/30" },
+  { id: "anotacoes", label: "Anotações", Icon: StickyNote, cor: "text-amber-300", ativa: "bg-amber-500/15 ring-amber-500/30" },
+  { id: "cronograma", label: "Cronograma de RP", Icon: CalendarClock, cor: "text-sky-300", ativa: "bg-sky-500/15 ring-sky-500/30" },
+  { id: "online", label: "Online", Icon: Activity, cor: "text-emerald-300", ativa: "bg-emerald-500/15 ring-emerald-500/30" },
+  { id: "paineis", label: "Painéis dos líderes", Icon: KeyRound, cor: "text-violet-300", ativa: "bg-violet-500/15 ring-violet-500/30" },
 ];
 
 
@@ -1058,9 +1064,7 @@ function IlegalDashboard() {
   const [aba, setAba] = useState<string>("todas");
 
   const [busca, setBusca] = useState("");
-  const [filtroStat, setFiltroStat] = useState<
-    "todas" | "assumidas" | "livres" | "pendentes" | "comObs"
-  >("todas");
+  const [filtroStat, setFiltroStat] = useState<FiltroIlegal>("todas");
   const [filtroSerie, setFiltroSerie] = useState<"todas" | SerieIlegal>("todas");
   const [editando, setEditando] = useState<{
     org: IlegalOrg;
@@ -1078,6 +1082,7 @@ function IlegalDashboard() {
   } | null>(null);
   const [relGeral, setRelGeral] = useState(false);
   const [relMulti, setRelMulti] = useState(false);
+  const [excluindo, setExcluindo] = useState<IlegalOrg | null>(null);
   const [coroas, setCoroas] = useState<{
     setagem: string;
     organizacao: string;
@@ -1129,6 +1134,7 @@ function IlegalDashboard() {
       // Setagens Fechado (sem local) não entram na contagem.
       total: count((o) => o.status !== "Fechado"),
       assumidas: count((o) => o.status === "Assumida"),
+      reservadas: count((o) => o.status === "Reservada"),
       livres: count((o) => o.status === "Livre"),
       pendentes: count((o) => o.situacao === "Pendente"),
       comObs: count((o) => o.observacao.trim().length > 0),
@@ -1153,6 +1159,8 @@ function IlegalDashboard() {
           (filtroSerie === "todas" ||
             serieDoPico(mediasOnline.get(o.setagem)?.pico) === filtroSerie)
         );
+      case "reservadas":
+        return o.status === "Reservada";
       case "livres":
         return o.status === "Livre";
       case "pendentes":
@@ -1164,13 +1172,6 @@ function IlegalDashboard() {
     }
   };
 
-  const filtroLabel: Record<typeof filtroStat, string> = {
-    todas: "",
-    assumidas: "Assumidas",
-    livres: "Livres",
-    pendentes: "Entregas pendentes",
-    comObs: "Com observação",
-  };
 
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -1221,72 +1222,74 @@ function IlegalDashboard() {
         title="Painel Ilegal"
         subtitle="Sincronizado na nuvem — toda a equipe vê as mesmas informações em tempo real"
         actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <IlegalLogButton />
-            <div className="flex items-center gap-1 rounded-full glass p-1">
-              {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => setView(id)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                    view === id
-                      ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                      : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
-                  )}
-                >
-                  <Icon className="size-3.5" /> {label}
-                </button>
-              ))}
-            </div>
+          <>
             {view === "orgs" && (
-              <button
-                onClick={() => setRelMulti(true)}
-                title="Gerar relatório de várias setagens"
-                className="flex items-center gap-1.5 rounded-full glass px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-              >
-                <FileText className="size-3.5" /> Relatório por setagens
-              </button>
-            )}
-            {view === "orgs" && (
-              <button
-                onClick={() => setRelGeral(true)}
-                title="Relatório geral de todas as setagens (online, picos, punições)"
-                className="flex items-center gap-1.5 rounded-full glass px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-              >
-                <FileText className="size-3.5" /> Relatório geral
-              </button>
-            )}
-            {view === "orgs" && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <label className="relative block">
+                <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar org, local, grupo..."
-                  className="w-56 rounded-full glass py-2 pl-9 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
+                  className="pilula w-56 rounded-full !pl-8 !pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
                 />
-              </div>
+              </label>
             )}
-
-            {/* Solicitações — em destaque */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setView("solicitacoes")}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                  view === "solicitacoes"
-                    ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                    : "border border-primary/50 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
-                )}
-              >
-                <ClipboardList className="size-4" /> Solicitações
-              </button>
-            </div>
-          </div>
+            <IlegalLogButton />
+            <button
+              onClick={() => setView("solicitacoes")}
+              className={cn(
+                "pilula flex items-center gap-1.5 rounded-full",
+                view === "solicitacoes" ? "pilula-ativa" : "!border-primary/40 !text-red-300",
+              )}
+            >
+              <ClipboardList className="size-3.5" /> Solicitações
+            </button>
+          </>
         }
-
       />
+
+      {/* abas da área (cada uma com a sua cor) e ações */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="segmentos">
+          {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon, cor }) => (
+            <button key={id} onClick={() => setView(id)} data-ativo={view === id}>
+              <Icon className={cn("size-3.5", cor)} strokeWidth={1.8} /> {label}
+            </button>
+          ))}
+        </div>
+        {view === "orgs" && (
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setRelMulti(true)}
+              title="Gerar relatório de várias setagens"
+              className="pilula flex !h-[30px] items-center gap-1.5 rounded-full !text-[11.5px]"
+            >
+              <FileText className="size-3.5 text-sky-300" /> Relatório por setagens
+            </button>
+            <button
+              onClick={() => setRelGeral(true)}
+              title="Relatório geral de todas as setagens (online, picos, punições)"
+              className="pilula flex !h-[30px] items-center gap-1.5 rounded-full !text-[11.5px]"
+            >
+              <FileText className="size-3.5 text-violet-300" /> Relatório geral
+            </button>
+            {canEdit && (
+              <button
+                onClick={() =>
+                  handleAdd(
+                    categorias.find((c) => c.id === aba) ??
+                      categorias.find((c) => c.id === "a_definir") ??
+                      categorias[0]!,
+                  )
+                }
+                className="flex h-[30px] items-center gap-1 rounded-full bg-white px-3 text-[11.5px] font-semibold text-black transition-opacity hover:opacity-90"
+              >
+                <Plus className="size-3.5" /> Nova organização
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {view === "anotacoes" ? (
         <IlegalAnotacoes />
@@ -1300,311 +1303,83 @@ function IlegalDashboard() {
         <IlegalPaineis orgs={allOrgs} />
       ) : (
         <>
+          <IlegalResumo
+            total={stats.total}
+            filtro={filtroStat}
+            onFiltro={setFiltroStat}
+            categorias={categorias}
+            aba={aba}
+            onAba={setAba}
+            numeros={[
+              { id: "todas", rotulo: "Setagens", valor: stats.total, cor: "#ff7a66" },
+              { id: "assumidas", rotulo: "Assumidas", valor: stats.assumidas, cor: HEX_STATUS.Assumida },
+              { id: "reservadas", rotulo: "Reservadas", valor: stats.reservadas, cor: HEX_STATUS.Reservada },
+              { id: "livres", rotulo: "Livres", valor: stats.livres, cor: HEX_STATUS.Livre },
+              { id: "pendentes", rotulo: "Entregas pendentes", valor: stats.pendentes, cor: HEX_SITUACAO.Pendente },
+              { id: "comObs", rotulo: "Com observação", valor: stats.comObs, cor: "#a78bfa" },
+            ]}
+          />
 
-      {/* Stats clicáveis — filtram a lista abaixo */}
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-
-        {(
-          [
-            { id: "todas", label: "Setagens", value: stats.total },
-            { id: "assumidas", label: "Assumidas", value: stats.assumidas },
-            { id: "livres", label: "Livres", value: stats.livres },
-            { id: "pendentes", label: "Entregas pendentes", value: stats.pendentes },
-            { id: "comObs", label: "Com observação", value: stats.comObs },
-          ] as const
-        ).map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setFiltroStat(s.id)}
-            title={
-              s.id === "todas"
-                ? "Mostrar todas"
-                : `Ver quais estão: ${s.label}`
-            }
-            className={cn(
-              "rounded-2xl border p-4 text-left transition-colors",
-              filtroStat === s.id
-                ? "border-white/15 bg-white/[0.07]"
-                : "glass hover:bg-accent/50"
-            )}
-          >
-            <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground font-display">{s.value}</p>
-          </button>
-        ))}
-      </section>
-
-      {filtroStat !== "todas" && (
-        <div className="mt-4 flex items-center gap-2">
-          <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
-            Filtro: {filtroLabel[filtroStat]}
-          </span>
-          <button
-            onClick={() => setFiltroStat("todas")}
-            className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-          >
-            <X className="size-3" /> Limpar
-          </button>
-        </div>
-      )}
-
-      {filtroStat === "assumidas" && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {(
-            [
-              { id: "todas", label: "Todas assumidas", cls: "border-border text-foreground" },
-              { id: "A", label: "Série A · 10+", cls: "border-warning/50 text-warning" },
-              { id: "B", label: "Série B · 5–9", cls: "border-success/50 text-success" },
-              { id: "C", label: "Série C · 0–4", cls: "border-destructive/50 text-destructive" },
-            ] as const
-          ).map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFiltroSerie(f.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-                f.cls,
-                filtroSerie === f.id ? "bg-accent" : "opacity-70 hover:opacity-100"
-              )}
-            >
-              {f.id !== "todas" && (
-                <span className="mr-1 inline-block size-2 rounded-full bg-current align-middle" />
-              )}
-              {f.label} ({assumidasPorSerie[f.id]})
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Carregando organizações...
-        </div>
-      ) : (
-        <>
-          {/* Tabs de categoria */}
-          <nav className="mt-8 flex flex-wrap items-center gap-2">
-            {[{ id: "todas", nome: "Todas" }, ...categorias].map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setAba(c.id)}
-                className={cn(
-                  "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                  aba === c.id
-                    ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                    : "border border-border text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
-                )}
-              >
-                {c.nome}
-              </button>
-            ))}
-            {canEdit && (
-              <button
-                onClick={() => handleAdd(categorias.find((c) => c.id === aba) ?? categorias.find((c) => c.id === "a_definir") ?? categorias[0]!)}
-                className="ml-auto flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                <Plus className="size-4" /> Nova organização
-              </button>
-            )}
-          </nav>
-
-          {/* Categorias */}
-          <div className="mt-6 space-y-8">
-            {visiveis.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-                {busca.trim() || filtroStat !== "todas" ? "Nenhum resultado para a busca." : canEdit ? "Nenhuma organização cadastrada ainda. Use “Nova organização” para criar." : "Nenhuma organização cadastrada ainda."}
-              </div>
-            )}
-            {visiveis.map((cat) => (
-              <section key={cat.id}>
-                <div className="flex items-center justify-between">
-                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-                    {cat.nome}
-                    <span className="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {cat.orgs.length}
-                    </span>
-                  </h2>
-                  {canEdit && (
-                    <button
-                      onClick={() => handleAdd(cat)}
-                      className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <Plus className="size-3.5" /> Nova setagem
-                    </button>
+          {filtroStat === "assumidas" && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { id: "todas", label: "Todas as assumidas", cor: "#ffffff" },
+                  { id: "A", label: "Série A · 10+", cor: HEX_SERIE.A },
+                  { id: "B", label: "Série B · 5–9", cor: HEX_SERIE.B },
+                  { id: "C", label: "Série C · 0–4", cor: HEX_SERIE.C },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFiltroSerie(f.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-2 text-[10.5px] font-medium leading-[20px] transition-colors",
+                    filtroSerie === f.id
+                      ? "border-white/25 bg-white/[0.09] text-white"
+                      : "border-white/[0.07] text-zinc-400 hover:text-white",
                   )}
+                >
+                  <span className="size-1.5 rounded-full" style={{ background: f.cor }} />
+                  {f.label}
+                  <span className="tabular-nums text-muted-foreground">{assumidasPorSerie[f.id]}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
+          {isLoading ? (
+            <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Carregando organizações...
+            </div>
+          ) : (
+            <>
+              {visiveis.length === 0 ? (
+                <div className="glass mt-2 rounded-[24px] p-8 text-center text-xs text-muted-foreground">
+                  {busca.trim() || filtroStat !== "todas" ? "Nenhum resultado para a busca." : canEdit ? "Nenhuma organização cadastrada ainda. Use “Nova organização” para criar." : "Nenhuma organização cadastrada ainda."}
                 </div>
-
-                <div className="mt-3 overflow-hidden rounded-2xl border border-border">
-                  <table className="w-full table-fixed text-left text-xs">
-                    <thead>
-                      <tr className="border-b glass text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="w-[9%] px-2 py-2.5 text-[11px] font-semibold">Setagem</th>
-                        <th className="w-[7%] px-2 py-2.5 text-[11px] font-semibold" title="Maior pico de online entre 20h e 00h — passe o mouse para ver todos os horários">
-                          Média
-                        </th>
-                        <th className="hidden w-[11%] px-2 py-2.5 text-[11px] font-semibold lg:table-cell">Local</th>
-                        <th className="hidden w-[6%] px-2 py-2.5 text-[11px] font-semibold xl:table-cell">Grupo</th>
-                        <th className="w-[12%] px-2 py-2.5 text-[11px] font-semibold">Organização</th>
-                        <th className="hidden w-[8%] px-2 py-2.5 text-[11px] font-semibold md:table-cell">Status</th>
-                        <th className="hidden w-[9%] px-2 py-2.5 text-[11px] font-semibold md:table-cell">Situação</th>
-                        <th className="hidden w-[6%] px-1 py-2.5 text-center text-[11px] font-semibold lg:table-cell">CDS</th>
-                        <th className="hidden w-[9%] px-2 py-2.5 text-[11px] font-semibold 2xl:table-cell">Observação</th>
-                        <th className="w-[104px] py-2.5 pl-0.5 pr-2" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cat.orgs.map((o) => (
-                        <tr
-                          key={o.id}
-                          onClick={() =>
-                            setDetalhes({
-                              org: o,
-                              categoriaNome: cat.nome,
-                              isGaragem: cat.id === "garagem",
-                            })
-                          }
-                          title={
-                            o.status === "Assumida"
-                              ? `Série ${serieDoPico(mediasOnline.get(o.setagem)?.pico)} — abrir painel`
-                              : "Abrir painel da organização"
-                          }
-                          className={cn(
-                            "cursor-pointer border-b border-border/50 transition-all last:border-0",
-                            o.status === "Assumida"
-                              ? SERIE_ROW[serieDoPico(mediasOnline.get(o.setagem)?.pico)]
-                              : "bg-muted/30 opacity-70 grayscale hover:opacity-100 hover:grayscale-0"
-                          )}
-                        >
-                          <td className="px-2 py-3 font-semibold">
-                            <span
-                              className={cn(
-                                "block break-all",
-                                o.status === "Assumida"
-                                  ? SERIE_TEXT[serieDoPico(mediasOnline.get(o.setagem)?.pico)]
-                                  : "text-foreground",
-                              )}
-                              title={o.setagem}
-                            >
-                              {o.setagem}
-                            </span>
-                          </td>
-                          <td className="px-2 py-3">
-                            <MediaOnlineCell info={mediasOnline.get(o.setagem)} />
-                          </td>
-                          <td className="hidden px-2 py-3 text-muted-foreground lg:table-cell">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <MapPin className="size-3.5 shrink-0 text-primary" />
-                              <span className="truncate" title={o.local}>{o.local}</span>
-                            </span>
-                          </td>
-                          <td className="hidden px-2 py-3 font-mono text-[11px] text-muted-foreground xl:table-cell">
-                            <span className="block truncate" title={o.grupo}>{o.grupo}</span>
-                          </td>
-                          <td className="px-2 py-3 font-semibold text-foreground">
-                            {o.organizacao ? (
-                              <span className="block truncate" title={o.organizacao}>{o.organizacao}</span>
-                            ) : (
-                              <span className="font-normal text-muted-foreground/60">
-                                —
-                              </span>
-                            )}
-                          </td>
-                          <td className="hidden px-2 py-3 md:table-cell">
-                            <span
-                              className={cn(
-                                "inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                statusStyle[o.status]
-                              )}
-                            >
-                              {o.status}
-                            </span>
-                          </td>
-                          <td className="hidden px-2 py-3 md:table-cell">
-                            <span
-                              className={cn(
-                                "inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                situacaoStyle[o.situacao]
-                              )}
-                            >
-                              {o.situacao === "." ? "—" : o.situacao}
-                            </span>
-                          </td>
-                          <td className="hidden px-1 py-3 text-center lg:table-cell">
-                            <CdsCell cds={o.cds} />
-                          </td>
-                          <td className="hidden px-2 py-3 2xl:table-cell">
-                            {o.observacao ? (
-                              <span className="line-clamp-2 text-xs font-medium text-warning">
-                                {o.observacao}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/50">—</span>
-                            )}
-                          </td>
-                          <td className="py-3 pl-0.5 pr-2">
-                            <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCoroas({ setagem: o.setagem, organizacao: o.organizacao });
-                                }}
-                                title="Coroas da semana — contatos de RP (segunda a domingo 23:59)"
-                                className="flex items-center gap-1 rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-warning hover:text-background"
-                              >
-                                <Crown className="size-3.5 text-warning" />
-                                <span className="text-[11px] font-semibold text-warning">
-                                  {coroasSemana.get(o.setagem) ?? 0}
-                                </span>
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setJuridico({ setagem: o.setagem, organizacao: o.organizacao });
-                                }}
-                                title="Jurídico — denúncias desta setagem"
-                                className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                              >
-                                <Scale className="size-3.5" />
-                              </button>
-
-                              {canEdit ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditando({
-                                      org: o,
-                                      categoriaNome: cat.nome,
-                                      isNew: false,
-                                    });
-                                  }}
-                                  title="Editar"
-                                  className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
-                                >
-                                  <Pencil className="size-3.5" />
-                                </button>
-                              ) : (
-                                <span title="Somente visualização">
-                                  <Eye className="size-3.5 text-muted-foreground/50" />
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            ))}
-          </div>
-        </>
-      )}
+              ) : (
+                <IlegalPlanilha
+                  categorias={visiveis}
+                  medias={mediasOnline}
+                  coroas={coroasSemana}
+                  canEdit={canEdit}
+                  onAbrir={(o, cat) => setDetalhes({ org: o, categoriaNome: cat.nome, isGaragem: cat.id === "garagem" })}
+                  onEditar={(o, cat) => setEditando({ org: o, categoriaNome: cat.nome, isNew: false })}
+                  onExcluir={(o) => setExcluindo(o)}
+                  onCoroas={(o) => setCoroas({ setagem: o.setagem, organizacao: o.organizacao })}
+                  onJuridico={(o) => setJuridico({ setagem: o.setagem, organizacao: o.organizacao })}
+                  onAdicionar={handleAdd}
+                />
+              )}
+            </>
+          )}
         </>
       )}
 
+      {excluindo && canEdit && (
+        <IlegalExcluirModal org={excluindo} onClose={() => setExcluindo(null)} onDone={() => setExcluindo(null)} />
+      )}
 
       {editando && canEdit && (
         <EditModal

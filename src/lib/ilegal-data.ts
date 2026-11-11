@@ -231,8 +231,10 @@ export async function createOrg(org: IlegalOrg): Promise<void> {
 export async function deleteOrg(input: { id: string; setagem: string; confirmacao: string }): Promise<void> {
   const dados = excluirSetagemSchema.parse(input);
   // RLS enforces can_edit_ilegal; selecting the deleted row avoids false success.
-  const { data, error } = await supabase.from("ilegal_orgs")
-    .delete().eq("id", dados.id).eq("setagem", dados.setagem).select("id").maybeSingle();
+  // a linha é achada pelo id; o nome só confere se estiver preenchido (setagens novas vêm sem nome)
+  let pedido = supabase.from("ilegal_orgs").delete().eq("id", dados.id);
+  if (dados.setagem.trim()) pedido = pedido.eq("setagem", dados.setagem);
+  const { data, error } = await pedido.select("id").maybeSingle();
   if (error) throw new Error("Não foi possível excluir a setagem. Tente novamente.");
   if (!data) throw new Error("Setagem não encontrada, alterada ou sem permissão para excluir.");
 }

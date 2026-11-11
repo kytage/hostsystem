@@ -7,5 +7,14 @@ test("exclusão exige a palavra EXCLUIR", () => {
   assert.equal(excluirSetagemSchema.safeParse(dados).success, false);
   assert.equal(excluirSetagemSchema.safeParse({ ...dados, confirmacao: "Armas01" }).success, false);
   assert.equal(excluirSetagemSchema.safeParse({ ...dados, confirmacao: "excluir" }).success, false);
-  assert.equal(excluirSetagemSchema.safeParse({ ...dados, confirmacao: " EXCLUIR " }).success, true);
+  assert.equal(
+    excluirSetagemSchema.safeParse({ ...dados, confirmacao: " EXCLUIR " }).success,
+    true,
+  );
+});
+
+test("setagem sem nome também pode ser excluída (com EXCLUIR)", () => {
+  const dados = { id: "a2", setagem: "", confirmacao: "EXCLUIR" };
+  assert.equal(excluirSetagemSchema.safeParse(dados).success, true);
+  assert.equal(excluirSetagemSchema.safeParse({ ...dados, confirmacao: "" }).success, false);
 });

@@ -17,13 +17,15 @@ export interface IlegalExcluirModalProps {
 export function IlegalExcluirModal({ org, onClose, onDone }: IlegalExcluirModalProps) {
   const queryClient = useQueryClient();
   const [confirmacao, setConfirmacao] = useState("");
+  // setagens ainda sem nome são identificadas pela organização ou pelo local
+  const nome = org.setagem.trim() || org.organizacao.trim() || org.local.trim() || "sem nome";
   const mutation = useMutation({
     mutationFn: () => deleteOrg({ id: org.id, setagem: org.setagem, confirmacao }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["ilegal-orgs"] });
       queryClient.removeQueries({ queryKey: ["ilegal-detalhes", org.id] });
       await queryClient.invalidateQueries({ queryKey: ["ilegal-log"] });
-      toast.success(`${org.setagem} excluída.`);
+      toast.success(`Setagem ${nome} excluída.`);
       onDone();
     },
   });
@@ -32,11 +34,11 @@ export function IlegalExcluirModal({ org, onClose, onDone }: IlegalExcluirModalP
     <AlertDialog open onOpenChange={(open) => { if (!open && !mutation.isPending) onClose(); }}>
       <AlertDialogContent className="z-[60] max-w-[calc(100%-2rem)] sm:max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir setagem {org.setagem}?</AlertDialogTitle>
+          <AlertDialogTitle>Excluir setagem {nome}?</AlertDialogTitle>
         <AlertDialogDescription className="space-y-1">
           <span className="block">
             Isso exclui <strong className="text-destructive">TUDO</strong> da setagem{" "}
-            <strong>{org.setagem}</strong> de forma definitiva: ficha, logo, contatos, CDS,
+            <strong>{nome}</strong> de forma definitiva: ficha, logo, contatos, CDS,
             garagens, uniforme, VIP FAC, coroas e anotações.
           </span>
           <span className="block font-medium text-destructive">
