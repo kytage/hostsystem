@@ -54,7 +54,8 @@ type Evento =
   | "presente-entregue"
   | "estado"
   | "ola"
-  | "tchau";
+  | "tchau"
+  | "reiniciar";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -68,6 +69,7 @@ const EVENTOS: Evento[] = [
   "estado",
   "ola",
   "tchau",
+  "reiniciar",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -100,12 +102,19 @@ const NO_BERCO: Lugar = {
 
 /**
  * Além da presença, cada aba manda o próprio estado por mensagem direta a cada
- * mudança e a cada 10 s. Se a lista de presença do servidor atrasar ou cair por
- * um tempo (já aconteceu: as mensagens chegavam e a lista ficava vazia), a praça
- * continua vendo todo mundo andar. Quem não manda nada há 25 s some.
+ * mudança e de tempos em tempos (acordado a cada 12 s, dormindo a cada 45 s).
+ * Se a lista de presença do servidor atrasar ou cair por um tempo (já aconteceu:
+ * as mensagens chegavam e a lista ficava vazia), a praça continua vendo todo
+ * mundo. Quem fecha a aba avisa e some na hora; quem some sem avisar sai depois
+ * de 75 s (acordado) ou 2 min e meio (dormindo: abas escondidas o navegador
+ * deixa mais lentas, e ninguém pode sumir do berço por isso).
  */
-const BATIDA_MS = 10_000;
-const VALIDADE_MS = 25_000;
+const BATIDA_MS = 6_000;
+const BATIDA_ACORDADO_MS = 12_000;
+const BATIDA_DORMINDO_MS = 45_000;
+const VALIDADE_ACORDADO_MS = 75_000;
+const VALIDADE_DORMINDO_MS = 150_000;
+let ultimaBatida = 0;
 /** Identifica esta aba (a mesma pessoa pode ter várias abas abertas). */
 const MINHA_ABA = Math.random().toString(36).slice(2, 10);
 const porMensagem = new Map<string, Map<string, { dados: Partial<PresencaHoki>; visto: number }>>();
@@ -147,14 +156,32 @@ function avisar(outros: Record<string, PresencaHoki>) {
  */
 let envioMarcado: ReturnType<typeof setTimeout> | null = null;
 let ultimoEnvio = 0;
-function publicar() {
+/** O último estado que o servidor confirmou (vazio = precisa mandar de novo). */
+let ultimoTrack = "";
+function publicar(forcar = false) {
+  if (forcar) ultimoTrack = "";
   if (!canal || !pronto || !identidade || envioMarcado) return;
   const espera = Math.max(0, 150 - (Date.now() - ultimoEnvio));
   envioMarcado = setTimeout(() => {
     envioMarcado = null;
-    if (!canal || !pronto || !identidade) return;
+    const ch = canal;
+    if (!ch || !pronto || !identidade) return;
+    // a marca da aba deixa cada aba se achar na lista (a mesma pessoa pode ter várias abertas)
+    const dados = { ...identidade, ...lugar, aba: MINHA_ABA };
+    const texto = JSON.stringify(dados);
+    // nada mudou desde o último envio confirmado: não gasta mensagem
+    if (texto === ultimoTrack) return;
     ultimoEnvio = Date.now();
-    void canal.track({ ...identidade, ...lugar });
+    ultimoTrack = texto;
+    void ch
+      .track(dados)
+      .then((r) => {
+        // não chegou no servidor: a próxima batida manda de novo
+        if (r !== "ok" && ultimoTrack === texto) ultimoTrack = "";
+      })
+      .catch(() => {
+        if (ultimoTrack === texto) ultimoTrack = "";
+      });
     enviarEstado();
   }, espera);
 }
@@ -203,7 +230,8 @@ function lerEstado() {
     const abas = porMensagem.get(id);
     const frescas: Partial<PresencaHoki>[] = [];
     for (const [aba, m] of abas ?? []) {
-      if (agora - m.visto < VALIDADE_MS) frescas.push(m.dados);
+      const validade = m.dados.dorme === true ? VALIDADE_DORMINDO_MS : VALIDADE_ACORDADO_MS;
+      if (agora - m.visto < validade) frescas.push(m.dados);
       else abas?.delete(aba);
     }
     if (abas && abas.size === 0) porMensagem.delete(id);
@@ -228,6 +256,7 @@ function receberEstado(m: Mensagem & Partial<PresencaHoki> & { aba?: unknown }) 
 /** Manda meu estado por mensagem (além da presença). */
 function enviarEstado() {
   if (!canal || !pronto || !identidade || !meuId) return;
+  ultimaBatida = Date.now();
   void canal.send({
     type: "broadcast",
     event: "estado",
@@ -257,8 +286,11 @@ export function conectarPresenca(id: string) {
       try {
         abrirCanal(id);
       } catch {
-        // sem presença o resto do site segue funcionando; tenta de novo na próxima entrada
+        // sem presença o resto do site segue funcionando; tenta de novo daqui a pouco
         meuId = "";
+        setTimeout(() => {
+          if (!meuId && !canal) conectarPresenca(id);
+        }, 5000);
       }
     });
 }
@@ -271,8 +303,12 @@ function abrirCanal(id: string) {
       const dados = (payload ?? {}) as Mensagem & Partial<PresencaHoki> & { aba?: unknown };
       if (evento === "estado") receberEstado(dados);
       else if (evento === "ola") {
-        // alguém acabou de entrar: mando meu estado (com um atraso sorteado para não chegarem todos juntos)
-        setTimeout(enviarEstado, 200 + Math.random() * 900);
+        // alguém acabou de entrar: quem está acordado manda o estado na hora (com um atraso
+        // sorteado para não chegarem todos juntos); quem dorme aparece pela presença e pela batida
+        if (!lugar.dorme) setTimeout(enviarEstado, 200 + Math.random() * 900);
+      } else if (evento === "reiniciar") {
+        void aplicarReinicio(dados.de);
+        return;
       } else if (evento === "tchau") {
         const abas = typeof dados.id === "string" ? porMensagem.get(dados.id) : undefined;
         if (abas && typeof dados.aba === "string") abas.delete(dados.aba);
@@ -285,7 +321,8 @@ function abrirCanal(id: string) {
     if (canal !== ch) return;
     pronto = s === "SUBSCRIBED";
     if (pronto) {
-      publicar();
+      // entrou ou voltou depois de uma queda: o servidor não lembra de mim, manda tudo de novo
+      publicar(true);
       void ch.send({ type: "broadcast", event: "ola", payload: { id } });
     }
     avisar(foto.outros);
@@ -294,7 +331,14 @@ function abrirCanal(id: string) {
   if (batida) clearInterval(batida);
   batida = setInterval(() => {
     vigiar();
-    enviarEstado();
+    // o servidor perdeu a minha presença (acontece quando ele se reorganiza): publica de novo
+    const minhas = canal
+      ? (canal.presenceState()[meuId] as { aba?: unknown }[] | undefined)
+      : undefined;
+    if (canal && pronto && identidade && !minhas?.some((m) => m.aba === MINHA_ABA)) publicar(true);
+    else publicar();
+    const intervalo = lugar.dorme ? BATIDA_DORMINDO_MS : BATIDA_ACORDADO_MS;
+    if (Date.now() - ultimaBatida >= intervalo - 500) enviarEstado();
     if (porMensagem.size) lerEstado();
   }, BATIDA_MS);
 }
@@ -317,11 +361,20 @@ function vigiar() {
   if (!quedaDesde) quedaDesde = Date.now();
   if (Date.now() - quedaDesde < 4000 && supabase.getChannels().includes(ch)) return;
   quedaDesde = 0;
+  religar();
+}
+
+/** Fecha e abre o canal de novo, sem perder quem eu sou nem onde estou. */
+function religar() {
+  const ch = canal;
   const id = meuId;
+  if (!id) return;
   canal = null;
   pronto = false;
-  void supabase
-    .removeChannel(ch)
+  ultimoTrack = "";
+  porMensagem.clear();
+  avisar({});
+  void (ch ? supabase.removeChannel(ch) : Promise.resolve())
     .catch(() => undefined)
     .then(() => {
       if (meuId !== id || canal) return;
@@ -332,6 +385,42 @@ function vigiar() {
       }
     });
 }
+
+/** Se quem mandou reiniciar é Founder (guardado para não perguntar ao banco toda hora). */
+const founders = new Map<string, Promise<boolean>>();
+function ehFounder(id: string) {
+  let c = founders.get(id);
+  if (!c) {
+    c = Promise.resolve(supabase.from("user_roles").select("role").eq("user_id", id)).then(
+      ({ data }) => (data ?? []).some((r) => r.role === "founder"),
+      () => false,
+    );
+    founders.set(id, c);
+  }
+  return c;
+}
+
+/**
+ * Reinício da praça (raio do Founder): todo mundo volta a dormir no berço e
+ * religa o canal do zero. Serve para destravar quem ficou fora de sincronia.
+ * Só vale se quem mandou for Founder de verdade (conferido no banco).
+ */
+async function aplicarReinicio(de: unknown) {
+  if (typeof de !== "string" || de.length > 64) return;
+  if (!(await ehFounder(de))) return;
+  ouvintes.reiniciar.forEach((f) => f({ de }));
+  lugar = { ...lugar, dorme: true, banco: null, par: null, anim: null };
+  // cada um religa num momento um pouco diferente, para não entrarem todos no mesmo instante
+  setTimeout(religar, 300 + Math.random() * 2500);
+}
+
+/** Raio do Founder: manda todo mundo (inclusive eu) voltar para o berço e sincronizar de novo. */
+export function reiniciarPraca() {
+  if (!canal || !meuId) return false;
+  void canal.send({ type: "broadcast", event: "reiniciar", payload: { de: meuId } });
+  void aplicarReinicio(meuId);
+  return true;
+}
 if (typeof document !== "undefined")
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
@@ -341,6 +430,13 @@ if (typeof document !== "undefined")
     enviarEstado();
   });
 
+// A conexão da praça vive enquanto a aba estiver aberta: trocar de tela no painel
+// (que desmonta e monta os componentes) não desliga nada. Só sair da conta desliga.
+if (typeof window !== "undefined")
+  supabase.auth.onAuthStateChange((evento) => {
+    if (evento === "SIGNED_OUT") desconectarPresenca();
+  });
+
 export function desconectarPresenca() {
   avisarSaida();
   if (batida) clearInterval(batida);
@@ -348,6 +444,7 @@ export function desconectarPresenca() {
   porMensagem.clear();
   if (envioMarcado) clearTimeout(envioMarcado);
   envioMarcado = null;
+  ultimoTrack = "";
   const ch = canal;
   canal = null;
   pronto = false;
@@ -370,7 +467,13 @@ export function definirLugar(l: Partial<Lugar>) {
   publicar();
 }
 
-/** Volta para o berço (ao sair da tela inicial ou ao escolher dormir). */
+/**
+ * Onde estou agora. Ao trocar de tela no painel o HOKI continua na praça do
+ * jeito que estava; quando a tela inicial abre de novo, ela começa daqui.
+ */
+export const meuLugar = (): Lugar => ({ ...lugar });
+
+/** Volta para o berço (ao escolher dormir). */
 export const voltarAoBerco = () =>
   definirLugar({ dorme: true, banco: null, par: null, anim: null });
 

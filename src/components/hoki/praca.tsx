@@ -29,8 +29,9 @@ import {
   definirLugar,
   enviarNaPraca,
   ouvirNaPraca,
+  reiniciarPraca,
+  meuLugar,
   usePresencaHoki,
-  voltarAoBerco,
   DUPLAS,
   type Dupla,
   type Par,
@@ -51,7 +52,7 @@ import { CartasDialog, VelhaDialog } from "./jogos-online";
 import { DesafioDialog, FestaDialog, novoDesafio } from "./minijogos-online";
 import { DESAFIOS, NOME_DO_JOGO, participantes, type Festa } from "@/lib/hoki-minijogos";
 import type { Reacao } from "./mascote";
-import { Coins } from "lucide-react";
+import { Coins, Zap } from "lucide-react";
 import { ROLE_TAG } from "@/lib/roles";
 import { isCoordinatorPlus, useMyRole } from "@/lib/permissions";
 import { Mundo3D, type Mundo3DRef, type PessoaMundo } from "./mundo-3d";
@@ -166,9 +167,10 @@ export function Praca({
   const meuVisual = useMemo(() => JSON.parse(visualTxt) as Visual, [visualTxt]);
 
   const { outros } = usePresencaHoki();
-  const [eu, setEu] = useState<{ x: number; z: number; banco: number | null }>({
-    ...CHEGADA,
-    banco: null,
+  // voltando de outra tela do painel: o HOKI continua de onde estava (andando ou sentado)
+  const [eu, setEu] = useState<{ x: number; z: number; banco: number | null }>(() => {
+    const l = meuLugar();
+    return l.dorme ? { ...CHEGADA, banco: null } : { x: l.x, z: l.z, banco: l.banco };
   });
   const [falas, setFalas] = useState<Record<string, { texto: string; ate: number }>>({});
   const [texto, setTexto] = useState("");
@@ -224,7 +226,10 @@ export function Praca({
   const [indoAoParkour, setIndoAoParkour] = useState(false);
   const [parkour, setParkour] = useState<"jogar" | "ranking" | null>(null);
   /** Sentado numa cadeira do escritório: o status vira "Trabalhando" até levantar. */
-  const [trabalhando, setTrabalhando] = useState(false);
+  const [trabalhando, setTrabalhando] = useState(() => {
+    const l = meuLugar();
+    return !l.dorme && l.banco !== null && l.status === "💻 Trabalhando";
+  });
   const statusAtual = trabalhando ? "💻 Trabalhando" : status;
   const [velhaId, setVelhaId] = useState<string | null>(null);
   /** Partida aberta de dama, ligue 4 ou pedra-papel-tesoura. */
@@ -450,8 +455,11 @@ export function Praca({
   }, [parceiroSumiu]);
 
   // Ao acordar, o HOKI desce o escorregador e pousa no gramado (cada um num ponto um pouco diferente).
+  // Se a tela abriu com o HOKI já acordado (voltou de outra tela), não desce o escorregador de novo.
+  const jaAcordado = useRef(dentro);
   useEffect(() => {
-    if (dentro)
+    if (dentro && jaAcordado.current) jaAcordado.current = false;
+    else if (dentro)
       setEu({
         x: CHEGADA.x + (Math.random() - 0.5) * 1.2,
         z: CHEGADA.z - Math.random() * 0.8,
@@ -479,8 +487,39 @@ export function Praca({
       sujo: pet.higiene < SUJO_ABAIXO_DE,
     });
   }, [dentro, eu, statusAtual, par, animacao, pet.higiene]);
-  // Ao sair desta tela, o HOKI volta a dormir no berço.
-  useEffect(() => () => voltarAoBerco(), []);
+  // Raio do Founder: todo mundo volta a dormir no berço e a praça sincroniza do zero.
+  const dentroRef = useRef(dentro);
+  dentroRef.current = dentro;
+  const aoAlternarRef = useRef(aoAlternar);
+  aoAlternarRef.current = aoAlternar;
+  useEffect(
+    () =>
+      ouvirNaPraca("reiniciar", () => {
+        setAlvo(null);
+        setIndoAte(null);
+        setAnimacao(null);
+        setPar(null);
+        setTrabalhando(false);
+        if (dentroRef.current) aoAlternarRef.current();
+        playSfx("pop");
+        toast("A praça foi reiniciada: todo mundo voltou para o berço.", { icon: "⚡" });
+      }),
+    [],
+  );
+  const souFounder = cargo === "founder";
+  const raio = () =>
+    toast("Mandar todo mundo de volta para o berço?", {
+      description: "Todos os HOKIs voltam a dormir e a praça sincroniza de novo.",
+      icon: "⚡",
+      duration: 8000,
+      action: {
+        label: "Reiniciar",
+        onClick: () => {
+          if (!reiniciarPraca()) toast.error("A praça ainda está conectando. Tente de novo.");
+        },
+      },
+    });
+  // Ao sair desta tela o HOKI continua onde está: aba aberta = HOKI na praça (só fechar a aba tira ele).
 
   // Emotes escolhidos aqui ficam rodando no mundo, para todos, até parar.
   const nTruque = truque?.n;
@@ -887,6 +926,17 @@ export function Praca({
     "flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 font-medium hover:bg-white/[0.14]";
   const flutuante =
     "grid size-9 place-items-center rounded-xl border border-white/15 bg-black/70 text-white backdrop-blur-md transition-transform duration-200 hover:-translate-y-0.5 active:scale-95";
+  // raio do Founder: só aparece para quem é Founder
+  const botaoRaio = souFounder ? (
+    <button
+      onClick={raio}
+      aria-label="Reiniciar a praça para todos"
+      title="Reiniciar a praça: todos voltam ao berço e sincronizam"
+      className={cn(flutuante, "text-amber-300")}
+    >
+      <Zap className="size-4" fill="currentColor" />
+    </button>
+  ) : null;
 
   return (
     <div className="relative h-full min-h-[420px] overflow-hidden">
@@ -1244,6 +1294,7 @@ export function Praca({
       )}
 
       {/* dormindo: quantos estão acordados e no berço, e o botão de acordar */}
+      {!dentro && botaoRaio && <div className="absolute bottom-[68px] right-3">{botaoRaio}</div>}
       {!dentro && (
         <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -1287,6 +1338,7 @@ export function Praca({
         <>
           {/* zoom da câmera */}
           <div className="absolute bottom-[68px] right-3 flex flex-col gap-1.5">
+            {botaoRaio}
             <button
               onClick={() => mundo.current?.zoom(-0.12)}
               aria-label="Aproximar a câmera"

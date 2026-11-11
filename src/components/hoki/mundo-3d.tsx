@@ -23,7 +23,7 @@ import {
   PARKOUR,
   planejar,
   TERMOMETRO,
-  VAGAS,
+  vagaDoBerco,
   type Ponto,
 } from "./mundo-mapa";
 import {
@@ -613,7 +613,7 @@ function criarMotor(
     rotulo.append(fala, nome, status);
     camada.appendChild(rotulo);
     const s = !p.dorme && p.banco !== null ? assento(p.banco) : null;
-    const v = p.dorme ? VAGAS[0] : undefined;
+    const v = p.dorme ? vagaDoBerco(0) : undefined;
     return {
       id: p.id,
       souEu: !!p.souEu,
@@ -670,8 +670,7 @@ function criarMotor(
         a = criarAvatar(p);
         avatares.set(p.id, a);
         if (a.dorme) {
-          const v = VAGAS[vaga % VAGAS.length];
-          if (v) a.mostra = { ...v };
+          a.mostra = vagaDoBerco(vaga);
         }
       } else {
         const chave = JSON.stringify(p.visual);
@@ -970,7 +969,7 @@ function criarMotor(
 
   /** HOKI no berço: deitado dormindo, ou acordando (levanta, pula para o escorregador, desce e pousa no gramado). */
   function animarBerco(a: Avatar, agora: number, t: number, dt: number) {
-    const v = VAGAS[a.vaga % VAGAS.length] ?? VAGAS[0]!;
+    const v = vagaDoBerco(a.vaga);
     a.sombra.visible = false;
     if (a.dorme) {
       const k = 1 - Math.exp(-dt * 6);

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { meuLugar } from "@/lib/hoki-presenca";
 import {
   aoVivo,
   BARRAS,
@@ -132,7 +133,8 @@ export function HokiCard() {
   /** Mochila aberta (e em qual aba: tudo, comidas ou bebidas). */
   const [mochila, setMochila] = useState<"tudo" | "comida" | "bebida" | null>(null);
   const [perfil, setPerfil] = useState<HokiPet | null>(null);
-  const [naPraca, setNaPraca] = useState(false);
+  // aberta a aba, o HOKI fica na praça mesmo trocando de tela: volta acordado se estava acordado
+  const [naPraca, setNaPraca] = useState(() => !meuLugar().dorme);
   const [rankingAberto, setRankingAberto] = useState(false);
   const [coinsAberto, setCoinsAberto] = useState(false);
   // tela cheia: o HOKI (cartão e praça) ocupa a janela toda; Esc volta

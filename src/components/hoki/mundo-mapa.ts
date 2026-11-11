@@ -268,6 +268,21 @@ const COLCHAO = BERCO.y + 0.36;
 export const VAGAS: { x: number; y: number; z: number }[] = [0, 1, 2, 3].flatMap((f) =>
   [-2, -1, 0, 1, 2].map((c) => ({ x: BERCO.x + c * 1.0, y: COLCHAO, z: BERCO.z - 1.3 + f * 0.9 })),
 );
+/**
+ * Vaga de quem dorme no berço. Passando de 20 pessoas, as próximas deitam numa
+ * camada de cima, um pouco deslocada, para ninguém ficar escondido embaixo de outro.
+ */
+export function vagaDoBerco(i: number) {
+  const n = Math.max(0, Math.floor(i));
+  const camada = Math.floor(n / VAGAS.length);
+  const base = VAGAS[n % VAGAS.length] ?? VAGAS[0]!;
+  const torto = camada % 2 === 1;
+  return {
+    x: base.x + (torto ? 0.5 : 0),
+    y: base.y + camada * 0.42,
+    z: base.z + (torto ? 0.45 : 0),
+  };
+}
 /** Escorregador: sai do fundo do deck e desce até o gramado, entre duas árvores. */
 export const ESCORREGADOR = {
   topo: { x: BERCO.x, y: BERCO.y + 0.05, z: BERCO.z - DECK_DO_BERCO.meiaZ },

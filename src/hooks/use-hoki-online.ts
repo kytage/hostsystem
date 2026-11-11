@@ -2,11 +2,12 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { meuPet, type Visual } from "@/lib/hoki";
+import { meuPet, VISUAL_PADRAO, type Visual } from "@/lib/hoki";
+import { getAuthUserData } from "@/lib/auth-cache";
+import { supabase } from "@/integrations/supabase/client";
 import {
   conectarPresenca,
   definirIdentidade,
-  desconectarPresenca,
   meuIdNaPraca,
   ouvirNaPraca,
 } from "@/lib/hoki-presenca";
@@ -67,21 +68,46 @@ function avisarNoComputador(titulo: string, corpo: string, aoClicar: () => void)
  * tela: ele aparece dormindo no berço da praça até a pessoa acordá-lo.
  */
 export function useHokiOnline() {
-  const { data: pet } = useQuery({ queryKey: ["hoki-meu"], queryFn: meuPet, staleTime: Infinity });
+  const { data: pet, isError: semPet } = useQuery({
+    queryKey: ["hoki-meu"],
+    queryFn: meuPet,
+    staleTime: Infinity,
+    // se o HOKI não carregar (internet oscilou), tenta de novo em vez de deixar a pessoa fora da praça
+    retry: 4,
+    retryDelay: (n) => Math.min(20_000, 1500 * 2 ** n),
+    refetchInterval: (q) => (q.state.status === "error" ? 60_000 : false),
+  });
+  // Enquanto o HOKI não carrega, a pessoa entra no berço com um HOKI padrão e o nome do perfil.
+  const { data: reserva } = useQuery({
+    queryKey: ["hoki-online-reserva"],
+    enabled: semPet,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const auth = await getAuthUserData();
+      if (!auth.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+      return { id: auth.user.id, nome: data?.username || "staff" };
+    },
+  });
   const { data: cargo } = useMyRole();
   const tag = cargo ? ROLE_TAG[cargo] : "";
-  const id = pet?.user_id;
-  const nome = pet ? pet.username || pet.nome : "";
+  const id = pet?.user_id ?? (semPet ? reserva?.id : undefined);
+  const nome = pet ? pet.username || pet.nome : (reserva?.nome ?? "");
   const nomeDoPet = pet?.nome ?? "";
   // texto estável do visual: só reenvia quando a aparência muda de verdade
-  const visual = pet ? JSON.stringify(pet.visual) : "";
+  const visual = JSON.stringify(pet?.visual ?? VISUAL_PADRAO);
 
   useEffect(() => {
-    if (!id || !visual) return;
+    if (!id) return;
     conectarPresenca(id);
     definirIdentidade({ nome, tag, pet: nomeDoPet, visual: JSON.parse(visual) as Visual });
   }, [id, nome, nomeDoPet, visual, tag]);
-  useEffect(() => () => desconectarPresenca(), []);
+  // não desliga ao desmontar: trocar de tela no painel desmonta este pedaço, e o HOKI
+  // tem que continuar na praça enquanto a aba estiver aberta (sair da conta desliga sozinho)
   useEffect(() => pedirAvisosNoComputador(), []);
 
   // "Toc toc": alguém me chamou pela praça. Toca e avisa em qualquer tela do painel.
