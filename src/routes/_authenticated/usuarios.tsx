@@ -63,6 +63,7 @@ import {
 import type { EquipeUser } from "@/lib/equipe-merge";
 import { PageHeader } from "@/components/page-header";
 import { PermissoesModal } from "@/components/permissoes-modal";
+import { PuxarCommit } from "@/components/puxar-commit";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 
 
@@ -556,6 +557,7 @@ function EquipePage() {
                 className="w-64 rounded-xl glass py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition-colors focus:border-primary/60"
               />
             </div>
+            {isFounder ? <PuxarCommit /> : null}
             {podeCriar && aba === "casting" ? (
               <button
                 onClick={() => setCastingForm({ id: null, ...EMPTY_CASTING })}
