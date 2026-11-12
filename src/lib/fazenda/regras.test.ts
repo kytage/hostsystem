@@ -299,3 +299,22 @@ test("subir do 34 ao 36 de uma vez dá 2 Granas e libera o Dourado", () => {
   assert.equal(k.granas, 1);
   assert.ok(k.titulos.includes("Mestre da HOST Fazendas"));
 });
+
+test("colheita e coleta mandam o produto para a mochila do HOKI (e os Ouros continuam)", () => {
+  let e: Estado = { j: novoJogador(T0), i: novaIlha() };
+  e = faz(e, { t: "plantar", x: 3, z: 3, cultura: "morango" });
+  const antes = e.j.ouros;
+  const colheita = faz(e, { t: "colher", x: 3, z: 3 }, T0 + 61_000);
+  assert.equal(colheita.j.ouros, antes + 75);
+  const produtos = colheita.ev.filter((x) => x.tipo === "produto");
+  assert.deepEqual(
+    produtos.map((x) => x.fonte),
+    ["morango"],
+  );
+  // a galinha colocada na ilha bota ovo: a coleta também manda um produto
+  e = colheita;
+  e.j.inventario.push({ id: "g1", item: "galinha", restanteMs: null, origem: "loja" });
+  e = faz(e, { t: "colocar", id: "g1", x: 0, z: 0, rot: 0 }, T0 + 61_000);
+  const coleta = faz(e, { t: "coletar", id: "g1" }, T0 + 61_000 + 21 * 60_000);
+  assert.ok(coleta.ev.some((x) => x.tipo === "produto" && x.fonte === "galinha"));
+});

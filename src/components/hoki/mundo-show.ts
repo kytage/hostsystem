@@ -1,6 +1,14 @@
 import type * as TH from "three";
 import type { Reacao } from "./mascote";
-import { ajustar, ENTRADA, FONTE, planejar, type Ponto } from "./mundo-mapa";
+import {
+  ajustar,
+  alturaDoChao,
+  AVIAO_PARADO,
+  EMBARQUE,
+  FONTE,
+  planejar,
+  type Ponto,
+} from "./mundo-mapa";
 import {
   BATATA_VOO_S,
   CONGELA_S,
@@ -54,6 +62,18 @@ interface Rota {
 }
 
 const VEL_ANDAR = 3.6;
+/**
+ * Quanto tempo cada evento dá para todo mundo chegar no lugar (em segundos). Quem está longe
+ * demais para chegar andando nesse tempo (do outro lado do mapa, no escritório, no Magnata)
+ * "brota" direto no lugar do evento, com uma nuvenzinha, em vez de escorregar pelo caminho.
+ */
+const CHEGADA_S: Partial<Record<Show["tipo"], number>> = {
+  aviao: 6.5,
+  mergulho: 5,
+  batata: 4,
+  trenzinho: 4,
+  baile: 4,
+};
 const suave = (x: number) => {
   const k = Math.min(1, Math.max(0, x));
   return k * k * (3 - 2 * k);
@@ -115,6 +135,8 @@ interface Ativo {
   lugar: Map<string, Ponto>;
   /** Ordem de cada um (para o trenzinho e a distribuição em volta da fonte). */
   ordem: Map<string, number>;
+  /** Quem estava longe demais e aparece direto no lugar do evento. */
+  brota: Set<string>;
   batata: Batata | null;
   feito: Set<string>;
   fogos: { lanca: number; x: number; z: number; altura: number; cor: number }[];
@@ -304,8 +326,9 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
     cena.add(g);
     aviao = { g, helice, assentos, L };
   }
-  // onde o avião fica parado, ao lado da entrada da ilha (de frente para +x)
-  const PARADO = new THREE.Vector3(ENTRADA.x + 0.6, 0.35, ENTRADA.z + 5.6);
+  // onde o avião fica parado: do lado de fora da cerca, no píer de embarque do sudoeste
+  // (longe da piscina e da calha do escorregador), de frente para +x
+  const PARADO = new THREE.Vector3(AVIAO_PARADO.x, AVIAO_PARADO.y, AVIAO_PARADO.z);
   const CENTRO_VOO = { x: 3, z: -1 };
   const R_VOO = 31;
   const r0 = Math.hypot(PARADO.x - CENTRO_VOO.x, PARADO.z - CENTRO_VOO.z);
@@ -510,11 +533,15 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
       const ang = inicio + (i / Math.max(1, total)) * Math.PI * 2;
       return { x: FONTE.x + Math.cos(ang) * raio, z: FONTE.z + Math.sin(ang) * raio };
     };
+    const tempo = CHEGADA_S[a.show.tipo] ?? 0;
     const ir = (id: string, alvo: Ponto) => {
       const destino = ajustar(alvo) ?? alvo;
       a.lugar.set(id, destino);
       const de = a.de.get(id)!;
-      a.rotas.set(id, montarRota({ x: de.x, z: de.z }, destino));
+      const rota = montarRota({ x: de.x, z: de.z }, destino);
+      a.rotas.set(id, rota);
+      // longe demais para chegar andando a tempo: brota direto lá
+      if (rota.total > VEL_ANDAR * tempo * 0.95) a.brota.add(id);
     };
     switch (a.show.tipo) {
       case "trovao":
@@ -523,11 +550,12 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
         break;
       case "aviao": {
         montarAviao(n);
+        // fila no gramado do embarque: a primeira na beira do píer, as outras para dentro da ilha
         const colunas = Math.min(Math.max(n, 1), 8);
         a.ids.forEach((id, i) =>
           ir(id, {
-            x: ENTRADA.x - ((colunas - 1) / 2) * 0.9 + (i % colunas) * 0.9,
-            z: ENTRADA.z + 1.1 + Math.floor(i / colunas) * 0.75,
+            x: EMBARQUE.x - ((colunas - 1) / 2) * 0.9 + (i % colunas) * 0.9,
+            z: EMBARQUE.z - Math.floor(i / colunas) * 0.75,
           }),
         );
         break;
@@ -616,6 +644,28 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
     const s = (agora - a.inicio) / 1000;
     if (s < 0) return;
     if (!a.preparado) preparar(a);
+    // quem estava longe some numa nuvenzinha e brota no lugar do evento
+    if (a.brota.size)
+      umaVez(a, "brota", () => {
+        for (const id of a.brota) {
+          const de = a.de.get(id);
+          const l = a.lugar.get(id);
+          const nuvem = {
+            cores: [0xffffff, 0xe6ebf2, 0xffe9a8],
+            vel: 1.7,
+            subida: 1.3,
+            grav: -1.1,
+          };
+          if (de) emitir(26, de.x, de.y + 0.5, de.z, { ...nuvem, vida: [0.5, 1], espalho: 0.5 });
+          if (l)
+            emitir(34, l.x, alturaDoChao(l.x, l.z) + 0.5, l.z, {
+              ...nuvem,
+              vida: [0.6, 1.2],
+              espalho: 0.6,
+            });
+        }
+        playSfx("pop");
+      });
     const fimDasPecas = a.show.tipo === "aviao" ? 29.5 : a.dura + 2.5;
     if (s > fimDasPecas) {
       encerrarPecas();
@@ -870,13 +920,26 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
     const de = a.de.get(id)!;
     const rota = a.rotas.get(id);
     const lugar = a.lugar.get(id);
+    const brotou = a.brota.has(id);
+    /** Altura do chão num ponto (a escadaria e a ilha da HOST FAZENDAS ficam no alto). */
+    const chaoEm = (p: Ponto) => alturaDoChao(p.x, p.z);
     const andar = (ate: number): PoseShow & { chegou: boolean } => {
-      if (!rota) return { x: de.x, y: 0, z: de.z, rumo: 0, chegou: true, sombra: true };
+      // quem estava longe já está no lugar do evento, olhando para o meio da praça
+      if (brotou && lugar)
+        return {
+          x: lugar.x,
+          y: chaoEm(lugar),
+          z: lugar.z,
+          rumo: olharPara(lugar, a.show.tipo === "aviao" ? PARADO : FONTE),
+          chegou: true,
+          sombra: true,
+        };
+      if (!rota) return { x: de.x, y: chaoEm(de), z: de.z, rumo: 0, chegou: true, sombra: true };
       const p = naRota(rota, s * VEL_ANDAR);
       const esticado = !p.chegou && s >= ate;
       return {
         x: p.x,
-        y: 0,
+        y: chaoEm(p),
         z: p.z,
         rumo: p.rumo,
         andando: !p.chegou && !esticado,
@@ -902,11 +965,11 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
         const k = a.ordem.get(id) ?? 0;
         if (s < 6.5) return andar(6.5);
         if (!lugar) return null;
-        const chao = { x: lugar.x, y: 0, z: lugar.z };
+        const chao = { x: lugar.x, y: chaoEm(lugar), z: lugar.z };
         if (s < 7.6) {
           const assento = assentoNoMundo(k);
-          const ultimo = rota ? naRota(rota, 6.5 * VEL_ANDAR) : de;
-          const saida = { x: ultimo.x, y: 0, z: ultimo.z };
+          const ultimo = brotou ? lugar : rota ? naRota(rota, 6.5 * VEL_ANDAR) : de;
+          const saida = { x: ultimo.x, y: chaoEm(ultimo), z: ultimo.z };
           if (!assento) return null;
           const p = pulo(saida, assento, entre(s, 6.5, 7.6), 1.6);
           return { ...p, rumo: assento.rumo };
@@ -932,7 +995,7 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
         if (s < 5) return andar(5);
         if (!lugar) return null;
         const ang = Math.atan2(lugar.z - FONTE.z, lugar.x - FONTE.x);
-        const borda = { x: lugar.x, y: 0, z: lugar.z };
+        const borda = { x: lugar.x, y: chaoEm(lugar), z: lugar.z };
         const agua = {
           x: FONTE.x + Math.cos(ang) * 1.9,
           y: 0.12,
@@ -966,7 +1029,7 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
           a.batata?.vencedor === id && s > (a.batata.rodadas.at(-1)?.explode ?? 0) + 0.6;
         return {
           x: lugar.x,
-          y: 0,
+          y: chaoEm(lugar),
           z: lugar.z,
           rumo: olharPara(lugar, FONTE),
           reacao: comEle ? "pulinhos" : venceu ? "festa" : null,
@@ -1004,7 +1067,7 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
         const dura = danca === "disco" ? 3.8 : danca === "dancinha" ? 4 : 3.6;
         return {
           x: lugar.x,
-          y: 0,
+          y: chaoEm(lugar),
           z: lugar.z,
           rumo: olharPara(lugar, FONTE) + Math.sin(s * 0.8 + k) * 0.4,
           reacao: danca,
@@ -1054,6 +1117,7 @@ export function criarShows(THREE: typeof TH, cena: TH.Scene, el: HTMLElement, li
         rotas: new Map(),
         lugar: new Map(),
         ordem: new Map(),
+        brota: new Set(),
         batata: null,
         feito: new Set(),
         fogos: [],

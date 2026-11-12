@@ -1,5 +1,5 @@
 /**
- * Itens da mochila do HOKI (comidas e bebidas) e o que a fazenda dá.
+ * Itens da mochila do HOKI (comidas e bebidas) e o que a HOST FAZENDAS manda para ela.
  * A mochila aguenta 50 kg. Comer e beber gastam o item e enchem as barras.
  */
 export interface Item {
@@ -27,14 +27,35 @@ export const ITENS: Item[] = [
   { id: "cenoura", nome: "Cenoura", emoji: "🥕", peso: 0.15, tipo: "comida", fome: 10 },
   { id: "tomate", nome: "Tomate", emoji: "🍅", peso: 0.15, tipo: "comida", fome: 9, sede: 3 },
   { id: "batata", nome: "Batata", emoji: "🥔", peso: 0.25, tipo: "comida", fome: 14 },
-  { id: "morango", nome: "Morango", emoji: "🍓", peso: 0.05, tipo: "comida", fome: 6, carinho: 3 },
+  {
+    id: "morango",
+    nome: "Morango",
+    emoji: "🍓",
+    peso: 0.05,
+    tipo: "comida",
+    fome: 6,
+    sede: 3,
+    carinho: 3,
+  },
+  { id: "alface", nome: "Alface", emoji: "🥬", peso: 0.3, tipo: "comida", fome: 6, sede: 9 },
   { id: "abobora", nome: "Abóbora", emoji: "🎃", peso: 2.5, tipo: "comida", fome: 40 },
   { id: "melancia", nome: "Melancia", emoji: "🍉", peso: 4, tipo: "comida", fome: 32, sede: 24 },
   { id: "uva", nome: "Uva", emoji: "🍇", peso: 0.3, tipo: "comida", fome: 10, sede: 8 },
+  {
+    id: "pitaya",
+    nome: "Pitaya",
+    emoji: "🐉",
+    peso: 0.5,
+    tipo: "comida",
+    fome: 14,
+    sede: 12,
+    carinho: 4,
+  },
   // frutas do pomar
   { id: "maca", nome: "Maçã", emoji: "🍎", peso: 0.2, tipo: "comida", fome: 12 },
   { id: "banana", nome: "Banana", emoji: "🍌", peso: 0.15, tipo: "comida", fome: 11, energia: 4 },
   { id: "laranja", nome: "Laranja", emoji: "🍊", peso: 0.2, tipo: "comida", fome: 8, sede: 12 },
+  { id: "manga", nome: "Manga", emoji: "🥭", peso: 0.4, tipo: "comida", fome: 14, sede: 6 },
   // dos bichos
   { id: "ovo", nome: "Ovo", emoji: "🥚", peso: 0.06, tipo: "comida", fome: 8, energia: 3 },
   // bebidas
@@ -110,6 +131,40 @@ export const ITENS: Item[] = [
 ];
 const POR_ID = new Map(ITENS.map((i) => [i.id, i]));
 export const item = (id: string) => POR_ID.get(id);
+
+/**
+ * HOST FAZENDAS → mochila: cada colheita (canteiro) e cada coleta (árvore ou bicho)
+ * manda uma unidade do produto para a mochila do HOKI, além dos Ouros de sempre.
+ * A chave é o id da cultura ou do objeto na fazenda; a lã não se come e fica de fora.
+ */
+const DA_FAZENDA: Record<string, string> = {
+  morango: "morango",
+  alface: "alface",
+  cenoura: "cenoura",
+  milho: "milho",
+  tomate: "tomate",
+  girassol: "girassol",
+  melancia: "melancia",
+  cafe: "cafe",
+  abobora: "abobora",
+  uva: "uva",
+  cacau: "chocolate",
+  pitaya: "pitaya",
+  macieira: "maca",
+  bananeira: "banana",
+  laranjeira: "laranja",
+  coqueiro: "coco",
+  mangueira: "manga",
+  galinha: "ovo",
+  pato: "ovo",
+  vaca: "leite",
+  cabra: "leite",
+};
+/** O item da mochila que uma colheita ou coleta da HOST FAZENDAS dá (ou undefined). */
+export const itemDaFazenda = (fonte: string) => {
+  const id = DA_FAZENDA[fonte];
+  return id ? item(id) : undefined;
+};
 
 /** O que cada lugar da fazenda dá: o item, quantos por colheita e em quanto tempo nasce de novo. */
 export type Cultura =

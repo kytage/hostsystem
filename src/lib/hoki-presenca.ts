@@ -31,7 +31,11 @@ export interface PresencaHoki {
   anim: string | null;
   /** HOKI sujo (aparece com mosquitos em volta). */
   sujo: boolean;
+  /** Está dentro da HOST FAZENDAS (numa ilha de fazenda, a própria ou a de alguém). */
+  naFazenda: boolean;
 }
+/** Status que aparece para todos enquanto a pessoa está dentro da HOST FAZENDAS. */
+export const STATUS_NA_FAZENDA = "🌾 No HOST FAZENDAS";
 /** Interações em dupla: de mãos dadas, de cavalinho, pulando corda ou num abraço. */
 export const DUPLAS = ["maos", "cavalinho", "corda", "abraco"] as const;
 export type Dupla = (typeof DUPLAS)[number];
@@ -41,7 +45,10 @@ export interface Par {
   tipo: Dupla;
 }
 type Identidade = Pick<PresencaHoki, "nome" | "tag" | "pet" | "visual">;
-type Lugar = Pick<PresencaHoki, "x" | "z" | "banco" | "status" | "dorme" | "par" | "anim" | "sujo">;
+type Lugar = Pick<
+  PresencaHoki,
+  "x" | "z" | "banco" | "status" | "dorme" | "par" | "anim" | "sujo" | "naFazenda"
+>;
 /** fala e truque vão para todos; convite, resposta, soltar e chamar dizem para quem são (`para`). */
 type Evento =
   | "fala"
@@ -59,7 +66,9 @@ type Evento =
   | "reiniciar"
   | "show"
   | "corrida"
-  | "magnata";
+  | "magnata"
+  | "fazenda-visita"
+  | "comercio";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -77,6 +86,8 @@ const EVENTOS: Evento[] = [
   "show",
   "corrida",
   "magnata",
+  "fazenda-visita",
+  "comercio",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -97,6 +108,8 @@ export interface Mensagem {
   /** Presentes: qual item e quantos. */
   item?: unknown;
   n?: unknown;
+  /** Comércio: quanto custou (Staff Coins). */
+  preco?: unknown;
 }
 
 const CANAL = "hoki-praca-3d";
@@ -109,6 +122,7 @@ const NO_BERCO: Lugar = {
   par: null,
   anim: null,
   sujo: false,
+  naFazenda: false,
 };
 
 /**
@@ -205,6 +219,7 @@ function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
   const z = numero(p.z, -51, 24);
   if (!dorme && (x === null || z === null)) return null;
   const banco = numero(p.banco, 0, 63);
+  const status = limpar(String(p.status ?? ""));
   return {
     id,
     nome: String(p.nome ?? "staff").slice(0, 24),
@@ -217,11 +232,13 @@ function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
     x: x ?? NO_BERCO.x,
     z: z ?? NO_BERCO.z,
     banco: dorme || banco === null ? null : Math.round(banco),
-    status: limpar(String(p.status ?? "")),
+    status,
     dorme,
     par: lerPar(p.par, dorme),
     anim: !dorme && typeof p.anim === "string" && p.anim.length < 24 ? p.anim : null,
     sujo: p.sujo === true,
+    // quem ainda está na versão anterior do site só avisa pelo status
+    naFazenda: !dorme && (p.naFazenda === true || status === STATUS_NA_FAZENDA),
   };
 }
 

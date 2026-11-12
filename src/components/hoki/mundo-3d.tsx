@@ -21,6 +21,7 @@ import {
   CANTEIROS,
   CHEGADA,
   CHUVEIRO,
+  CENTRO_DO_COMERCIO,
   CORREIO,
   AGUA_DA_PISCINA,
   MERGULHO,
@@ -91,6 +92,8 @@ interface Eventos {
   onCanteiro(i: number): void;
   /** Clicou na caixa do correio (ou no envelope em cima dela). */
   onCorreio(): void;
+  /** Clicou na barraca do Comércio (ou na moedinha em cima dela). */
+  onComercio?(): void;
   /** Clicou no balanço do letreiro HOST. */
   onBalanco?(): void;
   /** Recado curto de um evento da praça (quem explodiu, quem venceu, "espere acabar"…). */
@@ -596,6 +599,18 @@ function criarMotor(
   const cartaTela = { x: 0, y: 0, visivel: false };
   const noCorreio = (px: number, py: number) =>
     cartaTela.visivel && Math.hypot(cartaTela.x - px, cartaTela.y - 12 - py) < 22;
+  // moedinha em cima da barraca do Comércio (clicar leva o HOKI até o balcão)
+  const blipComercio = document.createElement("div");
+  blipComercio.className = CL_ROTULO;
+  blipComercio.innerHTML =
+    '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-white bg-black/85 text-white shadow-[0_4px_12px_rgba(0,0,0,0.55)]">' +
+    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></svg>' +
+    '<span class="absolute -bottom-0.5 -right-1.5 size-2 rounded-full bg-[#e5231b] ring-2 ring-black"></span>' +
+    "</span>";
+  camada.appendChild(blipComercio);
+  const comercioTela = { x: 0, y: 0, visivel: false };
+  const noComercio = (px: number, py: number) =>
+    comercioTela.visivel && Math.hypot(comercioTela.x - px, comercioTela.y - 12 - py) < 22;
 
   const avatares = new Map<string, Avatar>();
   let dentro = false;
@@ -849,7 +864,8 @@ function criarMotor(
       const r = el.getBoundingClientRect();
       const mx = e.clientX - r.left;
       const my = e.clientY - r.top;
-      el.style.cursor = noTermometro(mx, my) || noCorreio(mx, my) ? "pointer" : "";
+      el.style.cursor =
+        noTermometro(mx, my) || noCorreio(mx, my) || noComercio(mx, my) ? "pointer" : "";
       return;
     }
     if (!dentro) return;
@@ -901,6 +917,11 @@ function criarMotor(
       eventos.onCorreio();
       return;
     }
+    // a moedinha em cima da barraca do Comércio?
+    if (eventos.onComercio && noComercio(px, py)) {
+      eventos.onComercio();
+      return;
+    }
     // alguém embaixo do clique?
     for (const a of avatares.values()) {
       if (a.souEu) continue;
@@ -913,6 +934,16 @@ function criarMotor(
         eventos.onPessoa(a.id);
         return;
       }
+    }
+    // o balcão da barraca do Comércio?
+    vetor.set(CENTRO_DO_COMERCIO.x, 1.4, CENTRO_DO_COMERCIO.z).project(camera);
+    if (
+      eventos.onComercio &&
+      vetor.z < 1 &&
+      Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) < 26
+    ) {
+      eventos.onComercio();
+      return;
     }
     if (!dentro) return;
     ndc.set((px / r.width) * 2 - 1, -(py / r.height) * 2 + 1);
@@ -1466,6 +1497,13 @@ function criarMotor(
     blipCarta.style.display = cartaTela.visivel ? "" : "none";
     if (cartaTela.visivel)
       blipCarta.style.transform = `translate3d(${cartaTela.x.toFixed(1)}px, ${cartaTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
+    vetor.set(CENTRO_DO_COMERCIO.x, 4.25, CENTRO_DO_COMERCIO.z).project(camera);
+    comercioTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
+    comercioTela.x = (vetor.x * 0.5 + 0.5) * w;
+    comercioTela.y = (-vetor.y * 0.5 + 0.5) * h;
+    blipComercio.style.display = comercioTela.visivel ? "" : "none";
+    if (comercioTela.visivel)
+      blipComercio.style.transform = `translate3d(${comercioTela.x.toFixed(1)}px, ${comercioTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
     blip.style.display = blipTela.visivel && !semBlip ? "" : "none";
     if (blipTela.visivel)
       blip.style.transform = `translate3d(${blipTela.x.toFixed(1)}px, ${blipTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
@@ -1557,6 +1595,7 @@ function criarMotor(
       for (const a of [...avatares.values()]) removerAvatar(a);
       blip.remove();
       blipCarta.remove();
+      blipComercio.remove();
       gPlanta.dispose();
       mPlanta.dispose();
       gDucha.dispose();
@@ -1638,6 +1677,7 @@ export const Mundo3D = forwardRef<
           onParou: (p) => atual.current.onParou(p),
           onCanteiro: (i) => atual.current.onCanteiro(i),
           onCorreio: () => atual.current.onCorreio(),
+          onComercio: () => atual.current.onComercio?.(),
           onAviso: (texto) => atual.current.onAviso?.(texto),
           onBalanco: () => atual.current.onBalanco?.(),
         });

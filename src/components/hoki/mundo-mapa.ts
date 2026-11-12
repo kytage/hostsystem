@@ -357,6 +357,26 @@ export const MERGULHO: Ponto = { x: PLATAFORMA.x, z: PLATAFORMA.z + 0.4 };
 export const CHEGADA: Ponto = { x: PLATAFORMA.x, z: PLATAFORMA.z - 3.2 };
 /** Ponto de referência ao sul da praça (usado nos shows do Founder). */
 export const ENTRADA: Ponto = { x: FONTE.x, z: 14.4 };
+/**
+ * Embarque do avião (evento do Founder): a fila fica no gramado do sudoeste, longe da piscina
+ * e da calha do escorregador, e o avião para do lado de fora da cerca, encostado na beirada.
+ * `EMBARQUE` é o meio da primeira fila (as outras vão para dentro da ilha).
+ */
+export const EMBARQUE: Ponto = { x: -13, z: 20.5 };
+export const AVIAO_PARADO = { x: EMBARQUE.x + 0.6, y: 0.35, z: 25.2 };
+/** Píer de madeira do embarque: a cerca abre aqui e as tábuas passam um pouco da beirada. */
+export const PIER_DO_AVIAO = { x0: EMBARQUE.x - 2.6, x1: EMBARQUE.x + 2.6, z0: 21.2, z1: 23.4 };
+/** Plaquinha "EMBARQUE" ao lado da fila (dois postes). */
+export const PLACA_EMBARQUE: Ponto = { x: EMBARQUE.x - 4.8, z: PIER_DO_AVIAO.z0 - 0.9 };
+
+/** Comércio HOST: barraca de feira no gramado a noroeste da fonte, de frente para o sul. */
+export const COMERCIO = { x0: -15.9, x1: -12.1, z0: -8.5, z1: -6.9 };
+export const CENTRO_DO_COMERCIO: Ponto = {
+  x: (COMERCIO.x0 + COMERCIO.x1) / 2,
+  z: (COMERCIO.z0 + COMERCIO.z1) / 2,
+};
+/** Onde o HOKI para para negociar (na frente do balcão). */
+export const FRENTE_DO_COMERCIO: Ponto = { x: CENTRO_DO_COMERCIO.x, z: COMERCIO.z1 + 1.2 };
 
 // ---------------- bancos ----------------
 export interface Banco extends Ponto {
@@ -460,6 +480,7 @@ const OBSTACULOS: (Ponto & { r: number })[] = [
   { ...TERMOMETRO, r: 0.55 },
   { ...CORREIO, r: 0.4 },
   ...[PLACA_QUERIDOMETRO, PLACA_CORREIO].map((p) => ({ ...p, r: 0.35 })),
+  ...[-0.7, 0, 0.7].map((d) => ({ x: PLACA_EMBARQUE.x + d, z: PLACA_EMBARQUE.z, r: 0.2 })),
   { x: CHUVEIRO.x - 0.62, z: CHUVEIRO.z - 0.62, r: 0.16 },
   // colunas do coreto (oito, em volta) e do arco de flores
   ...Array.from({ length: 8 }, (_, i) => {
@@ -513,6 +534,8 @@ const PAREDES: Ret[] = [
   { x0: ESCRITORIO.x0, x1: ESCRITORIO.x1, z0: ESCRITORIO.z1 - 0.4, z1: ESCRITORIO.z1 },
   // terraço do TOP 3: o morrinho de trás (na frente dá para chegar perto do pódio)
   { x0: TERRACO_TOP3.x0, x1: TERRACO_TOP3.x1, z0: TERRACO_TOP3.z0 - 2, z1: TERRACO_TOP3.z0 + 1.6 },
+  // barraca do Comércio (balcão e fundo)
+  COMERCIO,
 ];
 
 /** Dá para pisar fora da ilha central? (pontes, ilhas laterais, escadarias e ilhas altas) */

@@ -12,6 +12,7 @@ import {
   ouvirNaPraca,
 } from "@/lib/hoki-presenca";
 import { playSfx } from "@/lib/sfx";
+import { item } from "@/lib/hoki-itens";
 import { useMyRole } from "@/lib/permissions";
 import { ROLE_TAG } from "@/lib/roles";
 import { useSouVisita } from "@/lib/hoki-visita";
@@ -183,5 +184,43 @@ export function useHokiOnline() {
         });
       }),
     [navigate],
+  );
+
+  // HOST FAZENDAS: alguém entrou na minha fazenda. Não precisa aceitar, é só um aviso.
+  useEffect(
+    () =>
+      ouvirNaPraca("fazenda-visita", (m) => {
+        if (m.para !== meuIdNaPraca() || typeof m.de !== "string") return;
+        const nome = String(m.nome ?? "Alguém").slice(0, 24);
+        playSfx("pop");
+        toast(`${nome} entrou na sua fazenda`, {
+          icon: "🌾",
+          description: "Visita na HOST FAZENDAS.",
+          duration: 7000,
+        });
+      }),
+    [],
+  );
+
+  // Comércio do lobby: alguém comprou um anúncio meu (as moedas já entraram na conta).
+  useEffect(
+    () =>
+      ouvirNaPraca("comercio", (m) => {
+        if (m.para !== meuIdNaPraca() || typeof m.de !== "string") return;
+        const nome = String(m.nome ?? "Alguém").slice(0, 24);
+        const it = typeof m.item === "string" ? item(m.item) : undefined;
+        const n = typeof m.n === "number" && Number.isFinite(m.n) ? Math.round(m.n) : 0;
+        const preco =
+          typeof m.preco === "number" && Number.isFinite(m.preco) ? Math.round(m.preco) : 0;
+        if (!it || n <= 0) return;
+        playSfx("complete");
+        piscarTitulo(`🪙 ${nome} comprou no Comércio!`);
+        toast(`${nome} comprou ${n} ${it.emoji} ${it.nome}`, {
+          icon: "🪙",
+          description: `+${preco} Staff Coins no Comércio do lobby.`,
+          duration: 8000,
+        });
+      }),
+    [],
   );
 }

@@ -21,13 +21,16 @@ import {
   beiradaEmZ,
   CANTEIROS_EM_BREVE,
   CELEIRO,
+  CENTRO_DO_COMERCIO,
   CHUVEIRO,
+  COMERCIO,
   CORETO,
   CORREIO,
   DADOS_DO_MAGNATA,
   DECK_DO_BERCO,
   dentroDaIlha,
   distLinha,
+  EMBARQUE,
   ESCRITORIO,
   FARDOS,
   FONTE,
@@ -47,6 +50,8 @@ import {
   naAgua,
   naEscadaria,
   PEAO_DO_MAGNATA,
+  PIER_DO_AVIAO,
+  PLACA_EMBARQUE,
   PILARES_DA_ESCADARIA,
   pilaresDaEscadaria,
   piso,
@@ -376,9 +381,19 @@ export function criarMundo(THREE: typeof TH) {
       const comp = Math.hypot(p.x - ult.x, p.z - ult.z);
       const giro = Math.atan2(p.x - ult.x, p.z - ult.z);
       if (!aberto(m)) {
-        for (const y of [0.32, 0.64])
-          madeira.add(m.x, y, m.z, 0.08, 0.09, comp + 0.02, escolhe(MADEIRA), 0.04, giro);
-        if (postes++ % 2 === 0) madeira.base(p.x, 0, p.z, 0.16, 0.85, 0.16, escolhe(MADEIRA), 0.04);
+        // no píer do avião a cerca abre; os sorteios de cor continuam os mesmos, para o resto
+        // do cenário (que vem depois desta cerca) não mudar nada
+        const pier = m.z > PIER_DO_AVIAO.z0 - 1 && m.x > PIER_DO_AVIAO.x0 && m.x < PIER_DO_AVIAO.x1;
+        for (const y of [0.32, 0.64]) {
+          const cor = escolhe(MADEIRA);
+          if (pier) r();
+          else madeira.add(m.x, y, m.z, 0.08, 0.09, comp + 0.02, cor, 0.04, giro);
+        }
+        if (postes++ % 2 === 0) {
+          const cor = escolhe(MADEIRA);
+          if (pier) r();
+          else madeira.base(p.x, 0, p.z, 0.16, 0.85, 0.16, cor, 0.04);
+        }
       }
       ult = p;
     }
@@ -809,6 +824,115 @@ export function criarMundo(THREE: typeof TH) {
     pedra.base(x + 0.5, 1.68, z, 0.2, 0.13, 0.03, 0xffd84a, 0);
     sombras.push({ x, z, rx: 0.8, rz: 0.8 });
     placaDePostes(PLACA_CORREIO, ["CAIXA", "POSTAL"], "#c8231c", "#7a120e");
+  }
+  // Comércio HOST: barraca de feira com toldo listrado, balcão e caixotes de frutas e verduras.
+  // Cores fixas e sem variação de tom (variar = 0): não mexe nos sorteios do resto do cenário.
+  {
+    const { x0, x1, z0, z1 } = COMERCIO;
+    const cx = CENTRO_DO_COMERCIO.x;
+    const larg = x1 - x0;
+    const MAD = 0xa8743c;
+    const MAD_ESCURA = 0x7a4f2c;
+    const MAD_CLARA = 0xc89a5e;
+    // estrado no chão, painel do fundo com duas prateleiras e os quatro pilares
+    madeira.base(cx, 0, (z0 + z1) / 2, larg + 0.3, 0.08, z1 - z0 + 0.5, MAD_ESCURA, 0);
+    madeira.base(cx, 0.08, z0 + 0.08, larg, 2.3, 0.14, MAD, 0);
+    for (const y of [0.95, 1.6])
+      madeira.base(cx, y, z0 + 0.34, larg - 0.3, 0.07, 0.4, MAD_CLARA, 0);
+    for (const x of [x0 + 0.1, x1 - 0.1])
+      for (const z of [z0 + 0.1, z1 - 0.12])
+        madeira.base(x, 0.08, z, 0.16, 2.62, 0.16, MAD_ESCURA, 0);
+    // balcão: corpo vermelho com um friso branco e o tampo de madeira clara
+    pedra.base(cx, 0.08, z1 - 0.34, larg - 0.42, 0.86, 0.5, VERMELHO, 0);
+    pedra.base(cx, 0.62, z1 - 0.085, larg - 0.42, 0.09, 0.02, BRANCO, 0);
+    madeira.base(cx, 0.94, z1 - 0.32, larg - 0.24, 0.08, 0.64, MAD_CLARA, 0);
+    // caixotes com a colheita (morango, laranja, alface, milho, uva e pitaya)
+    const FRUTAS = [0xe8333a, 0xf28a1e, 0x7ccf4a, 0xf6cf3a, 0x7b3fbf, 0xff4fa0];
+    const caixote = (x: number, y: number, z: number, cor: number) => {
+      madeira.base(x, y, z, 0.66, 0.22, 0.44, MAD, 0);
+      for (let i = 0; i < 3; i++)
+        for (let k = 0; k < 2; k++)
+          folhas.base(x - 0.2 + i * 0.2, y + 0.2, z - 0.1 + k * 0.2, 0.15, 0.13, 0.15, cor, 0);
+    };
+    [-1.3, -0.44, 0.44, 1.3].forEach((dx, i) =>
+      caixote(cx + dx, 1.02, z1 - 0.32, FRUTAS[i % FRUTAS.length]!),
+    );
+    [0.95, 1.6].forEach((y, j) =>
+      [-1.2, -0.4, 0.4, 1.2].forEach((dx, i) =>
+        caixote(cx + dx, y + 0.07, z0 + 0.36, FRUTAS[(i + j * 2 + 2) % FRUTAS.length]!),
+      ),
+    );
+    // toldo listrado (vermelho e branco) descendo em degraus do fundo para a frente
+    const faixas = 8;
+    const w = (larg + 0.6) / faixas;
+    const fundoZ = z0 - 0.05;
+    const frenteZ = z1 + 0.7;
+    const degraus = 5;
+    const passo = (frenteZ - fundoZ) / degraus;
+    for (let s = 0; s < faixas; s++) {
+      const x = x0 - 0.3 + w * (s + 0.5);
+      const cor = s % 2 ? BRANCO : VERMELHO;
+      for (let k = 0; k < degraus; k++)
+        pedra.add(
+          x,
+          2.86 - k * 0.11,
+          fundoZ + passo * (k + 0.5),
+          w + 0.01,
+          0.07,
+          passo + 0.03,
+          cor,
+          0,
+        );
+      // babado na beira do toldo
+      pedra.add(x, 2.3, frenteZ + 0.01, w - 0.04, 0.2, 0.04, cor, 0);
+    }
+    // placa "COMÉRCIO" em cima do toldo
+    for (const l of [-1, 1])
+      madeira.base(cx + l * 0.95, 2.62, z0 + 0.2, 0.08, 0.62, 0.08, MAD_ESCURA, 0);
+    placas.push({
+      tex: texturaDePlaca(THREE, ["COMÉRCIO"], {
+        fundo: "#c8231c",
+        borda: "#7a120e",
+        cor: "#ffffff",
+        largura: 512,
+        altura: 124,
+      }),
+      x: cx,
+      y: 3.42,
+      z: z0 + 0.26,
+      w: 2.5,
+      h: 0.6,
+    });
+    sombras.push({ x: cx, z: (z0 + z1) / 2 + 0.2, rx: 2.5, rz: 1.5 });
+  }
+  // píer de embarque do avião (evento do Founder): tábuas que passam um pouco da beirada,
+  // com dois postes de luz na ponta; a cerca fica aberta aqui
+  {
+    const { x0, x1, z0, z1 } = PIER_DO_AVIAO;
+    let n = 0;
+    for (let z = z0 + 0.16; z < z1; z += 0.32)
+      madeira.base((x0 + x1) / 2, -0.03, z, x1 - x0, 0.1, 0.28, n++ % 2 ? 0x9c6a36 : 0xa8743c, 0);
+    for (const x of [x0 + 0.22, x1 - 0.22]) {
+      madeira.base(x, -1.2, z1 - 0.2, 0.18, 1.18, 0.18, 0x7a4f2c, 0);
+      madeira.base(x, 0.07, z1 - 0.2, 0.14, 0.95, 0.14, 0x7a4f2c, 0);
+      aceso.add(x, 1.08, z1 - 0.2, 0.2, 0.14, 0.2, 0xffd84a, 0);
+    }
+    placas.push({
+      tex: texturaDePlaca(THREE, ["EMBARQUE"], {
+        fundo: "#c8231c",
+        borda: "#7a120e",
+        cor: "#ffffff",
+        largura: 512,
+        altura: 124,
+      }),
+      x: PLACA_EMBARQUE.x,
+      y: 1.55,
+      z: PLACA_EMBARQUE.z + 0.06,
+      w: 1.7,
+      h: 0.42,
+    });
+    for (const l of [-1, 1])
+      madeira.base(PLACA_EMBARQUE.x + l * 0.7, 0, PLACA_EMBARQUE.z, 0.1, 1.55, 0.1, 0x6e4a2b, 0);
   }
   // coreto: base de pedra em dois degraus, oito colunas brancas com flores e o telhado de telhas em degraus
   {

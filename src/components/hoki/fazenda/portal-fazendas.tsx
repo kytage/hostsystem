@@ -5,6 +5,8 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { corDoSelo } from "@/lib/fazenda/catalogo";
 import { fazendaAmigos, fazendaCorreio, fazendaResponderAmizade } from "@/lib/fazenda.functions";
+import { Hoki2D } from "../hoki-2d";
+import { motivoSemVisita, ondeEsta, useIlhasDe, type PresenteNaIlha } from "./ilhas-de";
 
 type ListaDeAmigos = Awaited<ReturnType<typeof fazendaAmigos>>;
 interface Props {
@@ -12,6 +14,8 @@ interface Props {
   onVisitar: (id: string) => void;
   /** Abre a minha ilha já com o Correio (presentes) ou os Vizinhos (amigos e convites). */
   onAbrirNaIlha: (painel: "correio" | "vizinhos") => void;
+  /** Quem está online agora (sem contar eu). */
+  naIlha: PresenteNaIlha[];
   onClose: () => void;
 }
 
@@ -71,12 +75,83 @@ function Opcao({
   );
 }
 
+/**
+ * Quem está na ilha agora, com o nível e o botão de visitar a fazenda (sem precisar
+ * de aceite: o dono só recebe o aviso de que a pessoa entrou).
+ */
+export function NaIlhaAgora({
+  presentes,
+  onVisitar,
+  vazio = "Ninguém mais está na ilha agora.",
+}: {
+  presentes: PresenteNaIlha[];
+  onVisitar: (id: string) => void;
+  vazio?: string;
+}) {
+  const fazendas = useIlhasDe(presentes.map((p) => p.id));
+  // quem tem fazenda aberta primeiro, depois por nível
+  const lista = [...presentes].sort((a, b) => {
+    const fa = fazendas[a.id];
+    const fb = fazendas[b.id];
+    const pa = fa?.podeEntrar ? 1 : 0;
+    const pb = fb?.podeEntrar ? 1 : 0;
+    return pb - pa || (fb?.nivel ?? 0) - (fa?.nivel ?? 0) || a.nome.localeCompare(b.nome);
+  });
+  if (!lista.length) return <p className="text-[12px] leading-snug text-white/55">{vazio}</p>;
+  return (
+    <div className="space-y-1.5">
+      {lista.map((p) => {
+        const f = fazendas[p.id];
+        const motivo = motivoSemVisita(f);
+        return (
+          <div
+            key={p.id}
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-1.5 pr-2 text-[12px]"
+          >
+            <span className="block size-8 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50">
+              <Hoki2D visual={p.visual} busto />
+            </span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="flex items-center gap-1.5">
+                {f?.nivel != null && <SeloPequeno nivel={f.nivel} cor={f.cor} />}
+                {p.tag && (
+                  <span className="rounded bg-[#ce0e0e] px-1 text-[8.5px] font-bold leading-[13px]">
+                    {p.tag}
+                  </span>
+                )}
+                <span className="truncate font-semibold">{p.nome}</span>
+              </span>
+              <span className="block text-[10.5px] text-white/45">{ondeEsta(p)}</span>
+            </span>
+            {motivo ? (
+              <span className="shrink-0 text-[10.5px] text-white/40">{motivo}</span>
+            ) : (
+              <button
+                onClick={() => onVisitar(p.id)}
+                className="h-8 shrink-0 rounded-full bg-white px-3 text-[12px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.97]"
+              >
+                Visitar
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** O portal da porta do celeiro: escolhe para onde ir no HOST FAZENDAS. */
-export function PortalDasFazendas({ onMinhaIlha, onVisitar, onAbrirNaIlha, onClose }: Props) {
+export function PortalDasFazendas({
+  onMinhaIlha,
+  onVisitar,
+  onAbrirNaIlha,
+  naIlha,
+  onClose,
+}: Props) {
   const listar = useServerFn(fazendaAmigos);
   const lerCorreio = useServerFn(fazendaCorreio);
   const responder = useServerFn(fazendaResponderAmizade);
-  const [aba, setAba] = useState<"inicio" | "amigos" | "convites">("inicio");
+  const [aba, setAba] = useState<"inicio" | "agora" | "amigos" | "convites">("inicio");
   const [dados, setDados] = useState<ListaDeAmigos | null>(null);
   const [presentes, setPresentes] = useState<number | null>(null);
   const carregar = useCallback(async () => {
@@ -129,6 +204,16 @@ export function PortalDasFazendas({ onMinhaIlha, onVisitar, onAbrirNaIlha, onClo
                 onClick={onMinhaIlha}
               />
               <Opcao
+                icone="🧭"
+                titulo="Na ilha agora"
+                texto={
+                  naIlha.length
+                    ? `${naIlha.length} membro${naIlha.length === 1 ? "" : "s"} online · entre na fazenda sem pedir`
+                    : "Ninguém mais online agora"
+                }
+                onClick={() => setAba("agora")}
+              />
+              <Opcao
                 icone="🤝"
                 titulo="Ilhas de Amigos"
                 texto={
@@ -161,6 +246,15 @@ export function PortalDasFazendas({ onMinhaIlha, onVisitar, onAbrirNaIlha, onClo
           >
             <ArrowLeft className="size-3.5" /> voltar
           </button>
+        )}
+        {aba === "agora" && (
+          <div className="mt-3 max-h-[46vh] overflow-y-auto pr-0.5">
+            <p className="mb-2 text-[11.5px] leading-snug text-white/55">
+              Entre na fazenda de quem está online sem precisar de aceite: o dono só recebe um aviso
+              de que você entrou.
+            </p>
+            <NaIlhaAgora presentes={naIlha} onVisitar={onVisitar} />
+          </div>
         )}
         {aba === "amigos" && (
           <div className="mt-3 max-h-[46vh] space-y-1.5 overflow-y-auto">

@@ -51,6 +51,8 @@ export interface IlhaVisitada {
   agora: number;
   dono: { id: string; nome: string; nivel: number; cor: string };
   visitantes: number;
+  /** Acabou de chegar (não estava na ilha no último minuto): o dono recebe o aviso de que entrou. */
+  novo?: boolean;
 }
 
 async function podeUsarHoki(db: Db, userId: string) {
@@ -131,11 +133,15 @@ async function vizinhosCom(db: Db, userId: string) {
     .in("dono_id", ids);
   return count ?? 0;
 }
-/** Pode entrar na ilha do dono? (amigos, convite válido ou privada) */
+/**
+ * Pode entrar na ilha do dono? A ilha "aberta" (o modo padrão, guardado como "amigos")
+ * recebe qualquer membro que usa o HOKI sem precisar de aceite: o dono só é avisado de
+ * quem entrou. "Por convite" pede um convite válido e "privada" não recebe ninguém.
+ */
 async function acessoAIlha(db: Db, visitante: string, dono: string, privacidade: string) {
   if (visitante === dono) return true;
   if (privacidade === "privada") return false;
-  if (privacidade === "amigos") return amizadeAceita(db, visitante, dono);
+  if (privacidade === "amigos") return true;
   const { data } = await db
     .from("fazenda_convites")
     .select("id")
@@ -322,7 +328,62 @@ export const fazendaVisitar = createServerFn({ method: "POST" })
         cor: (dj as Selo | null)?.cor ?? "vermelho",
       },
       visitantes: outros + (user !== data.dono ? 1 : 0),
+      novo: user !== data.dono && !eu,
     };
+  });
+
+/**
+ * Situação da fazenda de cada pessoa da lista (quem está na ilha agora): se já tem ilha,
+ * o nível, a privacidade e se quem pergunta pode entrar direto.
+ */
+export interface IlhaDeAlguem {
+  id: string;
+  temIlha: boolean;
+  nivel: number | null;
+  cor: string;
+  privacidade: string | null;
+  podeEntrar: boolean;
+}
+export const fazendaIlhasDe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ ids: z.array(z.string().uuid()).max(80) }).parse(d))
+  .handler(async ({ data, context }): Promise<IlhaDeAlguem[]> => {
+    const db = await banco();
+    const user = context.userId;
+    await podeUsarHoki(db, user);
+    const ids = [...new Set(data.ids)].filter((x) => x !== user);
+    if (!ids.length) return [];
+    const agoraIso = new Date().toISOString();
+    const [{ data: ilhas }, { data: jogs }, { data: conv }] = await Promise.all([
+      db.from("fazenda_ilhas").select("dono_id, privacidade").in("dono_id", ids),
+      db.from("fazenda_jogadores").select("user_id, nivel, cor").in("user_id", ids),
+      db
+        .from("fazenda_convites")
+        .select("dono")
+        .eq("convidado", user)
+        .eq("revogado", false)
+        .gt("expira_em", agoraIso)
+        .in("dono", ids),
+    ]);
+    const convidadoPor = new Set(((conv ?? []) as { dono: string }[]).map((c) => c.dono));
+    return ids.map((id) => {
+      const il = ((ilhas ?? []) as { dono_id: string; privacidade: string }[]).find(
+        (x) => x.dono_id === id,
+      );
+      const jj = ((jogs ?? []) as { user_id: string; nivel: number; cor: string }[]).find(
+        (x) => x.user_id === id,
+      );
+      const privacidade = il?.privacidade ?? null;
+      return {
+        id,
+        temIlha: !!il,
+        nivel: jj?.nivel ?? null,
+        cor: jj?.cor ?? "vermelho",
+        privacidade,
+        podeEntrar:
+          !!il && (privacidade === "amigos" || (privacidade === "convite" && convidadoPor.has(id))),
+      };
+    });
   });
 /** Batida de presença do visitante (a cada ~25 s): mantém a vaga e avisa se perdeu o acesso. */
 export const fazendaPresenca = createServerFn({ method: "POST" })

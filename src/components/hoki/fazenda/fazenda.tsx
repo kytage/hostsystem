@@ -88,21 +88,23 @@ import {
   fazendaVisitar,
 } from "@/lib/fazenda.functions";
 import { CHAVE_MEU_NIVEL, useSelos, type MeuNivel } from "@/lib/fazenda/selos";
+import { enviarNaPraca } from "@/lib/hoki-presenca";
+import { itemDaFazenda } from "@/lib/hoki-itens";
 import { Hoki2D } from "../hoki-2d";
 import { centroDoQuadrado, criarCenaDaFazenda, type CenaDaFazenda } from "./fazenda-cena";
+import { NaIlhaAgora } from "./portal-fazendas";
+import type { PresenteNaIlha } from "./ilhas-de";
 
-export interface PessoaOnline {
-  id: string;
-  nome: string;
-  visual: Visual;
-}
 interface Props {
   eu: { id: string; nome: string; visual: Visual; tag?: string };
   /** Ilha de outra pessoa (visita); sem isso, abre a minha. */
   visitar?: string | null;
   /** Janela que abre junto (Ilhas de Amigos ou Convites e Presentes, vindos do portal). */
   painelInicial?: Painel | null;
-  online: PessoaOnline[];
+  /** Quem está na ilha (no Mundo HOST) agora, sem contar eu. */
+  online: PresenteNaIlha[];
+  /** O que as colheitas e coletas mandam para a mochila do HOKI (id do item → quantos). */
+  onProdutos?: (itens: Record<string, number>) => void;
   onClose: () => void;
 }
 type Painel =
@@ -217,7 +219,7 @@ function Selo({ nivel, cor, grande }: { nivel: number; cor: string; grande?: boo
   );
 }
 
-export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) {
+export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClose }: Props) {
   const entrar = useServerFn(fazendaEntrar);
   const acaoFn = useServerFn(fazendaAcao);
   const visitarFn = useServerFn(fazendaVisitar);
@@ -291,6 +293,17 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
   }, []);
   const avisarMudanca = () =>
     void canal.current?.send({ type: "broadcast", event: "mudou", payload: {} });
+  // cada colheita e cada coleta manda uma unidade do produto para a mochila do HOKI
+  const onProdutosRef = useRef(onProdutos);
+  onProdutosRef.current = onProdutos;
+  const entregarProdutos = useCallback((ev: Evento[]) => {
+    const itens: Record<string, number> = {};
+    for (const e of ev) {
+      const it = e.tipo === "produto" && e.fonte ? itemDaFazenda(e.fonte) : undefined;
+      if (it) itens[it.id] = (itens[it.id] ?? 0) + 1;
+    }
+    if (Object.keys(itens).length) onProdutosRef.current?.(itens);
+  }, []);
 
   // carrega a minha ilha (e, numa visita, a ilha do amigo)
   const recarregar = useCallback(async () => {
@@ -312,6 +325,8 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
           cor: v.dono.cor,
           visitantes: v.visitantes,
         });
+        // acabou de chegar: o dono recebe o aviso (onde estiver no painel) de que entrei
+        if (v.novo) enviarNaPraca("fazenda-visita", { de: eu.id, para: donoId, nome: eu.nome });
       } else {
         setIlha(minha.ilha);
         setDono({
@@ -324,7 +339,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
     } catch (e) {
       setErroGeral(e instanceof Error ? e.message : "Não deu para abrir a fazenda agora.");
     }
-  }, [entrar, visitarFn, souVisita, donoId, eu.nome, mostrar]);
+  }, [entrar, visitarFn, souVisita, donoId, eu.id, eu.nome, mostrar]);
   useEffect(() => {
     void recarregar();
   }, [recarregar]);
@@ -462,6 +477,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
             return false;
           }
           mostrar(r.ev);
+          entregarProdutos(r.ev);
           avisarMudanca();
           return true;
         } catch (e) {
@@ -475,7 +491,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
       fila.current = vez;
       return vez;
     },
-    [acaoFn, mostrar, souVisita],
+    [acaoFn, mostrar, entregarProdutos, souVisita],
   );
   /** Anda até perto do quadrado (alcance de 3 m) e depois faz a ação. */
   const pertoEDepois = (x: number, z: number, f: () => void) => {
@@ -621,6 +637,12 @@ export function Fazenda({ eu, visitar, painelInicial, online, onClose }: Props) 
     onPortal: () => onClose(),
     onCorreio: () => setPainel("correio"),
   };
+  // só para testes: escolhe a ferramenta e "clica" num quadrado, sem mirar na cena 3D
+  if (import.meta.env.DEV)
+    Object.assign(window, {
+      __fazendaFerramenta: setFerramenta,
+      __fazendaQuadrado: (x: number, z: number) => eventos.current.onQuadrado(x, z),
+    });
   useEffect(() => {
     if (ferramenta.t === "semente") ultimaSemente.current = ferramenta.cultura;
   }, [ferramenta]);
@@ -2080,7 +2102,7 @@ function Vizinhos({
   donoId,
 }: {
   eu: { id: string };
-  online: PessoaOnline[];
+  online: PresenteNaIlha[];
   ilha: Ilha | null;
   visitantes: { id: string; nome: string }[];
   agir: (a: Acao) => Promise<boolean>;
@@ -2124,7 +2146,7 @@ function Vizinhos({
               <div className="flex flex-wrap gap-1.5">
                 {(
                   [
-                    ["amigos", "Somente Amigos"],
+                    ["amigos", "Aberta"],
                     ["convite", "Por Convite"],
                     ["privada", "Privada"],
                   ] as [Privacidade, string][]
@@ -2143,6 +2165,13 @@ function Vizinhos({
                   </button>
                 ))}
               </div>
+              <p className="mt-1.5 text-[11px] leading-snug text-white/50">
+                {ilha.privacidade === "amigos"
+                  ? "Qualquer membro pode entrar sem pedir; você recebe um aviso de quem entrou."
+                  : ilha.privacidade === "convite"
+                    ? "Só entra quem você convidar (o convite vale 15 min)."
+                    : "Ninguém entra na sua ilha."}
+              </p>
               {visitantes.length > 0 && (
                 <div className="mt-2">
                   <p className="text-white/55">Na ilha agora:</p>
@@ -2169,6 +2198,16 @@ function Vizinhos({
               )}
             </div>
           )}
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-emerald-300">
+              Na ilha agora
+            </p>
+            <NaIlhaAgora
+              presentes={online.filter((p) => p.id !== eu.id && p.id !== donoId)}
+              onVisitar={visitar}
+              vazio="Ninguém mais está online agora."
+            />
+          </div>
           {dados.convitesRecebidos.length > 0 && (
             <div>
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-[#ffd23f]">
@@ -2248,7 +2287,7 @@ function Vizinhos({
                           ? "privada"
                           : a.privacidade === "convite"
                             ? "por convite"
-                            : "aberta a amigos"}
+                            : "aberta"}
                     </span>
                     {a.temIlha && a.id !== donoId && (
                       <Botao tipo="forte" onClick={() => visitar(a.id)}>

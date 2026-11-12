@@ -146,8 +146,11 @@ export interface Evento {
     | "missao"
     | "maestria"
     | "item"
-    | "presenca";
+    | "presenca"
+    | "produto";
   texto: string;
+  /** "produto": de onde veio (id da cultura ou do objeto), para a mochila do HOKI receber uma unidade. */
+  fonte?: string;
 }
 export interface Contexto {
   agora: number;
@@ -595,6 +598,8 @@ function colher(
   delete i.canteiros[chave(x, z)];
   contar(j, "colheitas", 1, ev, ctx);
   if (can.cultura) {
+    // uma unidade da colheita vai para a mochila do HOKI (comer, beber ou vender no Comércio)
+    ev.push({ tipo: "produto", texto: "", fonte: can.cultura });
     maestria(j, can.cultura, 1, ev, ctx);
     const id = can.cultura;
     metaDeProjeto(i, (m) => m.tipo === "colheitas" && (!m.cultura || m.cultura === id), 1);
@@ -628,6 +633,7 @@ function coletar(e: Estado, o: Objeto, ev: Evento[], ctx: Contexto) {
   creditarXP(j, it.xp ?? 0, ev);
   o.prontoEm = ctx.agora + it.tempoMs;
   contar(j, "coletas", 1, ev, ctx);
+  ev.push({ tipo: "produto", texto: "", fonte: o.item });
   const produto =
     it.tipo === "arvore"
       ? "arvore"

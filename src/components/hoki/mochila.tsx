@@ -25,7 +25,7 @@ const efeitos = (i: Item) =>
     .join(" · ");
 
 /**
- * Mochila do HOKI: o que ele carrega (comidas e bebidas colhidas na fazenda),
+ * Mochila do HOKI: o que ele carrega (comidas e bebidas da HOST FAZENDAS e do Comércio),
  * com o peso de tudo. Aguenta 50 kg. Daqui o HOKI come, bebe ou joga fora.
  */
 export function Mochila({
@@ -68,8 +68,8 @@ export function Mochila({
                 Mochila de {pet.nome}
               </DialogTitle>
               <p className="text-xs text-muted-foreground">
-                {kg(peso)} de {LIMITE_DA_MOCHILA} kg. Comida na fazenda, água na mina e presentes na
-                floricultura e na doceria da praça.
+                {kg(peso)} de {LIMITE_DA_MOCHILA} kg. Cada colheita da HOST FAZENDAS manda uma
+                unidade para cá; o resto se compra no Comércio do lobby.
               </p>
             </div>
             <div className="segmentos" role="tablist" aria-label="O que mostrar">
@@ -113,8 +113,9 @@ export function Mochila({
                   {filtro === "tudo" ? "Mochila vazia" : "Nada disso na mochila"}
                 </p>
                 <p className="mx-auto mt-1 max-w-[320px] text-xs text-muted-foreground">
-                  Acorde o HOKI, atravesse a ponte comprida do lado oeste da praça e colha na
-                  fazenda. A água vem da mina, lá no fundo.
+                  Colha na HOST FAZENDAS (suba a escadaria do noroeste da praça): cada colheita e
+                  cada coleta de árvore ou bicho mandam uma unidade para a mochila. Também dá para
+                  comprar dos outros no Comércio do lobby.
                 </p>
               </div>
             </div>

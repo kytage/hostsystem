@@ -10,9 +10,9 @@ import {
   Maximize2,
   Minimize2,
   Square,
+  Store,
   UserRound,
   Users,
-  Moon,
   Minus,
   Plus,
   Send,
@@ -45,6 +45,7 @@ import {
   meuLugar,
   usePresencaHoki,
   DUPLAS,
+  STATUS_NA_FAZENDA,
   type Dupla,
   type Par,
   type Mensagem,
@@ -84,7 +85,9 @@ import {
   CANTEIROS,
   CHEGADA,
   CHUVEIRO,
+  CENTRO_DO_COMERCIO,
   CORREIO,
+  FRENTE_DO_COMERCIO,
   FRENTE_DO_CORREIO,
   FRENTE_DO_PORTAL,
   FRENTE_DO_PORTAL_FAZENDAS,
@@ -95,6 +98,9 @@ import {
 } from "./mundo-mapa";
 import { Fazenda } from "./fazenda/fazenda";
 import { PortalDasFazendas } from "./fazenda/portal-fazendas";
+import type { PresenteNaIlha } from "./fazenda/ilhas-de";
+import { OnlineAgora, type PessoaOnlineAgora } from "./online-agora";
+import { Comercio } from "./comercio";
 import { useSelos } from "@/lib/fazenda/selos";
 import { CULTURAS, faltaParaCrescer, item, ITENS, quantosCabem } from "@/lib/hoki-itens";
 import { Queridometro, useQueridometro } from "./queridometro";
@@ -250,6 +256,9 @@ export function Praca({
   } | null>(null);
   const [jogosAberto, setJogosAberto] = useState(false);
   const [correioAberto, setCorreioAberto] = useState(false);
+  /** Comércio do lobby: a barraca de feira (vender e comprar itens com Staff Coins). */
+  const [comercioAberto, setComercioAberto] = useState(false);
+  const [indoAoComercio, setIndoAoComercio] = useState(false);
   /** Presentes que me ofereceram (cada um vence em 30 segundos). */
   const [ofertas, setOfertas] = useState<
     { de: string; nome: string; item: string; n: number; ate: number }[]
@@ -257,7 +266,7 @@ export function Praca({
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
     | {
-        tipo: "termometro" | "chuveiro" | "correio" | "portal" | "fazendas";
+        tipo: "termometro" | "chuveiro" | "correio" | "portal" | "fazendas" | "comercio";
       }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
@@ -269,7 +278,7 @@ export function Praca({
     return !l.dorme && l.banco !== null && l.status === "💻 Trabalhando";
   });
   // trabalhando no escritório ou dentro do HOST FAZENDAS, o status mostra isso para todos
-  const statusAtual = fazenda ? "🌾 No HOST FAZENDAS" : trabalhando ? "💻 Trabalhando" : status;
+  const statusAtual = fazenda ? STATUS_NA_FAZENDA : trabalhando ? "💻 Trabalhando" : status;
   const [velhaId, setVelhaId] = useState<string | null>(null);
   /** Partida aberta de dama, ligue 4 ou pedra-papel-tesoura. */
   const [desafioId, setDesafioId] = useState<string | null>(null);
@@ -563,8 +572,9 @@ export function Praca({
       par: dentro ? par : null,
       anim: dentro ? animacao : null,
       sujo: pet.higiene < SUJO_ABAIXO_DE,
+      naFazenda: !!fazenda,
     });
-  }, [dentro, eu, statusAtual, par, animacao, pet.higiene]);
+  }, [dentro, eu, statusAtual, par, animacao, pet.higiene, fazenda]);
   // Raio do Founder: todo mundo volta a dormir no berço e a praça sincroniza do zero.
   const dentroRef = useRef(dentro);
   dentroRef.current = dentro;
@@ -601,15 +611,16 @@ export function Praca({
       }),
     [],
   );
-  // quem participa: todo mundo acordado na praça (e eu, se estou acordado)
+  // quem participa: todo mundo acordado no lobby (e eu, se estou acordado). Quem está dentro
+  // da HOST FAZENDAS não está na praça: fica de fora (não veria o evento e "brotaria" lá do alto).
   const participantesDoShow = useMemo(
     () => [
-      ...(dentro ? [euPessoa.id] : []),
+      ...(dentro && !fazenda ? [euPessoa.id] : []),
       ...Object.values(outros)
-        .filter((o) => !o.dorme)
+        .filter((o) => !o.dorme && !o.naFazenda)
         .map((o) => o.id),
     ],
-    [outros, dentro, euPessoa.id],
+    [outros, dentro, euPessoa.id, fazenda],
   );
   const dispararShow = (tipo: TipoShow) => {
     if (mundo.current?.showRodando()) {
@@ -755,6 +766,7 @@ export function Praca({
     abrirPortalAoChegar.current = false;
     setIndoAoTermometro(false);
     setIndoAoCorreio(false);
+    setIndoAoComercio(false);
     setIndoAoCanteiro(null);
     setIndoAte(null);
     setAnimacao(null);
@@ -768,6 +780,12 @@ export function Praca({
       return { tipo: "termometro" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
+    // na frente do balcão do Comércio
+    if (
+      Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.9 ||
+      Math.hypot(p.x - CENTRO_DO_COMERCIO.x, p.z - CENTRO_DO_COMERCIO.z) < 2.6
+    )
+      return { tipo: "comercio" as const };
     // na frente do portal do Magnata
     if (Math.hypot(p.x - FRENTE_DO_PORTAL.x, p.z - FRENTE_DO_PORTAL.z) < 3)
       return { tipo: "portal" as const };
@@ -903,6 +921,30 @@ export function Praca({
     setIndoAoCorreio(true);
     setEu({ ...FRENTE_DO_CORREIO, banco: null });
   };
+  /** Comércio: abre no balcão da barraca. Clicar nela (ou no atalho) leva o HOKI até lá. */
+  const irAoComercio = () => {
+    if (!dentro) {
+      toast.info("Acorde o seu HOKI para ir até o Comércio.");
+      return;
+    }
+    if (
+      Math.hypot(eu.x - FRENTE_DO_COMERCIO.x, eu.z - FRENTE_DO_COMERCIO.z) < 0.6 &&
+      eu.banco === null
+    ) {
+      if (!indoAoComercio) {
+        playSfx("open");
+        setComercioAberto(true);
+      }
+      return;
+    }
+    largarTudo();
+    setAlvo(null);
+    setIndoAoComercio(true);
+    setEu({ ...FRENTE_DO_COMERCIO, banco: null });
+  };
+  // só para testes: abre o Comércio direto, sem andar até a barraca
+  if (import.meta.env.DEV)
+    (window as unknown as { __comercio?: () => void }).__comercio = () => setComercioAberto(true);
   const irAoTermometro = () => {
     // o queridômetro é só da equipe
     if (souVisita) {
@@ -949,6 +991,7 @@ export function Praca({
     else if (perto.tipo === "canteiro") colher(perto.i);
     else if (perto.tipo === "chuveiro") tomarBanho();
     else if (perto.tipo === "correio") setCorreioAberto(true);
+    else if (perto.tipo === "comercio") setComercioAberto(true);
     else if (perto.tipo === "portal") setPortalAberto(true);
     else if (perto.tipo === "fazendas") setPortalFazendas(true);
     else setQueridometro(true);
@@ -1134,6 +1177,74 @@ export function Praca({
     () => Object.values(outros).map((o) => ({ id: o.id, nome: o.nome, visual: o.visual })),
     [outros],
   );
+  /** Quem está na ilha agora (sem contar eu): para visitar a fazenda sem precisar de aceite. */
+  const presentes = useMemo<PresenteNaIlha[]>(
+    () =>
+      Object.values(outros).map((o) => ({
+        id: o.id,
+        nome: o.nome,
+        visual: o.visual,
+        tag: o.tag,
+        dorme: o.dorme,
+        naFazenda: o.naFazenda,
+      })),
+    [outros],
+  );
+  /**
+   * HOST FAZENDAS → mochila: cada colheita e cada coleta manda uma unidade do produto.
+   * Junta o que chega e grava de uma vez só quando nenhum outro salvamento está no meio
+   * (e só depois que o anterior voltou do banco), até onde couber nos 50 kg.
+   */
+  const entregas = useRef<{
+    fila: Record<string, number>;
+    inv: Record<string, number> | null;
+    desde: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ fila: {}, inv: null, desde: 0, timer: null });
+  const entregarNaMochila = useRef(function entregar() {
+    const e = entregas.current;
+    e.timer = null;
+    if (!Object.keys(e.fila).length) return;
+    const antes = petRef.current.inventario;
+    const esperando = e.inv !== null && antes === e.inv && Date.now() - e.desde < 6000;
+    if (salvandoRef.current || esperando) {
+      e.timer = setTimeout(entregar, 300);
+      return;
+    }
+    let nova = { ...antes };
+    const entrou: string[] = [];
+    let sobrou = false;
+    for (const [id, n] of Object.entries(e.fila)) {
+      const cabe = Math.min(n, quantosCabem(nova, id));
+      if (cabe < n) sobrou = true;
+      if (cabe <= 0) continue;
+      nova = { ...nova, [id]: (nova[id] ?? 0) + cabe };
+      const it = item(id);
+      entrou.push(`+${cabe} ${it?.emoji ?? ""} ${it?.nome ?? id}`);
+    }
+    e.fila = {};
+    if (sobrou)
+      toast.info("A mochila do HOKI está cheia (50 kg): coma, beba ou venda algo no Comércio.", {
+        id: "mochila-cheia",
+      });
+    if (!entrou.length) return;
+    e.inv = antes;
+    e.desde = Date.now();
+    aoSalvarRef.current({ inventario: nova });
+    toast(`${entrou.join(" · ")} na mochila do HOKI`, { icon: "🎒", id: "fazenda-mochila" });
+  }).current;
+  const receberProdutos = useRef((itens: Record<string, number>) => {
+    const e = entregas.current;
+    for (const [id, n] of Object.entries(itens)) e.fila[id] = (e.fila[id] ?? 0) + n;
+    if (!e.timer) e.timer = setTimeout(entregarNaMochila, 150);
+  }).current;
+  useEffect(
+    () => () => {
+      const e = entregas.current;
+      if (e.timer) clearTimeout(e.timer);
+    },
+    [],
+  );
 
   const falar = (e: FormEvent) => {
     e.preventDefault();
@@ -1193,8 +1304,29 @@ export function Praca({
     () => Object.fromEntries(Object.entries(falas).map(([id, f]) => [id, f.texto])),
     [falas],
   );
-  const dormindo = Object.values(outros).filter((o) => o.dorme).length + (dentro ? 0 : 1);
-  const acordados = Object.keys(outros).length + 1 - dormindo;
+  /** Quem está online agora (eu incluído), para a pílula do total e o menu por lugar. */
+  const pessoasOnline = useMemo<PessoaOnlineAgora[]>(
+    () => [
+      {
+        id: euPessoa.id,
+        nome: euPessoa.nome,
+        tag: minhaTag,
+        visual: meuVisual,
+        dorme: !dentro,
+        naFazenda: !!fazenda,
+        souEu: true,
+      },
+      ...Object.values(outros).map((o) => ({
+        id: o.id,
+        nome: o.nome,
+        tag: o.tag,
+        visual: o.visual,
+        dorme: o.dorme,
+        naFazenda: o.naFazenda,
+      })),
+    ],
+    [euPessoa, minhaTag, meuVisual, dentro, fazenda, outros],
+  );
   const acaoSobre =
     "flex h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3 font-medium hover:bg-white/[0.14]";
   const flutuante =
@@ -1244,6 +1376,7 @@ export function Praca({
         cartas={naoLidas}
         onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
         onCorreio={irAoCorreio}
+        onComercio={irAoComercio}
         onCanteiro={irAoCanteiro}
         onParou={(p) => {
           // cheguei perto de quem eu queria: abre as ações
@@ -1279,6 +1412,13 @@ export function Praca({
             if (Math.hypot(p.x - FRENTE_DO_CORREIO.x, p.z - FRENTE_DO_CORREIO.z) < 1.6) {
               playSfx("open");
               setCorreioAberto(true);
+            }
+          }
+          if (indoAoComercio) {
+            setIndoAoComercio(false);
+            if (Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.6) {
+              playSfx("open");
+              setComercioAberto(true);
             }
           }
           if (!indoAoTermometro) return;
@@ -1709,15 +1849,13 @@ export function Praca({
             >
               <Smile className="size-4" />
             </button>
-            <p className="pointer-events-none flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-[11px] text-white/90 backdrop-blur-md">
-              <span
-                className={cn(
-                  "size-1.5 rounded-full",
-                  acordados ? "bg-emerald-400" : "bg-white/40",
-                )}
-              />{" "}
-              {acordados} na praça · {dormindo} dormindo
-            </p>
+            <OnlineAgora
+              pessoas={pessoasOnline}
+              selos={selos}
+              onPessoa={setPerfilDe}
+              alinhar="esquerda"
+              className="rounded-full bg-black/70 backdrop-blur-md"
+            />
           </div>
           <button
             onClick={aoAlternar}
@@ -1819,20 +1957,18 @@ export function Praca({
                 falar
               </button>
             )}
-            {/* quantos estão acordados na praça e quantos dormem no berço */}
-            <span
-              title={`${acordados} na praça · ${dormindo} dormindo · ${acordados + dormindo} online`}
-              className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-white/10 px-2.5 text-[11.5px] tabular-nums text-white/85"
+            {/* total online: clica e abre quem está online, dormindo, no lobby ou na HOST FAZENDAS */}
+            <OnlineAgora pessoas={pessoasOnline} selos={selos} onPessoa={setPerfilDe} />
+            {/* comércio do lobby: atalho que leva o HOKI até a barraca */}
+            <button
+              type="button"
+              onClick={irAoComercio}
+              aria-label="Ir ao Comércio do lobby"
+              title="Comércio: vender e comprar itens"
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 text-white/70 transition-colors hover:text-white"
             >
-              <span className="flex items-center gap-1">
-                <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]" />
-                {acordados}
-              </span>
-              <span className="flex items-center gap-1 text-white/55">
-                <Moon className="size-3" strokeWidth={1.8} />
-                {dormindo}
-              </span>
-            </span>
+              <Store className="size-4" />
+            </button>
             {animacao ? (
               <button
                 type="button"
@@ -2138,6 +2274,7 @@ export function Praca({
           onMinhaIlha={() => abrirFazenda(null)}
           onVisitar={(id) => abrirFazenda(id)}
           onAbrirNaIlha={(painel) => abrirFazenda(null, painel)}
+          naIlha={presentes}
           onClose={() => setPortalFazendas(false)}
         />
       )}
@@ -2147,7 +2284,8 @@ export function Praca({
           eu={euNaFazenda}
           visitar={fazenda.visitar}
           painelInicial={fazenda.painel}
-          online={amigosOnline}
+          online={presentes}
+          onProdutos={receberProdutos}
           onClose={fecharFazenda}
         />
       )}
@@ -2165,11 +2303,13 @@ export function Praca({
                 ? `tomar banho (higiene ${pet.higiene}%)`
                 : perto.tipo === "correio"
                   ? "abrir a caixa postal"
-                  : perto.tipo === "portal"
-                    ? "entrar no portal do Magnata"
-                    : perto.tipo === "fazendas"
-                      ? "entrar no HOST FAZENDAS"
-                      : "abrir o queridômetro"}
+                  : perto.tipo === "comercio"
+                    ? "abrir o Comércio"
+                    : perto.tipo === "portal"
+                      ? "entrar no portal do Magnata"
+                      : perto.tipo === "fazendas"
+                        ? "entrar no HOST FAZENDAS"
+                        : "abrir o queridômetro"}
         </div>
       )}
       {correioAberto && (
@@ -2181,6 +2321,9 @@ export function Praca({
           }
           onClose={() => setCorreioAberto(false)}
         />
+      )}
+      {comercioAberto && (
+        <Comercio pet={pet} eu={euPessoa} onClose={() => setComercioAberto(false)} />
       )}
       {escolhendoDesafio && (
         <div className="pf-pop absolute inset-x-3 bottom-[68px] z-20 mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-2xl border border-white/15 bg-black/90 p-2.5 text-xs text-white backdrop-blur-md">
@@ -2263,8 +2406,8 @@ function EscolherPresente({
       </div>
       {meus.length === 0 ? (
         <p className="mt-2 text-white/60">
-          Sua mochila está vazia. Pegue flores na floricultura, doces na doceria ou comida na
-          fazenda.
+          Sua mochila está vazia. Colha na HOST FAZENDAS (cada colheita manda um pouco para a
+          mochila) ou compre no Comércio do lobby.
         </p>
       ) : (
         <>
