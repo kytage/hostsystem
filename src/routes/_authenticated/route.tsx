@@ -7,6 +7,7 @@ import { useDevSolicitacaoNotify } from "@/hooks/use-dev-solicitacao-notify";
 import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
 import { useHokiOnline } from "@/hooks/use-hoki-online";
 import { useVersaoNova } from "@/hooks/use-versao-nova";
+import { OuvinteReinicio } from "@/components/reiniciar-site";
 
 /** Avisos da equipe (a visita do HOKI não tem) e o HOKI flutuante, que aparece fora da tela inicial. */
 function SoDaEquipe() {
@@ -25,6 +26,7 @@ function AuthenticatedLayout() {
     <>
       {!visita && <Abertura />}
       <Outlet />
+      <OuvinteReinicio />
       {!visita && <SoDaEquipe />}
     </>
   );

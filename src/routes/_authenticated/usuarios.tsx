@@ -64,6 +64,7 @@ import type { EquipeUser } from "@/lib/equipe-merge";
 import { PageHeader } from "@/components/page-header";
 import { PermissoesModal } from "@/components/permissoes-modal";
 import { PuxarCommit } from "@/components/puxar-commit";
+import { BotaoReiniciarSite } from "@/components/reiniciar-site";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
@@ -562,6 +563,7 @@ function EquipePage() {
         subtitle="Usuários do painel organizados por cargo, áreas e controle de casting."
         actions={
           <div className="flex flex-wrap items-center gap-3">
+            {isFounder ? <BotaoReiniciarSite /> : null}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
