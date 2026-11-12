@@ -11,9 +11,7 @@ const usernameSchema = z
   .max(20, "Usuário deve ter no máximo 20 caracteres")
   .regex(/^[a-z0-9_.]+$/, "Use apenas letras minúsculas, números, _ ou .");
 
-async function getRoles(supabase: {
-  from: (t: string) => any;
-}): Promise<Map<string, AppRole[]>> {
+async function getRoles(supabase: AdminClient): Promise<Map<string, AppRole[]>> {
   const { data } = await supabase.from("user_roles").select("user_id, role");
   const map = new Map<string, AppRole[]>();
   for (const row of (data ?? []) as { user_id: string; role: AppRole }[]) {
@@ -39,8 +37,8 @@ type ManageAction = "view" | "create" | "edit" | "delete";
  * Retorna `true` quando o chamador é FOUNDER.
  */
 async function assertManager(
-  context: { supabase: any; userId: string },
-  action: ManageAction = "view"
+  context: { supabase: AdminClient; userId: string },
+  action: ManageAction = "view",
 ): Promise<boolean> {
   const { data: roleRows } = await context.supabase
     .from("user_roles")
@@ -50,6 +48,19 @@ async function assertManager(
 
   if (myRoles.includes("founder")) return true;
   if (myRoles.includes("c_level")) return false;
+
+  // Permissão da própria pessoa (definida pelo FOUNDER) vale no lugar de cargo e áreas.
+  const { data: daPessoa, error: erroDaPessoa } = await context.supabase
+    .from("user_permissions")
+    .select("actions")
+    .eq("user_id", context.userId)
+    .eq("category", "usuarios")
+    .maybeSingle();
+  if (!erroDaPessoa && daPessoa) {
+    const lista = Array.isArray(daPessoa.actions) ? daPessoa.actions.map(String) : [];
+    if (!lista.includes(action)) throw new Error("Sem permissão para gerenciar usuários");
+    return false;
+  }
 
   const allowed = new Set<string>();
 
@@ -93,12 +104,11 @@ async function assertManager(
   return false;
 }
 
-
 /** Garante que o chamador pode agir sobre o alvo (só founder mexe em founder) */
 async function assertTargetAllowed(
   admin: AdminClient,
   actorIsFounder: boolean,
-  targetUserId: string
+  targetUserId: string,
 ) {
   const roles = await getRoles(admin);
   const targetRole = highestRole(roles.get(targetUserId));
@@ -118,7 +128,6 @@ export const listUsers = createServerFn({ method: "GET" })
       .select("id, username, created_at, avatar_url, discord_id, host_id, last_seen_at")
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-
 
     // Último acesso — visível a quem já tem permissão de gerenciar a equipe
     void actorIsFounder;
@@ -165,7 +174,6 @@ export const listUsers = createServerFn({ method: "GET" })
         if (!seen) return signIn;
         return new Date(seen) > new Date(signIn) ? seen : signIn;
       })(),
-
     }));
   });
 
@@ -179,7 +187,7 @@ export const setUserIdentifiers = createServerFn({ method: "POST" })
         discord_id: z.string().trim().max(40).default(""),
         host_id: z.string().trim().max(40).default(""),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
@@ -192,7 +200,6 @@ export const setUserIdentifiers = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
 
 /** Lista simples de usuários (id + username) para designar tarefas — qualquer autenticado */
 export const listStaffSimple = createServerFn({ method: "GET" })
@@ -237,7 +244,7 @@ export const setUserAreas = createServerFn({ method: "POST" })
         /** Áreas em que o usuário é LÍDER; as demais entram como auxiliar */
         lideres: z.array(z.string().trim().min(1).max(80)).max(40).optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
@@ -258,7 +265,7 @@ export const setUserAreas = createServerFn({ method: "POST" })
           user_id: data.userId,
           area,
           nivel: lideres.has(area) ? "lider" : "auxiliar",
-        }))
+        })),
       );
       if (error) throw new Error(error.message);
     }
@@ -280,7 +287,7 @@ export const createUser = createServerFn({ method: "POST" })
         username: usernameSchema,
         role: roleSchema,
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "create");
@@ -329,9 +336,7 @@ export const deleteUser = createServerFn({ method: "POST" })
 
 export const resetUserPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid() }).parse(input)
-  )
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -363,7 +368,7 @@ export const definirMinhaSenha = createServerFn({ method: "POST" })
           .min(6, "Senha deve ter ao menos 6 caracteres")
           .max(72, "Senha deve ter no máximo 72 caracteres"),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -384,7 +389,7 @@ export const definirMinhaSenha = createServerFn({ method: "POST" })
 export const updateUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), role: roleSchema }).parse(input)
+    z.object({ userId: z.string().uuid(), role: roleSchema }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
@@ -413,7 +418,7 @@ const ACTION_KEYS = ["view", "create", "edit", "delete", "approve"] as const;
 const actionsSchema = z.array(z.enum(ACTION_KEYS)).min(1).max(5);
 
 /** Garante que o chamador é FOUNDER (única função que configura permissões/áreas). */
-async function assertFounder(context: { supabase: any; userId: string }) {
+async function assertFounder(context: { supabase: AdminClient; userId: string }) {
   const { data: isFounder } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "founder" as AppRole,
@@ -431,7 +436,7 @@ export const setRolePermission = createServerFn({ method: "POST" })
         allowed: z.boolean(),
         actions: actionsSchema.optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertFounder(context);
@@ -445,7 +450,7 @@ export const setRolePermission = createServerFn({ method: "POST" })
           category: data.category,
           actions: data.actions ?? ["view"],
         },
-        { onConflict: "role,category" }
+        { onConflict: "role,category" },
       );
       if (error) throw new Error(error.message);
     } else {
@@ -470,7 +475,7 @@ export const setAreaPermission = createServerFn({ method: "POST" })
         allowed: z.boolean(),
         actions: actionsSchema.optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertFounder(context);
@@ -483,7 +488,7 @@ export const setAreaPermission = createServerFn({ method: "POST" })
           category: data.category,
           actions: data.actions ?? ["view"],
         },
-        { onConflict: "area,category" }
+        { onConflict: "area,category" },
       );
       if (error) throw new Error(error.message);
     } else {
@@ -493,6 +498,54 @@ export const setAreaPermission = createServerFn({ method: "POST" })
         .eq("area", data.area)
         .eq("category", data.category);
       if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+/**
+ * Define o que UMA pessoa pode fazer numa aba — apenas FOUNDER. Vale no lugar do cargo e das
+ * áreas naquela aba. `actions: []` = sem acesso; `actions: null` = volta a seguir cargo e áreas.
+ */
+export const setUserPermission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        category: z.string().min(1).max(40),
+        actions: z.array(z.enum(ACTION_KEYS)).max(5).nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertFounder(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const roles = await getRoles(supabaseAdmin);
+    if (highestRole(roles.get(data.userId)) === "founder") {
+      throw new Error("O FOUNDER sempre tem acesso total");
+    }
+    const traduz = (e: { message: string; code?: string }) =>
+      e.code === "42P01" || e.message.includes("user_permissions")
+        ? new Error("Falta aplicar a atualização do banco (permissões por pessoa).")
+        : new Error(e.message);
+    if (data.actions === null) {
+      const { error } = await supabaseAdmin
+        .from("user_permissions")
+        .delete()
+        .eq("user_id", data.userId)
+        .eq("category", data.category);
+      if (error) throw traduz(error);
+    } else {
+      const { error } = await supabaseAdmin.from("user_permissions").upsert(
+        {
+          user_id: data.userId,
+          category: data.category,
+          actions: data.actions,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,category" },
+      );
+      if (error) throw traduz(error);
     }
     return { ok: true };
   });
@@ -518,7 +571,7 @@ export const upsertArea = createServerFn({ method: "POST" })
         emoji: z.string().trim().min(1).max(8).default("•"),
         ordem: z.number().int().min(0).max(999).optional(),
       })
-      .parse(input)
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertFounder(context);
@@ -530,7 +583,7 @@ export const upsertArea = createServerFn({ method: "POST" })
         emoji: data.emoji,
         ...(data.ordem !== undefined ? { ordem: data.ordem } : {}),
       },
-      { onConflict: "key" }
+      { onConflict: "key" },
     );
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -561,7 +614,6 @@ export const deleteArea = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
 /**
  * Renomeia o usuário (username + e-mail interno de login).
  * O login usa `${username}@host.local`, portanto os dois precisam mudar juntos.
@@ -569,7 +621,7 @@ export const deleteArea = createServerFn({ method: "POST" })
 export const renameUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), username: usernameSchema }).parse(input)
+    z.object({ userId: z.string().uuid(), username: usernameSchema }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");

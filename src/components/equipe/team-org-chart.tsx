@@ -1,5 +1,15 @@
 import { Fragment, useMemo } from "react";
-import { AtSign, Crown, KeyRound, MapPin, Pencil, Trash2, X } from "lucide-react";
+import {
+  AtSign,
+  ChevronRight,
+  Crown,
+  KeyRound,
+  MapPin,
+  Pencil,
+  ShieldCheck,
+  Trash2,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/dashboard/Logo";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
@@ -23,7 +33,9 @@ function chunk<T>(list: T[], size: number): T[][] {
   return out;
 }
 
-const Stem = ({ h = "h-6" }: { h?: string }) => <div className={cn("mx-auto w-px bg-white/15", h)} />;
+const Stem = ({ h = "h-6" }: { h?: string }) => (
+  <div className={cn("mx-auto w-px bg-white/15", h)} />
+);
 
 /** Linha de cards ligados por um "barramento" horizontal, como num organograma. */
 function TreeRow({ children }: { children: React.ReactNode[] }) {
@@ -112,7 +124,9 @@ export function PersonNode({
                     title={`${info?.label ?? a}${isLider ? " · Líder" : ""}`}
                     className={cn(
                       "flex items-center gap-1 rounded-full border px-1.5 py-px text-[10.5px]",
-                      isLider ? "border-primary/35 bg-primary/10 text-foreground" : "border-white/[0.08] bg-white/[0.04] text-muted-foreground",
+                      isLider
+                        ? "border-primary/35 bg-primary/10 text-foreground"
+                        : "border-white/[0.08] bg-white/[0.04] text-muted-foreground",
                     )}
                   >
                     {info?.emoji ?? "•"} {info?.label ?? a}
@@ -120,7 +134,9 @@ export function PersonNode({
                 );
               })}
               {user.areas.length > 3 && (
-                <span className="rounded-full border border-white/[0.08] px-1.5 py-px text-[10.5px] text-ink-3">+{user.areas.length - 3}</span>
+                <span className="rounded-full border border-white/[0.08] px-1.5 py-px text-[10.5px] text-ink-3">
+                  +{user.areas.length - 3}
+                </span>
               )}
             </>
           )}
@@ -146,13 +162,19 @@ export function TeamOrgChart({
     () =>
       ROLE_ORDER.map((role) => ({
         role,
-        people: users.filter((u) => u.role === role).sort((a, b) => a.username.localeCompare(b.username, "pt-BR")),
+        people: users
+          .filter((u) => u.role === role)
+          .sort((a, b) => a.username.localeCompare(b.username, "pt-BR")),
       })).filter((l) => l.people.length > 0),
     [users],
   );
 
   if (users.length === 0) {
-    return <p className="px-4 py-16 text-center text-sm text-muted-foreground">Nenhum membro encontrado com esses filtros.</p>;
+    return (
+      <p className="px-4 py-16 text-center text-sm text-muted-foreground">
+        Nenhum membro encontrado com esses filtros.
+      </p>
+    );
   }
 
   return (
@@ -164,7 +186,8 @@ export function TeamOrgChart({
           <div>
             <p className="font-display text-sm font-semibold">HOST</p>
             <p className="text-[11px] text-muted-foreground">
-              {users.length} membro{users.length === 1 ? "" : "s"} · {levels.length} níve{levels.length === 1 ? "l" : "is"}
+              {users.length} membro{users.length === 1 ? "" : "s"} · {levels.length} níve
+              {levels.length === 1 ? "l" : "is"}
             </p>
           </div>
         </div>
@@ -182,7 +205,13 @@ export function TeamOrgChart({
                 {i === 0 ? <Stem h="h-3" /> : null}
                 <TreeRow>
                   {row.map((u) => (
-                    <PersonNode key={u.id} user={u} areas={areaMap} selected={u.id === selectedId} onClick={() => onSelect(u)} />
+                    <PersonNode
+                      key={u.id}
+                      user={u}
+                      areas={areaMap}
+                      selected={u.id === selectedId}
+                      onClick={() => onSelect(u)}
+                    />
                   ))}
                 </TreeRow>
               </div>
@@ -206,6 +235,7 @@ export function PersonDrawer({
   onEditAreas,
   onResetToken,
   onDelete,
+  onPermissoes,
 }: {
   user: EquipeUser;
   areas: AreaInfo[];
@@ -217,6 +247,8 @@ export function PersonDrawer({
   onEditAreas: () => void;
   onResetToken: () => void;
   onDelete: () => void;
+  /** Só para o FOUNDER: abre a Central de permissões já nesta pessoa. */
+  onPermissoes?: (() => void) | undefined;
 }) {
   const areaMap = new Map(areas.map((a) => [a.key, a]));
   const online = isOnline(user.last_sign_in_at);
@@ -230,14 +262,27 @@ export function PersonDrawer({
     <aside className="glass-modal animate-rise fixed bottom-4 right-4 top-4 z-40 flex w-[340px] max-w-[calc(100vw-2rem)] flex-col rounded-[22px] p-5">
       <div className="flex items-start justify-between">
         <p className="eyebrow">Membro</p>
-        <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground">
+        <button
+          onClick={onClose}
+          aria-label="Fechar"
+          className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
+        >
           <X className="size-4" />
         </button>
       </div>
       <div className="mt-3 flex items-center gap-3">
         <div className="relative">
-          <img src={user.avatar_url || DEFAULT_AVATAR_URL} alt="" className="size-14 rounded-2xl border border-white/10 object-cover" />
-          <span className={cn("absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-black", online ? "bg-emerald-500" : "bg-white/25")} />
+          <img
+            src={user.avatar_url || DEFAULT_AVATAR_URL}
+            alt=""
+            className="size-14 rounded-2xl border border-white/10 object-cover"
+          />
+          <span
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-black",
+              online ? "bg-emerald-500" : "bg-white/25",
+            )}
+          />
         </div>
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-semibold">{user.username}</p>
@@ -262,17 +307,27 @@ export function PersonDrawer({
       <p className="mt-5 text-xs font-medium text-muted-foreground">Áreas</p>
       <div className="mt-2 flex flex-col gap-1.5">
         {user.areas.length === 0 ? (
-          <p className="glass-inset rounded-xl px-3 py-3 text-xs text-ink-3">Nenhuma área atribuída.</p>
+          <p className="glass-inset rounded-xl px-3 py-3 text-xs text-ink-3">
+            Nenhuma área atribuída.
+          </p>
         ) : (
           user.areas.map((a) => {
             const info = areaMap.get(a);
             const lider = (user.areaNiveis ?? {})[a] === "lider";
             return (
-              <div key={a} className="glass-inset flex items-center justify-between rounded-xl px-3 py-2 text-sm">
+              <div
+                key={a}
+                className="glass-inset flex items-center justify-between rounded-xl px-3 py-2 text-sm"
+              >
                 <span>
                   {info?.emoji ?? "•"} {info?.label ?? a}
                 </span>
-                <span className={cn("flex items-center gap-1 text-[11px]", lider ? "text-primary" : "text-ink-3")}>
+                <span
+                  className={cn(
+                    "flex items-center gap-1 text-[11px]",
+                    lider ? "text-primary" : "text-ink-3",
+                  )}
+                >
                   {lider && <Crown className="size-3" />}
                   {lider ? "Líder" : "Auxiliar"}
                 </span>
@@ -283,11 +338,30 @@ export function PersonDrawer({
       </div>
 
       <p className="mt-5 text-xs text-ink-3">
-        Último login: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString("pt-BR") : "nunca"}
+        Último login:{" "}
+        {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString("pt-BR") : "nunca"}
       </p>
 
       {(podeEditar || podeExcluir) && (
         <div className="mt-auto space-y-2 pt-5">
+          {onPermissoes && user.role !== "founder" && (
+            <button
+              onClick={onPermissoes}
+              className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08]"
+            >
+              <ShieldCheck
+                className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
+                strokeWidth={1.7}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-medium text-foreground">Permissões</span>
+                <span className="block truncate text-[11px] text-muted-foreground">
+                  O que {user.username} pode ver ou editar, aba por aba
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </button>
+          )}
           {podeEditar && (
             <div className="grid grid-cols-4 gap-2">
               {acoes.map((a) => (

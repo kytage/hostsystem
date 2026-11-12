@@ -35,12 +35,18 @@ export interface Player {
 function parseInventario(v: unknown): InventarioItem[] {
   if (!Array.isArray(v)) return [];
   return v
-    .filter((i): i is { item: string; qtd?: unknown } => typeof i === "object" && i !== null && typeof (i as { item?: unknown }).item === "string")
+    .filter(
+      (i): i is { item: string; qtd?: unknown } =>
+        typeof i === "object" && i !== null && typeof (i as { item?: unknown }).item === "string",
+    )
     .map((i) => ({ item: i.item, qtd: Number(i.qtd) || 1 }));
 }
 
 export async function fetchPlayers(): Promise<Player[]> {
-  const { data, error } = await supabase.from("players").select("*").order("nome", { ascending: true });
+  const { data, error } = await supabase
+    .from("players")
+    .select("*")
+    .order("nome", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((r) => ({
     id: r.id,
@@ -70,7 +76,8 @@ export async function fetchPlayers(): Promise<Player[]> {
   }));
 }
 
-export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
+export const brl = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
 /** "cellphone-1794023603" → "cellphone" (remove o serial do item). */
 export const itemBase = (item: string) => item.replace(/-\d{6,}$/, "");
@@ -84,5 +91,42 @@ export function itemTipo(item: string): ItemTipo {
   return "outro";
 }
 
+/** Punições que tiram o player do servidor (denúncia e VAR). */
+export const PUNICOES_BAN = ["Banimento Permanente", "Banimento Temporário", "Banido"] as const;
+
+export interface Banimento {
+  /** ID do player na punição (o mesmo número do passaporte). */
+  jogadorId: string;
+  punicao: string;
+  data: string;
+  /** Ainda valendo: permanente, do VAR, ou temporário dentro dos dias. */
+  ativo: boolean;
+}
+
+const DIA_MS = 86_400_000;
+
+/** Banimentos registrados nas Punições, do mais novo para o mais antigo. */
+export async function fetchBanimentos(): Promise<Banimento[]> {
+  const { data, error } = await supabase
+    .from("punicoes")
+    .select("jogador_id, punicao, dias, data_punicao")
+    .in("punicao", [...PUNICOES_BAN])
+    .order("data_punicao", { ascending: false })
+    .limit(5000);
+  if (error) throw error;
+  const agora = Date.now();
+  return (data ?? []).map((r) => {
+    const temporario = r.punicao === "Banimento Temporário";
+    const fim = r.dias ? new Date(r.data_punicao).getTime() + r.dias * DIA_MS : null;
+    return {
+      jogadorId: String(r.jogador_id ?? "").trim(),
+      punicao: r.punicao,
+      data: r.data_punicao,
+      ativo: !temporario || fim === null || fim > agora,
+    };
+  });
+}
+
 export const LEVEL_MAX = 250;
-export const kd = (p: Pick<Player, "kills" | "mortes">) => (p.mortes ? p.kills / p.mortes : p.kills);
+export const kd = (p: Pick<Player, "kills" | "mortes">) =>
+  p.mortes ? p.kills / p.mortes : p.kills;

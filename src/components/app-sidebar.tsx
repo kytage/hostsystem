@@ -60,6 +60,7 @@ import {
   canAccessCombined,
   useMyAreas,
   useMyRole,
+  useMyUserPermissions,
   useAreaPermissions,
   usePermissions,
   ROLE_LABELS,
@@ -121,6 +122,7 @@ export function useMenu() {
   const { data: myRole } = useMyRole();
   const { data: perms } = usePermissions();
   const { data: areaPerms } = useAreaPermissions();
+  const { data: userPerms } = useMyUserPermissions();
   const { data: myAreas } = useMyAreas();
   const { data: profile } = useQuery({
     queryKey: ["my-username"],
@@ -138,13 +140,13 @@ export function useMenu() {
   });
   const role = myRole ?? "staff";
   const pode = (i: NavEntry) =>
-    !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms);
+    !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms, userPerms);
   const todos: NavEntry[] = [
     ...nav.filter(pode),
     ...(role === "founder" ? founderOnly : []),
     ...ops.filter(pode),
     { title: "Configurações", icon: Settings, url: "/configuracoes" },
-    ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms)
+    ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms, userPerms)
       ? [{ title: "Usuários", icon: Users, url: "/usuarios" } satisfies NavEntry]
       : []),
   ];

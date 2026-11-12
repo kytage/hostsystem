@@ -210,6 +210,8 @@ export function CartaoMovimento({
   concluidos,
   legenda,
   className,
+  titulo = "Movimento",
+  rotulos = ["Novos", "Concluídos"],
 }: {
   /** datas em que cada pedido chegou */
   novos: string[];
@@ -218,6 +220,10 @@ export function CartaoMovimento({
   /** linha pequena abaixo do título */
   legenda: string;
   className?: string;
+  /** título do cartão (padrão: Movimento) */
+  titulo?: string;
+  /** nomes dos dois botões (padrão: Novos e Concluídos) */
+  rotulos?: readonly [string, string];
 }) {
   const [modo, setModo] = useState<"pedidos" | "concluidos">("pedidos");
   const [sobre, setSobre] = useState<number | null>(null);
@@ -284,7 +290,7 @@ export function CartaoMovimento({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[13.5px] font-medium text-foreground/90">
-            Movimento{" "}
+            {titulo}{" "}
             <span className="font-normal text-muted-foreground">
               {total} em {DIAS} dias
             </span>
@@ -299,7 +305,7 @@ export function CartaoMovimento({
             onClick={() => setModo("pedidos")}
             data-sem-elastico
           >
-            Novos
+            {rotulos[0]}
           </button>
           <button
             type="button"
@@ -308,7 +314,7 @@ export function CartaoMovimento({
             onClick={() => setModo("concluidos")}
             data-sem-elastico
           >
-            Concluídos
+            {rotulos[1]}
           </button>
         </div>
       </div>

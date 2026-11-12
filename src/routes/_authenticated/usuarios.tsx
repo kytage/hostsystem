@@ -66,7 +66,6 @@ import { PermissoesModal } from "@/components/permissoes-modal";
 import { PuxarCommit } from "@/components/puxar-commit";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 
-
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
     meta: [
@@ -129,7 +128,10 @@ function formatUltimoLogin(value: string | null): string {
 function UltimoLogin({ value }: { value: string | null }) {
   if (!value) {
     return (
-      <span title="Nunca logou" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-xs font-semibold text-destructive">
+      <span
+        title="Nunca logou"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-xs font-semibold text-destructive"
+      >
         X
       </span>
     );
@@ -166,7 +168,15 @@ function CopyValue({ value }: { value: string }) {
   );
 }
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: typeof Users;
+}) {
   return (
     <div className="rounded-xl glass p-4">
       <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -210,13 +220,17 @@ function EquipePage() {
     try {
       const v = localStorage.getItem("host-equipe-visao");
       if (v === "org" || v === "tabela") setVisao(v);
-    } catch {}
+    } catch {
+      // sem armazenamento: fica na visão padrão
+    }
   }, []);
   const trocarVisao = (v: "org" | "tabela") => {
     setVisao(v);
     try {
       localStorage.setItem("host-equipe-visao", v);
-    } catch {}
+    } catch {
+      // sem armazenamento: só não lembra da escolha
+    }
   };
   const [busca, setBusca] = useState("");
   const [areaFiltro, setAreaFiltro] = useState<string>("todas");
@@ -238,11 +252,13 @@ function EquipePage() {
   const [renameTarget, setRenameTarget] = useState<UserRow | null>(null);
   const [novoNome, setNovoNome] = useState("");
   const [permOpen, setPermOpen] = useState(false);
+  /** Pessoa já escolhida ao abrir a Central pela ficha do usuário. */
+  const [permPessoa, setPermPessoa] = useState<string | null>(null);
 
   /** null = fechado, { id: null } = novo registro */
-  const [castingForm, setCastingForm] = useState<
-    ({ id: string | null } & CastingInput) | null
-  >(null);
+  const [castingForm, setCastingForm] = useState<({ id: string | null } & CastingInput) | null>(
+    null,
+  );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["users-list"] });
@@ -420,9 +436,7 @@ function EquipePage() {
   const openAreaEditor = (user: UserRow) => {
     setAreaTarget(user);
     setSelectedAreas(user.areas);
-    setSelectedLideres(
-      user.areas.filter((area) => (user.areaNiveis ?? {})[area] === "lider")
-    );
+    setSelectedLideres(user.areas.filter((area) => (user.areaNiveis ?? {})[area] === "lider"));
   };
 
   const openIdsEditor = (user: UserRow) => {
@@ -453,7 +467,7 @@ function EquipePage() {
         ? current.includes(area)
           ? current
           : [...current, area]
-        : current.filter((item) => item !== area)
+        : current.filter((item) => item !== area),
     );
   };
 
@@ -461,7 +475,7 @@ function EquipePage() {
     () =>
       areasList ??
       AREAS.map((a, i) => ({ key: a.key, label: a.label, emoji: a.emoji, ordem: i + 1 })),
-    [areasList]
+    [areasList],
   );
 
   const areaLabel = (area: string) => {
@@ -476,7 +490,7 @@ function EquipePage() {
     return lista.sort(
       (a, b) =>
         ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) ||
-        a.username.localeCompare(b.username, "pt-BR")
+        a.username.localeCompare(b.username, "pt-BR"),
     );
   }, [users]);
 
@@ -511,7 +525,7 @@ function EquipePage() {
     const lista = (casting ?? []) as CastingRow[];
     if (!q) return lista;
     return lista.filter((r) =>
-      [r.nome, r.host_id, r.discord_id, r.obs].join(" ").toLowerCase().includes(q)
+      [r.nome, r.host_id, r.discord_id, r.obs].join(" ").toLowerCase().includes(q),
     );
   }, [casting, busca]);
 
@@ -589,7 +603,7 @@ function EquipePage() {
           label="Coordenação+"
           value={
             linhas.filter((u) =>
-              (["founder", "c_level", "direcao", "coordinator"] as AppRole[]).includes(u.role)
+              (["founder", "c_level", "direcao", "coordinator"] as AppRole[]).includes(u.role),
             ).length
           }
           icon={Crown}
@@ -608,7 +622,7 @@ function EquipePage() {
               "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
               aba === a.key
                 ? "border-white/15 bg-white/[0.07] text-foreground"
-                : "glass text-muted-foreground hover:bg-white/[0.08]"
+                : "glass text-muted-foreground hover:bg-white/[0.08]",
             )}
           >
             <a.icon className="size-4" /> {a.label}
@@ -616,11 +630,17 @@ function EquipePage() {
         ))}
         {aba === "equipe" && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="glass flex items-center gap-0.5 rounded-full p-1" role="group" aria-label="Modo de visualização">
-              {([
-                { v: "org", icon: Network, label: "Organograma" },
-                { v: "tabela", icon: Table2, label: "Tabela" },
-              ] as const).map((o) => (
+            <div
+              className="glass flex items-center gap-0.5 rounded-full p-1"
+              role="group"
+              aria-label="Modo de visualização"
+            >
+              {(
+                [
+                  { v: "org", icon: Network, label: "Organograma" },
+                  { v: "tabela", icon: Table2, label: "Tabela" },
+                ] as const
+              ).map((o) => (
                 <button
                   key={o.v}
                   onClick={() => trocarVisao(o.v)}
@@ -629,7 +649,9 @@ function EquipePage() {
                   aria-pressed={visao === o.v}
                   className={cn(
                     "grid size-8 place-items-center rounded-full transition-colors duration-200",
-                    visao === o.v ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground"
+                    visao === o.v
+                      ? "bg-white/[0.1] text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <o.icon className="size-4" strokeWidth={1.7} />
@@ -664,7 +686,9 @@ function EquipePage() {
 
       <div className="overflow-hidden rounded-xl glass">
         {loadingUsers || (aba === "casting" && loadingCasting) ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">Carregando equipe...</p>
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+            Carregando equipe...
+          </p>
         ) : aba === "equipe" && visao === "org" ? (
           <div className="p-3">
             <TeamOrgChart
@@ -697,8 +721,13 @@ function EquipePage() {
                   </tr>
                 ) : (
                   filtradas.map((u) => (
-                    <tr key={u.id} className="border-b border-border/50 align-top last:border-0 hover:bg-accent/40">
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{u.host_id || "—"}</td>
+                    <tr
+                      key={u.id}
+                      className="border-b border-border/50 align-top last:border-0 hover:bg-accent/40"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                        {u.host_id || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="relative">
@@ -710,7 +739,9 @@ function EquipePage() {
                             <span
                               className={cn(
                                 "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card",
-                                isOnline(u.last_sign_in_at) ? "bg-emerald-500" : "bg-muted-foreground/50"
+                                isOnline(u.last_sign_in_at)
+                                  ? "bg-emerald-500"
+                                  : "bg-muted-foreground/50",
                               )}
                             />
                           </div>
@@ -721,22 +752,28 @@ function EquipePage() {
                                 <span className="text-muted-foreground"> #{u.host_id}</span>
                               ) : null}
                             </p>
-                            <p className="truncate text-[11px] text-muted-foreground">@{u.username}</p>
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              @{u.username}
+                            </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         {podeEditar && u.role !== "founder" ? (
                           <div className="flex items-center gap-1.5">
-                            <span className={cn("size-2 shrink-0 rounded-full", ROLE_DOT[u.role])} />
+                            <span
+                              className={cn("size-2 shrink-0 rounded-full", ROLE_DOT[u.role])}
+                            />
                             <MinimalSelect
                               value={u.role}
                               onChange={(v) => mutRole.mutate({ userId: u.id, role: v as AppRole })}
                               className="rounded-lg bg-black/25 px-2 py-1 text-xs font-semibold"
-                              options={ROLE_ORDER.filter((x) => isFounder || x !== "founder").map((x) => ({
-                                value: x,
-                                label: ROLE_LABELS[x],
-                              }))}
+                              options={ROLE_ORDER.filter((x) => isFounder || x !== "founder").map(
+                                (x) => ({
+                                  value: x,
+                                  label: ROLE_LABELS[x],
+                                }),
+                              )}
                             />
                           </div>
                         ) : (
@@ -763,7 +800,7 @@ function EquipePage() {
                                     "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                                     lider
                                       ? "border-white/15 bg-white/[0.07] text-foreground"
-                                      : "border-border bg-accent text-accent-foreground"
+                                      : "border-border bg-accent text-accent-foreground",
                                   )}
                                 >
                                   {lider ? <Crown className="size-3" /> : null}
@@ -816,7 +853,7 @@ function EquipePage() {
                               onClick={() => {
                                 if (
                                   confirm(
-                                    `Excluir o usuário "${u.username}"? Essa ação não pode ser desfeita.`
+                                    `Excluir o usuário "${u.username}"? Essa ação não pode ser desfeita.`,
                                   )
                                 ) {
                                   mutDelete.mutate(u.id);
@@ -856,7 +893,10 @@ function EquipePage() {
                 </tr>
               ) : (
                 castingFiltrado.map((r) => (
-                  <tr key={r.id} className="border-b border-border/50 last:border-0 hover:bg-accent/40">
+                  <tr
+                    key={r.id}
+                    className="border-b border-border/50 last:border-0 hover:bg-accent/40"
+                  >
                     <td className="px-4 py-2.5 font-semibold text-foreground">{r.nome || "—"}</td>
                     <td className="px-4 py-2.5">
                       <CopyValue value={r.host_id} />
@@ -884,7 +924,7 @@ function EquipePage() {
                             <Pencil className="size-3.5" />
                           </button>
                         ) : null}
-                         {podeCriar ? (
+                        {podeCriar ? (
                           <button
                             onClick={() => {
                               const username = slugUsername(r.nome);
@@ -894,7 +934,7 @@ function EquipePage() {
                               }
                               if (
                                 confirm(
-                                  `Upar "${r.nome}" para Support? Será criado o usuário "${username}" e o registro sairá do casting.`
+                                  `Upar "${r.nome}" para Support? Será criado o usuário "${username}" e o registro sairá do casting.`,
                                 )
                               ) {
                                 mutUpar.mutate(r);
@@ -910,7 +950,8 @@ function EquipePage() {
                         {podeExcluir ? (
                           <button
                             onClick={() => {
-                              if (confirm(`Excluir o casting "${r.nome}"?`)) mutCastingDelete.mutate(r.id);
+                              if (confirm(`Excluir o casting "${r.nome}"?`))
+                                mutCastingDelete.mutate(r.id);
                             }}
                             title="Excluir casting"
                             className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -944,7 +985,9 @@ function EquipePage() {
                 <X className="size-4" />
               </button>
             </div>
-            <label className="mb-1 block text-xs font-semibold text-muted-foreground">Novo usuário</label>
+            <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+              Novo usuário
+            </label>
             <input
               value={novoNome}
               onChange={(e) => setNovoNome(e.target.value)}
@@ -992,7 +1035,9 @@ function EquipePage() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">Nome</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  Nome
+                </label>
                 <input
                   value={castingForm.nome}
                   onChange={(e) => setCastingForm({ ...castingForm, nome: e.target.value })}
@@ -1000,7 +1045,9 @@ function EquipePage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">ID Host</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  ID Host
+                </label>
                 <input
                   value={castingForm.host_id}
                   onChange={(e) => setCastingForm({ ...castingForm, host_id: e.target.value })}
@@ -1008,7 +1055,9 @@ function EquipePage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">ID Discord</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  ID Discord
+                </label>
                 <input
                   value={castingForm.discord_id}
                   onChange={(e) => setCastingForm({ ...castingForm, discord_id: e.target.value })}
@@ -1016,7 +1065,9 @@ function EquipePage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">Observação</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  Observação
+                </label>
                 <input
                   value={castingForm.obs}
                   onChange={(e) => setCastingForm({ ...castingForm, obs: e.target.value })}
@@ -1070,7 +1121,15 @@ function EquipePage() {
         </button>
       )}
 
-      {permOpen && isFounder && <PermissoesModal onClose={() => setPermOpen(false)} />}
+      {permOpen && isFounder && (
+        <PermissoesModal
+          onClose={() => {
+            setPermOpen(false);
+            setPermPessoa(null);
+          }}
+          {...(permPessoa ? { inicial: { aba: "usuarios" as const, userId: permPessoa } } : {})}
+        />
+      )}
 
       {/* Modal criar usuário */}
       {novoOpen && (
@@ -1090,7 +1149,9 @@ function EquipePage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">Usuário</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  Usuário
+                </label>
                 <input
                   value={novoUser}
                   onChange={(e) => setNovoUser(e.target.value)}
@@ -1099,7 +1160,9 @@ function EquipePage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">Cargo</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  Cargo
+                </label>
                 <MinimalSelect
                   value={novoRole}
                   onChange={(v) => setNovoRole(v as AppRole)}
@@ -1148,7 +1211,9 @@ function EquipePage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">ID Discord</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  ID Discord
+                </label>
                 <input
                   value={discordId}
                   onChange={(e) => setDiscordId(e.target.value)}
@@ -1157,7 +1222,9 @@ function EquipePage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">ID Host</label>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  ID Host
+                </label>
                 <input
                   value={hostId}
                   onChange={(e) => setHostId(e.target.value)}
@@ -1203,8 +1270,8 @@ function EquipePage() {
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
               Será gerado um novo token temporário para{" "}
-              <strong className="text-foreground">{resetTarget.username}</strong>. A senha anterior deixa de
-              funcionar e o usuário criará uma nova senha no próximo login.
+              <strong className="text-foreground">{resetTarget.username}</strong>. A senha anterior
+              deixa de funcionar e o usuário criará uma nova senha no próximo login.
             </p>
             <div className="mt-6 flex justify-end gap-2">
               <button
@@ -1242,8 +1309,9 @@ function EquipePage() {
               </button>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
-              Envie este token para <strong className="text-foreground">{tokenGerado.username}</strong>. Ele
-              entra com o token no lugar da senha e criará a própria senha no primeiro acesso. Este token é
+              Envie este token para{" "}
+              <strong className="text-foreground">{tokenGerado.username}</strong>. Ele entra com o
+              token no lugar da senha e criará a própria senha no primeiro acesso. Este token é
               exibido apenas agora.
             </p>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-black/25 px-3 py-2.5">
@@ -1290,8 +1358,8 @@ function EquipePage() {
               </button>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
-              Marque uma ou mais áreas e defina se o usuário é <b>Líder</b> ou{" "}
-              <b>Auxiliar</b> em cada uma. As permissões das áreas somam com as do cargo.
+              Marque uma ou mais áreas e defina se o usuário é <b>Líder</b> ou <b>Auxiliar</b> em
+              cada uma. As permissões das áreas somam com as do cargo.
             </p>
             <div className="grid max-h-80 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
               {areasDisponiveis.map((area) => {
@@ -1306,7 +1374,7 @@ function EquipePage() {
                         ? isLider
                           ? "border-primary bg-primary/15"
                           : "border-primary/50 bg-primary/5"
-                        : "border-border bg-white/[0.035]"
+                        : "border-border bg-white/[0.035]",
                     )}
                   >
                     <button
@@ -1317,7 +1385,7 @@ function EquipePage() {
                       <span
                         className={cn(
                           "flex min-w-0 items-center gap-1.5 truncate",
-                          checked ? "text-primary" : "text-foreground"
+                          checked ? "text-primary" : "text-foreground",
                         )}
                       >
                         {checked && isLider ? <Crown className="size-3.5 shrink-0" /> : null}
@@ -1330,7 +1398,7 @@ function EquipePage() {
                           "flex size-4 shrink-0 items-center justify-center rounded border",
                           checked
                             ? "border-white/15 bg-white/[0.09] text-foreground"
-                            : "border-border bg-black/25"
+                            : "border-border bg-black/25",
                         )}
                       >
                         {checked ? <Check className="size-3" /> : null}
@@ -1345,7 +1413,7 @@ function EquipePage() {
                             "flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors",
                             isLider
                               ? "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]"
+                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]",
                           )}
                         >
                           <Crown className="size-3" /> Líder
@@ -1357,7 +1425,7 @@ function EquipePage() {
                             "flex-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors",
                             !isLider
                               ? "border-foreground/30 bg-accent text-foreground"
-                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]"
+                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]",
                           )}
                         >
                           Auxiliar
@@ -1411,28 +1479,40 @@ function EquipePage() {
         </div>
       )}
 
-      {aba === "equipe" && selecionado && (() => {
-        const atual = linhas.find((u) => u.id === selecionado.id) ?? selecionado;
-        return (
-          <PersonDrawer
-            user={atual}
-            areas={areasDisponiveis}
-            onClose={() => setSelecionado(null)}
-            podeEditar={podeEditar}
-            podeExcluir={podeExcluir}
-            onRename={() => openRename(atual)}
-            onEditIds={() => openIdsEditor(atual)}
-            onEditAreas={() => openAreaEditor(atual)}
-            onResetToken={() => setResetTarget(atual)}
-            onDelete={() => {
-              if (confirm(`Excluir o usuário "${atual.username}"? Essa ação não pode ser desfeita.`)) {
-                mutDelete.mutate(atual.id);
-                setSelecionado(null);
+      {aba === "equipe" &&
+        selecionado &&
+        (() => {
+          const atual = linhas.find((u) => u.id === selecionado.id) ?? selecionado;
+          return (
+            <PersonDrawer
+              user={atual}
+              areas={areasDisponiveis}
+              onClose={() => setSelecionado(null)}
+              podeEditar={podeEditar}
+              podeExcluir={podeExcluir}
+              onRename={() => openRename(atual)}
+              onEditIds={() => openIdsEditor(atual)}
+              onEditAreas={() => openAreaEditor(atual)}
+              onResetToken={() => setResetTarget(atual)}
+              onPermissoes={
+                isFounder
+                  ? () => {
+                      setPermPessoa(atual.id);
+                      setPermOpen(true);
+                    }
+                  : undefined
               }
-            }}
-          />
-        );
-      })()}
+              onDelete={() => {
+                if (
+                  confirm(`Excluir o usuário "${atual.username}"? Essa ação não pode ser desfeita.`)
+                ) {
+                  mutDelete.mutate(atual.id);
+                  setSelecionado(null);
+                }
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }

@@ -2174,6 +2174,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          actions: string[]
+          category: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: string[]
+          category: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: string[]
+          category?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

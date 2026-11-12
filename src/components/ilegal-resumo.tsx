@@ -45,7 +45,7 @@ function suavizar(pts: { x: number; y: number }[]) {
 }
 
 /** A linha do cartão: reta na base e um pico da altura da parte no total. */
-function Linha({
+export function Linha({
   id,
   cor,
   parte,
