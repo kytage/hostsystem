@@ -16,6 +16,7 @@ export const CATEGORIES = [
   { key: "captacoes", label: "Captações" },
   { key: "peds", label: "Peds" },
   { key: "controle_staff", label: "Controle Staff" },
+  { key: "marketing", label: "Marketing" },
   { key: "area_manager", label: "Área Manager" },
   { key: "cronograma", label: "Cronograma" },
   { key: "punicoes", label: "Punições" },
@@ -25,7 +26,11 @@ export const CATEGORIES = [
   { key: "configuracoes", label: "Configurações" },
 ] as const;
 
-export type CategoryKey = (typeof CATEGORIES)[number]["key"] | "marketing";
+export type CategoryKey = (typeof CATEGORIES)[number]["key"];
+
+/** Marketing: Coordinator+ e quem tem a área Marketing entram sempre; os outros, pela tela de Permissões. */
+const marketingPadrao = (role: AppRole, myAreas: string[] | undefined) =>
+  isCoordinatorPlus(role) || (myAreas ?? []).includes("marketing");
 
 /* ------------------------------------------------------------------ *
  * Ações granulares por categoria
@@ -263,7 +268,7 @@ export function canAccessCombined(
 ): boolean {
   if (category === "captacoes") return hasCaptacoesAccess(role, myAreas);
   if (category === "peds") return hasPedsAccess(role, myAreas);
-  if (category === "marketing") return isCoordinatorPlus(role) || (myAreas ?? []).includes("marketing");
+  if (category === "marketing" && marketingPadrao(role, myAreas)) return true;
   if (category === "players" && isCoordinatorPlus(role)) return true;
   if (canAccess(role, category, perms)) return true;
   for (const area of myAreas ?? []) {
@@ -286,6 +291,7 @@ export function actionsFor(
   if (category === "captacoes") return hasCaptacoesAccess(role, myAreas) ? [...ALL_ACTIONS] : [];
   if (category === "peds") return hasPedsAccess(role, myAreas) ? [...ALL_ACTIONS] : [];
   if (role === "founder") return [...ALL_ACTIONS];
+  if (category === "marketing" && marketingPadrao(role, myAreas)) return [...ALL_ACTIONS];
   const set = new Set<ActionKey>();
   if (category === "players" && isCoordinatorPlus(role)) set.add("view");
   for (const action of perms?.get(role)?.get(category) ?? []) set.add(action);

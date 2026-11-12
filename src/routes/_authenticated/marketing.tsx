@@ -9,7 +9,14 @@ import { MarketingLeads } from "@/components/marketing/leads";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getCurrentUsername } from "@/lib/kanban";
-import { isCoordinatorPlus, useAreas, useMyAreas, useMyRole } from "@/lib/permissions";
+import {
+  canAccessCombined,
+  useAreaPermissions,
+  useAreas,
+  useMyAreas,
+  useMyRole,
+  usePermissions,
+} from "@/lib/permissions";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
 import {
@@ -73,9 +80,11 @@ function usePatch() {
 function MarketingPage() {
   const { data: role, isLoading: l1 } = useMyRole();
   const { data: areas = [], isLoading: l2 } = useMyAreas();
-  const pode = isCoordinatorPlus(role) || areas.includes("marketing");
+  const { data: perms, isLoading: l3 } = usePermissions();
+  const { data: areaPerms, isLoading: l4 } = useAreaPermissions();
+  const pode = !!role && canAccessCombined(role, areas, "marketing", perms, areaPerms);
 
-  if (l1 || l2) {
+  if (l1 || l2 || l3 || l4) {
     return (
       <div className="mt-24 flex items-center justify-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" /> Carregando…
