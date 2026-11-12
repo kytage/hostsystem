@@ -1,0 +1,7 @@
+Modelos 3D da HOST FAZENDAS (casa, galinheiro, laranjeira, canteiros, trigo, carroça, mesa,
+fogueira, galinha, feno, cerca, portão, toco e flores) adaptados de:
+
+"3D Pacote de Assets de Fazenda | Farm Asset Pack" por CristiniDias
+https://sketchfab.com/3d-models/3d-pacote-de-assets-de-fazenda-farm-asset-pack-41ab6db119254784b0b19b8268859e21
+Licença CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+Alterações: peças recortadas, polígonos reduzidos e texturas trocadas por cores.

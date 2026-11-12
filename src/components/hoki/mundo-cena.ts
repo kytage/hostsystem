@@ -1,60 +1,84 @@
 /**
- * Cenário 3D da Praça HOST: a ilha flutuante em blocos, com o terreno em
- * camadas (grama, terra e rocha), a praça redonda de pedra clara com a fonte,
- * os caminhos, o rio com a ponte, o morro com a cachoeira, o coreto, as
- * pérgolas, as árvores e o letreiro HOST no céu. As posições vêm de
- * mundo-mapa.ts; aqui é só o desenho.
+ * Cenário do lobby do HOKI em 3D, refeito do zero a partir da arte do lobby:
+ * ilha central simétrica com a praça da fonte, canteiros floridos, bancos e
+ * postes; coreto e laguinho com cachoeira à esquerda, rio com cachoeira à
+ * direita; Magnata (oeste) e Escritório (leste) em ilhas ligadas por pontes;
+ * HOST FAZENDAS (noroeste) e EM BREVE (nordeste) no alto, com escadarias; o
+ * terraço do TOP 3 com o letreiro HOST e o anel vermelho; e, ao sul, o
+ * escorregador turquesa que desce da nuvem onde os HOKIs dormem.
+ * As posições vêm de mundo-mapa.ts.
  */
-import { GRUPOS } from "@/lib/hoki-magnata";
 import type * as TH from "three";
 import { acabamento, criarManchas, texturaMancha, type Mancha } from "./luz";
 import {
   ANEL,
+  ARCO_DE_FLORES,
   ARVORES,
-  anguloDoBalanco,
-  BALANCO,
+  ARVORES_EM_BREVE,
+  ARVORES_FAZENDAS,
   BANCOS,
   BERCO,
-  CANTEIROS,
+  beiradaEmZ,
+  CANTEIROS_EM_BREVE,
+  CELEIRO,
   CHUVEIRO,
-  CORREIO,
   CORETO,
+  CORREIO,
+  DADOS_DO_MAGNATA,
   DECK_DO_BERCO,
-  ESCORREGADOR,
+  dentroDaIlha,
+  distLinha,
   ESCRITORIO,
-  FAZENDA,
+  FARDOS,
   FONTE,
+  GALPAO,
   ILHA,
+  ILHA_EM_BREVE,
+  ILHA_ESCRITORIO,
+  ILHA_FAZENDAS,
+  ILHA_MAGNATA,
+  LAGO,
+  LETREIRO,
+  MEIA_RIACHO,
+  MEIA_RIO,
   MESAS,
-  MORRO,
-  PEDRAS,
-  PERGOLAS,
-  PARKOUR,
-  PILARES,
-  POCA,
+  MOINHO,
+  NASCENTE,
+  naAgua,
+  naEscadaria,
+  PEAO_DO_MAGNATA,
+  PILARES_DA_ESCADARIA,
+  pilaresDaEscadaria,
+  piso,
+  PLACA_CORREIO,
+  PLACA_QUERIDOMETRO,
+  PLATAFORMA,
   PONTE,
-  BRACO_DO_PORTAL,
-  PATIO_DO_PORTAL,
-  PORTAL,
-  PONTE_DA_FAZENDA,
-  PISTA,
-  PONTE_DA_PISTA,
-  PONTE_DO_ESCRITORIO,
+  PONTE_EM_BREVE,
+  PONTE_FAZENDAS,
+  PONTE_LESTE,
+  PONTE_OESTE,
+  PONTOS_DO_ESCORREGADOR,
+  PORTAO_EM_BREVE,
   POSTES,
+  POSTES_EM_BREVE,
+  POSTES_FAZENDAS,
+  PREDIO_MAGNATA,
+  RAIO_DO_CORETO,
+  RIACHO,
   RIO,
   TERMOMETRO,
+  TERRACO_TOP3,
+  TOP3,
+  TRIGAIS,
   VAGAS,
-  dentroDaIlha,
-  naAgua,
-  noMorro,
-  piso,
-  postesDaPergola,
-  xRio,
+  type Escadaria,
+  type Ponto,
 } from "./mundo-mapa";
 import {
-  Blocos,
   arbusto,
   arvore,
+  Blocos,
   criarNuvens,
   letrasDePedra,
   pedregulho,
@@ -66,1522 +90,1109 @@ import {
 /** Altura do assento dos bancos (onde o HOKI fica quando senta). */
 export const ASSENTO = 0.47;
 /** Névoa que fecha embaixo da ilha. */
-const NEVOA = { inicio: 3.5, fim: 15, forca: 0.95 };
+const NEVOA = { inicio: 3.5, fim: 18, forca: 0.95 };
 
-const GRAMA = [0x6cc046, 0x63b73f, 0x76c84e] as const;
-const GRAMA_ESCURA = [0x4f9c35, 0x58a83b] as const;
-const TERRA = [0x8e5b35, 0x82512e, 0x9a663c] as const;
-const ROCHA = [0x8b8279, 0x7b736b, 0x999289] as const;
-const PAVE = [0xded3bf, 0xd3c7b1, 0xe7ddcc, 0xcbbfa9] as const;
+// paleta viva, como na arte do lobby
+const GRAMA = [0x78cd48, 0x6ec342, 0x84d650, 0x72c845] as const;
+const GRAMA_ESCURA = [0x4f9c35, 0x58a83b, 0x469030] as const;
+const TERRA = [0x9a6235, 0x8c5730, 0xa66d3c] as const;
+const ROCHA = [0x8f8a85, 0x7e7974, 0x9b958f, 0x6f6a66] as const;
+const PAVE = [0xe6dcc6, 0xdacfb6, 0xefe6d2, 0xd2c6ac] as const;
 const PEDRA_CLARA = [0xe2d9c8, 0xd8cebb, 0xece4d5] as const;
-const MEIO_FIO = 0xb3a791;
-const REJUNTE = 0x91866e;
+const PEDRA = [0x9a9aa2, 0x8a8a93, 0xa7a7ae, 0x7f7f88] as const;
 const MADEIRA = [0xa8743c, 0x9c6a36, 0xb47e44] as const;
-const MADEIRA_ESCURA = 0x6b4526;
 const FERRO = 0x2b2d32;
-const TELHA = [0xb5533c, 0xa64632, 0xc46045] as const;
-const FLORES = [0xffffff, 0xff5a5a, 0xffd84a, 0xff8fc8, 0xfff1a8] as const;
+const VERMELHO = 0xd8281f;
+const BRANCO = 0xf6f1e4;
+const TELHA = [0xc4502f, 0xb24529, 0xd45d38] as const;
+const FLORES = [0xffffff, 0xff5a5a, 0xffd84a, 0xff8fc8, 0xfff1a8, 0xb98cff] as const;
+const FONTE_PLACA = 'Manrope, Inter, "Segoe UI", Arial, sans-serif';
 
-/** Pintura que aparece pela abertura do portal: o tabuleiro do Magnata flutuando no céu. */
-function vistaDoTabuleiro() {
+/** Placa arredondada com texto (desenhada num canvas). */
+function texturaDePlaca(
+  THREE: typeof TH,
+  linhas: string[],
+  o: { fundo: string; borda: string; cor: string; largura?: number; altura?: number },
+) {
+  const L = o.largura ?? 512;
+  const A = o.altura ?? 128;
   const tela = document.createElement("canvas");
-  tela.width = 256;
-  tela.height = 378;
+  tela.width = L;
+  tela.height = A;
   const c = tela.getContext("2d");
-  if (!c) return tela;
-  const ceu = c.createLinearGradient(0, 0, 0, 378);
-  ceu.addColorStop(0, "#16388f");
-  ceu.addColorStop(0.55, "#4f95ea");
-  ceu.addColorStop(1, "#bfe0fb");
-  c.fillStyle = ceu;
-  c.fillRect(0, 0, 256, 378);
-  c.fillStyle = "rgba(255,255,255,0.85)";
-  for (const [x, y, s] of [
-    [40, 70, 1],
-    [205, 110, 0.8],
-    [70, 330, 1.2],
-    [215, 300, 0.9],
-  ] as const) {
+  if (c) {
+    c.fillStyle = o.borda;
     c.beginPath();
-    c.ellipse(x, y, 34 * s, 11 * s, 0, 0, Math.PI * 2);
-    c.ellipse(x + 16 * s, y - 8 * s, 20 * s, 10 * s, 0, 0, Math.PI * 2);
+    c.roundRect(0, 0, L, A, A * 0.3);
     c.fill();
-  }
-  const cx = 128;
-  const cy = 196;
-  const a = 112;
-  const b = 58;
-  /** Ponto do tabuleiro (u e v de 0 a 1) visto de cima, em diagonal. */
-  const P = (u: number, v: number): [number, number] => [cx + (u - v) * a, cy + (u + v - 1) * b];
-  const quadro = (u0: number, v0: number, u1: number, v1: number, cor: string) => {
-    c.fillStyle = cor;
+    c.fillStyle = o.fundo;
     c.beginPath();
-    c.moveTo(...P(u0, v0));
-    c.lineTo(...P(u1, v0));
-    c.lineTo(...P(u1, v1));
-    c.lineTo(...P(u0, v1));
+    c.roundRect(9, 9, L - 18, A - 18, A * 0.24);
     c.fill();
-  };
-  // rocha embaixo da ilha
-  c.fillStyle = "#6f4a30";
-  c.beginPath();
-  c.moveTo(cx - a, cy);
-  c.lineTo(cx, cy + b);
-  c.lineTo(cx + a, cy);
-  c.lineTo(cx + 44, cy + b + 78);
-  c.lineTo(cx - 36, cy + b + 92);
-  c.fill();
-  c.fillStyle = "rgba(0,0,0,0.22)";
-  c.beginPath();
-  c.moveTo(cx, cy + b);
-  c.lineTo(cx + a, cy);
-  c.lineTo(cx + 44, cy + b + 78);
-  c.lineTo(cx - 36, cy + b + 92);
-  c.fill();
-  quadro(0, 0, 1, 1, "#efe8d8");
-  quadro(0.15, 0.15, 0.85, 0.85, "#62b84a");
-  // casas coloridas em volta
-  const cores = GRUPOS.map((g) => g.cor);
-  for (let k = 0; k < 9; k++) {
-    const u0 = 0.15 + (k * 0.7) / 9 + 0.008;
-    const u1 = 0.15 + ((k + 1) * 0.7) / 9 - 0.008;
-    quadro(u0, 0.03, u1, 0.13, cores[k % 8] ?? "#888");
-    quadro(u0, 0.87, u1, 0.97, cores[(k + 2) % 8] ?? "#888");
-    quadro(0.03, u0, 0.13, u1, cores[(k + 4) % 8] ?? "#888");
-    quadro(0.87, u0, 0.97, u1, cores[(k + 6) % 8] ?? "#888");
+    const g = c.createLinearGradient(0, 0, 0, A);
+    g.addColorStop(0, "rgba(255,255,255,0.3)");
+    g.addColorStop(0.5, "rgba(255,255,255,0)");
+    c.fillStyle = g;
+    c.beginPath();
+    c.roundRect(9, 9, L - 18, A - 18, A * 0.24);
+    c.fill();
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    let px = (A * 0.6) / linhas.length;
+    c.font = `900 ${px}px ${FONTE_PLACA}`;
+    while (linhas.some((l) => c.measureText(l).width > L - 56) && px > 10)
+      c.font = `900 ${--px}px ${FONTE_PLACA}`;
+    linhas.forEach((l, k) => {
+      const y = A / 2 + (k - (linhas.length - 1) / 2) * px * 1.06 + 2;
+      c.lineWidth = px * 0.18;
+      c.strokeStyle = "rgba(0,0,0,0.38)";
+      c.strokeText(l, L / 2, y + 3);
+      c.fillStyle = o.cor;
+      c.fillText(l, L / 2, y);
+    });
   }
-  for (const [u, v, cor] of [
-    [0, 0, "#3b4c70"],
-    [0.86, 0, "#ee8a22"],
-    [0, 0.86, "#2f9e58"],
-    [0.86, 0.86, "#d8281f"],
-  ] as const)
-    quadro(u + 0.01, v + 0.01, u + 0.13, v + 0.13, cor);
-  // prédios do centro
-  for (const [u, v, h, cor] of [
-    [0.36, 0.34, 44, "#f2e9d8"],
-    [0.5, 0.36, 62, "#d9e4ee"],
-    [0.62, 0.42, 38, "#f0d9c8"],
-    [0.4, 0.52, 52, "#e8dff0"],
-    [0.56, 0.56, 70, "#fbf5e8"],
-    [0.44, 0.68, 34, "#dfe8d6"],
-    [0.66, 0.64, 46, "#e3d4c0"],
-  ] as const) {
-    const [x, y] = P(u, v);
-    c.fillStyle = "rgba(0,0,0,0.25)";
-    c.fillRect(x - 2, y - h, 13, h);
-    c.fillStyle = cor;
-    c.fillRect(x - 11, y - h, 13, h);
-    c.fillStyle = "#d8281f";
-    c.fillRect(x - 12, y - h - 3, 26, 4);
-    c.fillStyle = "#ffe9a8";
-    for (let j = 8; j < h - 6; j += 9) c.fillRect(x - 8, y - h + j, 7, 4);
-  }
-  // brilho vermelho nas bordas, da cor do portal
-  const brilho = c.createRadialGradient(128, 189, 90, 128, 189, 230);
-  brilho.addColorStop(0, "rgba(255,40,40,0)");
-  brilho.addColorStop(1, "rgba(255,40,40,0.55)");
-  c.fillStyle = brilho;
-  c.fillRect(0, 0, 256, 378);
-  return tela;
+  const t = new THREE.CanvasTexture(tela);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Faixa de água ao longo de uma linha (o rio e o riacho), com a textura correndo no sentido da linha. */
+function faixaDeAgua(THREE: typeof TH, linha: readonly Ponto[], meia: number, y: number) {
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  let v = 0;
+  linha.forEach((p, i) => {
+    const a = linha[Math.max(0, i - 1)]!;
+    const b = linha[Math.min(linha.length - 1, i + 1)]!;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const n = Math.hypot(dx, dz) || 1;
+    const nx = -dz / n;
+    const nz = dx / n;
+    if (i > 0) v += Math.hypot(p.x - linha[i - 1]!.x, p.z - linha[i - 1]!.z) / (meia * 2);
+    pos.push(p.x + nx * meia, y, p.z + nz * meia, p.x - nx * meia, y, p.z - nz * meia);
+    uv.push(0, v, 1, v);
+    if (i > 0) {
+      const k = i * 2;
+      idx.push(k - 2, k, k - 1, k - 1, k, k + 1);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
 }
 
 export function criarMundo(THREE: typeof TH) {
-  const lixo: { dispose: () => void }[] = [];
   const grupo = new THREE.Group();
-  const r = sorteador(7);
+  const lixo: { dispose: () => void }[] = [];
+  const r = sorteador(2026);
   const escolhe = (l: readonly number[]) => l[Math.floor(r() * l.length)] ?? l[0]!;
-  // cada tipo de coisa vai num conjunto de blocos, com o seu acabamento
-  const chao = new Blocos(r); // gramado e base dos caminhos (só recebe sombra)
-  const piso3d = new Blocos(r); // pedras do calçamento e meios-fios
-  const encosta = new Blocos(r); // lateral da ilha: grama pendurada, terra e rocha
-  const pedra = new Blocos(r); // fonte, coreto, ponte, muretas, rochas
-  const madeira = new Blocos(r); // bancos, cercas, pérgolas, troncos, telhado, ferro dos postes
-  const folhas = new Blocos(r); // copas, arbustos, flores e tufos
-  const aceso = new Blocos(r); // miolo das luminárias
-  const sombras: Mancha[] = []; // sombras de contato (pé de árvore, banco, poste...)
-  const clarao: Mancha[] = []; // luz das luminárias no piso
+
+  const chao = new Blocos(r); // gramado e base do calçamento (só recebe sombra)
+  const piso3d = new Blocos(r); // pedras do calçamento, meios-fios e degraus
+  const encosta = new Blocos(r); // lateral das ilhas: terra e rocha
+  const pedra = new Blocos(r); // fonte, coreto, pontes, muretas, prédios
+  const madeira = new Blocos(r); // bancos, cercas, telhados, ferro dos postes
+  const folhas = new Blocos(r); // copas, arbustos, flores e trigo
+  const aceso = new Blocos(r); // lâmpadas e luzes (sem sombra, sempre acesas)
+  const nuvem = new Blocos(r); // a nuvem do berço
+  const sombras: Mancha[] = [];
+  const clarao: Mancha[] = [];
   const lampadas: [number, number, number][] = [];
+  const brilhos: [number, number, number][] = [];
 
-  const ruido = (x: number, z: number) => {
-    const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
-    return s - Math.floor(s);
+  /** Lanterna: caixinha acesa com tampa (e o ponto de luz que brilha à noite). */
+  const lanterna = (x: number, y: number, z: number, cor = 0xffc670) => {
+    aceso.base(x, y, z, 0.32, 0.38, 0.32, cor, 0);
+    madeira.base(x, y + 0.38, z, 0.46, 0.1, 0.46, FERRO, 0);
+    lampadas.push([x, y + 0.22, z]);
   };
-  // quantos blocos a ilha tem de fundura em cada casa: rasa na borda, funda no meio
-  const fundura = (x: number, z: number) => {
-    if (!dentroDaIlha(x, z)) return 0;
-    const f = 1 - Math.pow(Math.abs(x) / ILHA.a, ILHA.n) - Math.pow(Math.abs(z) / ILHA.b, ILHA.n);
-    return Math.max(
-      2,
-      Math.round(2 + 7.5 * Math.pow(Math.min(1, f / 0.62), 0.75) + (ruido(x, z) - 0.5) * 1.6),
-    );
+  /** Poste de luz de ferro com a lanterna em cima. */
+  const poste = (x: number, z: number, y0 = 0, alt = 2.5) => {
+    madeira.base(x, y0, z, 0.36, 0.22, 0.36, FERRO, 0);
+    madeira.base(x, y0, z, 0.14, alt, 0.14, FERRO, 0);
+    madeira.base(x, y0 + alt - 0.1, z, 0.3, 0.1, 0.3, FERRO, 0);
+    lanterna(x, y0 + alt, z);
+    sombras.push({ x, z, y: y0 + 0.03, rx: 0.45, rz: 0.45 });
+    clarao.push({ x, z, y: y0 + 0.03, rx: 2.8, rz: 2.8 });
   };
-  // morro: sobe para o fundo e para a direita; a cachoeira desce por um canal em degraus
-  const CANAL = [POCA.x - 0.5, POCA.x + 0.5].map(Math.round) as [number, number];
-  const noCanal = (x: number) => x >= CANAL[0] && x <= CANAL[1];
-  const degrauDoCanal = (z: number) =>
-    Math.max(1, Math.min(4, Math.round(0.5 + (MORRO.z1 - z) * 1.0)));
-  const alturaMorro = (x: number, z: number) => {
-    if (!noMorro(x, z) || !dentroDaIlha(x, z)) return 0;
-    if (noCanal(x)) return degrauDoCanal(z);
-    const h = Math.max(
-      1,
-      Math.min(
-        6,
-        Math.round(
-          1.5 + (x - MORRO.x0) * 0.45 + (MORRO.z1 - z) * 0.85 + (ruido(x * 3, z * 7) - 0.5),
-        ),
-      ),
-    );
-    return x === CANAL[0] - 1 || x === CANAL[1] + 1 ? Math.max(h, degrauDoCanal(z) + 1) : h;
+  /** Banco de praça: assento de ripas, encosto e pés de ferro, girado para onde quem senta olha. */
+  const banco = (x: number, z: number, ang: number) => {
+    const c = Math.cos(ang);
+    const s = Math.sin(ang);
+    const p = (lx: number, lz: number) => ({ x: x + lx * c + lz * s, z: z - lx * s + lz * c });
+    for (const lx of [-0.62, 0.62])
+      for (const lz of [-0.14, 0.14]) {
+        const q = p(lx, lz);
+        madeira.base(q.x, 0, q.z, 0.08, 0.4, 0.08, FERRO, 0, ang);
+      }
+    for (const lz of [-0.12, 0.04, 0.2]) {
+      const q = p(0, lz);
+      madeira.base(q.x, 0.4, q.z, 1.5, 0.07, 0.14, escolhe(MADEIRA), 0.03, ang);
+    }
+    for (const y of [0.62, 0.84]) {
+      const q = p(0, -0.24);
+      madeira.base(q.x, y, q.z, 1.5, 0.14, 0.06, escolhe(MADEIRA), 0.03, ang);
+    }
+    for (const lx of [-0.62, 0.62]) {
+      const q = p(lx, -0.26);
+      madeira.base(q.x, 0.4, q.z, 0.08, 0.58, 0.06, FERRO, 0, ang);
+    }
+    sombras.push({ x, z, rx: 0.95, rz: 0.45, giro: ang });
   };
-  const VIZINHOS = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ] as const;
-  const calcado = (x: number, z: number) =>
-    dentroDaIlha(x, z) && !noMorro(x, z) && !naAgua(x, z) && piso(x, z) === "caminho";
+  /** Ilha flutuante retangular: gramado em cima, terra e rocha afinando para baixo, com grama pendurada. */
+  const ilhaRetangular = (
+    I: { x0: number; x1: number; z0: number; z1: number },
+    y: number,
+    fundo = 6,
+  ) => {
+    for (let x = I.x0 + 0.5; x < I.x1; x++)
+      for (let z = I.z0 + 0.5; z < I.z1; z++) {
+        chao.base(x, y - 0.4, z, 1, 0.4, 1, escolhe(GRAMA), 0.05);
+        const borda = Math.min(x - I.x0, I.x1 - x, z - I.z0, I.z1 - z);
+        const d = Math.min(fundo, 1.4 + borda * 1.1 + r() * 0.9);
+        encosta.base(x, y - 0.4 - 1.2, z, 1, 1.2, 1, escolhe(TERRA), 0.06);
+        if (d > 1.6) encosta.base(x, y - 0.4 - d, z, 1, d - 1.2, 1, escolhe(ROCHA), 0.06);
+        if (borda < 1 && r() < 0.45)
+          encosta.base(x, y - 0.75, z, 1.02, 0.4, 1.02, escolhe(GRAMA_ESCURA), 0.06);
+      }
+  };
 
-  // ---------------- terreno: tampa de grama, calçamento e a encosta em camadas ----------------
-  const molhados: number[] = [];
-  for (let x = -24; x <= 24; x++) {
-    for (let z = -16; z <= 16; z++) {
-      if (!dentroDaIlha(x, z)) {
-        // degraus soltos do lado de fora: deixam a borda irregular
-        if (
-          VIZINHOS.some(([dx, dz]) => dentroDaIlha(x + dx, z + dz)) &&
-          !naAgua(x, z - 1) &&
-          r() < 0.34
-        ) {
-          const topo = -0.5 - Math.floor(r() * 3) * 0.5;
-          const lado = r() < 0.35 ? 0.6 : 1;
-          encosta.base(
+  // =====================================================================
+  // ILHA CENTRAL: gramado, calçamento, beirada de terra e rocha
+  // =====================================================================
+  {
+    for (let x = -ILHA.a + 0.5; x < ILHA.a; x++)
+      for (let z = -ILHA.b + 0.5; z < ILHA.b; z++) {
+        if (!dentroDaIlha(x, z, 0.1)) continue;
+        // quanto falta para a beirada (0 na beirada, 1 no centro)
+        const v = Math.pow(Math.abs(x) / ILHA.a, ILHA.n) + Math.pow(Math.abs(z) / ILHA.b, ILHA.n);
+        const dentro = 1 - Math.pow(v, 1 / ILHA.n);
+        const agua = naAgua(x, z, 0.2);
+        const tipo = piso(x, z);
+        if (agua) chao.base(x, -1.0, z, 1, 0.4, 1, 0x3b6e8c, 0.04);
+        else if (tipo === "grama") {
+          const listra = (Math.floor(x) + Math.floor(z)) % 2 === 0;
+          chao.base(
             x,
-            topo - 1.4 - r(),
+            -0.4,
             z,
-            lado,
-            1.4 + r(),
-            lado,
-            escolhe(r() < 0.5 ? TERRA : ROCHA),
-            0.07,
+            1,
+            0.4,
+            1,
+            listra ? escolhe(GRAMA) : escolhe([0x80d24e, 0x76ca47]),
+            0.04,
           );
-          if (r() < 0.65)
-            encosta.base(x, topo, z, lado + 0.06, 0.24, lado + 0.06, escolhe(GRAMA), 0.05);
-        }
-        continue;
-      }
-      const morro = noMorro(x, z);
-      const molhado = naAgua(x, z) && !morro;
-      const D = fundura(x, z);
-      if (molhado) {
-        encosta.base(x, -1.45, z, 1, 0.65, 1, r() < 0.2 ? 0x8f8a80 : 0xa8946a, 0.06);
-        molhados.push(x, z);
-      } else if (morro) {
-        const h = alturaMorro(x, z);
-        const canal = noCanal(x);
-        encosta.base(x, -0.35, z, 1, 0.35, 1, escolhe(ROCHA), 0.06);
-        for (let l = 0; l < h; l++) {
-          if (!VIZINHOS.some(([dx, dz]) => alturaMorro(x + dx, z + dz) < l + 1) && l < h - 1)
-            continue;
-          const topo = l === h - 1 && !canal ? l + 0.68 : l + 1;
-          pedra.base(
-            x,
-            l,
-            z,
-            1 + (r() < 0.2 ? 0.14 : 0),
-            topo - l,
-            1 + (r() < 0.2 ? 0.14 : 0),
-            escolhe(ROCHA),
-            0.07,
-          );
-        }
-        if (!canal) chao.base(x, h - 0.32, z, 1.04, 0.32, 1.04, escolhe(GRAMA), 0.04);
-      } else if (piso(x, z) === "caminho") chao.base(x, -0.35, z, 1, 0.35, 1, REJUNTE, 0.03);
-      else chao.base(x, -0.35, z, 1, 0.35, 1, escolhe(GRAMA), 0.035);
-
-      // barranco na beira do rio
-      if (
-        !molhado &&
-        VIZINHOS.some(([dx, dz]) => naAgua(x + dx, z + dz) && !noMorro(x + dx, z + dz))
-      )
-        encosta.base(x, -1.35, z, 1, 1, 1, escolhe(TERRA), 0.06);
-      // casca da encosta: só os blocos que aparecem de fora
-      for (let k = 0; k < D; k++) {
-        if (!VIZINHOS.some(([dx, dz]) => fundura(x + dx, z + dz) <= k)) continue;
-        const rocha = k >= 2 + (ruido(x * 5, z * 3) > 0.6 ? 1 : 0);
-        const gordo = r() < 0.24 ? 0.16 + r() * 0.22 : 0;
-        encosta.base(
-          x,
-          -1.35 - k,
-          z,
-          1 + gordo,
-          1,
-          1 + gordo,
-          escolhe(rocha ? ROCHA : TERRA),
-          0.07,
-        );
-        if (r() < 0.12) {
-          const [dx, dz] = VIZINHOS[Math.floor(r() * 4)]!;
-          if (fundura(x + dx, z + dz) <= k)
-            encosta.add(
-              x + dx * 0.66,
-              -0.6 - k - r() * 0.4,
-              z + dz * 0.66,
-              0.5,
-              0.5,
-              0.5,
-              escolhe(rocha ? ROCHA : TERRA),
-              0.07,
-            );
+        } else chao.base(x, -0.4, z, 1, 0.4, 1, 0xcabd9f, 0.02);
+        // terra e rocha embaixo: a ilha afina para baixo, como uma montanha de ponta-cabeça
+        const fundo = 1.6 + 12 * Math.pow(dentro, 0.65) + r() * 1.2;
+        encosta.base(x, -1.8, z, 1, 1.4, 1, escolhe(TERRA), 0.06);
+        encosta.base(x, -1.8 - (fundo - 1.4), z, 1, fundo - 1.4, 1, escolhe(ROCHA), 0.07);
+        if (dentro < 0.05 && r() < 0.5)
+          encosta.base(x, -0.85, z, 1.04, 0.5, 1.04, escolhe(GRAMA_ESCURA), 0.06);
+        // florzinhas e tufos soltos no gramado
+        if (tipo === "grama" && !agua && r() < 0.16) {
+          const fx = x + (r() - 0.5) * 0.7;
+          const fz = z + (r() - 0.5) * 0.7;
+          if (r() < 0.55) folhas.base(fx, 0, fz, 0.13, 0.16, 0.13, escolhe(FLORES), 0.02);
+          else folhas.base(fx, 0, fz, 0.22, 0.18, 0.22, escolhe(GRAMA_ESCURA), 0.06);
         }
       }
-      // pontas de rocha penduradas embaixo da borda
-      if (D <= 4 && r() < 0.16)
-        encosta.base(
-          x + (r() - 0.5) * 0.4,
-          -0.35 - D - 0.6 - r() * 1.8,
-          z + (r() - 0.5) * 0.4,
-          0.62,
-          0.6 + r() * 1.8,
-          0.62,
-          ROCHA[1],
-          0.07,
-        );
-      // grama pendurada na beirada, em dentes de alturas diferentes
-      for (const [dx, dz] of VIZINHOS) {
-        if (dentroDaIlha(x + dx, z + dz) || molhado) continue;
-        const h = 0.28 + Math.floor(r() * 3) * 0.16;
-        encosta.add(
-          x + dx * 0.53,
-          -0.02 - h / 2,
-          z + dz * 0.53,
-          dx ? 0.14 : 1.02,
-          h,
-          dz ? 0.14 : 1.02,
-          escolhe(GRAMA_ESCURA),
-          0.05,
-        );
-        if (r() < 0.5)
-          encosta.add(
-            x + dx * 0.55 + (dz ? (r() - 0.5) * 0.5 : 0),
-            -0.02 - (h + 0.3) / 2,
-            z + dz * 0.55 + (dx ? (r() - 0.5) * 0.5 : 0),
-            dx ? 0.14 : 0.42,
-            h + 0.3,
-            dz ? 0.14 : 0.42,
-            escolhe(GRAMA_ESCURA),
-            0.05,
-          );
+    // calçamento dos caminhos: pedrinhas de meio bloco
+    for (let x = -ILHA.a + 0.25; x < ILHA.a; x += 0.5)
+      for (let z = -ILHA.b + 0.25; z < ILHA.b; z += 0.5) {
+        if (!dentroDaIlha(x, z, 0.4) || piso(x, z) !== "caminho" || naAgua(x, z, 0.1)) continue;
+        piso3d.base(x, 0, z, 0.5, 0.06, 0.5, escolhe(PAVE), 0.04);
       }
+    // praça: anéis de pedra em volta da fonte, com uma faixa mais escura a cada três anéis e o meio-fio
+    for (let raio = ANEL.dentro + 0.45; raio < ANEL.fora; raio += 0.9) {
+      const n = Math.round((Math.PI * 2 * raio) / 0.9);
+      const anel = Math.round((raio - ANEL.dentro) / 0.9);
+      for (let k = 0; k < n; k++) {
+        const a = ((k + (anel % 2) * 0.5) / n) * Math.PI * 2;
+        const cor = anel % 3 === 1 ? escolhe([0xc9b99a, 0xbfae8f]) : escolhe(PAVE);
+        piso3d.base(
+          Math.cos(a) * raio,
+          0,
+          Math.sin(a) * raio,
+          0.86,
+          0.06,
+          (Math.PI * 2 * raio) / n - 0.02,
+          cor,
+          0.03,
+          -a,
+        );
+      }
+    }
+    for (let k = 0; k < 96; k++) {
+      const a = (k / 96) * Math.PI * 2;
+      const x = Math.cos(a) * (ANEL.fora + 0.15);
+      const z = Math.sin(a) * (ANEL.fora + 0.15);
+      if (piso(x * 1.06, z * 1.06) === "caminho") continue;
+      piso3d.base(x, 0, z, 0.3, 0.14, 0.78, 0xb3a791, 0.03, -a);
     }
   }
 
-  // ---------------- praça redonda: pedras em anéis, rejunte por baixo e meio-fio nas beiradas ----------------
-  /** Fileira de blocos em roda, em volta de um centro: cada um virado para fora. */
-  const roda = (
-    b: Blocos,
-    cx: number,
-    cz: number,
-    raio: number,
-    n: number,
-    y0: number,
-    fundo: number,
-    alto: number,
-    cores: readonly number[],
-    fase = 0,
-    folga = 0.035,
-    pula?: (a: number) => boolean,
-  ) => {
-    for (let i = 0; i < n; i++) {
-      const a = fase + (i / n) * Math.PI * 2;
-      if (pula?.(a)) continue;
-      b.base(
-        cx + Math.cos(a) * raio,
-        y0,
-        cz + Math.sin(a) * raio,
-        fundo,
-        alto,
-        (Math.PI * 2 * raio) / n - folga,
-        escolhe(cores),
-        0.035,
+  // ---------------- cerca de madeira na beirada (aberta nos caminhos, pontes, escadarias e quedas d'água) ----------------
+  {
+    const A = ILHA.a - 0.75;
+    const B = ILHA.b - 0.75;
+    const pts: Ponto[] = [];
+    for (let i = 0; i < 900; i++) {
+      const t = (i / 900) * Math.PI * 2;
+      const c = Math.cos(t);
+      const s = Math.sin(t);
+      pts.push({
+        x: A * Math.sign(c) * Math.pow(Math.abs(c), 2 / ILHA.n),
+        z: B * Math.sign(s) * Math.pow(Math.abs(s), 2 / ILHA.n),
+      });
+    }
+    const aberto = (p: Ponto) =>
+      (Math.abs(p.z) < 2.6 && Math.abs(p.x) > 20) ||
+      (Math.abs(p.x) < 3.6 && p.z > 0) ||
+      (Math.abs(p.x) < 7 && p.z < 0) ||
+      [PONTE_FAZENDAS, PONTE_EM_BREVE].some(
+        (e) => distLinha(p.x, p.z, [e.pe, e.topo]) < e.meia + 1.6,
+      ) ||
+      distLinha(p.x, p.z, RIO) < MEIA_RIO + 1 ||
+      distLinha(p.x, p.z, RIACHO) < MEIA_RIACHO + 1.2;
+    let andou = 0;
+    let ult: Ponto | null = null;
+    let postes = 0;
+    for (const p of pts) {
+      if (!ult) {
+        ult = p;
+        continue;
+      }
+      andou += Math.hypot(p.x - ult.x, p.z - ult.z);
+      if (andou < 0.8) continue;
+      andou = 0;
+      const m = { x: (p.x + ult.x) / 2, z: (p.z + ult.z) / 2 };
+      const comp = Math.hypot(p.x - ult.x, p.z - ult.z);
+      const giro = Math.atan2(p.x - ult.x, p.z - ult.z);
+      if (!aberto(m)) {
+        for (const y of [0.32, 0.64])
+          madeira.add(m.x, y, m.z, 0.08, 0.09, comp + 0.02, escolhe(MADEIRA), 0.04, giro);
+        if (postes++ % 2 === 0) madeira.base(p.x, 0, p.z, 0.16, 0.85, 0.16, escolhe(MADEIRA), 0.04);
+      }
+      ult = p;
+    }
+  }
+
+  // =====================================================================
+  // PRAÇA: fonte em três andares, canteiro florido, bancos e postes
+  // =====================================================================
+  {
+    const { x: fx, z: fz } = FONTE;
+    // canteiro de flores em volta da fonte (aberto nos quatro caminhos)
+    for (let k = 0; k < 64; k++) {
+      const a = (k / 64) * Math.PI * 2;
+      if (Math.abs(Math.sin(a * 2)) < 0.22) continue;
+      for (const raio of [4.85, 5.55]) {
+        const x = fx + Math.cos(a) * raio;
+        const z = fz + Math.sin(a) * raio;
+        folhas.base(x, 0, z, 0.62, 0.42 + r() * 0.12, 0.62, escolhe(GRAMA_ESCURA), 0.06, -a);
+        if (r() < 0.75)
+          folhas.base(
+            x + (r() - 0.5) * 0.3,
+            0.46,
+            z + (r() - 0.5) * 0.3,
+            0.16,
+            0.14,
+            0.16,
+            escolhe(FLORES),
+            0.02,
+          );
+      }
+      pedra.base(
+        fx + Math.cos(a) * 6.0,
+        0,
+        fz + Math.sin(a) * 6.0,
+        0.24,
+        0.22,
+        0.62,
+        0xd4c8b0,
+        0.03,
         -a,
       );
     }
-  };
-  const gRejunte = new THREE.RingGeometry(ANEL.dentro - 0.3, ANEL.fora + 0.35, 72);
-  gRejunte.rotateX(-Math.PI / 2);
-  const mRejunte = new THREE.MeshStandardMaterial({ color: REJUNTE, roughness: 1 });
-  const rejunte = new THREE.Mesh(gRejunte, mRejunte);
-  rejunte.position.set(FONTE.x, 0.012, FONTE.z);
-  rejunte.receiveShadow = true;
-  grupo.add(rejunte);
-  lixo.push(gRejunte, mRejunte);
-  const FAIXA = (ANEL.fora - ANEL.dentro) / 5;
-  for (let k = 0; k < 5; k++) {
-    const raio = ANEL.dentro + FAIXA * (k + 0.5);
-    roda(
-      piso3d,
-      FONTE.x,
-      FONTE.z,
-      raio,
-      Math.round((Math.PI * 2 * raio) / 0.98),
-      0.012,
-      FAIXA - 0.04,
-      0.045,
-      PAVE,
-      k * 0.37,
-    );
-  }
-  // meio-fio de fora (aberto onde os 4 caminhos chegam) e de dentro, em volta do canteiro
-  const naEntrada = (a: number) =>
-    Math.min(Math.abs(Math.sin(a)), Math.abs(Math.cos(a))) * (ANEL.fora + 0.2) < 1.7;
-  roda(
-    piso3d,
-    FONTE.x,
-    FONTE.z,
-    ANEL.fora + 0.2,
-    56,
-    0,
-    0.36,
-    0.13,
-    [MEIO_FIO, 0xa99d87],
-    0,
-    0.04,
-    naEntrada,
-  );
-  roda(piso3d, FONTE.x, FONTE.z, ANEL.dentro - 0.14, 36, 0, 0.26, 0.2, [MEIO_FIO, 0xbdb19c]);
-
-  // ---------------- caminhos: tijolos de pedra em fiadas desencontradas, com meio-fio ----------------
-  for (let x = -24; x <= 24; x++) {
-    for (let z = -16; z <= 16; z++) {
-      if (!calcado(x, z)) continue;
-      for (let h = 0; h < 2; h++) {
-        const zc = z - 0.25 + h * 0.5;
-        const tijolo = (cx: number, largo: number) =>
-          piso3d.base(cx, 0, zc, largo - 0.04, 0.045, 0.46, escolhe(PAVE), 0.035);
-        if (((z * 2 + h) & 1) === 0) tijolo(x, 1);
-        else {
-          if (calcado(x + 1, z)) tijolo(x + 0.5, 1);
-          else tijolo(x + 0.25, 0.5);
-          if (!calcado(x - 1, z)) tijolo(x - 0.25, 0.5);
-        }
-      }
-      for (const [dx, dz] of VIZINHOS) {
-        const nx = x + dx;
-        const nz = z + dz;
-        if (!dentroDaIlha(nx, nz) || naAgua(nx, nz) || noMorro(nx, nz) || piso(nx, nz) !== "grama")
-          continue;
-        piso3d.base(
-          x + dx * 0.56,
-          0,
-          z + dz * 0.56,
-          dx ? 0.16 : 1,
-          0.11,
-          dz ? 0.16 : 1,
-          r() < 0.5 ? MEIO_FIO : 0xa99d87,
-          0.03,
-        );
-      }
-    }
-  }
-
-  // ---------------- fonte em três níveis ----------------
-  const FX = FONTE.x;
-  const FZ = FONTE.z;
-  /** Bloco "oitavado": duas caixas iguais, uma girada 45°. */
-  const oitavado = (y0: number, lado: number, alto: number, cor: number) => {
-    pedra.base(FX, y0, FZ, lado, alto, lado, cor, 0.03);
-    pedra.base(FX, y0, FZ, lado, alto, lado, cor, 0.03, Math.PI / 4);
-  };
-  roda(pedra, FX, FZ, 3.2, 24, 0, 0.5, 0.2, [0xc9bea9, 0xbfb49e]);
-  roda(pedra, FX, FZ, 2.78, 20, 0.02, 0.5, 0.6, PEDRA_CLARA, 0.15);
-  roda(pedra, FX, FZ, 2.78, 20, 0.62, 0.64, 0.13, [0xf0e9db, 0xe6dece], 0);
-  oitavado(0.05, 1.15, 0.62, PEDRA_CLARA[1]);
-  oitavado(0.67, 0.62, 0.86, PEDRA_CLARA[0]);
-  oitavado(1.5, 1.86, 0.12, PEDRA_CLARA[1]);
-  roda(pedra, FX, FZ, 0.98, 10, 1.6, 0.34, 0.26, PEDRA_CLARA, 0.2, 0.02);
-  oitavado(1.6, 0.44, 0.78, PEDRA_CLARA[0]);
-  oitavado(2.36, 1.02, 0.1, PEDRA_CLARA[1]);
-  roda(pedra, FX, FZ, 0.52, 8, 2.44, 0.22, 0.2, PEDRA_CLARA, 0, 0.02);
-  oitavado(2.44, 0.24, 0.5, PEDRA_CLARA[2]);
-  sombras.push({ x: FX, z: FZ, rx: 4.1, rz: 4.1 });
-
-  // canteiros em arco em volta da fonte: terra, cerca viva e flores (abertos nos 4 eixos)
-  for (let g = 0; g < 360; g += 9) {
-    if (g % 90 < 16 || g % 90 > 74) continue;
-    const a = (g * Math.PI) / 180;
-    const x = FX + Math.cos(a) * 3.82;
-    const z = FZ + Math.sin(a) * 3.82;
-    encosta.base(x, 0, z, 0.66, 0.12, 0.62, 0x5d3f27, 0.05, -a);
-    folhas.base(x, 0.1, z, 0.56, 0.36 + ((g / 9) % 2) * 0.12, 0.6, escolhe(GRAMA_ESCURA), 0.06, -a);
-    for (let n = 0; n < 2; n++)
-      folhas.base(
-        x + (r() - 0.5) * 0.4,
-        0.5 + ((g / 9) % 2) * 0.1,
-        z + (r() - 0.5) * 0.4,
-        0.15,
-        0.14,
-        0.15,
-        escolhe(FLORES),
-        0,
-      );
-  }
-
-  // ---------------- bancos de madeira com pés de ferro ----------------
-  for (const bc of BANCOS) {
-    // o balanço do letreiro tem o seu próprio banco (lá embaixo, junto do letreiro)
-    if (bc.balanco) continue;
-    const peca = (
-      b: Blocos,
-      lx: number,
-      y: number,
-      lz: number,
-      sx: number,
-      sy: number,
-      sz: number,
-      cor: number,
-    ) =>
-      b.add(
-        bc.x + lx * Math.cos(bc.ang) + lz * Math.sin(bc.ang),
-        y,
-        bc.z - lx * Math.sin(bc.ang) + lz * Math.cos(bc.ang),
-        sx,
-        sy,
-        sz,
-        cor,
-        0.05,
-        bc.ang,
-      );
-    for (let i = -1; i <= 1; i++)
-      peca(madeira, 0, ASSENTO - 0.04, i * 0.17 + 0.02, 1.36, 0.07, 0.15, escolhe(MADEIRA));
-    peca(madeira, 0, 0.67, -0.27, 1.36, 0.13, 0.07, escolhe(MADEIRA));
-    peca(madeira, 0, 0.87, -0.29, 1.36, 0.13, 0.07, escolhe(MADEIRA));
-    for (const lado of [-1, 1]) {
-      peca(madeira, lado * 0.6, 0.2, 0.2, 0.08, 0.4, 0.08, FERRO);
-      peca(madeira, lado * 0.6, 0.48, -0.28, 0.08, 0.96, 0.08, FERRO);
-      peca(madeira, lado * 0.6, 0.62, -0.03, 0.08, 0.06, 0.52, FERRO);
-    }
-    sombras.push({ x: bc.x, z: bc.z, rx: 1.05, rz: 0.62, giro: bc.ang });
-  }
-
-  // ---------------- luminárias: base de pedra, haste de ferro e lanterna acesa ----------------
-  for (const p of POSTES) {
-    pedra.base(p.x, 0, p.z, 0.42, 0.16, 0.42, 0x9a917f, 0.04);
-    madeira.base(p.x, 0.16, p.z, 0.22, 0.3, 0.22, FERRO, 0.03);
-    madeira.base(p.x, 0.46, p.z, 0.12, 2.1, 0.12, FERRO, 0.03);
-    madeira.base(p.x, 2.56, p.z, 0.34, 0.08, 0.34, FERRO, 0.03);
-    aceso.base(p.x, 2.64, p.z, 0.3, 0.42, 0.3, 0xffd98a, 0);
-    for (const i of [-1, 1])
-      for (const j of [-1, 1])
-        madeira.base(p.x + i * 0.18, 2.64, p.z + j * 0.18, 0.05, 0.42, 0.05, FERRO, 0);
-    madeira.base(p.x, 3.06, p.z, 0.52, 0.08, 0.52, FERRO, 0.03);
-    madeira.base(p.x, 3.14, p.z, 0.3, 0.1, 0.3, FERRO, 0.03);
-    madeira.base(p.x, 3.24, p.z, 0.1, 0.14, 0.1, FERRO, 0.03);
-    sombras.push({ x: p.x, z: p.z, rx: 0.5, rz: 0.5 });
-    clarao.push({ x: p.x, z: p.z, rx: 2.7, rz: 2.7 });
-    lampadas.push([p.x, 2.86, p.z]);
-  }
-
-  // ---------------- coreto: colunas de pedra, degrau em volta e telhado de telhas terracota ----------------
-  for (const p of PILARES) {
-    pedra.base(p.x, 0, p.z, 0.82, 0.28, 0.82, PEDRA_CLARA[1], 0.03);
-    pedra.base(p.x, 0.28, p.z, 0.5, 1.3, 0.5, PEDRA_CLARA[0], 0.03);
-    pedra.base(p.x, 1.58, p.z, 0.5, 1.22, 0.5, PEDRA_CLARA[2], 0.03);
-    pedra.base(p.x, 2.8, p.z, 0.76, 0.24, 0.76, PEDRA_CLARA[1], 0.03);
-    sombras.push({ x: p.x, z: p.z, rx: 0.8, rz: 0.8 });
-  }
-  for (const lado of [-1, 1]) {
-    // degrau de pedra em volta do piso e vigas de madeira em cima das colunas
-    for (let i = -3; i <= 3; i++) {
+    // bacia: borda de pedra em dois degraus, espelho d'água, coluna central e duas taças
+    for (let k = 0; k < 40; k++) {
+      const a = (k / 40) * Math.PI * 2;
       pedra.base(
-        CORETO.x + i,
+        fx + Math.cos(a) * 4.15,
         0,
-        CORETO.z + lado * 3.3,
-        0.96,
-        0.1,
-        0.5,
+        fz + Math.sin(a) * 4.15,
+        0.62,
+        0.68,
+        0.7,
         escolhe(PEDRA_CLARA),
         0.03,
+        -a,
       );
       pedra.base(
-        CORETO.x + lado * 3.3,
+        fx + Math.cos(a) * 4.15,
+        0.68,
+        fz + Math.sin(a) * 4.15,
+        0.78,
+        0.12,
+        0.74,
+        0xf0e9db,
+        0.02,
+        -a,
+      );
+      pedra.base(
+        fx + Math.cos(a) * 4.62,
         0,
-        CORETO.z + i,
-        0.5,
-        0.1,
-        0.96,
+        fz + Math.sin(a) * 4.62,
+        0.4,
+        0.3,
+        0.66,
         escolhe(PEDRA_CLARA),
         0.03,
+        -a,
       );
     }
-    madeira.base(CORETO.x, 3.04, CORETO.z + lado * 2.4, 5.7, 0.26, 0.34, MADEIRA_ESCURA, 0.04);
-    madeira.base(CORETO.x + lado * 2.4, 3.04, CORETO.z, 0.34, 0.26, 5.7, MADEIRA_ESCURA, 0.04);
-  }
-  [6.9, 5.9, 4.9, 3.9, 2.9, 1.9, 0.9].forEach((lado, k) => {
-    const y = 3.3 + k * 0.32;
-    if (lado < 1.2) {
-      madeira.base(CORETO.x, y, CORETO.z, lado, 0.32, lado, TELHA[0], 0.04);
-      return;
-    }
-    madeira.base(CORETO.x, y, CORETO.z, lado - 1.1, 0.32, lado - 1.1, TELHA[1], 0.03);
-    // a beirada de cada camada é feita de telhas separadas (os cantos ficam com as fileiras da frente e de trás)
-    const n = Math.max(1, Math.round(lado / 0.86));
-    for (let i = 0; i < n; i++)
-      for (const s of [-1, 1])
-        madeira.base(
-          CORETO.x + ((i + 0.5) / n - 0.5) * lado,
-          y,
-          CORETO.z + s * (lado / 2 - 0.26),
-          lado / n - 0.03,
-          0.32,
-          0.52,
-          escolhe(TELHA),
-          0.04,
-        );
-    const resto = lado - 1.04;
-    const n2 = Math.max(1, Math.round(resto / 0.86));
-    for (let i = 0; i < n2; i++)
-      for (const s of [-1, 1])
-        madeira.base(
-          CORETO.x + s * (lado / 2 - 0.26),
-          y,
-          CORETO.z + ((i + 0.5) / n2 - 0.5) * resto,
-          0.52,
-          0.32,
-          resto / n2 - 0.03,
-          escolhe(TELHA),
-          0.04,
-        );
-  });
-  madeira.base(CORETO.x, 5.54, CORETO.z, 0.34, 0.5, 0.34, 0xd9b27a, 0.02);
-  madeira.base(CORETO.x, 6.04, CORETO.z, 0.16, 0.22, 0.16, 0xe8c98f, 0.02);
-  sombras.push({ x: CORETO.x, z: CORETO.z, rx: 4.6, rz: 4.6 });
-
-  // ---------------- pérgolas com trepadeira, sobre os bancos das áreas de descanso ----------------
-  for (const pg of PERGOLAS) {
-    for (const p of postesDaPergola(pg)) {
-      madeira.base(p.x, 0, p.z, 0.3, 0.14, 0.3, MADEIRA_ESCURA, 0.04);
-      madeira.base(p.x, 0.14, p.z, 0.18, 2.3, 0.18, escolhe(MADEIRA), 0.05);
-      sombras.push({ x: p.x, z: p.z, rx: 0.42, rz: 0.42 });
-      // trepadeira subindo pelo poste
-      for (let n = 0; n < 4; n++)
-        folhas.add(
-          p.x + (r() - 0.5) * 0.2,
-          0.5 + n * 0.5 + r() * 0.2,
-          p.z + (r() - 0.5) * 0.2,
-          0.3,
-          0.26,
-          0.3,
-          escolhe(GRAMA_ESCURA),
-          0.07,
-          r(),
-        );
-    }
-    const cz = (pg.z0 + pg.z1) / 2;
-    const cx = (pg.x0 + pg.x1) / 2;
-    for (const x of [pg.x0, pg.x1])
-      madeira.base(x, 2.44, cz, 0.2, 0.2, pg.z1 - pg.z0 + 0.7, MADEIRA_ESCURA, 0.04);
-    const ripas = Math.round((pg.z1 - pg.z0 + 0.5) / 0.48);
-    for (let i = 0; i <= ripas; i++) {
-      const z = pg.z0 - 0.25 + (i / ripas) * (pg.z1 - pg.z0 + 0.5);
-      madeira.base(cx, 2.64, z, pg.x1 - pg.x0 + 0.7, 0.1, 0.12, escolhe(MADEIRA), 0.05);
-      for (let n = 0; n < 3; n++) {
-        if (r() < 0.45) continue;
-        const x = pg.x0 + r() * (pg.x1 - pg.x0);
-        folhas.base(
-          x,
-          2.72,
-          z,
-          0.5,
-          0.2,
-          0.44,
-          escolhe(r() < 0.75 ? GRAMA_ESCURA : GRAMA),
-          0.07,
-          r(),
-        );
-        if (r() < 0.4)
-          folhas.base(
-            x + (r() - 0.5) * 0.3,
-            2.9,
-            z,
-            0.14,
-            0.12,
-            0.14,
-            r() < 0.5 ? 0xff8fc8 : 0xffffff,
-            0,
-          );
-        if (r() < 0.25)
-          folhas.add(x, 2.5 - r() * 0.3, z, 0.12, 0.4 + r() * 0.4, 0.12, GRAMA_ESCURA[0], 0.05);
-      }
-    }
-  }
-
-  // ---------------- ponte de pedra em arco (o tabuleiro fica no nível do chão, para dar para andar) ----------------
-  const xPonte = molhados
-    .filter((_, i) => i % 2 === 0 && molhados[i + 1] === PONTE.z)
-    .sort((a, b) => a - b);
-  const x0P = (xPonte[0] ?? 15) - 1;
-  const x1P = (xPonte[xPonte.length - 1] ?? 18) + 1;
-  for (let x = x0P; x <= x1P; x++) {
-    const meio = 1 - Math.abs((x - (x0P + x1P) / 2) / ((x1P - x0P) / 2)); // 0 nas pontas, 1 no meio
-    const molhado = x > x0P && x < x1P;
-    for (let z = -1; z <= 1; z++)
-      if (naAgua(x, PONTE.z + z))
-        for (const dz of [-0.25, 0.25])
-          pedra.base(x, -0.3, PONTE.z + z + dz, 0.97, 0.345, 0.47, escolhe(PAVE), 0.035);
-    for (const s of [-1, 1]) {
-      const z = PONTE.z + s * 1.62;
-      // mureta que sobe no meio, com capa clara, e as pedras do arco por baixo
-      const alto = 0.42 + Math.round(meio * 3) * 0.12;
-      pedra.base(x, 0, z, 0.98, alto, 0.3, escolhe(PEDRA_CLARA), 0.035);
-      pedra.base(x, alto, z, 1.03, 0.1, 0.4, 0xf0e9db, 0.03);
-      if (molhado)
+    pedra.base(fx, 0, fz, 1.5, 1.4, 1.5, escolhe(PEDRA_CLARA), 0.03);
+    pedra.base(fx, 1.4, fz, 0.8, 1.1, 0.8, 0xece4d5, 0.02);
+    for (const [y, raio] of [
+      [1.55, 1.75],
+      [2.62, 1.0],
+    ] as const)
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * Math.PI * 2;
         pedra.base(
-          x,
-          -0.36 - (1 - meio) * 0.6,
-          z,
-          0.98,
-          0.36 + (1 - meio) * 0.6,
-          0.3,
-          escolhe(PEDRA_CLARA),
-          0.035,
+          fx + Math.cos(a) * raio,
+          y,
+          fz + Math.sin(a) * raio,
+          0.46,
+          0.34,
+          (Math.PI * 2 * raio) / 18 + 0.04,
+          0xf3ecdf,
+          0.02,
+          -a,
         );
-      if (x === x0P || x === x1P) {
-        pedra.base(x + (x === x0P ? -0.3 : 0.3), 0, z, 0.46, 0.92, 0.46, PEDRA_CLARA[1], 0.03);
-        pedra.base(x + (x === x0P ? -0.3 : 0.3), 0.92, z, 0.56, 0.12, 0.56, 0xf0e9db, 0.03);
       }
+    pedra.base(fx, 2.5, fz, 0.45, 0.85, 0.45, 0xece4d5, 0.02);
+    pedra.base(fx, 3.35, fz, 0.3, 0.22, 0.3, 0xf3ecdf, 0.02);
+    sombras.push({ x: fx, z: fz, rx: 5.2, rz: 5.2 });
+    for (const b of BANCOS)
+      if (!b.trabalho && Math.hypot(b.x - CORETO.x, b.z - CORETO.z) > 2) banco(b.x, b.z, b.ang);
+    for (const p of POSTES) poste(p.x, p.z);
+    // vasos com flores nas entradas da praça
+    for (const [x, z] of [
+      [-2.7, -11.9],
+      [2.7, -11.9],
+      [-2.7, 11.9],
+      [2.7, 11.9],
+      [-11.9, -2.7],
+      [-11.9, 2.7],
+      [11.9, -2.7],
+      [11.9, 2.7],
+    ] as const) {
+      pedra.base(x, 0, z, 0.62, 0.5, 0.62, escolhe(PEDRA_CLARA), 0.03);
+      folhas.base(x, 0.5, z, 0.72, 0.42, 0.72, escolhe(GRAMA_ESCURA), 0.06);
+      for (let k = 0; k < 4; k++)
+        folhas.base(
+          x + (r() - 0.5) * 0.5,
+          0.88,
+          z + (r() - 0.5) * 0.5,
+          0.17,
+          0.15,
+          0.17,
+          escolhe(FLORES),
+          0,
+        );
     }
   }
 
-  // ---------------- água: rio, quedas, poça do morro, riacho e os espelhos da fonte ----------------
+  // ---------------- árvores, arbustos e pedras ----------------
+  for (const a of ARVORES) {
+    arvore(folhas, a.x, a.z, { tipo: a.tipo, ...(a.cor ? { cor: a.cor } : {}) }, madeira);
+    const raio = a.tipo === "copinha" ? 1.0 : 1.35;
+    sombras.push({ x: a.x, z: a.z, rx: raio, rz: raio });
+  }
+  {
+    // canteiros floridos espelhados ao longo dos caminhos e da beirada
+    const metade: [number, number, number][] = [
+      [-5.8, 14.4, 0xff5a5a],
+      [-5.4, 17.2, 0xffffff],
+      [-9.6, 18.4, 0xffd84a],
+      [-14.8, 2.8, 0xff8fc8],
+      [-24.6, 3.0, 0xffffff],
+      [-24.8, -3.2, 0xff5a5a],
+      [-14.6, -2.8, 0xffd84a],
+      [-4.6, -14.0, 0xff8fc8],
+      [-10.4, -19.4, 0xffffff],
+      [-26.6, -10.8, 0xffd84a],
+      [-20.8, 18.8, 0xff5a5a],
+    ];
+    for (const [x, z, flor] of metade)
+      for (const l of [-1, 1]) {
+        const px = x * l;
+        if (naAgua(px, z, 0.8) || piso(px, z) !== "grama") continue;
+        arbusto(folhas, px, z, 1, { flor });
+        arbusto(folhas, px + 0.7, z + 0.4, 0.75, { flor });
+      }
+    for (const [x, z] of [
+      [-28.2, 1.2],
+      [-9.2, -21.0],
+      [-25.6, 14.6],
+      [-3.8, 21.2],
+    ] as const)
+      for (const l of [-1, 1]) if (!naAgua(x * l, z, 1)) pedregulho(pedra, x * l, z, 0.9);
+  }
+
+  // =====================================================================
+  // ÁGUA: rio da direita, nascente, laguinho da esquerda, riacho e as cachoeiras
+  // =====================================================================
   const tAgua = texturaAgua(THREE);
   const tParada = texturaAgua(THREE, 5);
   const tQueda = texturaQueda(THREE);
+  for (const t of [tAgua, tParada, tQueda]) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   const mAgua = acabamento(
     new THREE.MeshStandardMaterial({
       map: tAgua,
-      roughness: 0.16,
+      color: 0x8fe0ff,
+      roughness: 0.12,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.9,
+      emissive: 0x0c4f86,
+      emissiveIntensity: 0.25,
     }),
     { nevoa: NEVOA },
   );
   const mParada = new THREE.MeshStandardMaterial({
     map: tParada,
-    roughness: 0.12,
+    color: 0x9fe6ff,
+    roughness: 0.1,
     transparent: true,
-    opacity: 0.9,
+    opacity: 0.92,
+    emissive: 0x0c4f86,
+    emissiveIntensity: 0.22,
   });
   const mQueda = acabamento(
     new THREE.MeshStandardMaterial({
       map: tQueda,
+      color: 0xd8f4ff,
       roughness: 0.3,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.92,
       side: THREE.DoubleSide,
+      emissive: 0x2a7cc0,
+      emissiveIntensity: 0.25,
     }),
     { nevoa: NEVOA },
   );
   lixo.push(tAgua, tParada, tQueda, mAgua, mParada, mQueda);
-  /** Junta retângulos (4 cantos em ordem + trecho da textura) numa malha só. */
-  const lamina = (m: TH.Material) => {
-    const pos: number[] = [];
-    const uv: number[] = [];
-    const idx: number[] = [];
-    return {
-      quadro(c: number[][], u0: number, v0: number, u1: number, v1: number) {
-        const n = pos.length / 3;
-        for (const p of c) pos.push(p[0]!, p[1]!, p[2]!);
-        uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
-        idx.push(n, n + 1, n + 2, n, n + 2, n + 3);
-      },
-      montar() {
-        const g = new THREE.BufferGeometry();
-        g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-        g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-        g.setIndex(idx);
-        g.computeVertexNormals();
-        const malha = new THREE.Mesh(g, m);
-        malha.receiveShadow = true;
-        grupo.add(malha);
-        lixo.push(g);
-      },
+  {
+    for (const g of [
+      faixaDeAgua(THREE, RIO, MEIA_RIO + 0.15, -0.2),
+      faixaDeAgua(THREE, RIACHO, MEIA_RIACHO + 0.15, -0.2),
+    ]) {
+      const m = new THREE.Mesh(g, mAgua);
+      m.receiveShadow = true;
+      grupo.add(m);
+      lixo.push(g);
+    }
+    // espelhos d'água: nascente, laguinho e a bacia da fonte
+    for (const [x, z, raio, y] of [
+      [NASCENTE.x, NASCENTE.z, NASCENTE.r + 0.2, -0.2],
+      [LAGO.x, LAGO.z, LAGO.r + 0.2, -0.2],
+      [FONTE.x, FONTE.z, 3.85, 0.5],
+    ] as const) {
+      const g = new THREE.CircleGeometry(raio, 40);
+      g.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(g, mParada);
+      m.position.set(x, y, z);
+      grupo.add(m);
+      lixo.push(g);
+    }
+    // pedras das margens do rio e do riacho
+    const margem = (linha: readonly Ponto[], meia: number) => {
+      for (let i = 1; i < linha.length; i++) {
+        const a = linha[i - 1]!;
+        const b = linha[i]!;
+        const comp = Math.hypot(b.x - a.x, b.z - a.z);
+        const nx = -(b.z - a.z) / comp;
+        const nz = (b.x - a.x) / comp;
+        for (let t = 0; t < comp; t += 0.75)
+          for (const l of [-1, 1]) {
+            const x = a.x + ((b.x - a.x) * t) / comp + nx * l * (meia + 0.25);
+            const z = a.z + ((b.z - a.z) * t) / comp + nz * l * (meia + 0.25);
+            if (!dentroDaIlha(x, z, 0.6) || piso(x, z) === "caminho") continue;
+            pedra.base(x, -0.1, z, 0.66, 0.3 + r() * 0.12, 0.66, escolhe(ROCHA), 0.06, r());
+          }
+      }
     };
-  };
-  const rio = lamina(mAgua);
-  const quedas = lamina(mQueda);
-  const parada = lamina(mParada);
-  /** Lâmina deitada entre (x0, z0) e (x1, z1), na altura y. */
-  const deitada = (
-    l: ReturnType<typeof lamina>,
-    x0: number,
-    z0: number,
-    x1: number,
-    z1: number,
-    y: number,
-    k = 0.25,
-  ) =>
-    l.quadro(
-      [
-        [x0, y, z1],
-        [x1, y, z1],
-        [x1, y, z0],
-        [x0, y, z0],
-      ],
-      x0 * k,
-      -z1 * k,
-      x1 * k,
-      -z0 * k,
-    );
-  /** Queda em pé de y0 até y1, de (xa, za) a (xb, zb). */
-  const empe = (xa: number, za: number, xb: number, zb: number, y0: number, y1: number) =>
-    quedas.quadro(
-      [
-        [xa, y0, za],
-        [xb, y0, zb],
-        [xb, y1, zb],
-        [xa, y1, za],
-      ],
-      xa * 0.5 + za * 0.3,
-      y0 * 0.25,
-      xa * 0.5 + za * 0.3 + Math.hypot(xb - xa, zb - za) * 0.5,
-      y1 * 0.25,
-    );
-  const NIVEL = -0.3;
-  for (let i = 0; i < molhados.length; i += 2) {
-    const x = molhados[i]!;
-    const z = molhados[i + 1]!;
-    deitada(rio, x - 0.5, z - 0.5, x + 0.5, z + 0.5, NIVEL);
-    // o rio despenca da borda da frente da ilha
-    if (!dentroDaIlha(x, z + 1)) empe(x - 0.5, z + 0.52, x + 0.5, z + 0.52, -16, NIVEL);
-  }
-  // cachoeira do morro: desce o canal em degraus e cai na poça
-  const [c0, c1] = CANAL;
-  for (let z = Math.ceil(MORRO.z1 - 6); z < MORRO.z1; z++) {
-    if (!dentroDaIlha(c0, z) || !noMorro(c0, z)) continue;
-    const h = degrauDoCanal(z);
-    const frente = alturaMorro(c0, z + 1);
-    deitada(rio, c0 - 0.5, z - 0.5, c1 + 0.5, z + 0.5, h + 0.03);
-    if (frente < h)
-      empe(c0 - 0.5, z + 0.52, c1 + 0.5, z + 0.52, frente > 0 ? frente + 0.03 : 0.06, h + 0.03);
-  }
-  deitada(rio, POCA.x - 1.35, MORRO.z1, POCA.x + 1.6, POCA.z + 1.15, 0.06);
-  // riacho que leva a água da poça até o rio, com uma laje de pedra para atravessar
-  const xBeira = xRio(Math.round(POCA.z)) + RIO.meia;
-  deitada(rio, Math.floor(xBeira + 0.5) - 0.5, POCA.z - 0.45, POCA.x - 1.3, POCA.z + 0.45, 0.05);
-  pedra.base((xBeira + POCA.x - 1.3) / 2 + 0.1, 0, POCA.z, 1.1, 0.1, 1.7, PEDRA_CLARA[1], 0.03);
-  for (let g = 20; g < 340; g += 32) {
-    const a = (g * Math.PI) / 180 + Math.PI / 2;
-    if (Math.sin(a) < -0.5) continue; // atrás fica a parede do morro
-    pedra.base(
-      POCA.x + Math.cos(a) * 1.5,
-      0,
-      POCA.z + Math.sin(a) * 1.25,
-      0.5 + r() * 0.3,
-      0.18 + r() * 0.2,
-      0.5 + r() * 0.2,
-      escolhe(ROCHA),
-      0.06,
-      r() * 3,
-    );
-  }
-  // espelhos d'água da fonte e os fios que escorrem de uma taça para a outra
-  const disco = (raio: number, y: number) => {
-    const g = new THREE.CircleGeometry(raio, 28);
-    g.rotateX(-Math.PI / 2);
-    const o = new THREE.Mesh(g, mParada);
-    o.position.set(FX, y, FZ);
-    o.receiveShadow = true;
-    grupo.add(o);
-    lixo.push(g);
-  };
-  disco(2.56, 0.5);
-  disco(0.86, 1.8);
-  disco(0.44, 2.58);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + 0.2;
-    const t = [Math.cos(a + Math.PI / 2) * 0.13, Math.sin(a + Math.PI / 2) * 0.13] as const;
-    const fio = (raio: number, y0: number, y1: number) =>
-      empe(
-        FX + Math.cos(a) * raio - t[0],
-        FZ + Math.sin(a) * raio - t[1],
-        FX + Math.cos(a) * raio + t[0],
-        FZ + Math.sin(a) * raio + t[1],
-        y0,
-        y1,
-      );
-    fio(1.18, 0.5, 1.84);
-    if (i % 2 === 0) fio(0.66, 1.8, 2.62);
-  }
-  rio.montar();
-  quedas.montar();
-  parada.montar();
-
-  // ---------------- vegetação: árvores de três cores, arbustos, flores, tufos e pedras ----------------
-  for (const a of ARVORES) {
-    arvore(
-      folhas,
-      a.x,
-      a.z,
-      {
-        tipo: a.tipo,
-        cor: a.cor ?? "verde",
-        u: a.tipo === "copinha" ? 0.66 + ruido(a.x, a.z) * 0.1 : 0.74 + ruido(a.x, a.z) * 0.14,
-      },
-      madeira,
-    );
-    sombras.push({ x: a.x, z: a.z, rx: 1.15, rz: 1.15 });
-    // um arbusto ou uma pedra ao pé de algumas árvores
-    const ang = ruido(a.z, a.x) * Math.PI * 2;
-    const px = a.x + Math.cos(ang) * 0.95;
-    const pz = a.z + Math.sin(ang) * 0.95;
-    if (
-      dentroDaIlha(px, pz, 1) &&
-      !naAgua(px, pz, 0.5) &&
-      piso(Math.round(px), Math.round(pz)) === "grama"
-    ) {
-      if (ruido(a.x * 2, a.z) < 0.6)
-        arbusto(folhas, px, pz, 0.75, ruido(a.x, a.z * 2) < 0.5 ? { flor: escolhe(FLORES) } : {});
-      else pedregulho(pedra, px, pz, 0.7);
-    }
-  }
-  for (const p of PEDRAS) {
-    pedregulho(pedra, p.x, p.z, 1);
-    sombras.push({ x: p.x + 0.1, z: p.z, rx: 1, rz: 0.85 });
-  }
-  // em cima do morro
-  const topoMorro = (x: number, z: number) => alturaMorro(Math.round(x), Math.round(z));
-  arvore(folhas, 21, -10.6, { tipo: "copinha", u: 0.62, y: topoMorro(21, -10.6) }, madeira);
-  arvore(folhas, 20.2, -12, { tipo: "pinheiro", u: 0.6, y: topoMorro(20.2, -12) }, madeira);
-  arvore(
-    folhas,
-    17,
-    -11.8,
-    { tipo: "copinha", cor: "amarelo", u: 0.52, y: topoMorro(17, -11.8) },
-    madeira,
-  );
-  arbusto(folhas, 21.6, -9.2, 0.7, { y: topoMorro(21.6, -9.2) });
-  arbusto(folhas, 20, -9, 0.6, { y: topoMorro(20, -9), flor: 0xffffff });
-
-  const flor = (x: number, z: number, y = 0) => {
-    folhas.base(x, y, z, 0.06, 0.24, 0.06, GRAMA_ESCURA[0], 0);
-    folhas.base(x, y + 0.24, z, 0.2, 0.15, 0.2, escolhe(FLORES), 0);
-  };
-  const tufo = (x: number, z: number, y = 0) => {
-    for (let n = 0; n < 3; n++)
-      folhas.base(
-        x + (r() - 0.5) * 0.22,
-        y,
-        z + (r() - 0.5) * 0.22,
-        0.07,
-        0.14 + r() * 0.16,
-        0.07,
-        escolhe(r() < 0.5 ? GRAMA_ESCURA : GRAMA),
-        0.05,
-        r(),
-      );
-  };
-  const gramado = (x: number, z: number) =>
-    dentroDaIlha(x, z, 1.1) &&
-    !naAgua(x, z, 0.75) &&
-    !noMorro(x, z) &&
-    piso(Math.round(x), Math.round(z)) === "grama" &&
-    Math.hypot(x - FX, z - FZ) > ANEL.fora + 0.7 &&
-    Math.hypot(x - POCA.x, z - POCA.z) > 2.2;
-  for (let n = 0; n < 520; n++) {
-    const x = (r() - 0.5) * 46;
-    const z = (r() - 0.5) * 30;
-    if (!gramado(x, z)) continue;
-    if (n % 3 === 0) flor(x, z);
-    else tufo(x, z);
-  }
-  // faixa da beirada da ilha (onde ninguém pisa): arbustos, pedras e flores
-  const naBorda = (g: number, folga: number): [number, number] => {
-    const a = (g * Math.PI) / 180;
-    const e = 2 / ILHA.n;
-    return [
-      Math.sign(Math.cos(a)) * Math.pow(Math.abs(Math.cos(a)), e) * (ILHA.a - folga),
-      Math.sign(Math.sin(a)) * Math.pow(Math.abs(Math.sin(a)), e) * (ILHA.b - folga),
-    ];
-  };
-  const livreNaBorda = (x: number, z: number) =>
-    !naAgua(x, z, 1) &&
-    !noMorro(x + 0.6, z - 0.6) &&
-    piso(Math.round(x), Math.round(z)) === "grama";
-  for (let g = 0; g < 360; g += 3.2) {
-    const [x, z] = naBorda(g + r() * 2, 0.55 + r() * 0.35);
-    if (!livreNaBorda(x, z)) continue;
-    const sorte = r();
-    if (sorte < 0.2)
-      arbusto(folhas, x, z, 0.6 + r() * 0.35, r() < 0.4 ? { flor: escolhe(FLORES) } : {});
-    else if (sorte < 0.32) pedregulho(pedra, x, z, 0.55 + r() * 0.35);
-    else if (sorte < 0.6) tufo(x, z);
-    else if (sorte < 0.75) flor(x, z);
-  }
-
-  // ---------------- cercas baixas de madeira acompanhando a beirada ----------------
-  for (const [g0, g1] of [
-    [97, 172],
-    [188, 252],
-    [10, 46],
-  ] as const) {
-    let antes: [number, number] | null = null;
-    for (let g = g0; g <= g1; g += 3.4) {
-      const p = naBorda(g, 0.5);
-      if (!livreNaBorda(p[0], p[1])) {
-        antes = null;
-        continue;
-      }
-      madeira.base(p[0], 0, p[1], 0.16, 0.78, 0.16, MADEIRA_ESCURA, 0.05);
-      madeira.base(p[0], 0.78, p[1], 0.22, 0.06, 0.22, MADEIRA[0], 0.05);
-      if (antes) {
-        const dx = p[0] - antes[0];
-        const dz = p[1] - antes[1];
-        for (const y of [0.3, 0.58])
-          madeira.add(
-            (p[0] + antes[0]) / 2,
-            y,
-            (p[1] + antes[1]) / 2,
-            Math.hypot(dx, dz),
-            0.09,
-            0.07,
-            escolhe(MADEIRA),
-            0.05,
-            -Math.atan2(dz, dx),
-          );
-      }
-      antes = p;
-    }
-  }
-
-  // ---------------- beira do rio: juncos, pedras na água e vitórias-régias ----------------
-  const brilhos: [number, number, number][] = [];
-  for (let i = 0; i < molhados.length; i += 2) {
-    const x = molhados[i]!;
-    const z = molhados[i + 1]!;
-    if (Math.abs(z - PONTE.z) <= 2) continue;
-    const beira = VIZINHOS.find(
-      ([dx, dz]) => dentroDaIlha(x + dx, z + dz) && !naAgua(x + dx, z + dz),
-    );
-    if (beira && r() < 0.3)
-      for (let n = 0; n < 3; n++)
-        folhas.base(
-          x + beira[0] * 0.36 + (r() - 0.5) * 0.3,
-          -0.5,
-          z + beira[1] * 0.36 + (r() - 0.5) * 0.3,
-          0.07,
-          0.75 + r() * 0.5,
-          0.07,
-          GRAMA_ESCURA[n % 2]!,
-          0.05,
-          r(),
-        );
-    else if (beira && r() < 0.22)
-      pedra.base(
-        x + beira[0] * 0.3,
-        -0.62,
-        z + beira[1] * 0.3,
-        0.5,
-        0.42 + r() * 0.2,
-        0.45,
-        escolhe(ROCHA),
-        0.06,
-        r() * 3,
-      );
-    else if (!beira && r() < 0.16) {
-      const px = x + (r() - 0.5) * 0.4;
-      const pz = z + (r() - 0.5) * 0.4;
-      folhas.base(px, NIVEL, pz, 0.5, 0.035, 0.5, 0x4fa63a, 0.05, Math.PI / 4 + r());
-      if (r() < 0.5)
-        folhas.base(
-          px + 0.08,
-          NIVEL + 0.035,
-          pz,
-          0.14,
-          0.1,
-          0.14,
-          r() < 0.5 ? 0xff9fd0 : 0xffffff,
-          0,
-        );
-    }
-    if (r() < 0.42) brilhos.push([x + (r() - 0.5) * 0.8, NIVEL + 0.04, z + (r() - 0.5) * 0.8]);
-  }
-  for (let n = 0; n < 12; n++) {
-    const a = r() * Math.PI * 2;
-    brilhos.push([
-      FX + Math.cos(a) * (0.9 + r() * 1.5),
-      0.54,
-      FZ + Math.sin(a) * (0.9 + r() * 1.5),
-    ]);
-  }
-  for (let n = 0; n < 5; n++)
-    brilhos.push([POCA.x + (r() - 0.5) * 2, 0.1, POCA.z + (r() - 0.3) * 1.2]);
-
-  // ---------------- gotas da fonte ----------------
-  const GOTAS = 48;
-  const gGota = new THREE.SphereGeometry(0.06, 6, 5);
-  const mGota = new THREE.MeshBasicMaterial({ color: 0xe6f6ff });
-  const gotas = new THREE.InstancedMesh(gGota, mGota, GOTAS);
-  gotas.frustumCulled = false;
-  grupo.add(gotas);
-  lixo.push(gGota, mGota);
-  const aux = new THREE.Object3D();
-
-  // ---------------- berçário: ilhota flutuante com o berço e o escorregador até o gramado ----------------
-  {
-    const { x: bx, y: by, z: bz } = BERCO;
-    const { meiaX, meiaZ } = DECK_DO_BERCO;
-    const BRANCO = 0xf4efe6;
-    const VERMELHO = 0xd8281f;
-    // ilhota: tampa de grama logo abaixo do deck e camadas de terra e rocha afinando para baixo
-    for (let k = 0; k <= 5; k++) {
-      const rx = meiaX + 0.9 - k * 0.75;
-      const rz = meiaZ + 0.9 - k * 0.6;
-      if (rx < 0.6 || rz < 0.6) break;
-      const topo = k === 0 ? by - 0.3 : by - 0.7 - (k - 1);
-      const alt = k === 0 ? 0.4 : 1;
-      for (let i = Math.floor(-rx); i <= Math.ceil(rx); i++)
-        for (let j = Math.floor(-rz); j <= Math.ceil(rz); j++) {
-          if (Math.pow(Math.abs(i) / rx, 2.6) + Math.pow(Math.abs(j) / rz, 2.6) > 1) continue;
-          encosta.base(
-            bx + i,
-            topo - alt,
-            bz + j,
-            1,
-            alt,
-            1,
-            escolhe(k === 0 ? GRAMA : k < 3 ? TERRA : ROCHA),
-            0.06,
-          );
-        }
-    }
-    // deck de tábuas
-    for (let i = 0; i < Math.round(meiaX * 4); i++)
-      madeira.base(
-        bx - meiaX + 0.25 + i * 0.5,
-        by - 0.22,
-        bz,
-        0.5,
-        0.22,
-        meiaZ * 2,
-        MADEIRA[i % 3] ?? MADEIRA[0],
-        0.05,
-      );
-
-    // berço: estrado branco, colchão azul-claro e um travesseiro em cada vaga
-    const cz = bz + 0.05;
-    const mx = 2.75;
-    const mz = 2.05;
-    pedra.base(bx, by, cz, mx * 2, 0.14, mz * 2, BRANCO, 0.02);
-    pedra.base(bx, by + 0.14, cz, mx * 2 - 0.3, 0.22, mz * 2 - 0.3, 0xcfe1f5, 0.02);
-    for (const v of VAGAS) pedra.base(v.x, v.y, v.z - 0.3, 0.62, 0.1, 0.3, 0xffffff, 0.015);
-    // grades: ripas brancas com um corrimão em cima (mais baixas na frente, para ver quem dorme; abertas no fundo, para o escorregador)
-    const ripa = (x: number, z: number, h: number) =>
-      pedra.base(x, by + 0.14, z, 0.08, h, 0.08, BRANCO, 0.02);
-    for (let x = -mx; x <= mx + 0.01; x += 0.5) {
-      ripa(bx + x, cz + mz, 0.42);
-      if (Math.abs(x) > 0.8) ripa(bx + x, cz - mz, 0.72);
-    }
-    for (let z = -mz + 0.5; z <= mz - 0.49; z += 0.5)
-      for (const l of [-1, 1]) ripa(bx + l * mx, cz + z, 0.72);
-    pedra.base(bx, by + 0.56, cz + mz, mx * 2 + 0.1, 0.08, 0.12, BRANCO, 0.02);
-    for (const l of [-1, 1]) {
-      pedra.base(bx + l * mx, by + 0.86, cz, 0.12, 0.08, mz * 2 + 0.1, BRANCO, 0.02);
-      pedra.base(
-        bx + l * (mx + 0.8) * 0.5 + l * 0.48,
-        by + 0.86,
-        cz - mz,
-        mx - 0.85,
-        0.08,
-        0.12,
-        BRANCO,
-        0.02,
-      );
-      // pés dos cantos, com um pomo vermelho
-      for (const f of [-1, 1]) {
-        pedra.base(bx + l * mx, by, cz + f * mz, 0.2, f > 0 ? 0.78 : 1.1, 0.2, BRANCO, 0.02);
+    margem(RIO, MEIA_RIO);
+    margem(RIACHO, MEIA_RIACHO);
+    for (const [x, z, raio] of [
+      [NASCENTE.x, NASCENTE.z, NASCENTE.r],
+      [LAGO.x, LAGO.z, LAGO.r],
+    ] as const)
+      for (let k = 0; k < 22; k++) {
+        const a = (k / 22) * Math.PI * 2;
         pedra.base(
-          bx + l * mx,
-          by + (f > 0 ? 0.78 : 1.1),
-          cz + f * mz,
-          0.28,
-          0.24,
-          0.28,
-          VERMELHO,
-          0.02,
+          x + Math.cos(a) * (raio + 0.25),
+          -0.1,
+          z + Math.sin(a) * (raio + 0.25),
+          0.7,
+          0.36,
+          0.6,
+          escolhe(ROCHA),
+          0.06,
+          -a,
         );
       }
-      // arco do móbile: um poste de cada lado
-      madeira.base(bx + l * (mx + 0.22), by, cz - 0.4, 0.14, 2.5, 0.14, MADEIRA_ESCURA, 0.03);
+    // vitórias-régias e flores na água
+    for (const [x, z] of [
+      [LAGO.x - 1.0, LAGO.z + 0.6],
+      [LAGO.x + 0.9, LAGO.z - 0.8],
+      [LAGO.x + 0.2, LAGO.z + 1.4],
+      [20.2, 4.6],
+      [22.1, 10.4],
+      [17.9, -4.4],
+    ] as const) {
+      folhas.base(x, -0.19, z, 0.5, 0.03, 0.5, 0x3fa34a, 0.04);
+      if (r() < 0.6) folhas.base(x + 0.1, -0.16, z, 0.12, 0.1, 0.12, 0xff8fc8, 0);
     }
-    // móbile: a travessa e as estrelas penduradas
-    madeira.base(bx, by + 2.5, cz - 0.4, mx * 2 + 0.6, 0.14, 0.14, MADEIRA_ESCURA, 0.03);
-    [-2, -1, 0, 1, 2].forEach((c, n) => {
-      const fio = 0.45 + (n % 2) * 0.3;
-      madeira.base(bx + c * 1.0, by + 2.5 - fio, cz - 0.4, 0.03, fio, 0.03, 0x3a3a3a, 0);
-      aceso.add(
-        bx + c * 1.0,
-        by + 2.5 - fio - 0.12,
-        cz - 0.4,
-        0.24,
-        0.24,
-        0.24,
-        n % 2 ? 0xffd84a : 0xfff1a8,
-        0,
-        Math.PI / 4,
+    // cachoeiras: a água cai da beirada e some nas nuvens lá embaixo
+    const queda = (
+      x: number,
+      z: number,
+      y: number,
+      largura: number,
+      altura: number,
+      giro: number,
+    ) => {
+      const g = new THREE.PlaneGeometry(largura, altura);
+      const m = new THREE.Mesh(g, mQueda);
+      m.position.set(x, y - altura / 2, z);
+      m.rotation.y = giro;
+      grupo.add(m);
+      lixo.push(g);
+      for (let k = 0; k < 10; k++)
+        brilhos.push([x + (r() - 0.5) * largura, y - r() * 3, z + (r() - 0.5) * 0.6]);
+    };
+    const fimRio = RIO[RIO.length - 1]!;
+    const fimRiacho = RIACHO[RIACHO.length - 1]!;
+    queda(fimRio.x, fimRio.z + 0.2, -0.15, MEIA_RIO * 2.1, 16, -0.3);
+    queda(fimRiacho.x, fimRiacho.z + 0.2, -0.15, MEIA_RIACHO * 2.3, 14, 0.25);
+    // as ilhas do Magnata e do Escritório também têm uma quedinha na ponta de fora
+    for (const ix of [ILHA_MAGNATA.x0 + 2.2, ILHA_ESCRITORIO.x1 - 2.2]) {
+      queda(ix, ILHA_MAGNATA.z1 + 0.05, -0.1, 1.4, 10, 0);
+      const gz = faixaDeAgua(
+        THREE,
+        [
+          { x: ix, z: 3.4 },
+          { x: ix, z: ILHA_MAGNATA.z1 + 0.05 },
+        ],
+        0.7,
+        0.04,
       );
-    });
-    // lanterna de cabeceira num canto do deck
-    madeira.base(bx - meiaX + 0.3, by, bz + meiaZ - 0.3, 0.14, 1.3, 0.14, FERRO, 0);
-    aceso.base(bx - meiaX + 0.3, by + 1.3, bz + meiaZ - 0.3, 0.3, 0.3, 0.3, 0xffe2a8, 0);
-
-    // escorregador: calha vermelha de bordas brancas, em degraus curtos, com dois pares de pés
-    const { topo: t0, pe: t1 } = ESCORREGADOR;
-    const N = 24;
-    const comp = Math.abs(t1.z - t0.z) / N + 0.03;
-    for (let k = 0; k < N; k++) {
-      const f = (k + 0.5) / N;
-      const y = t0.y + (t1.y - t0.y) * f - 0.16;
-      const z = t0.z + (t1.z - t0.z) * f;
-      pedra.base(t0.x, y, z, 1.0, 0.14, comp, VERMELHO, 0.03);
-      for (const l of [-1, 1]) pedra.base(t0.x + l * 0.56, y, z, 0.12, 0.42, comp, BRANCO, 0.02);
+      grupo.add(new THREE.Mesh(gz, mAgua));
+      lixo.push(gz);
     }
-    pedra.base(t1.x, t1.y - 0.2, t1.z - 0.35, 1.0, 0.14, 0.7, VERMELHO, 0.03);
-    for (const z of [12.4, 14]) {
-      const f = (t0.z - z) / (t0.z - t1.z);
-      const h = t0.y + (t1.y - t0.y) * f - 0.16;
-      for (const l of [-1, 1]) madeira.base(t0.x + l * 0.5, 0, z, 0.16, h, 0.16, FERRO, 0);
-      madeira.base(t0.x, h * 0.55, z, 1.0, 0.1, 0.1, FERRO, 0);
-    }
-  }
-
-  // ---------------- parkour: portal na beirada da frente e blocos flutuando para fora da ilha ----------------
-  {
-    const { x: px, z: pz } = PARKOUR;
+    // pontezinha de madeira do caminho do leste, por cima do rio
+    const alturaDaPonte = (k: number) => 0.14 + Math.cos((k / 6) * (Math.PI / 2)) * 0.38;
+    for (let k = -6; k <= 6; k++)
+      madeira.base(
+        PONTE.x + k * 0.36,
+        alturaDaPonte(k) - 0.12,
+        PONTE.z,
+        0.34,
+        0.16,
+        PONTE.meia * 2 + 0.2,
+        escolhe(MADEIRA),
+        0.04,
+      );
     for (const l of [-1, 1]) {
-      pedra.base(px + l * 0.95, 0, pz, 0.34, 2.6, 0.34, 0x1b1b1f, 0.03);
-      pedra.base(px + l * 0.95, 2.6, pz, 0.44, 0.2, 0.44, 0xd8281f, 0.02);
+      for (let k = -6; k <= 6; k += 3)
+        madeira.base(
+          PONTE.x + k * 0.36,
+          alturaDaPonte(k),
+          PONTE.z + l * (PONTE.meia + 0.05),
+          0.14,
+          0.8,
+          0.14,
+          0x7a4f2c,
+          0.03,
+        );
+      for (let k = -6; k < 6; k++)
+        madeira.base(
+          PONTE.x + (k + 0.5) * 0.36,
+          alturaDaPonte(k + 0.5) + 0.66,
+          PONTE.z + l * (PONTE.meia + 0.05),
+          0.4,
+          0.09,
+          0.1,
+          escolhe(MADEIRA),
+          0.03,
+        );
     }
-    pedra.base(px, 2.2, pz, 2.3, 0.34, 0.3, 0xd8281f, 0.03);
-    // faixa quadriculada de largada e os blocos do percurso, subindo para fora da ilha
-    for (let i = 0; i < 6; i++)
-      piso3d.base(px - 0.75 + i * 0.3, 0, pz - 0.5, 0.3, 0.03, 0.3, i % 2 ? 0xf4f1ea : 0x18181b, 0);
-    const blocos: [number, number, number, number][] = [
-      [0, 0.25, 1.7, 0xd8281f],
-      [0.9, 0.8, 3.1, 0xf4f1ea],
-      [-0.6, 1.4, 4.5, 0xd8281f],
-      [0.5, 2.0, 5.9, 0xf4f1ea],
-      [-0.2, 2.7, 7.3, 0xd8281f],
-    ];
-    for (const [dx, y, dz, cor] of blocos)
-      pedra.base(px + dx, y, pz + dz, 1.1, 0.4, 1.1, cor, 0.03);
-    // bandeira de chegada no último bloco
-    madeira.base(px - 0.2, 3.1, pz + 7.3, 0.08, 1.3, 0.08, FERRO, 0);
-    aceso.base(px + 0.12, 3.9, pz + 7.3, 0.6, 0.4, 0.04, 0xffd84a, 0);
   }
 
-  // ---------------- correio: caixa vermelha num poste, com a abertura das cartas e a bandeirinha ----------------
-  {
-    const { x, z } = CORREIO;
-    madeira.base(x, 0, z, 0.14, 0.95, 0.14, FERRO, 0);
-    pedra.base(x, 0.95, z, 0.62, 0.5, 0.46, 0xd8281f, 0.02);
-    pedra.base(x, 1.45, z, 0.62, 0.1, 0.46, 0xb8221a, 0.02);
-    pedra.base(x, 1.2, z + 0.235, 0.36, 0.05, 0.02, 0x2b2d32, 0);
-    madeira.base(x + 0.34, 1.05, z, 0.04, 0.42, 0.04, FERRO, 0);
-    pedra.base(x + 0.42, 1.36, z, 0.16, 0.11, 0.03, 0xffd84a, 0);
-  }
-
-  // ---------------- chuveirão: deque de madeira, poste com a ducha, balde e toalha ----------------
-  {
-    const { x, z } = CHUVEIRO;
-    for (let i = 0; i < 4; i++)
-      madeira.base(x - 0.6 + i * 0.4, 0, z, 0.38, 0.08, 1.6, MADEIRA[i % 3] ?? MADEIRA[0], 0.04);
-    madeira.base(x - 0.62, 0, z - 0.62, 0.12, 2.5, 0.12, FERRO, 0);
-    madeira.base(x - 0.31, 2.44, z - 0.31, 0.7, 0.07, 0.07, FERRO, 0, Math.PI / 4);
-    pedra.base(x, 2.26, z, 0.34, 0.12, 0.34, 0xc9ced6, 0.02);
-    // registro vermelho no poste, balde e a toalha pendurada
-    pedra.base(x - 0.55, 1.1, z - 0.62, 0.1, 0.1, 0.1, 0xd8281f, 0);
-    madeira.base(x + 0.75, 0, z + 0.55, 0.3, 0.3, 0.3, 0x5aa8d8, 0.03);
-    madeira.base(x - 0.62, 1.55, z - 0.5, 0.06, 0.5, 0.26, 0xfbfbf6, 0.02);
-  }
-
-  // ---------------- termômetro (queridômetro): totem com o tubo, o bulbo e um coração em cima ----------------
+  // =====================================================================
+  // PONTOS DA PRAÇA: queridômetro, caixa postal, coreto, arco de flores, ducha
+  // =====================================================================
+  const placas: {
+    tex: TH.Texture;
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+    h: number;
+    giro?: number;
+  }[] = [];
+  const placaDePostes = (
+    p: Ponto,
+    linhas: string[],
+    fundo: string,
+    borda: string,
+    cor = "#ffffff",
+  ) => {
+    for (const l of [-1, 1]) madeira.base(p.x + l * 0.78, 0, p.z, 0.12, 1.9, 0.12, 0x6e4a2b, 0.03);
+    const alta = linhas.length > 1;
+    placas.push({
+      tex: texturaDePlaca(THREE, linhas, {
+        fundo,
+        borda,
+        cor,
+        largura: 512,
+        altura: alta ? 210 : 124,
+      }),
+      x: p.x,
+      y: alta ? 1.95 : 2.0,
+      z: p.z + 0.08,
+      w: 1.95,
+      h: alta ? 0.8 : 0.48,
+    });
+  };
+  // queridômetro: totem branco com o tubo vermelho e um coração aceso em cima
   {
     const { x: tx, z: tz } = TERMOMETRO;
-    const BRANCO = 0xf6f3ee;
-    const VERMELHO = 0xd8281f;
-    pedra.base(tx, 0, tz, 1.0, 0.22, 1.0, PEDRA_CLARA[0], 0.04);
-    pedra.base(tx, 0.22, tz, 0.72, 0.14, 0.72, PEDRA_CLARA[1], 0.04);
-    pedra.base(tx, 0.36, tz, 0.62, 0.62, 0.62, VERMELHO, 0.02);
-    pedra.base(tx, 0.98, tz, 0.4, 2.0, 0.4, BRANCO, 0.02);
-    pedra.base(tx, 0.98, tz + 0.04, 0.2, 1.15, 0.36, VERMELHO, 0);
+    pedra.base(tx, 0, tz, 1.1, 0.22, 1.1, PEDRA_CLARA[0], 0.04);
+    pedra.base(tx, 0.22, tz, 0.8, 0.16, 0.8, PEDRA_CLARA[1], 0.04);
+    pedra.base(tx, 0.38, tz, 0.66, 0.66, 0.66, VERMELHO, 0.02);
+    pedra.base(tx, 1.04, tz, 0.42, 2.0, 0.42, 0xfbf7ee, 0.02);
+    pedra.base(tx, 1.04, tz + 0.05, 0.2, 1.2, 0.38, VERMELHO, 0);
     for (let m = 0; m < 5; m++)
-      pedra.base(tx + 0.14, 1.3 + m * 0.34, tz + 0.21, 0.1, 0.04, 0.03, FERRO, 0);
-    pedra.base(tx, 2.98, tz, 0.46, 0.16, 0.46, BRANCO, 0.02);
-    // coração de bloquinhos, aceso
+      pedra.base(tx + 0.15, 1.36 + m * 0.34, tz + 0.22, 0.1, 0.04, 0.03, FERRO, 0);
+    pedra.base(tx, 3.04, tz, 0.48, 0.16, 0.48, 0xfbf7ee, 0.02);
     const CORACAO = [".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."];
     CORACAO.forEach((linha, j) =>
       [...linha].forEach((c, i) => {
         if (c === "X")
-          aceso.add(tx + (i - 3) * 0.13, 4.15 - j * 0.13, tz, 0.13, 0.13, 0.16, 0xff3b30, 0);
+          aceso.add(tx + (i - 3) * 0.13, 4.2 - j * 0.13, tz, 0.13, 0.13, 0.16, 0xff3b30, 0);
       }),
     );
+    sombras.push({ x: tx, z: tz, rx: 0.8, rz: 0.8 });
+    placaDePostes(PLACA_QUERIDOMETRO, ["QUERIDÔMETRO"], "#c8231c", "#7a120e");
   }
-
-  // ---------------- portal do Magnata: braço que sai da ponte da fazenda e pátio de pedra escura ----------------
+  // caixa postal: caixa vermelha num pedestal, com o envelope e a bandeirinha
   {
-    const B = BRACO_DO_PORTAL;
-    const T = PATIO_DO_PORTAL;
-    const ESCURA = [0x3d3d46, 0x47474f, 0x34343c] as const;
-    const BRASA = 0xff2a2a;
-    // braço: lajes, muretas e balizas vermelhas na saída da ponte
-    const lajes = 3;
-    const passo = (B.z1 - B.z0) / lajes;
-    for (let i = 0; i < lajes; i++) {
-      const z = B.z1 - (i + 0.5) * passo;
-      piso3d.base(B.x, -0.4, z, B.meia * 2, 0.4, passo, escolhe(PAVE), 0.04);
-      for (const l of [-1, 1])
-        pedra.base(B.x + l * B.meia, 0, z, 0.2, 0.36, passo, escolhe(PEDRA_CLARA), 0.04);
-    }
-    for (const l of [-1, 1]) {
-      pedra.base(B.x + l * (B.meia + 0.05), 0, B.z1 - 0.1, 0.34, 1.1, 0.34, escolhe(ESCURA), 0.03);
-      aceso.base(B.x + l * (B.meia + 0.05), 1.1, B.z1 - 0.1, 0.22, 0.22, 0.22, BRASA, 0);
-    }
-    // faixa vermelha no chão, guiando da ponte até o portal
-    for (let k = 0; k < 9; k++)
-      piso3d.base(B.x, 0, B.z1 - 0.6 - k * 0.8, 0.5, 0.03, 0.34, k % 2 ? 0xf4f1ea : 0xd8281f, 0);
-    // pátio: ilhota de rocha com piso escuro
-    const cx = (T.x0 + T.x1) / 2;
-    const cz = (T.z0 + T.z1) / 2;
-    const larg = T.x1 - T.x0;
-    const fund = T.z1 - T.z0;
-    for (let k = 1; k <= 3; k++) {
-      const f = 1 - k * 0.24;
-      encosta.base(cx, -0.4 - k, cz, larg * f, 1, fund * f, escolhe(k < 2 ? ESCURA : ROCHA), 0.05);
-    }
-    for (let x = T.x0 + 0.6; x < T.x1; x += 1.2)
-      for (let z = T.z0 + 0.7; z < T.z1; z += 1.4)
-        piso3d.base(x, -0.4, z, 1.2, 0.4, 1.4, escolhe(ESCURA), 0.05);
-    for (const l of [-1, 1])
-      for (let z = T.z0 + 0.3; z < T.z1 - 0.2; z += 1.1)
-        pedra.base(cx + l * (larg / 2 - 0.15), 0, z, 0.3, 0.42, 1.1, escolhe(ESCURA), 0.04);
-    for (const l of [-1, 1]) {
-      const meio = (larg / 2 - B.meia) / 2 + B.meia;
-      pedra.base(
-        cx + l * meio,
-        0,
-        T.z1 - 0.15,
-        larg / 2 - B.meia - 0.3,
-        0.42,
-        0.3,
-        escolhe(ESCURA),
-        0.04,
-      );
-    }
-    // moldura do portal: colunas de blocos, verga, degrau e brasas vermelhas por dentro
-    const { x: px, z: pz } = PORTAL;
-    for (const l of [-1, 1]) {
-      for (let k = 0; k < 6; k++)
-        pedra.base(
-          px + l * 2.05,
-          k * 0.8,
-          pz,
-          1.05 - (k % 2) * 0.1,
-          0.8,
-          1.05,
-          escolhe(ESCURA),
-          0.04,
-        );
-      pedra.base(px + l * 2.05, 4.8, pz, 1.25, 0.34, 1.25, escolhe(ESCURA), 0.03);
-      for (let k = 0; k < 9; k++)
-        aceso.base(px + l * 1.5, 0.2 + k * 0.5, pz + 0.3, 0.07, 0.3, 0.07, BRASA, 0);
-      // tochas ao lado da entrada
-      pedra.base(px + l * 3.05, 0, pz + 1.5, 0.3, 1.3, 0.3, escolhe(ESCURA), 0.03);
-      aceso.base(px + l * 3.05, 1.3, pz + 1.5, 0.24, 0.34, 0.24, 0xff5a3a, 0);
-      clarao.push({ x: px + l * 3.05, z: pz + 1.5, rx: 1.6, rz: 1.6 });
-    }
-    pedra.base(px, 4.5, pz, 5.4, 0.95, 1.1, escolhe(ESCURA), 0.04);
-    pedra.base(px, 5.45, pz, 4.4, 0.3, 0.9, escolhe(ESCURA), 0.04);
-    aceso.base(px, 4.42, pz + 0.3, 3.0, 0.07, 0.07, BRASA, 0);
-    pedra.base(px, 0, pz + 0.75, 3.4, 0.14, 0.6, escolhe(ESCURA), 0.04);
-    aceso.base(px, 0.14, pz + 0.75, 2.6, 0.02, 0.12, BRASA, 0);
-    clarao.push({ x: px, z: pz + 1.4, rx: 2.6, rz: 2 });
-    sombras.push({ x: px, z: pz, rx: 3, rz: 0.9 });
+    const { x, z } = CORREIO;
+    pedra.base(x, 0, z, 1.1, 0.22, 1.1, PEDRA_CLARA[0], 0.04);
+    madeira.base(x, 0.22, z, 0.16, 0.9, 0.16, FERRO, 0);
+    pedra.base(x, 1.1, z, 0.72, 0.6, 0.56, 0xe02a20, 0.02);
+    pedra.base(x, 1.7, z, 0.62, 0.14, 0.5, 0xc8231c, 0.02);
+    pedra.base(x, 1.82, z, 0.42, 0.1, 0.4, 0xc8231c, 0.02);
+    pedra.base(x, 1.26, z + 0.29, 0.42, 0.28, 0.02, 0xf6f1e4, 0);
+    pedra.base(x, 1.38, z + 0.3, 0.42, 0.04, 0.02, 0xd9d2c4, 0);
+    madeira.base(x + 0.4, 1.3, z, 0.04, 0.5, 0.04, FERRO, 0);
+    pedra.base(x + 0.5, 1.68, z, 0.2, 0.13, 0.03, 0xffd84a, 0);
+    sombras.push({ x, z, rx: 0.8, rz: 0.8 });
+    placaDePostes(PLACA_CORREIO, ["CAIXA", "POSTAL"], "#c8231c", "#7a120e");
   }
-
-  // ---------------- ilha da pista de corrida: ao norte, ligada pela ponte que sai ao lado do morro ----------------
+  // coreto: base de pedra em dois degraus, oito colunas brancas com flores e o telhado de telhas em degraus
   {
-    const A = PISTA;
-    const P = PONTE_DA_PISTA;
-    const cx = (A.x0 + A.x1) / 2;
-    const cz = (A.z0 + A.z1) / 2;
-    const largura = A.x1 - A.x0;
-    const fundura = A.z1 - A.z0;
-    for (let k = 1; k <= 4; k++) {
-      const f = 1 - k * 0.19;
-      encosta.base(
-        cx,
-        -0.4 - k,
-        cz,
-        largura * f,
-        1,
-        fundura * f,
-        escolhe(k < 3 ? TERRA : ROCHA),
-        0.05,
-      );
-    }
-    // piso: grama, com um circuito oval de asfalto, zebras vermelhas e brancas e a faixa xadrez da largada
-    const RA = 7.4;
-    const RB = 4.4;
-    for (let x = A.x0 + 0.5; x < A.x1; x += 1)
-      for (let z = A.z0 + 0.5; z < A.z1; z += 1) {
-        const d = Math.hypot((x - cx) / RA, (z - cz) / RB);
-        const naPista = d > 0.72 && d < 1.28;
-        const zebra = (d > 0.6 && d <= 0.72) || (d >= 1.28 && d < 1.4);
-        const largada = naPista && Math.abs(x - cx) < 0.6 && z > cz;
-        const cor = largada
-          ? Math.round(z * 2) % 2
-            ? 0xf2f2f2
-            : 0x1b1b1e
-          : naPista
-            ? 0x3b3e45
-            : zebra
-              ? Math.round(x + z) % 2
-                ? 0xd8281f
-                : 0xf2f2f2
-              : escolhe([0x63b34c, 0x5aa845, 0x6bbd52]);
-        piso3d.base(x, -0.4, z, 1, 0.4, 1, cor, naPista ? 0.02 : 0.04);
+    const { x: cx, z: cz } = CORETO;
+    const R = RAIO_DO_CORETO;
+    for (const [y, raio, cor] of [
+      [0, R + 0.7, PEDRA_CLARA[1]],
+      [0.2, R + 0.25, PEDRA_CLARA[0]],
+    ] as const)
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        for (let rr = 0.5; rr <= raio; rr += 0.9)
+          pedra.base(cx + Math.cos(a) * rr, y, cz + Math.sin(a) * rr, 0.95, 0.2, 0.95, cor, 0.03);
       }
-    // ponte de pedra (vai no sentido norte-sul), com muretas e lanternas
-    const lajes = Math.round(P.z1 - P.z0);
-    const passo = (P.z1 - P.z0) / lajes;
-    for (let i = 0; i < lajes; i++) {
-      const z = P.z0 + (i + 0.5) * passo;
-      piso3d.base(P.x, -0.4, z, P.meia * 2, 0.4, passo, escolhe(PAVE), 0.04);
-      for (const l of [-1, 1])
-        pedra.base(P.x + l * P.meia, 0, z, 0.2, 0.45, passo, escolhe(PEDRA_CLARA), 0.04);
-      if (i % 3 === 1)
-        for (const l of [-1, 1]) {
-          pedra.base(P.x + l * P.meia, 0.45, z, 0.3, 0.5, 0.3, escolhe(PEDRA_CLARA), 0.03);
-          aceso.base(P.x + l * P.meia, 0.95, z, 0.22, 0.22, 0.22, 0xffe2a8, 0);
-        }
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      const x = cx + Math.cos(a) * R;
+      const z = cz + Math.sin(a) * R;
+      pedra.base(x, 0.4, z, 0.36, 2.5, 0.36, 0xfbf7ee, 0.02);
+      pedra.base(x, 2.9, z, 0.5, 0.16, 0.5, PEDRA_CLARA[0], 0.02);
+      folhas.base(x, 1.2 + r(), z, 0.44, 0.5, 0.44, escolhe(GRAMA_ESCURA), 0.06);
+      folhas.base(x + 0.1, 1.5 + r(), z, 0.14, 0.14, 0.14, escolhe(FLORES), 0);
     }
-    // arco da largada na chegada da ponte: dois postes e a faixa xadrez em cima
-    for (const l of [-1, 1]) pedra.base(P.x + l * 1.9, 0, A.z1 - 0.9, 0.3, 3, 0.3, 0x2b2d32, 0.02);
-    for (let i = 0; i < 12; i++)
-      for (let j = 0; j < 2; j++)
-        pedra.base(
-          P.x - 1.75 + i * 0.32 + 0.0,
-          2.4 + j * 0.32,
-          A.z1 - 0.9,
-          0.32,
-          0.32,
-          0.14,
-          (i + j) % 2 ? 0xf2f2f2 : 0x1b1b1e,
+    (
+      [
+        [R + 1.0, 0.36],
+        [R + 0.4, 0.36],
+        [R - 0.3, 0.36],
+        [R - 1.0, 0.36],
+        [R - 1.8, 0.36],
+        [0.5, 0.4],
+      ] as const
+    ).reduce((y, [raio, h]) => {
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        for (let rr = 0.4; rr <= raio; rr += 0.85)
+          madeira.base(
+            cx + Math.cos(a) * rr,
+            y,
+            cz + Math.sin(a) * rr,
+            0.9,
+            h,
+            0.9,
+            escolhe(TELHA),
+            0.04,
+          );
+      }
+      return y + h;
+    }, 3.06);
+    lanterna(cx, 2.4, cz);
+    for (const b of BANCOS) if (Math.hypot(b.x - cx, b.z - cz) < 2) banco(b.x, b.z, b.ang);
+    sombras.push({ x: cx, z: cz, rx: R + 0.9, rz: R + 0.9 });
+  }
+  // arco de flores sobre a trilha do coreto
+  {
+    const { x, z } = ARCO_DE_FLORES;
+    for (const l of [-1, 1]) {
+      const px = x + l * 1.05;
+      const pz = z + l * 0.42;
+      madeira.base(px, 0, pz, 0.2, 2.4, 0.2, BRANCO, 0.02);
+      for (let y = 0.3; y < 2.3; y += 0.45) {
+        folhas.base(px, y, pz, 0.42, 0.4, 0.42, escolhe(GRAMA_ESCURA), 0.06);
+        folhas.base(
+          px + (r() - 0.5) * 0.3,
+          y + 0.2,
+          pz + (r() - 0.5) * 0.3,
+          0.15,
+          0.15,
+          0.15,
+          escolhe([0xff5a7a, 0xff8fc8, 0xffffff]),
           0,
         );
-    // pilhas de pneus nos cantos, arquibancada no fundo e bandeirinhas
-    for (const [px, pz] of [
-      [A.x0 + 1.2, A.z0 + 1.2],
-      [A.x1 - 1.2, A.z0 + 1.2],
-      [A.x0 + 1.2, A.z1 - 1.2],
-      [A.x1 - 1.2, A.z1 - 1.2],
-    ] as const)
-      for (let k = 0; k < 3; k++)
-        pedra.base(px, k * 0.3, pz, 0.7 - k * 0.08, 0.28, 0.7 - k * 0.08, 0x202024, 0.02);
-    for (let degrau = 0; degrau < 3; degrau++)
-      madeira.base(
-        cx,
-        degrau * 0.4,
-        A.z0 + 0.6 + degrau * 0.5 - 0.5,
-        8,
-        0.4,
-        0.5,
-        degrau % 2 ? 0xd8281f : 0xf2f2f2,
-        0.03,
-      );
-    for (let i = 0; i < 6; i++) {
-      const fx = cx - 5 + i * 2;
-      madeira.base(fx, 1.2, A.z0 + 0.2, 0.08, 1.6, 0.08, 0x2b2d32, 0);
-      aceso.base(
-        fx + 0.28,
-        2.5,
-        A.z0 + 0.2,
-        0.5,
-        0.3,
-        0.04,
-        [0xd8281f, 0xffd84a, 0x4fd1ff][i % 3]!,
+      }
+    }
+    for (let k = 0; k <= 8; k++) {
+      const ang = (k / 8) * Math.PI;
+      const px = x + Math.cos(ang) * 1.05;
+      const pz = z + Math.cos(ang) * 0.42;
+      const py = 2.3 + Math.sin(ang) * 0.6;
+      folhas.base(px, py, pz, 0.5, 0.42, 0.5, escolhe(GRAMA_ESCURA), 0.06);
+      folhas.base(
+        px,
+        py + 0.36,
+        pz,
+        0.16,
+        0.15,
+        0.16,
+        escolhe([0xff5a7a, 0xff8fc8, 0xffffff, 0xffd84a]),
         0,
       );
     }
   }
-
-  // ---------------- Escritório HOST: anexo vermelho a leste, ligado à ilha pela ponte no fim do caminho ----------------
+  // chuveirão: deque de madeira, poste com a ducha e o balde
   {
-    const E = ESCRITORIO;
-    const P = PONTE_DO_ESCRITORIO;
-    const VERMELHO = 0xc8281f;
-    const BRANCO = 0xf4f1ea;
-    const cx = (E.x0 + E.x1) / 2;
-    const largura = E.x1 - E.x0;
-    const fundura = E.z1 - E.z0;
-    // base flutuante (terra e rocha, afinando para baixo) e o piso xadrez escuro
-    for (let k = 1; k <= 4; k++) {
-      const f = 1 - k * 0.19;
-      encosta.base(
-        cx,
-        -0.4 - k,
-        0,
-        largura * f,
-        1,
-        fundura * f,
-        escolhe(k < 3 ? TERRA : ROCHA),
-        0.05,
+    const { x, z } = CHUVEIRO;
+    for (let i = 0; i < 4; i++)
+      madeira.base(x - 0.6 + i * 0.4, 0, z, 0.38, 0.08, 1.6, escolhe(MADEIRA), 0.04);
+    madeira.base(x - 0.62, 0, z - 0.62, 0.12, 2.5, 0.12, FERRO, 0);
+    madeira.base(x - 0.31, 2.44, z - 0.31, 0.7, 0.07, 0.07, FERRO, 0, Math.PI / 4);
+    pedra.base(x, 2.26, z, 0.34, 0.12, 0.34, 0xc9ced6, 0.02);
+    pedra.base(x - 0.55, 1.1, z - 0.62, 0.1, 0.1, 0.1, VERMELHO, 0);
+    madeira.base(x + 0.75, 0, z + 0.55, 0.3, 0.3, 0.3, 0x5aa8d8, 0.03);
+  }
+
+  // =====================================================================
+  // TERRAÇO DO TOP 3 (norte): morrinho verde atrás, pódio pequeno 2-1-3 e a faixa
+  // =====================================================================
+  {
+    const T = TERRACO_TOP3;
+    const { x, z } = TOP3;
+    for (let px = T.x0 + 0.5; px < T.x1; px++)
+      for (let pz = T.z0 + 0.5; pz < T.z1; pz++)
+        piso3d.base(px, 0, pz, 1, 0.12, 1, escolhe(PEDRA_CLARA), 0.03);
+    // morrinho atrás: camadas de grama subindo, com arbustos e árvores em cima
+    for (let k = 0; k < 4; k++) {
+      const w = T.x1 - T.x0 + 3 - k * 2.4;
+      const zz = T.z0 - 1.0 - k * 0.6;
+      for (let px = -w / 2 + 0.5; px < w / 2; px++)
+        chao.base(px, 0, zz, 1, 0.6 + k * 0.55, 1.4, escolhe(GRAMA), 0.05);
+    }
+    for (const l of [-1, 1]) {
+      arbusto(folhas, l * 4.6, T.z0 - 0.6, 1.2, { flor: 0xffd84a });
+      arbusto(folhas, l * 2.6, T.z0 - 1.4, 1.1, { flor: 0xffffff, y: 1.0 });
+      arvore(
+        folhas,
+        l * 6.8,
+        T.z0 - 1.2,
+        { tipo: "copinha", cor: l < 0 ? "amarelo" : "verde", y: 0.6 },
+        madeira,
       );
     }
-    for (let x = E.x0 + 0.5; x < E.x1; x += 1)
-      for (let z = E.z0 + 0.5; z < E.z1; z += 1)
-        piso3d.base(x, -0.4, z, 1, 0.4, 1, Math.round(x + z) % 2 ? 0x2a2a2e : 0x35353a, 0.03);
-    // ponte: tabuleiro de pedra com muretas dos dois lados
-    // (as lajes dividem o vão em partes iguais, do fim do caminho até a porta, sem sobra nem falha)
-    const lajes = Math.round(P.x1 - P.x0);
-    const passo = (P.x1 - P.x0) / lajes;
-    for (let i = 0; i < lajes; i++) {
-      const x = P.x0 + (i + 0.5) * passo;
-      piso3d.base(x, -0.4, 0, passo, 0.4, P.meia * 2, escolhe(PAVE), 0.04);
-      for (const l of [-1, 1])
-        pedra.base(x, 0, l * P.meia, passo, 0.45, 0.2, escolhe(PEDRA_CLARA), 0.04);
-      // um pilar com lanterna a cada três lajes
-      if (i % 3 === 1)
-        for (const l of [-1, 1]) {
-          pedra.base(x, 0.45, l * P.meia, 0.3, 0.5, 0.3, escolhe(PEDRA_CLARA), 0.03);
-          aceso.base(x, 0.95, l * P.meia, 0.22, 0.22, 0.22, 0xffe2a8, 0);
+    pedra.base(x, 0.12, z, 2.5, 0.1, 1.0, 0xe7dfcf, 0.02);
+    for (const [dx, h, cor, n] of [
+      [-0.72, 0.5, 0xd7dbe2, "2"],
+      [0, 0.78, 0xffc531, "1"],
+      [0.72, 0.36, 0xd2884a, "3"],
+    ] as const) {
+      pedra.base(x + dx, 0.22, z, 0.68, h, 0.68, cor, 0.02);
+      placas.push({
+        tex: texturaDePlaca(THREE, [n], {
+          fundo: "rgba(0,0,0,0)",
+          borda: "rgba(0,0,0,0)",
+          cor: "#3b2a12",
+          largura: 128,
+          altura: 128,
+        }),
+        x: x + dx,
+        y: 0.22 + h * 0.5,
+        z: z + 0.345,
+        w: 0.5,
+        h: 0.5,
+      });
+    }
+    for (const l of [-1, 1]) {
+      madeira.base(x + l * 1.45, 0.12, z - 0.2, 0.14, 2.2, 0.14, 0x6e4a2b, 0.03);
+      folhas.base(x + l * 1.45, 1.7, z - 0.2, 0.36, 0.36, 0.36, 0x58a83b, 0.08);
+    }
+    placas.push({
+      tex: texturaDePlaca(THREE, ["TOP 3 LEVEL"], {
+        fundo: "#4a2f16",
+        borda: "#e7b334",
+        cor: "#ffd55a",
+        largura: 512,
+        altura: 112,
+      }),
+      x,
+      y: 2.15,
+      z: z - 0.14,
+      w: 2.6,
+      h: 0.58,
+    });
+    sombras.push({ x, z, rx: 1.5, rz: 0.7 });
+  }
+
+  // =====================================================================
+  // PONTES DO OESTE E DO LESTE: lajes, balaustrada com pilares e lanternas, apoios por baixo
+  // =====================================================================
+  for (const P of [PONTE_OESTE, PONTE_LESTE]) {
+    const comp = P.x1 - P.x0;
+    const n = Math.round(comp);
+    for (let i = 0; i < n; i++) {
+      const x = P.x0 + (i + 0.5) * (comp / n);
+      for (const dz of [-1.1, 0, 1.1])
+        piso3d.base(x, -0.4, dz, comp / n, 0.4, 1.12, escolhe(PAVE), 0.04);
+      for (const l of [-1, 1]) {
+        pedra.base(x, 0, l * (P.meia + 0.05), comp / n, 0.55, 0.32, escolhe(PEDRA_CLARA), 0.04);
+        if (i % 3 === 1) {
+          pedra.base(x, 0, l * (P.meia + 0.05), 0.55, 1.15, 0.55, escolhe(PEDRA_CLARA), 0.03);
+          lanterna(x, 1.15, l * (P.meia + 0.05));
         }
+      }
+      encosta.base(x, -1.0, 0, comp / n, 0.6, P.meia * 2 + 0.4, escolhe(ROCHA), 0.05);
+      if (i % 4 === 2) encosta.base(x, -6, 0, 1.6, 5, 2.4, escolhe(ROCHA), 0.05);
     }
-    // parede do fundo: alta, vermelha, com janelas acesas
-    for (let i = 0; i < largura; i++) {
-      const x = E.x0 + 0.5 + i;
-      const z = E.z0 + 0.15;
-      if (i % 3 === 1) {
-        pedra.base(x, 0, z, 1, 1.1, 0.3, VERMELHO, 0.03);
-        aceso.base(x, 1.1, z, 0.9, 1.3, 0.12, 0xa8dcff, 0);
-        pedra.base(x, 2.4, z, 1, 0.8, 0.3, VERMELHO, 0.03);
-      } else pedra.base(x, 0, z, 1, 3.2, 0.3, VERMELHO, 0.03);
+  }
+
+  // =====================================================================
+  // ILHA DO MAGNATA (oeste): casas coloridas de tabuleiro no chão, dados, peão e o prédio do portal
+  // =====================================================================
+  {
+    ilhaRetangular(ILHA_MAGNATA, 0, 9);
+    const CORES = [0xff5b4f, 0x3d8bff, 0xffc933, 0x35c46a, 0xa56bff, 0xff8a3d, 0x5cc8f0, 0xe86bb8];
+    const B = { x0: -49.4, x1: -41.2, z0: -6.8, z1: 6.8 };
+    let k = 0;
+    for (let x = B.x0 + 0.5; x < B.x1; x++)
+      for (let z = B.z0 + 0.5; z < B.z1; z++) {
+        const borda = x < B.x0 + 1 || x > B.x1 - 1 || z < B.z0 + 1 || z > B.z1 - 1;
+        if (Math.abs(z) < 1.6 && x > B.x1 - 1) continue; // passagem da ponte
+        if (borda) {
+          piso3d.base(x, 0, z, 0.98, 0.05, 0.98, 0xfbf7ee, 0);
+          piso3d.base(x, 0.05, z, 0.72, 0.02, 0.72, CORES[k++ % CORES.length] ?? 0xffffff, 0);
+        } else if (Math.abs(z) < 1.6) piso3d.base(x, 0, z, 1, 0.05, 1, escolhe(PAVE), 0.03);
+      }
+    for (const [n, d] of DADOS_DO_MAGNATA.entries()) {
+      const giro = n ? -0.5 : 0.35;
+      pedra.base(d.x, 0, d.z, 0.95, 0.95, 0.95, 0xfbf8f1, 0.01, giro);
+      const pontos: [number, number][] = n
+        ? [
+            [-0.24, -0.24],
+            [0.24, 0.24],
+            [0, 0],
+          ]
+        : [
+            [-0.24, -0.24],
+            [0.24, 0.24],
+            [-0.24, 0.24],
+            [0.24, -0.24],
+          ];
+      for (const [a, b] of pontos)
+        pedra.add(
+          d.x + a * Math.cos(giro) + b * Math.sin(giro),
+          0.965,
+          d.z - a * Math.sin(giro) + b * Math.cos(giro),
+          0.15,
+          0.03,
+          0.15,
+          n ? 0x1d1a17 : VERMELHO,
+          0,
+          giro,
+        );
+      sombras.push({ x: d.x, z: d.z, rx: 0.8, rz: 0.8 });
     }
-    pedra.base(cx, 3.2, E.z0 + 0.15, largura + 0.4, 0.2, 0.5, BRANCO, 0.02);
-    // laterais descendo do fundo para a frente (a de oeste tem a porta, na chegada da ponte)
-    for (let j = 0; j < fundura; j++) {
-      const z = E.z0 + 0.5 + j;
-      const h = Math.max(0.9, 3.2 - (j / (fundura - 1)) * 2.3);
-      pedra.base(E.x1 - 0.15, 0, z, 0.3, h, 1, VERMELHO, 0.03);
-      if (Math.abs(z) > P.meia + 0.2) pedra.base(E.x0 + 0.15, 0, z, 0.3, h, 1, VERMELHO, 0.03);
+    {
+      const { x: px, z: pz } = PEAO_DO_MAGNATA;
+      (
+        [
+          [0.66, 0.12],
+          [0.5, 0.42],
+          [0.32, 0.38],
+          [0.44, 0.14],
+          [0.46, 0.38],
+        ] as const
+      ).reduce((y, [l, h]) => {
+        pedra.base(px, y, pz, l, h, l, 0xe2342a, 0.02);
+        return y + h;
+      }, 0);
     }
-    // frente baixa, para dar para ver quem está trabalhando lá dentro
-    pedra.base(cx, 0, E.z1 - 0.15, largura, 0.8, 0.3, VERMELHO, 0.03);
-    pedra.base(cx, 0.8, E.z1 - 0.15, largura + 0.2, 0.1, 0.4, BRANCO, 0.02);
-    // mesas com monitor, teclado e caneca; a cadeira vermelha fica atrás (de costas para a câmera)
+    // prédio de pedra com colunas e telhado azul, de frente para a ponte; a porta é o portal
+    const Pm = PREDIO_MAGNATA;
+    const mx = (Pm.x0 + Pm.x1) / 2;
+    for (let z = Pm.z0 + 0.3; z < Pm.z1; z += 0.6)
+      for (let y = 0; y < 3.6; y += 0.6) {
+        const naPorta = Math.abs(z) < Pm.porta + 0.1 && y < 2.9;
+        if (!naPorta) pedra.base(Pm.x1 - 0.3, y, z, 0.6, 0.6, 0.6, escolhe(PEDRA_CLARA), 0.04);
+        pedra.base(Pm.x0 + 0.3, y, z, 0.6, 0.6, 0.6, escolhe(PEDRA_CLARA), 0.04);
+      }
+    for (let x = Pm.x0 + 0.9; x < Pm.x1 - 0.5; x += 0.6)
+      for (let y = 0; y < 3.6; y += 0.6)
+        for (const zz of [Pm.z0 + 0.3, Pm.z1 - 0.3])
+          pedra.base(x, y, zz, 0.6, 0.6, 0.6, escolhe(PEDRA_CLARA), 0.04);
+    pedra.base(mx, 0, 0, Pm.x1 - Pm.x0 - 1.2, 2.9, Pm.porta * 2, 0x0a1230, 0);
+    for (const l of [-1, 1]) {
+      pedra.base(Pm.x1 + 0.35, 0, l * (Pm.porta + 0.35), 0.5, 3.2, 0.5, 0xfbf7ee, 0.02);
+      pedra.base(Pm.x1 + 0.35, 3.2, l * (Pm.porta + 0.35), 0.66, 0.18, 0.66, PEDRA_CLARA[0], 0.02);
+      lanterna(Pm.x1 + 0.9, 2.2, l * (Pm.porta + 1.2));
+      clarao.push({ x: Pm.x1 + 1.6, z: l * 1.4, rx: 2.2, rz: 2.2 });
+    }
+    (
+      [
+        [Pm.x1 - Pm.x0 + 0.8, Pm.z1 - Pm.z0 + 0.8, 0x3d5a9e],
+        [Pm.x1 - Pm.x0 - 0.2, Pm.z1 - Pm.z0 - 0.6, 0x35508f],
+        [Pm.x1 - Pm.x0 - 1.4, Pm.z1 - Pm.z0 - 2.2, 0x2e477f],
+      ] as const
+    ).reduce((y, [w, d, cor]) => {
+      madeira.base(mx, y, 0, w, 0.4, d, cor, 0.03);
+      return y + 0.4;
+    }, 3.6);
+    for (const zz of [-2.6, 0, 2.6]) aceso.base(mx, 4.8, zz, 0.2, 0.3, 0.2, 0xffd84a, 0);
+    placas.push({
+      tex: texturaDePlaca(THREE, ["MAGNATA"], {
+        fundo: "#1f4fbf",
+        borda: "#e7b334",
+        cor: "#ffd55a",
+        largura: 512,
+        altura: 128,
+      }),
+      x: Pm.x1 + 0.12,
+      y: 3.95,
+      z: 0,
+      w: 3.6,
+      h: 0.9,
+      giro: Math.PI / 2,
+    });
+    sombras.push({ x: mx, z: 0, rx: 2.6, rz: 5 });
+    for (const [x, z, tipo] of [
+      [-53.2, -7.0, "pinheiro"],
+      [-53.0, 7.0, "copa"],
+      [-41.6, -7.4, "copinha"],
+    ] as const) {
+      arvore(folhas, x, z, { tipo }, madeira);
+      sombras.push({ x, z, rx: 1.2, rz: 1.2 });
+    }
+  }
+
+  // =====================================================================
+  // ILHA DO ESCRITÓRIO (leste): prédio claro de telhado vermelho, faixas com o H e as mesas
+  // =====================================================================
+  {
+    const I = ILHA_ESCRITORIO;
+    ilhaRetangular(I, 0, 9);
+    const E = ESCRITORIO;
+    for (let x = E.x0 + 0.5; x < E.x1; x++)
+      for (let z = E.z0 + 0.5; z < E.z1; z++)
+        piso3d.base(x, 0, z, 1, 0.06, 1, escolhe([0xc9a074, 0xbf9468, 0xd2aa7e]), 0.03);
+    for (let x = I.x0 + 0.5; x < E.x0; x++)
+      for (let z = -1.5; z < 2; z++) piso3d.base(x, 0, z, 1, 0.06, 1, escolhe(PAVE), 0.03);
+    const H = 3.4;
+    const PAREDE = [0xf1e8d6, 0xe8ddc6] as const;
+    for (let z = E.z0 + 0.3; z < E.z1; z += 0.6)
+      for (let y = 0; y < H; y += 0.6)
+        pedra.base(E.x1 - 0.2, y, z, 0.4, 0.6, 0.6, escolhe(PAREDE), 0.03);
+    for (let x = E.x0 + 0.3; x < E.x1; x += 0.6)
+      for (let y = 0; y < H; y += 0.6)
+        for (const zz of [E.z0 + 0.2, E.z1 - 0.2]) {
+          const janela = y > 0.9 && y < 2.4 && Math.abs(((x - E.x0) % 2.4) - 1.2) < 0.5;
+          if (janela) aceso.base(x, y, zz, 0.6, 0.6, 0.3, 0xffe2a0, 0);
+          else pedra.base(x, y, zz, 0.6, 0.6, 0.4, escolhe(PAREDE), 0.03);
+        }
+    for (const z of [E.z0 + 0.4, E.z0 + 3.9, E.z1 - 3.9, E.z1 - 0.4]) {
+      pedra.base(E.x0 - 0.1, 0, z, 0.5, H, 0.5, 0xfbf7ee, 0.02);
+      pedra.base(E.x0 - 0.1, H, z, 0.66, 0.16, 0.66, PEDRA_CLARA[0], 0.02);
+    }
+    (
+      [
+        [E.x1 - E.x0 + 1.0, E.z1 - E.z0 + 1.0],
+        [E.x1 - E.x0 - 0.6, E.z1 - E.z0 - 0.6],
+        [E.x1 - E.x0 - 2.4, E.z1 - E.z0 - 2.4],
+        [E.x1 - E.x0 - 4.4, E.z1 - E.z0 - 4.4],
+      ] as const
+    ).reduce((y, [w, d]) => {
+      madeira.base((E.x0 + E.x1) / 2, y, (E.z0 + E.z1) / 2, w, 0.36, d, escolhe(TELHA), 0.04);
+      return y + 0.36;
+    }, H + 0.16);
+    for (const x of [E.x0 + 1.6, E.x1 - 1.6]) {
+      madeira.base(x, H - 0.25, E.z1 + 0.06, 1.2, 0.1, 0.1, 0xd9a83a, 0.02);
+      placas.push({
+        tex: texturaDePlaca(THREE, ["H"], {
+          fundo: "#c8231c",
+          borda: "#e7b334",
+          cor: "#ffd55a",
+          largura: 160,
+          altura: 256,
+        }),
+        x,
+        y: H - 1.2,
+        z: E.z1 + 0.08,
+        w: 1.0,
+        h: 1.6,
+      });
+    }
+    placas.push({
+      tex: texturaDePlaca(THREE, ["ESCRITÓRIO", "HOST"], {
+        fundo: "#4a2f16",
+        borda: "#e7b334",
+        cor: "#ffd55a",
+        largura: 512,
+        altura: 230,
+      }),
+      x: (E.x0 + E.x1) / 2,
+      y: H + 2.05,
+      z: E.z1 - 1.4,
+      w: 3.8,
+      h: 1.7,
+    });
     for (const m of MESAS) {
       madeira.base(m.x, 0.58, m.z, 1.5, 0.08, 0.72, 0xe9e2d0, 0.03);
       for (const [dx, dz] of [
@@ -1595,182 +1206,698 @@ export function criarMundo(THREE: typeof TH) {
       madeira.base(m.x, 0.78, m.z - 0.16, 0.76, 0.48, 0.06, 0x18181b, 0);
       aceso.base(m.x, 0.82, m.z - 0.12, 0.66, 0.4, 0.02, 0x7fd0ff, 0);
       madeira.base(m.x - 0.05, 0.66, m.z + 0.14, 0.5, 0.03, 0.16, 0x232326, 0);
-      madeira.base(m.x + 0.55, 0.66, m.z + 0.1, 0.1, 0.12, 0.1, VERMELHO, 0);
       const cz = m.z + 1.0;
       madeira.base(m.x, 0, cz, 0.1, 0.36, 0.1, FERRO, 0);
       madeira.base(m.x, 0.36, cz, 0.52, 0.08, 0.52, VERMELHO, 0.03);
       madeira.base(m.x, 0.44, cz + 0.25, 0.52, 0.5, 0.08, VERMELHO, 0.03);
     }
-    // vasos nos cantos e o tapete da entrada
-    for (const z of [E.z0 + 0.9, E.z1 - 0.9]) {
-      pedra.base(E.x1 - 0.9, 0, z, 0.5, 0.4, 0.5, BRANCO, 0.03);
-      folhas.base(E.x1 - 0.9, 0.4, z, 0.6, 0.7, 0.6, GRAMA_ESCURA[0], 0.08);
+    lanterna((E.x0 + E.x1) / 2, H - 0.6, (E.z0 + E.z1) / 2, 0xfff0c8);
+    for (const z of [E.z0 + 1.0, E.z1 - 1.0]) {
+      pedra.base(E.x1 - 1.0, 0, z, 0.5, 0.4, 0.5, BRANCO, 0.03);
+      folhas.base(E.x1 - 1.0, 0.4, z, 0.6, 0.7, 0.6, GRAMA_ESCURA[0], 0.08);
     }
-    piso3d.base(E.x0 + 1.3, 0, 0, 1.6, 0.03, 1.8, VERMELHO, 0.03);
-  }
-  // ---------------- fazenda: anexo grande a oeste, no fim de uma ponte comprida com anéis dourados ----------------
-  {
-    const F = FAZENDA;
-    const P = PONTE_DA_FAZENDA;
-    const cx = (F.x0 + F.x1) / 2;
-    const larg = F.x1 - F.x0;
-    const fund = F.z1 - F.z0;
-    for (let k = 1; k <= 4; k++) {
-      const f = 1 - k * 0.19;
-      encosta.base(cx, -0.4 - k, 0, larg * f, 1, fund * f, escolhe(k < 3 ? TERRA : ROCHA), 0.05);
+    sombras.push({ x: (E.x0 + E.x1) / 2, z: (E.z0 + E.z1) / 2, rx: 6.5, rz: 6.5 });
+    for (const [x, z, tipo] of [
+      [53.4, -7.2, "pinheiro"],
+      [41.4, 7.0, "copa"],
+      [41.6, -7.4, "copinha"],
+    ] as const) {
+      arvore(
+        folhas,
+        x,
+        z,
+        { tipo, ...(tipo === "copa" ? { cor: "amarelo" as const } : {}) },
+        madeira,
+      );
+      sombras.push({ x, z, rx: 1.2, rz: 1.2 });
     }
-    for (let x = F.x0 + 0.5; x < F.x1; x += 1)
-      for (let z = F.z0 + 0.5; z < F.z1; z += 1)
-        chao.base(x, -0.4, z, 1, 0.4, 1, escolhe(GRAMA), 0.05);
-    // ponte: lajes compridas, muretas baixas e um anel dourado a cada três lajes (o HOKI passa por dentro, em disparada)
-    const lajes = Math.round((P.x1 - P.x0) / 2);
-    const passo = (P.x1 - P.x0) / lajes;
-    for (let i = 0; i < lajes; i++) {
-      const x = P.x0 + (i + 0.5) * passo;
-      piso3d.base(x, -0.4, 0, passo, 0.4, P.meia * 2, escolhe(PAVE), 0.04);
-      for (const l of [-1, 1]) {
-        // a mureta do norte abre onde sai o braço do portal
-        if (l < 0 && Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia + passo / 2 - 0.2)
-          continue;
-        pedra.base(x, 0, l * P.meia, passo, 0.36, 0.2, escolhe(PEDRA_CLARA), 0.04);
-      }
-      if (i % 3 === 1)
-        for (let a = 0; a < 12; a++) {
-          const ang = (a / 12) * Math.PI * 2;
-          aceso.add(
-            x,
-            1.25 + Math.sin(ang) * 0.95,
-            Math.cos(ang) * 0.95,
-            0.14,
-            0.24,
-            0.24,
-            0xffd23f,
-            0,
-          );
-        }
-    }
-    // faixas de arrancada nas duas pontas (vermelho e branco)
-    for (const [x, sentido] of [
-      [P.x1 - 1.4, -1],
-      [P.x0 + 1.4, 1],
-    ] as const)
-      for (let k = 0; k < 4; k++)
-        piso3d.base(
-          x + sentido * k * 0.45,
-          0,
-          0,
-          0.28,
-          0.03,
-          1.7 - k * 0.35,
-          k % 2 ? 0xf4f1ea : 0xd8281f,
-          0,
-        );
-    // cerca de madeira em volta, aberta na chegada da ponte
-    const mourao = (x: number, z: number) =>
-      madeira.base(x, 0, z, 0.14, 0.7, 0.14, MADEIRA_ESCURA, 0.04);
-    for (let x = F.x0 + 0.3; x <= F.x1 - 0.2; x += 1.2)
-      for (const z of [F.z0 + 0.3, F.z1 - 0.3]) {
-        mourao(x, z);
-        madeira.base(x + 0.6, 0.42, z, 1.2, 0.1, 0.08, MADEIRA[0], 0.04);
-      }
-    for (let z = F.z0 + 0.3; z <= F.z1 - 0.2; z += 1.2) {
-      mourao(F.x0 + 0.3, z);
-      madeira.base(F.x0 + 0.3, 0.42, z + 0.6, 0.08, 0.1, 1.2, MADEIRA[0], 0.04);
-      if (Math.abs(z + 0.6) > 2) {
-        mourao(F.x1 - 0.3, z);
-        madeira.base(F.x1 - 0.3, 0.42, z + 0.6, 0.08, 0.1, 1.2, MADEIRA[0], 0.04);
-      }
-    }
-    for (const c of CANTEIROS) {
-      const { x, z } = c;
-      if (c.cultura === "maca" || c.cultura === "laranja")
-        arvore(folhas, x, z, { tipo: "copinha" }, madeira);
-      else if (c.cultura === "banana" || c.cultura === "coco") {
-        // palmeira: tronco fino e folhas em cruz
-        madeira.base(x, 0, z, 0.24, 2.3, 0.24, MADEIRA[1], 0.05);
-        folhas.base(x, 2.3, z, 2, 0.14, 0.44, GRAMA_ESCURA[0], 0.06);
-        folhas.base(x, 2.3, z, 0.44, 0.14, 2, GRAMA_ESCURA[1], 0.06);
-      } else if (c.cultura === "cafe")
-        folhas.base(x, 0, z, 0.74, 0.72, 0.74, GRAMA_ESCURA[1], 0.07);
-      else if (c.cultura === "ovo") {
-        // galinheiro com telhado vermelho e duas galinhas
-        madeira.base(x, 0, z, 1.1, 0.8, 0.9, MADEIRA[1], 0.04);
-        pedra.base(x, 0.8, z, 1.3, 0.24, 1.1, TELHA[0], 0.04);
-        for (const [dx, dz] of [
-          [0.95, 0.35],
-          [0.7, 0.85],
-        ] as const) {
-          pedra.base(x + dx, 0, z + dz, 0.26, 0.26, 0.34, 0xfbfbf6, 0.02);
-          pedra.base(x + dx, 0.26, z + dz + 0.12, 0.16, 0.16, 0.16, 0xfbfbf6, 0.02);
-          pedra.base(x + dx, 0.38, z + dz + 0.12, 0.06, 0.08, 0.1, 0xd8281f, 0);
-        }
-      } else if (c.cultura === "leite") {
-        // vaca malhada
-        for (const [dx, dz] of [
-          [-0.4, -0.2],
-          [0.4, -0.2],
-          [-0.4, 0.2],
-          [0.4, 0.2],
-        ] as const)
-          pedra.base(x + dx, 0, z + dz, 0.16, 0.36, 0.16, 0xfbfbf6, 0.02);
-        pedra.base(x, 0.36, z, 1.2, 0.6, 0.62, 0xfbfbf6, 0.02);
-        pedra.base(x - 0.25, 0.6, z, 0.4, 0.37, 0.64, 0x1c1c1e, 0);
-        pedra.base(x + 0.3, 0.42, z + 0.14, 0.3, 0.3, 0.36, 0x1c1c1e, 0);
-        pedra.base(x + 0.78, 0.62, z, 0.42, 0.46, 0.46, 0xfbfbf6, 0.02);
-        pedra.base(x + 1.0, 0.62, z, 0.14, 0.2, 0.3, 0xf2b8b0, 0);
-      } else if (c.cultura === "agua") {
-        // mina de água: pedras em roda, o olho d'água no meio e um balde ao lado
-        for (let a = 0; a < 7; a++) {
-          const ang = (a / 7) * Math.PI * 2;
-          pedra.base(
-            x + Math.cos(ang) * 0.62,
-            0,
-            z + Math.sin(ang) * 0.62,
-            0.42,
-            0.3 + (a % 3) * 0.14,
-            0.42,
-            escolhe(ROCHA),
-            0.05,
-          );
-        }
-        aceso.base(x, 0, z, 0.82, 0.14, 0.82, 0x5fb8ff, 0);
-        madeira.base(x + 0.95, 0, z + 0.5, 0.3, 0.32, 0.3, MADEIRA[0], 0.04);
-      } else if (c.cultura === "rosa" || c.cultura === "girassol" || c.cultura === "tulipa") {
-        // floricultura: vaso de barro no gramado
-        pedra.base(x, 0, z, 0.62, 0.36, 0.62, 0xb5533c, 0.04);
-        pedra.base(x, 0.36, z, 0.7, 0.08, 0.7, 0xc46045, 0.03);
-        piso3d.base(x, 0.36, z, 0.5, 0.05, 0.5, 0x5a3a22, 0.05);
-      } else if (c.cultura === "chocolate" || c.cultura === "bala") {
-        // carrinho da doceria: caixa listrada com rodas e um toldo vermelho
-        madeira.base(x, 0.18, z, 0.9, 0.62, 0.62, 0xf4f1ea, 0.03);
-        for (let k = 0; k < 3; k++)
-          madeira.base(x - 0.3 + k * 0.3, 0.2, z + 0.32, 0.12, 0.58, 0.02, 0xd8281f, 0);
-        for (const l of [-1, 1]) pedra.base(x + l * 0.35, 0, z + 0.3, 0.2, 0.2, 0.08, 0x2b2d32, 0);
-        for (const l of [-1, 1])
-          madeira.base(x + l * 0.4, 0.8, z - 0.25, 0.06, 0.7, 0.06, MADEIRA_ESCURA, 0);
-        pedra.base(x, 1.5, z, 1.05, 0.1, 0.8, 0xd8281f, 0.03);
-      } else if (c.cultura === "ursinho") {
-        // prateleira de brindes do escritório
-        madeira.base(x, 0, z, 0.9, 0.9, 0.5, 0xe9e2d0, 0.03);
-        madeira.base(x, 0.9, z, 0.96, 0.06, 0.56, 0xc8281f, 0.02);
-      } else {
-        // canteiro da horta: terra revolvida embaixo da planta (a uva tem a estaca)
-        piso3d.base(x, 0, z, 1.25, 0.06, 1.1, 0x5a3a22, 0.06);
-        if (c.cultura === "uva") madeira.base(x, 0, z, 0.08, 0.95, 0.08, MADEIRA_ESCURA, 0.04);
-      }
-    }
-    // espantalho no meio da horta do norte
-    madeira.base(-67.5, 0, -6.4, 0.12, 1.5, 0.12, MADEIRA_ESCURA, 0.04);
-    madeira.base(-67.5, 1.0, -6.4, 1.1, 0.1, 0.1, MADEIRA_ESCURA, 0.04);
-    pedra.base(-67.5, 1.5, -6.4, 0.36, 0.36, 0.36, 0xf2d9a0, 0.03);
-    pedra.base(-67.5, 1.86, -6.4, 0.6, 0.08, 0.6, 0x8e5b35, 0.03);
   }
 
-  // ---------------- monta os conjuntos de blocos ----------------
+  // =====================================================================
+  // EM BREVE (nordeste, no alto): escadaria, ilha e o portão de pedra trancado
+  // =====================================================================
+  const escadaria = (e: Escadaria, H: number, ilhaZ1: number) => {
+    const esc = naEscadaria(0, 0, e);
+    const giro = Math.atan2(esc.ux, esc.uz);
+    const naRampa = (ao: number, lado: number) => ({
+      x: e.pe.x + esc.ux * ao + esc.uz * lado,
+      z: e.pe.z + esc.uz * ao - esc.ux * lado,
+    });
+    const N = 22;
+    const passo = (esc.comp + 1.4) / N;
+    for (let i = 0; i < N; i++) {
+      const ao = (i + 0.5) * passo;
+      const y = Math.min(H + 0.03, (H * ao) / (esc.comp - 1.2));
+      for (const lado of [-1.47, 0, 1.47]) {
+        const c = naRampa(ao, lado);
+        piso3d.add(c.x, y - 0.275, c.z, 1.47, 0.55, passo, escolhe(PAVE), 0.04, giro);
+      }
+      for (const l of [-1, 1]) {
+        const m = naRampa(ao, l * (e.meia + 0.25));
+        pedra.add(m.x, y + 0.05, m.z, 0.5, 1.2, passo, escolhe(PEDRA), 0.04, giro);
+        if (i % 3 === 1) {
+          pedra.add(m.x, y + 0.325, m.z, 0.74, 1.75, 0.74, escolhe(PEDRA), 0.03, giro);
+          lanterna(m.x, y + 1.27, m.z);
+        }
+      }
+      const b = naRampa(ao, 0);
+      if (ao < esc.comp - 0.5)
+        encosta.add(b.x, y - 0.85, b.z, e.meia * 2 + 0.3, 0.6, passo, escolhe(ROCHA), 0.05, giro);
+      if (i % 5 === 2) encosta.add(b.x, y - 3.6, b.z, 3.6, 5, 1.7, escolhe(ROCHA), 0.05, giro);
+    }
+    for (const p of pilaresDaEscadaria(e)) {
+      pedra.base(p.x, 0, p.z, 1.05, 2.3, 1.05, escolhe(PEDRA), 0.04);
+      lanterna(p.x, 2.3, p.z);
+      sombras.push({ x: p.x, z: p.z, rx: 0.85, rz: 0.85 });
+    }
+    for (const l of [-1, 1]) {
+      pedra.base(
+        e.topo.x + l * (e.meia + 1.5),
+        H,
+        ilhaZ1 - 0.5,
+        1.05,
+        2.3,
+        1.05,
+        escolhe(PEDRA),
+        0.04,
+      );
+      lanterna(e.topo.x + l * (e.meia + 1.5), H + 2.3, ilhaZ1 - 0.5);
+    }
+  };
+  {
+    const I = ILHA_EM_BREVE;
+    const H = I.y;
+    ilhaRetangular(I, H, 7);
+    escadaria(PONTE_EM_BREVE, H, I.z1);
+    for (let x = PONTE_EM_BREVE.topo.x - 2.5; x < PONTE_EM_BREVE.topo.x + 2.6; x++)
+      for (let z = PORTAO_EM_BREVE.z1 + 0.5; z < I.z1; z++)
+        piso3d.base(x, H, z, 1, 0.06, 1, escolhe(PEDRA), 0.04);
+    const G = PORTAO_EM_BREVE;
+    const gx = (G.x0 + G.x1) / 2;
+    const gz = (G.z0 + G.z1) / 2;
+    for (let x = G.x0 + 0.3; x < G.x1; x += 0.6)
+      for (let y = 0; y < 4.8; y += 0.6) {
+        const porta = Math.abs(x - gx) < 1.6 && y < 3.0;
+        if (!porta) pedra.base(x, H + y, G.z1 - 0.3, 0.6, 0.6, 0.6, escolhe(PEDRA), 0.05);
+        pedra.base(x, H + y, G.z0 + 0.3, 0.6, 0.6, 0.6, escolhe(PEDRA), 0.05);
+      }
+    for (let z = G.z0 + 0.9; z < G.z1 - 0.5; z += 0.6)
+      for (let y = 0; y < 4.8; y += 0.6)
+        for (const xx of [G.x0 + 0.3, G.x1 - 0.3])
+          pedra.base(xx, H + y, z, 0.6, 0.6, 0.6, escolhe(PEDRA), 0.05);
+    pedra.base(gx, H, G.z1 - 0.62, 3.2, 3.0, 0.2, 0x24262b, 0);
+    for (let k = 0; k < 3; k++)
+      pedra.base(
+        gx,
+        H + 4.8 + k * 0.5,
+        gz,
+        G.x1 - G.x0 + 0.6 - k * 2.6,
+        0.5,
+        G.z1 - G.z0 + 0.6 - k * 0.8,
+        escolhe(PEDRA),
+        0.04,
+      );
+    for (let x = -1.5; x < 1.55; x += 0.3)
+      pedra.base(
+        gx + x + 0.15,
+        H,
+        G.z1 + 0.15,
+        0.3,
+        0.24,
+        0.12,
+        Math.round((x + 1.5) / 0.3) % 2 ? 0x1d1a17 : 0xffc933,
+        0,
+      );
+    pedra.base(gx, H + 1.0, G.z1 - 0.46, 0.62, 0.56, 0.14, 0xe7b334, 0.02);
+    pedra.base(gx, H + 1.56, G.z1 - 0.46, 0.4, 0.32, 0.08, 0xc8c8cc, 0.02);
+    pedra.base(gx, H + 1.12, G.z1 - 0.38, 0.09, 0.2, 0.04, 0x1d1a17, 0);
+    for (const l of [-1, 1]) {
+      madeira.base(gx + l * 2.6, H + 0.9, G.z1 + 0.02, 0.9, 2.2, 0.06, 0xc8231c, 0.03);
+      madeira.base(gx + l * 2.6, H + 2.0, G.z1 + 0.06, 0.5, 0.1, 0.04, 0xf6f1e4, 0, l * 0.7);
+      madeira.base(gx + l * 2.6, H + 2.0, G.z1 + 0.06, 0.5, 0.1, 0.04, 0xf6f1e4, 0, -l * 0.7);
+      aceso.base(gx + l * 3.4, H + 4.85, G.z1 - 0.1, 0.26, 0.26, 0.26, 0xff3b30, 0);
+      brilhos.push([gx + l * 3.4, H + 5.0, G.z1 - 0.1]);
+      for (let y = 0.4; y < 4.2; y += 0.5)
+        folhas.base(gx + l * 4.9, H + y, G.z1 + 0.05, 0.5, 0.5, 0.2, escolhe(GRAMA_ESCURA), 0.07);
+    }
+    placas.push({
+      tex: texturaDePlaca(THREE, ["EM BREVE"], {
+        fundo: "#3a3c42",
+        borda: "#9a9aa2",
+        cor: "#ffffff",
+        largura: 512,
+        altura: 120,
+      }),
+      x: gx,
+      y: H + 3.75,
+      z: G.z1 + 0.04,
+      w: 3.4,
+      h: 0.8,
+    });
+    for (const C of CANTEIROS_EM_BREVE) {
+      for (let x = C.x0 + 0.5; x < C.x1; x++)
+        for (const zz of [C.z0 + 0.2, C.z1 - 0.2])
+          pedra.base(x, H, zz, 1, 0.45, 0.4, escolhe(PEDRA), 0.04);
+      for (let x = C.x0 + 0.7; x < C.x1 - 0.4; x += 1.4)
+        for (let z = C.z0 + 1.0; z < C.z1 - 0.6; z += 1.4)
+          arbusto(folhas, x, z, 0.8, { y: H, flor: escolhe(FLORES) });
+    }
+    for (const p of POSTES_EM_BREVE) poste(p.x, p.z, H, 2.3);
+    for (const a of ARVORES_EM_BREVE) {
+      arvore(folhas, a.x, a.z, { tipo: a.tipo, y: H }, madeira);
+      sombras.push({ x: a.x, z: a.z, y: H + 0.03, rx: 1.15, rz: 1.15 });
+    }
+    sombras.push({ x: gx, z: gz, y: H + 0.03, rx: 6, rz: 3 });
+  }
+
+  // ---------------- HOST FAZENDAS: escadaria-ponte larga, ilha no alto e o celeiro com o portal ----------------
+  {
+    const I = ILHA_FAZENDAS;
+    const P = PONTE_FAZENDAS;
+    const C = CELEIRO;
+    const H = I.y;
+    const cx = (I.x0 + I.x1) / 2;
+    const cz = (I.z0 + I.z1) / 2;
+    const larg = I.x1 - I.x0;
+    const fund = I.z1 - I.z0;
+    const PEDRA_PONTE = [0xcfc7b8, 0xc2baab, 0xd9d2c4] as const;
+    const TRIGO = [0xf2c230, 0xe8b020, 0xf8d44a, 0xdca018] as const;
+    const CELEIRO_COR = [0xc8402f, 0xb93629, 0xd04a38] as const;
+    const TELHA = [0x8a5a3a, 0x7a4a2e, 0x96643f] as const;
+    const TORA = 0x6e4a2b;
+    const BRANCO = 0xf6f1e4;
+    /** Lanterna: caixinha acesa com tampa e o ponto de luz que brilha à noite. */
+    const lanterna = (x: number, y: number, z: number) => {
+      aceso.base(x, y, z, 0.34, 0.4, 0.34, 0xffc670, 0);
+      madeira.base(x, y + 0.4, z, 0.48, 0.1, 0.48, FERRO, 0);
+      lampadas.push([x, y + 0.25, z]);
+    };
+    /** Pilar de pedra com capitel e lanterna em cima. */
+    const pilar = (x: number, y: number, z: number, alt: number, lado = 1.05) => {
+      pedra.base(x, y, z, lado, alt, lado, escolhe(PEDRA_PONTE), 0.04);
+      pedra.base(x, y + alt, z, lado + 0.22, 0.18, lado + 0.22, PEDRA_PONTE[1], 0.02);
+      lanterna(x, y + alt + 0.18, z);
+    };
+
+    // corpo da ilha: terra e rocha afinando para baixo, com pedras penduradas na frente
+    for (let k = 1; k <= 6; k++) {
+      const f = 1 - k * 0.14;
+      encosta.base(
+        cx + (k % 2 ? 0.5 : -0.4),
+        H - 0.4 - k * 1.15,
+        cz + (k % 2 ? -0.3 : 0.4),
+        larg * f,
+        1.15,
+        fund * f,
+        escolhe(k < 3 ? TERRA : ROCHA),
+        0.05,
+      );
+    }
+    for (let n = 0; n < 16; n++)
+      encosta.base(
+        I.x0 + 1 + r() * (larg - 2),
+        H - 1.6 - r() * 3.2,
+        (n % 2 ? I.z1 - 0.2 : I.z0 + 0.2) + (r() - 0.5),
+        1.3 + r() * 1.7,
+        0.9 + r() * 1.3,
+        1.3,
+        escolhe(n % 3 ? ROCHA : TERRA),
+        0.05,
+      );
+    // gramado, com a avenida calçada do topo da escadaria até a porta do celeiro
+    const naAvenida = (x: number, z: number) =>
+      (Math.abs(x - P.topo.x) < 2.7 && z > C.z1) ||
+      (z > C.z1 && z < -42.3 && Math.abs(x - P.topo.x) < 5.4);
+    for (let x = I.x0 + 0.5; x < I.x1; x++)
+      for (let z = I.z0 + 0.5; z < I.z1; z++)
+        if (naAvenida(x, z)) piso3d.base(x, H - 0.4, z, 1, 0.4, 1, escolhe(PAVE), 0.04);
+        else chao.base(x, H - 0.4, z, 1, 0.4, 1, escolhe(GRAMA), 0.05);
+
+    // escadaria-ponte em diagonal: degraus largos, muretas grossas, pilares com lanterna e apoios de pedra por baixo
+    const esc = naEscadaria(0, 0);
+    const giro = Math.atan2(esc.ux, esc.uz);
+    /** Ponto do mundo a `ao` do pé, ao longo da escadaria, e `lado` para o lado do eixo. */
+    const naRampa = (ao: number, lado: number) => ({
+      x: P.pe.x + esc.ux * ao + esc.uz * lado,
+      z: P.pe.z + esc.uz * ao - esc.ux * lado,
+    });
+    const N = 22;
+    const passo = (esc.comp + 1.4) / N;
+    for (let i = 0; i < N; i++) {
+      const ao = (i + 0.5) * passo;
+      // sobe até a altura da ilha e termina num patamar (um fio acima do gramado, para não piscar)
+      const y = Math.min(H + 0.03, (H * ao) / (esc.comp - 1.2));
+      for (const lado of [-1.47, 0, 1.47]) {
+        const c = naRampa(ao, lado);
+        piso3d.add(c.x, y - 0.275, c.z, 1.47, 0.55, passo, escolhe(PAVE), 0.04, giro);
+      }
+      for (const l of [-1, 1]) {
+        const m = naRampa(ao, l * (P.meia + 0.25));
+        pedra.add(m.x, y + 0.05, m.z, 0.5, 1.2, passo, escolhe(PEDRA_PONTE), 0.04, giro);
+        if (i % 3 === 1) {
+          pedra.add(m.x, y + 0.325, m.z, 0.74, 1.75, 0.74, escolhe(PEDRA_PONTE), 0.03, giro);
+          pedra.add(m.x, y + 1.27, m.z, 0.9, 0.14, 0.9, PEDRA_PONTE[1], 0.02, giro);
+          lanterna(m.x, y + 1.34, m.z);
+        }
+      }
+      const b = naRampa(ao, 0);
+      if (ao < esc.comp - 0.5)
+        encosta.add(b.x, y - 0.85, b.z, P.meia * 2 + 0.3, 0.6, passo, escolhe(ROCHA), 0.05, giro);
+      if (i % 5 === 2) {
+        encosta.add(b.x, y - 3.6, b.z, 3.6, 5, 1.7, escolhe(ROCHA), 0.05, giro);
+        encosta.add(b.x, y - 7.6, b.z, 2.3, 3, 1.2, escolhe(ROCHA), 0.05, giro);
+      }
+    }
+    // pilares grandes no pé (na praça) e no topo (na ilha)
+    for (const p of PILARES_DA_ESCADARIA) {
+      pilar(p.x, 0, p.z, 2.3);
+      sombras.push({ x: p.x, z: p.z, rx: 0.85, rz: 0.85 });
+      clarao.push({ x: p.x, z: p.z + 1, rx: 2.3, rz: 2.3 });
+    }
+    for (const l of [-1, 1]) pilar(P.topo.x + l * (P.meia + 1.5), H, I.z1 - 0.5, 2.3);
+
+    // celeiro: base de pedra, paredes de tábuas vermelhas, cantos brancos e telhado em degraus
+    const bx = (C.x0 + C.x1) / 2;
+    const bz = (C.z0 + C.z1) / 2;
+    const W = C.x1 - C.x0;
+    const D = C.z1 - C.z0;
+    const PAREDE = 5.2;
+    const VAO = 2.7; // meia largura do vão da porta (o batente fica por dentro)
+    for (const l of [-1, 1])
+      pedra.base(
+        bx + l * (VAO + (W / 2 - VAO) / 2),
+        H,
+        bz,
+        W / 2 - VAO + 0.3,
+        0.45,
+        D + 0.3,
+        escolhe(PEDRA_PONTE),
+        0.04,
+      );
+    for (let x = C.x0 + 0.45; x < C.x1; x += 0.9) {
+      const naPorta = Math.abs(x - bx) < VAO;
+      if (!naPorta)
+        madeira.base(x, H + 0.45, C.z1 - 0.2, 0.9, PAREDE - 0.45, 0.4, escolhe(CELEIRO_COR), 0.04);
+      madeira.base(x, H + 0.45, C.z0 + 0.2, 0.9, PAREDE - 0.45, 0.4, escolhe(CELEIRO_COR), 0.04);
+    }
+    for (let z = C.z0 + 0.65; z < C.z1 - 0.3; z += 0.9)
+      for (const l of [-1, 1])
+        madeira.base(
+          bx + l * (W / 2 - 0.2),
+          H + 0.45,
+          z,
+          0.4,
+          PAREDE - 0.45,
+          0.9,
+          escolhe(CELEIRO_COR),
+          0.04,
+        );
+    // fundo escuro atrás do portal, batente de toras e o fio de luz azul por dentro
+    pedra.base(bx, H, C.z1 - 1.4, VAO * 2 + 0.4, PAREDE, 0.3, 0x0a1230, 0);
+    for (const l of [-1, 1]) {
+      madeira.base(bx + l * (VAO - 0.2), H, C.z1 + 0.05, 0.44, 5.0, 0.55, TORA, 0.05);
+      aceso.base(bx + l * (VAO - 0.46), H + 0.1, C.z1 - 0.12, 0.08, 4.8, 0.08, 0x6fd8ff, 0);
+      madeira.base(
+        bx + l * (W / 2 - 0.05),
+        H + 0.45,
+        C.z1 - 0.08,
+        0.36,
+        PAREDE - 0.45,
+        0.5,
+        BRANCO,
+        0.02,
+      );
+      // painel branco em X de cada lado da porta
+      const x0 = bx + l * (VAO + 0.35);
+      const x1 = bx + l * (W / 2 - 0.5);
+      const meio = (x0 + x1) / 2;
+      const vao = Math.abs(x1 - x0);
+      for (const yy of [1.0, 3.9])
+        madeira.base(meio, H + yy, C.z1 + 0.04, vao, 0.2, 0.12, BRANCO, 0.02);
+      for (const xx of [x0, x1])
+        madeira.base(xx, H + 1.0, C.z1 + 0.04, 0.2, 3.1, 0.12, BRANCO, 0.02);
+      for (let k = 0; k < 7; k++) {
+        const f = (k + 0.5) / 7;
+        for (const s of [f, 1 - f])
+          madeira.base(
+            Math.min(x0, x1) + s * vao,
+            H + 1.2 + f * 2.7 - 0.2,
+            C.z1 + 0.04,
+            0.3,
+            0.42,
+            0.1,
+            BRANCO,
+            0.02,
+          );
+      }
+      // pilares de pedra com lanterna, guardando a porta
+      pilar(bx + l * 3.45, H, C.z1 + 0.8, 2.7);
+      clarao.push({ x: bx + l * 3.45, z: C.z1 + 1.6, y: H + 0.03, rx: 2.2, rz: 2.2 });
+    }
+    madeira.base(bx, H + 5.0, C.z1 + 0.05, VAO * 2 + 0.5, 0.46, 0.6, TORA, 0.05);
+    aceso.base(bx, H + 4.9, C.z1 - 0.12, VAO * 2 - 1.0, 0.08, 0.08, 0x6fd8ff, 0);
+    let yTelhado = H + PAREDE;
+    for (const [w, h] of [
+      [W, 0.9],
+      [9.4, 0.9],
+      [7.6, 0.9],
+      [5.2, 0.8],
+      [2.6, 0.7],
+    ] as const) {
+      for (const zz of [C.z1 - 0.2, C.z0 + 0.2])
+        madeira.base(bx, yTelhado, zz, w, h, 0.4, escolhe(CELEIRO_COR), 0.04);
+      for (const l of [-1, 1])
+        madeira.base(
+          bx + l * (w / 2 + 0.2),
+          yTelhado - 0.1,
+          bz,
+          0.4,
+          h + 0.1,
+          D + 1.1,
+          escolhe(TELHA),
+          0.05,
+        );
+      madeira.base(bx, yTelhado + h, bz, w + 0.8, 0.24, D + 1.1, escolhe(TELHA), 0.05);
+      yTelhado += h;
+    }
+    sombras.push({ x: bx, z: bz, y: H + 0.03, rx: W / 2 + 0.8, rz: D / 2 + 0.8 });
+
+    // trigais dourados, com terra batida embaixo e uma cerquinha em volta
+    for (const T of TRIGAIS) {
+      madeira.base(
+        (T.x0 + T.x1) / 2,
+        H,
+        (T.z0 + T.z1) / 2,
+        T.x1 - T.x0,
+        0.12,
+        T.z1 - T.z0,
+        0x8a5a3a,
+        0.04,
+      );
+      for (let x = T.x0 + 0.3; x < T.x1 - 0.1; x += 0.5)
+        for (let z = T.z0 + 0.3; z < T.z1 - 0.1; z += 0.5)
+          folhas.base(
+            x + (r() - 0.5) * 0.12,
+            H + 0.1,
+            z + (r() - 0.5) * 0.12,
+            0.36,
+            0.65 + r() * 0.55,
+            0.36,
+            escolhe(TRIGO),
+            0.06,
+          );
+      for (const zz of [T.z0 - 0.1, T.z1 + 0.1]) {
+        madeira.base(
+          (T.x0 + T.x1) / 2,
+          H + 0.45,
+          zz,
+          T.x1 - T.x0 + 0.3,
+          0.1,
+          0.1,
+          escolhe(MADEIRA),
+          0.04,
+        );
+        for (let x = T.x0 - 0.1; x <= T.x1 + 0.11; x += (T.x1 - T.x0 + 0.2) / 4)
+          madeira.base(x, H, zz, 0.16, 0.7, 0.16, escolhe(MADEIRA), 0.04);
+      }
+    }
+    // abóboras na beira dos trigais
+    for (const [x, z] of [
+      [-24.9, -36.4],
+      [-24.8, -40.9],
+      [-17.1, -36.6],
+      [-17.2, -41.1],
+    ] as const) {
+      folhas.base(x, H, z, 0.46, 0.36, 0.46, 0xf08a24, 0.05);
+      folhas.base(x, H + 0.36, z, 0.1, 0.12, 0.1, 0x3f8f2f, 0);
+    }
+    // galpãozinho vermelho
+    {
+      const G = GALPAO;
+      const gx = (G.x0 + G.x1) / 2;
+      const gz = (G.z0 + G.z1) / 2;
+      madeira.base(gx, H, gz, G.x1 - G.x0, 1.9, G.z1 - G.z0, CELEIRO_COR[0], 0.04);
+      madeira.base(gx, H, G.z1 + 0.02, 0.8, 1.3, 0.06, BRANCO, 0.02);
+      madeira.base(gx, H + 0.1, G.z1 + 0.05, 0.56, 1.1, 0.06, CELEIRO_COR[1], 0.02);
+      madeira.base(gx, H + 1.9, gz, G.x1 - G.x0 + 0.5, 0.3, G.z1 - G.z0 + 0.5, TELHA[0], 0.04);
+      madeira.base(gx, H + 2.2, gz, G.x1 - G.x0 - 0.6, 0.3, G.z1 - G.z0 + 0.5, TELHA[1], 0.04);
+      madeira.base(gx, H + 2.5, gz, 0.8, 0.26, G.z1 - G.z0 + 0.5, TELHA[2], 0.04);
+      sombras.push({ x: gx, z: gz, y: H + 0.03, rx: 1.7, rz: 1.5 });
+    }
+    // moinho: torre de pedra que afina e o chapéu de madeira (as pás giram, à parte)
+    {
+      const { x, z } = MOINHO;
+      [1.9, 1.6, 1.3, 1.05].forEach((lado, k) =>
+        pedra.base(x, H + k * 1.4, z, lado, 1.4, lado, escolhe(PEDRA_PONTE), 0.04),
+      );
+      madeira.base(x, H, z + 0.96, 0.6, 1.1, 0.06, TORA, 0.03);
+      madeira.base(x, H + 5.6, z, 1.5, 0.5, 1.5, TELHA[0], 0.04);
+      madeira.base(x, H + 6.1, z, 0.9, 0.4, 0.9, TELHA[1], 0.04);
+      madeira.base(x, H + 4.75, z + 0.75, 0.3, 0.3, 0.7, TORA, 0.03);
+      sombras.push({ x, z, y: H + 0.03, rx: 1.5, rz: 1.5 });
+    }
+    // fardos de feno
+    {
+      const F = FARDOS;
+      const fz = (F.z0 + F.z1) / 2;
+      for (const [x, y] of [
+        [F.x0 + 0.6, 0],
+        [F.x1 - 0.6, 0],
+        [(F.x0 + F.x1) / 2, 0.72],
+      ] as const) {
+        folhas.base(x, H + y, fz, 1.08, 0.72, 1.3, TRIGO[1], 0.05);
+        for (const dz of [-0.36, 0.36])
+          madeira.base(x, H + y, fz + dz, 1.12, 0.74, 0.08, 0xb88a18, 0);
+      }
+    }
+    // cerca de madeira na beirada (aberta onde chega a escadaria)
+    const cerca = (x0: number, z0: number, x1: number, z1: number) => {
+      const comp = Math.hypot(x1 - x0, z1 - z0);
+      const n = Math.max(1, Math.round(comp / 1.6));
+      const noX = Math.abs(x1 - x0) > Math.abs(z1 - z0);
+      for (let k = 0; k <= n; k++)
+        madeira.base(
+          x0 + ((x1 - x0) * k) / n,
+          H,
+          z0 + ((z1 - z0) * k) / n,
+          0.18,
+          0.8,
+          0.18,
+          escolhe(MADEIRA),
+          0.04,
+        );
+      for (const yy of [0.3, 0.6])
+        madeira.base(
+          (x0 + x1) / 2,
+          H + yy,
+          (z0 + z1) / 2,
+          noX ? comp : 0.09,
+          0.09,
+          noX ? 0.09 : comp,
+          escolhe(MADEIRA),
+          0.04,
+        );
+    };
+    const B = 0.4;
+    cerca(I.x0 + B, I.z1 - B, P.topo.x - P.meia - 2.1, I.z1 - B);
+    cerca(P.topo.x + P.meia + 2.1, I.z1 - B, I.x1 - B, I.z1 - B);
+    cerca(I.x0 + B, I.z0 + B, I.x0 + B, I.z1 - B);
+    cerca(I.x1 - B, I.z0 + B, I.x1 - B, I.z1 - B);
+    cerca(I.x0 + B, I.z0 + B, I.x1 - B, I.z0 + B);
+    // postes de luz na avenida e as árvores
+    for (const p of POSTES_FAZENDAS) {
+      madeira.base(p.x, H, p.z, 0.16, 2.3, 0.16, FERRO, 0);
+      madeira.base(p.x, H, p.z, 0.34, 0.2, 0.34, FERRO, 0);
+      lanterna(p.x, H + 2.3, p.z);
+      sombras.push({ x: p.x, z: p.z, y: H + 0.03, rx: 0.45, rz: 0.45 });
+      clarao.push({ x: p.x, z: p.z, y: H + 0.03, rx: 2.6, rz: 2.6 });
+    }
+    for (const a of ARVORES_FAZENDAS) {
+      arvore(
+        folhas,
+        a.x,
+        a.z,
+        { tipo: a.tipo, y: H, ...(a.tipo === "copinha" ? { cor: "amarelo" as const } : {}) },
+        madeira,
+      );
+      sombras.push({ x: a.x, z: a.z, y: H + 0.03, rx: 1.15, rz: 1.15 });
+    }
+  }
+
+  // =====================================================================
+  // NUVEM DO BERÇO (sul) e o ESCORREGADOR turquesa até a plataforma da praça
+  // =====================================================================
+  {
+    const { x: bx, y: by, z: bz } = BERCO;
+    const { meiaX, meiaZ } = DECK_DO_BERCO;
+    const NUVEM = [0xffffff, 0xf8fbff, 0xf0f5ff] as const;
+    const SOMBRA_NUVEM = [0xdfe8f8, 0xd4e0f4, 0xe6edfa] as const;
+    for (let x = -meiaX - 1.2; x <= meiaX + 1.21; x += 0.8)
+      for (let z = -meiaZ - 1.2; z <= meiaZ + 1.21; z += 0.8) {
+        const v =
+          Math.pow(Math.abs(x) / (meiaX + 1.4), 2.2) + Math.pow(Math.abs(z) / (meiaZ + 1.4), 2.2);
+        if (v > 1) continue;
+        const cama = Math.abs(x) <= meiaX && Math.abs(z) <= meiaZ;
+        const alto = cama ? 0 : 0.25 + (1 - v) * 0.5 + r() * 0.35;
+        nuvem.add(
+          bx + x,
+          by - 0.2 + alto / 2,
+          bz + z,
+          0.82,
+          0.42 + alto,
+          0.82,
+          escolhe(NUVEM),
+          0.012,
+        );
+        for (let k = 1; k <= 4; k++)
+          if (v < 1 - k * 0.2)
+            nuvem.add(
+              bx + x,
+              by - 0.2 - k * 0.55,
+              bz + z,
+              0.82,
+              0.6,
+              0.82,
+              escolhe(SOMBRA_NUVEM),
+              0.012,
+            );
+      }
+    for (const [dx, dz, t] of [
+      [-3.4, 4.1, 1.6],
+      [-0.6, 4.6, 2.1],
+      [2.4, 4.3, 1.8],
+      [5.2, 2.6, 1.4],
+      [-5.5, 2.4, 1.3],
+      [5.6, -1.6, 1.1],
+      [-5.8, -1.8, 1.0],
+    ] as const)
+      nuvem.add(bx + dx, by + t / 2 - 0.1, bz + dz, t * 1.2, t, t, escolhe(NUVEM), 0.012);
+    for (const v of VAGAS) nuvem.add(v.x, v.y - 0.06, v.z - 0.34, 0.62, 0.12, 0.3, 0xcfe6ff, 0.01);
+  }
+  const tAguaCalha = texturaAgua(THREE, 11);
+  tAguaCalha.wrapS = tAguaCalha.wrapT = THREE.RepeatWrapping;
+  {
+    const pts = PONTOS_DO_ESCORREGADOR;
+    const R = 0.55;
+    const LADOS = 12;
+    const pos: number[] = [];
+    const nor: number[] = [];
+    const posA: number[] = [];
+    const uvA: number[] = [];
+    const idx: number[] = [];
+    const idxA: number[] = [];
+    let v = 0;
+    pts.forEach((p, i) => {
+      const a = pts[Math.max(0, i - 1)]!;
+      const b = pts[Math.min(pts.length - 1, i + 1)]!;
+      const n = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+      const lx = -(b.z - a.z) / n;
+      const lz = (b.x - a.x) / n;
+      if (i > 0) v += Math.hypot(p.x - pts[i - 1]!.x, p.y - pts[i - 1]!.y, p.z - pts[i - 1]!.z);
+      for (let k = 0; k <= LADOS; k++) {
+        const ang = Math.PI + (k / LADOS) * Math.PI;
+        const cx = Math.cos(ang);
+        const cy = Math.sin(ang);
+        pos.push(p.x + lx * cx * R, p.y + 0.42 + cy * R, p.z + lz * cx * R);
+        nor.push(-lx * cx, -cy, -lz * cx);
+      }
+      posA.push(
+        p.x + lx * 0.32,
+        p.y + 0.02,
+        p.z + lz * 0.32,
+        p.x - lx * 0.32,
+        p.y + 0.02,
+        p.z - lz * 0.32,
+      );
+      uvA.push(0, v * 0.8, 1, v * 0.8);
+      if (i > 0) {
+        const base = (i - 1) * (LADOS + 1);
+        for (let k = 0; k < LADOS; k++) {
+          const q = base + k;
+          idx.push(q, q + LADOS + 1, q + 1, q + 1, q + LADOS + 1, q + LADOS + 2);
+        }
+        const kk = i * 2;
+        idxA.push(kk - 2, kk - 1, kk, kk - 1, kk + 1, kk);
+      }
+    });
+    const gCalha = new THREE.BufferGeometry();
+    gCalha.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    gCalha.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    gCalha.setIndex(idx);
+    const mCalha = new THREE.MeshPhysicalMaterial({
+      color: 0x3fd0e6,
+      roughness: 0.18,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.2,
+      transparent: true,
+      opacity: 0.88,
+      side: THREE.DoubleSide,
+      emissive: 0x0b7c96,
+      emissiveIntensity: 0.25,
+    });
+    const calha = new THREE.Mesh(gCalha, mCalha);
+    calha.castShadow = true;
+    grupo.add(calha);
+    const gAguaCalha = new THREE.BufferGeometry();
+    gAguaCalha.setAttribute("position", new THREE.Float32BufferAttribute(posA, 3));
+    gAguaCalha.setAttribute("uv", new THREE.Float32BufferAttribute(uvA, 2));
+    gAguaCalha.setIndex(idxA);
+    gAguaCalha.computeVertexNormals();
+    const mAguaCalha = new THREE.MeshBasicMaterial({
+      map: tAguaCalha,
+      color: 0xc8f6ff,
+      transparent: true,
+      opacity: 0.85,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    grupo.add(new THREE.Mesh(gAguaCalha, mAguaCalha));
+    lixo.push(gCalha, mCalha, gAguaCalha, mAguaCalha, tAguaCalha);
+    pts.forEach((p, i) => {
+      if (i % 8 !== 4 || p.z > beiradaEmZ(p.x) - 0.3 || p.z < PLATAFORMA.z + 1.6) return;
+      pedra.base(p.x, 0, p.z, 0.22, p.y, 0.22, 0xf6f1e4, 0.01);
+      sombras.push({ x: p.x, z: p.z, rx: 0.4, rz: 0.4 });
+    });
+  }
+  // plataforma redonda e brilhante onde o escorregador chega
+  {
+    const { x, z, r: R } = PLATAFORMA;
+    for (let k = 0; k < 28; k++) {
+      const a = (k / 28) * Math.PI * 2;
+      piso3d.base(
+        x + Math.cos(a) * (R + 0.3),
+        0,
+        z + Math.sin(a) * (R + 0.3),
+        0.7,
+        0.3,
+        0.62,
+        escolhe(PEDRA_CLARA),
+        0.03,
+        -a,
+      );
+      aceso.base(
+        x + Math.cos(a) * (R - 0.2),
+        0.02,
+        z + Math.sin(a) * (R - 0.2),
+        0.32,
+        0.06,
+        0.5,
+        0x6fd8ff,
+        0,
+        -a,
+      );
+    }
+    for (let k = 0; k < 6; k++) brilhos.push([x + Math.cos(k) * 1.2, 0.6, z + Math.sin(k) * 1.2]);
+    clarao.push({ x, z, rx: 3.2, rz: 3.2 });
+  }
+
+  // =====================================================================
+  // CONSTRUIR OS BLOCOS
+  // =====================================================================
   const conjuntos = [
     chao.construir(THREE, {
       sombra: false,
-      acabamento: { chanfro: 0.035, junta: 0.07, pe: 0, grao: 0.055, nevoa: NEVOA },
+      acabamento: { chanfro: 0.035, junta: 0.07, pe: 0, grao: 0.05, nevoa: NEVOA },
     }),
     piso3d.construir(THREE, {
       sombra: false,
@@ -1788,17 +1915,42 @@ export function criarMundo(THREE: typeof TH) {
       recebe: false,
       material: new THREE.MeshBasicMaterial({ toneMapped: false }),
     }),
+    nuvem.construir(THREE, {
+      sombra: false,
+      material: acabamento(
+        new THREE.MeshLambertMaterial({
+          color: 0xffffff,
+          emissive: 0x9fb8e0,
+          emissiveIntensity: 0.4,
+        }),
+        { chanfro: 0.2, junta: 0.02, pe: 0.05, grao: 0.012 },
+      ),
+    }),
   ];
   for (const c of conjuntos) {
     grupo.add(c.malha);
     lixo.push({ dispose: c.descartar });
   }
+  for (const p of placas) {
+    const g = new THREE.PlaneGeometry(p.w, p.h);
+    const m = new THREE.MeshBasicMaterial({
+      map: p.tex,
+      transparent: true,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    });
+    const malha = new THREE.Mesh(g, m);
+    malha.position.set(p.x, p.y, p.z);
+    malha.rotation.y = p.giro ?? 0;
+    grupo.add(malha);
+    lixo.push(g, m, p.tex);
+  }
 
-  // ---------------- sombras de contato, luz das luminárias no piso e brilhos ----------------
+  // ---------------- sombras de contato, luz das lanternas no piso e brilhos ----------------
   const tMancha = texturaMancha(THREE);
   const tBrilho = texturaMancha(THREE, 0.08);
   const contato = criarManchas(THREE, tMancha, sombras, { cor: 0x1d150c, forca: 0.4 });
-  const luzPiso = criarManchas(THREE, tMancha, clarao, { cor: 0xffc77a, forca: 0.13, soma: true });
+  const luzPiso = criarManchas(THREE, tMancha, clarao, { cor: 0xffc77a, forca: 0.15, soma: true });
   grupo.add(contato.malha, luzPiso.malha);
   lixo.push(tMancha, tBrilho, { dispose: contato.descartar }, { dispose: luzPiso.descartar });
   /** Pontos de luz somados à imagem (o "bloom" fica só onde eles estão). */
@@ -1829,62 +1981,301 @@ export function criarMundo(THREE: typeof TH) {
         cores[i * 3 + 1] = base.g * f;
         cores[i * 3 + 2] = base.b * f;
       }
-      (g.getAttribute("color") as TH.BufferAttribute).needsUpdate = true;
+      g.attributes["color"]!.needsUpdate = true;
     };
   };
+
+  // ---------------- HOST FAZENDAS: logo 3D no celeiro, redemoinho do portal, brilhos e as pás do moinho ----------------
+  const yFazendas = ILHA_FAZENDAS.y;
+  const xCeleiro = (CELEIRO.x0 + CELEIRO.x1) / 2;
+  const logoFazendas = new THREE.Group();
+  logoFazendas.position.set(xCeleiro, yFazendas + 5.6, CELEIRO.z1 + 0.6);
+  {
+    // placa de tábuas com rebites, o galo espiando por cima, o celeirinho, o trigo e as folhas
+    const base = new Blocos(r);
+    base.base(0, -0.12, -0.14, 9.3, 3.56, 0.3, 0x6e4420, 0.03);
+    (
+      [
+        [8.3, 0xb97a38],
+        [8.9, 0xc98a44],
+        [8.1, 0xb07434],
+      ] as const
+    ).forEach(([w, cor], k) => base.base(0, k * 1.1, 0.02, w, 1.08, 0.4, cor, 0.05));
+    for (const sx of [-1, 1])
+      for (const yy of [0.35, 2.85]) base.base(sx * 3.85, yy, 0.24, 0.18, 0.18, 0.1, 0xb9bcc2, 0);
+    // galo: corpo, cabeça, crista, bico, barbela, olhos, asa apoiada na placa e o rabo vermelho
+    const G = -3.0;
+    const GY = 3.0;
+    const PENA = 0xfbf7ee;
+    const CRISTA = 0xe02a20;
+    base.base(G, GY - 0.2, 0, 1.7, 1.3, 0.7, PENA, 0.03);
+    base.base(G + 0.35, GY + 1.0, 0.05, 1.05, 1.05, 0.8, PENA, 0.03);
+    base.base(G + 1.05, 3.12, 0.3, 0.8, 0.42, 0.5, PENA, 0.03);
+    (
+      [
+        [0.05, 0.45],
+        [0.38, 0.62],
+        [0.7, 0.4],
+      ] as const
+    ).forEach(([dx, h]) => base.base(G + dx, GY + 2.05, 0.05, 0.3, h, 0.3, CRISTA, 0.03));
+    base.base(G + 1.08, GY + 1.45, 0.12, 0.52, 0.24, 0.42, 0xffc21a, 0.02);
+    base.base(G + 1.02, GY + 1.26, 0.12, 0.38, 0.18, 0.36, 0xf09a10, 0.02);
+    base.base(G + 0.82, GY + 0.82, 0.32, 0.34, 0.44, 0.3, CRISTA, 0.03);
+    for (const dx of [0.14, 0.58]) {
+      base.base(G + dx, GY + 1.5, 0.44, 0.3, 0.36, 0.06, 0xffffff, 0);
+      base.base(G + dx + 0.04, GY + 1.54, 0.48, 0.15, 0.2, 0.04, 0x1d1a17, 0);
+    }
+    (
+      [
+        [-1.1, 0.1, 1.0],
+        [-1.5, 0.5, 1.15],
+        [-1.9, 0.15, 0.9],
+        [-1.32, 1.45, 0.55],
+      ] as const
+    ).forEach(([dx, dy, h], k) =>
+      base.base(G + dx, GY + dy, -0.05, 0.5, h, 0.36, k % 2 ? 0xc82018 : CRISTA, 0.04),
+    );
+    // celeirinho atrás, no meio
+    base.base(1.0, 3.3, -0.12, 2.6, 1.3, 0.44, 0xc8402f, 0.03);
+    base.base(1.0, 3.42, 0.1, 0.96, 0.96, 0.06, 0xf6f1e4, 0.02);
+    base.base(1.0, 3.54, 0.14, 0.7, 0.7, 0.04, 0xc8402f, 0.02);
+    base.base(1.0, 3.82, 0.16, 0.7, 0.14, 0.04, 0xf6f1e4, 0);
+    base.base(1.0, 3.54, 0.16, 0.14, 0.7, 0.04, 0xf6f1e4, 0);
+    base.base(1.0, 4.6, -0.12, 3.0, 0.26, 0.6, 0x8a5a3a, 0.04);
+    base.base(1.0, 4.86, -0.12, 2.2, 0.3, 0.6, 0x7a4a2e, 0.04);
+    base.base(1.0, 5.16, -0.12, 1.2, 0.26, 0.6, 0x96643f, 0.04);
+    // espigas de trigo à direita e folhas dos lados
+    for (let e = 0; e < 3; e++)
+      for (let k = 0; k < 5; k++)
+        base.base(
+          3.3 + e * 0.42 + k * 0.09,
+          3.2 + k * 0.3 + (e % 2) * 0.2,
+          0,
+          0.28,
+          0.3,
+          0.28,
+          k % 2 ? 0xf2c230 : 0xe0a820,
+          0.04,
+        );
+    for (const sx of [-1, 1])
+      (
+        [
+          [4.55, 0.5],
+          [4.85, 1.0],
+          [4.6, 1.55],
+        ] as const
+      ).forEach(([x, y], k) =>
+        base.base(sx * x, y, -0.02, 0.8, 0.38, 0.3, k % 2 ? 0x3f9a30 : 0x58b83c, 0.05),
+      );
+    const mBase = base.construir(THREE, {
+      acabamento: { chanfro: 0.03, junta: 0.16, pe: 0.1, grao: 0.06 },
+    });
+    logoFazendas.add(mBase.malha);
+    lixo.push({ dispose: mBase.descartar });
+    // letras gordas: "HOST" verde em cima e "FAZENDAS" azul embaixo, cada uma com o contorno escuro atrás
+    const palavra = (
+      texto: string,
+      u: number,
+      y: number,
+      cores: readonly number[],
+      contorno: number,
+    ) => {
+      (
+        [
+          [1, [contorno], 0.34, 0.2],
+          [0, cores, 0.5, 0.22],
+        ] as const
+      ).forEach(([engorda, tons, frente, fundo]) => {
+        const b = new Blocos(r);
+        letrasDePedra(b, texto, u, fundo, {
+          linhas: 12,
+          relevo: 0.25,
+          cores: tons,
+          engorda,
+          z: frente,
+        });
+        const m = b.construir(THREE, {
+          recebe: false,
+          sombra: false,
+          material: new THREE.MeshBasicMaterial({ toneMapped: false }),
+        });
+        m.malha.position.y = y - engorda * u;
+        logoFazendas.add(m.malha);
+        lixo.push({ dispose: m.descartar });
+      });
+    };
+    palavra("HOST", 0.118, 1.78, [0x7be832, 0x66d824, 0x8cf040, 0x72e02c], 0x1c7a1a);
+    palavra("FAZENDAS", 0.098, 0.3, [0x35b6ff, 0x2aa6f5, 0x55c6ff, 0x3cbcff], 0x1746a8);
+  }
+  grupo.add(logoFazendas);
+
+  // redemoinho do portal: espiral azul girando dentro da porta do celeiro
+  const uPortal = { uT: { value: 0 } };
+  const mRedemoinho = new THREE.ShaderMaterial({
+    uniforms: uPortal,
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec2 vUv;
+      uniform float uT;
+      void main() {
+        vec2 p = (vUv - 0.5) * vec2(1.0, 1.06);
+        float raio = length(p) * 2.0;
+        float ang = atan(p.y, p.x);
+        // dois braços de espiral girando em sentidos diferentes e um miolo que pulsa
+        float a = sin(ang * 3.0 + raio * 9.0 - uT * 2.4);
+        float b = sin(ang * 5.0 - raio * 15.0 + uT * 1.5);
+        float bracos = smoothstep(-0.1, 1.0, a) * 0.65 + smoothstep(0.35, 1.0, b) * 0.4;
+        vec3 fundo = mix(vec3(0.01, 0.05, 0.32), vec3(0.03, 0.34, 0.9), clamp(1.0 - raio * 0.8, 0.0, 1.0));
+        vec3 cor = fundo + vec3(0.3, 0.72, 1.0) * bracos * (1.15 - raio * 0.5);
+        float miolo = pow(max(0.0, 1.0 - raio * 1.5), 3.0) * (0.85 + 0.15 * sin(uT * 3.0));
+        cor += vec3(0.9, 0.97, 1.0) * miolo;
+        // faíscas que cintilam no redemoinho
+        vec2 g = floor(vUv * vec2(26.0, 28.0));
+        float sorte = fract(sin(dot(g, vec2(12.9898, 78.233))) * 43758.5453);
+        cor += vec3(1.0) * step(0.965, sorte) * pow(max(0.0, sin(uT * (2.0 + sorte * 5.0) + sorte * 40.0)), 8.0);
+        gl_FragColor = vec4(cor, 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const gRedemoinho = new THREE.PlaneGeometry(4.8, 4.95);
+  const redemoinho = new THREE.Mesh(gRedemoinho, mRedemoinho);
+  redemoinho.position.set(xCeleiro, yFazendas + 2.48, CELEIRO.z1 - 0.5);
+  grupo.add(redemoinho);
+  // clarão azul no chão da frente e o halo em volta da porta
+  const mClaraoPortal = new THREE.MeshBasicMaterial({
+    map: tBrilho,
+    color: 0x3aa8ff,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+  const gClarao = new THREE.PlaneGeometry(1, 1);
+  const claraoPortal = new THREE.Mesh(gClarao, mClaraoPortal);
+  claraoPortal.rotation.x = -Math.PI / 2;
+  claraoPortal.scale.set(11, 9, 1);
+  claraoPortal.position.set(xCeleiro, yFazendas + 0.05, CELEIRO.z1 + 2.4);
+  const haloPortal = new THREE.Mesh(gClarao, mClaraoPortal);
+  haloPortal.scale.set(10, 10, 1);
+  haloPortal.position.set(xCeleiro, yFazendas + 2.5, CELEIRO.z1 + 0.25);
+  grupo.add(claraoPortal, haloPortal);
+  lixo.push(mRedemoinho, gRedemoinho, mClaraoPortal, gClarao);
+  // brilhinhos soltos na frente do portal e subindo pela escadaria
+  const faiscasDoPortal: [number, number, number][] = [];
+  for (let k = 0; k < 34; k++)
+    faiscasDoPortal.push([
+      xCeleiro + (r() - 0.5) * 6.4,
+      yFazendas + 0.3 + r() * 5.4,
+      CELEIRO.z1 + 0.2 + r() * 2.6,
+    ]);
+  for (let k = 0; k < 16; k++) {
+    const f = r();
+    const { pe, topo } = PONTE_FAZENDAS;
+    faiscasDoPortal.push([
+      pe.x + (topo.x - pe.x) * f + (r() - 0.5) * 4.2,
+      yFazendas * f + 1.4 + r() * 1.6,
+      pe.z + (topo.z - pe.z) * f,
+    ]);
+  }
+  const acenderFaiscasDoPortal = pontos(faiscasDoPortal, 0.5, 0xaee6ff);
+  // pás do moinho: quatro braços com vela, girando devagar
+  const pasDoMoinho = new THREE.Group();
+  pasDoMoinho.position.set(MOINHO.x, yFazendas + 4.9, MOINHO.z + 1.15);
+  {
+    const pas = new Blocos(r);
+    pas.add(0, 0, 0, 0.42, 0.42, 0.3, 0x6e4a2b, 0.03);
+    for (const s of [-1, 1]) {
+      pas.add(0, s * 1.55, 0, 0.14, 2.9, 0.1, 0x8a5a3a, 0.04);
+      pas.add(s * 0.42, s * 1.75, 0, 0.66, 2.1, 0.05, 0xf6f1e4, 0.03);
+      pas.add(s * 1.55, 0, 0, 2.9, 0.14, 0.1, 0x8a5a3a, 0.04);
+      pas.add(s * 1.75, -s * 0.42, 0, 2.1, 0.66, 0.05, 0xf6f1e4, 0.03);
+    }
+    const mPas = pas.construir(THREE, {
+      acabamento: { chanfro: 0.02, junta: 0.12, pe: 0, grao: 0.05 },
+    });
+    pasDoMoinho.add(mPas.malha);
+    lixo.push({ dispose: mPas.descartar });
+  }
+  grupo.add(pasDoMoinho);
+
   const acenderLampadas = pontos(lampadas, 3.4, 0xffc670);
-  const acenderBrilhos = pontos(brilhos, 0.55, 0xffffff);
+  const acenderBrilhos = pontos(brilhos, 0.6, 0xffffff);
 
-  // letreiro "ESCRITÓRIO HOST" em cima da parede do fundo
-  const placaEscritorio = new THREE.Group();
-  placaEscritorio.position.set((ESCRITORIO.x0 + ESCRITORIO.x1) / 2, 3.55, ESCRITORIO.z0 + 0.4);
-  const letrasEscritorio = new Blocos(r);
-  letrasDePedra(letrasEscritorio, "ESCRITÓRIO HOST", 0.085, 0.3, { linhas: 10, relevo: 0.5 });
-  const mEscritorio = letrasEscritorio.construir(THREE, {
-    recebe: false,
-    acabamento: { chanfro: 0.02, junta: 0.2, pe: 0, grao: 0.04 },
+  // ---------------- portal do Magnata: redemoinho azul (com um toque vermelho) na porta ----------------
+  const uMagnata = { uT: { value: 0 } };
+  const mMagnata = new THREE.ShaderMaterial({
+    uniforms: uMagnata,
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      varying vec2 vUv;
+      uniform float uT;
+      void main() {
+        vec2 p = (vUv - 0.5) * vec2(1.0, 1.4);
+        float raio = length(p) * 2.0;
+        float ang = atan(p.y, p.x);
+        float a = sin(ang * 3.0 + raio * 10.0 - uT * 2.6);
+        vec3 fundo = mix(vec3(0.02, 0.06, 0.35), vec3(0.08, 0.4, 1.0), clamp(1.0 - raio * 0.8, 0.0, 1.0));
+        vec3 cor = fundo + vec3(0.4, 0.75, 1.0) * smoothstep(0.0, 1.0, a) * (1.1 - raio * 0.5);
+        cor += vec3(1.0, 0.3, 0.3) * smoothstep(0.6, 1.0, sin(ang * 2.0 - raio * 6.0 + uT * 1.7)) * 0.35;
+        cor += vec3(0.95, 0.98, 1.0) * pow(max(0.0, 1.0 - raio * 1.6), 3.0);
+        gl_FragColor = vec4(cor, 1.0);
+        #include <colorspace_fragment>
+      }`,
   });
-  placaEscritorio.add(mEscritorio.malha);
-  grupo.add(placaEscritorio);
-  lixo.push({ dispose: mEscritorio.descartar });
+  const gMagnata = new THREE.PlaneGeometry(PREDIO_MAGNATA.porta * 2 - 0.1, 2.85);
+  const portalMagnata = new THREE.Mesh(gMagnata, mMagnata);
+  portalMagnata.position.set(PREDIO_MAGNATA.x1 - 0.5, 1.45, 0);
+  portalMagnata.rotation.y = Math.PI / 2;
+  grupo.add(portalMagnata);
+  lixo.push(mMagnata, gMagnata);
 
-  // portal do Magnata: o nome em cima e, pela abertura, o tabuleiro flutuando do outro lado
-  const letrasPortal = new Blocos(r);
-  letrasDePedra(letrasPortal, "MAGNATA", 0.078, 0.3, {
-    linhas: 10,
-    relevo: 0.5,
-    cores: [0xff3b30, 0xe23b30, 0xff5a4a, 0xd8281f],
-  });
-  const mPortal = letrasPortal.construir(THREE, {
-    recebe: false,
-    sombra: false,
-    material: new THREE.MeshBasicMaterial({ toneMapped: false }),
-  });
-  mPortal.malha.position.set(PORTAL.x, 5.85, PORTAL.z + 0.2);
-  grupo.add(mPortal.malha);
-  const tVista = new THREE.CanvasTexture(vistaDoTabuleiro());
-  tVista.colorSpace = THREE.SRGBColorSpace;
-  const mVista = new THREE.MeshBasicMaterial({ map: tVista, toneMapped: false });
-  const gVista = new THREE.PlaneGeometry(3.05, 4.5);
-  const vista = new THREE.Mesh(gVista, mVista);
-  vista.position.set(PORTAL.x, 2.25, PORTAL.z - 0.15);
-  grupo.add(vista);
-  lixo.push({ dispose: mPortal.descartar }, tVista, mVista, gVista);
-
-  // ---------------- letreiro HOST no céu: letras de pedra clara em relevo ----------------
+  // ---------------- logo HOST 3D no céu (modelo em public/hoki/logo), flutuando de leve ----------------
   const placa = new THREE.Group();
-  placa.position.set(0, 9.4, -19);
-  const letras = new Blocos(r);
-  const medidaDasLetras = letrasDePedra(letras, "HOST", 0.42, 1.5, { linhas: 12, relevo: 0.8 });
-  const mLetras = letras.construir(THREE, {
-    recebe: false,
-    acabamento: { chanfro: 0.08, junta: 0.22, pe: 0, grao: 0.04 },
-  });
-  placa.add(mLetras.malha);
+  placa.position.set(LETREIRO.x, LETREIRO.y, LETREIRO.z);
   grupo.add(placa);
-  lixo.push({ dispose: mLetras.descartar });
+  let logoDescartada = false;
+  const recursosDaLogo: { dispose(): void }[] = [];
+  void import("three/examples/jsm/loaders/GLTFLoader.js")
+    .then(({ GLTFLoader }) => new GLTFLoader().loadAsync("/hoki/logo/host-logo.glb"))
+    .then((gltf) => {
+      const logo = gltf.scene;
+      logo.traverse((o) => {
+        const m = o as TH.Mesh;
+        if (!m.isMesh) return;
+        recursosDaLogo.push(m.geometry);
+        const mat = m.material as TH.MeshStandardMaterial;
+        recursosDaLogo.push(mat);
+        if (mat.map) {
+          mat.map.anisotropy = 8;
+          recursosDaLogo.push(mat.map);
+          // um pouco de brilho próprio para a logo ficar viva também à sombra e à noite
+          mat.emissive = new THREE.Color(0xffffff);
+          mat.emissiveMap = mat.map;
+          mat.emissiveIntensity = 0.18;
+        }
+      });
+      if (logoDescartada) return recursosDaLogo.forEach((x) => x.dispose());
+      // o modelo tem 0,98 × 0,70 (base no chão, frente para +z): fica com ~17 m de largura
+      logo.scale.setScalar(17.5);
+      placa.add(logo);
+    })
+    .catch(() => undefined);
+  lixo.push({
+    dispose: () => {
+      logoDescartada = true;
+      recursosDaLogo.forEach((x) => x.dispose());
+    },
+  });
 
-  // ---------------- ao longe: ilhas flutuando; no céu e embaixo da ilha, nuvens ----------------
+  // ---------------- ao longe: ilhotas flutuando; no céu e embaixo da ilha, nuvens ----------------
   const longe = new Blocos(r);
   const ilhota = (cx: number, cy: number, cz: number, raio: number) => {
     for (let k = 0; k <= 5; k++) {
@@ -1916,10 +2307,13 @@ export function criarMundo(THREE: typeof TH) {
     });
     arvore(longe, cx + 1.7, cz - 1, { tipo: "pinheiro", u: 0.62, y: cy });
   };
-  ilhota(-37, 3, -31, 4.5);
-  ilhota(39, 6, -37, 5);
-  ilhota(-31, -4, 7, 3.2);
-  ilhota(34, -2, 12, 2.6);
+  ilhota(-46, 8, -28, 3.4);
+  ilhota(46, 8, -28, 3.4);
+  ilhota(-62, 2, 14, 3);
+  ilhota(62, 2, 14, 3);
+  // (a do meio, lá no fundo, fica mais alta e de lado para não aparecer atrás da logo)
+  ilhota(-30, 20, -62, 2.6);
+  ilhota(30, 20, -62, 2.6);
   const mLonge = longe.construir(THREE, {
     sombra: false,
     recebe: false,
@@ -1927,167 +2321,95 @@ export function criarMundo(THREE: typeof TH) {
   });
   grupo.add(mLonge.malha);
   lixo.push({ dispose: mLonge.descartar });
-
   const ceu = criarNuvens(
     THREE,
     [
-      [-30, 15, -40, 2.4],
-      [16, 22, -50, 3],
-      [44, 12, -34, 2.1],
-      [-52, 9, -30, 2.3],
-      [0, 27, -62, 3.6],
-      [30, 24, -44, 1.9],
-      [-14, 30, -56, 2.6],
+      [-40, 20, -70, 2.6],
+      [18, 24, -76, 3],
+      [52, 18, -60, 2.2],
+      [-64, 16, -40, 2.4],
+      [70, 15, -30, 2.3],
+      [-20, 26, -90, 3.4],
+      [40, 28, -96, 3],
     ],
     11,
   );
   const mar = criarNuvens(
     THREE,
     [
-      [-22, -15, 14, 5],
-      [4, -16.5, 18, 6],
-      [27, -15, 12, 5],
-      [-34, -14, -6, 5],
-      [38, -15, -10, 5.5],
-      [0, -17, -4, 7],
-      [-12, -15.5, -22, 5.5],
-      [18, -16, -24, 6],
-      [-44, -16, 16, 6],
-      [48, -16, 22, 6],
+      [-26, -16, 18, 6],
+      [8, -18, 24, 7],
+      [32, -16, 16, 6],
+      [-44, -15, -4, 6],
+      [46, -16, -8, 6.5],
+      [0, -19, -6, 8],
+      [-16, -17, -28, 6.5],
+      [22, -17, -30, 7],
+      [-58, -16, 22, 6],
+      [60, -16, 26, 6],
+      [-4, -12, 40, 5],
     ],
     23,
   );
   for (const n of [...ceu.nuvens, ...mar.nuvens]) grupo.add(n.malha);
   lixo.push({ dispose: ceu.descartar }, { dispose: mar.descartar });
 
-  // ---------------- balanço do letreiro: um banco comprido, para 10, pendurado por cordas ----------------
-  // fica num grupo que gira no eixo (embaixo do letreiro); os "lugares" são pontos do banco que o
-  // mundo consulta a cada quadro para sentar os HOKIs no lugar certo enquanto ele balança
-  const eixoDoBalanco = new THREE.Group();
-  eixoDoBalanco.position.set(BALANCO.eixo.x, BALANCO.eixo.y, BALANCO.eixo.z);
-  grupo.add(eixoDoBalanco);
-  const larguraDoBalanco = BALANCO.lugares * BALANCO.passo + 0.5;
-  const pecaDoBalanco = (
-    w: number,
-    h: number,
-    d: number,
-    x: number,
-    y: number,
-    z: number,
-    cor: number,
-    pai: TH.Object3D = eixoDoBalanco,
-  ) => {
-    const g = new THREE.BoxGeometry(w, h, d);
-    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.8 });
-    const o = new THREE.Mesh(g, m);
-    o.position.set(x, y, z);
-    o.castShadow = true;
-    pai.add(o);
-    lixo.push(g, m);
-    return o;
-  };
-  const MADEIRA_DO_BALANCO = 0x9a6a3c;
-  const CORDA_DO_BALANCO = 0xd9c9a3;
-  const L = BALANCO.corda;
-  // só as cordas das pontas, presas direto nas letras: a da esquerda no pé do H e a da direita no pé do T
-  const meiaLetra = medidaDasLetras.largura / 2;
-  const presas = [
-    { lado: -1, topo: -meiaLetra + 0.42 },
-    { lado: 1, topo: meiaLetra - 0.42 * 2.5 },
-  ];
-  for (const { lado, topo } of presas)
-    for (const dz of [-0.24, 0.24]) {
-      const base = lado * (larguraDoBalanco / 2);
-      // a corda vai do pé da letra até a ponta do banco (um pouco inclinada)
-      const comprimento = Math.hypot(base - topo, L, dz);
-      const corda = pecaDoBalanco(
-        0.09,
-        comprimento,
-        0.09,
-        (base + topo) / 2,
-        -L / 2,
-        dz / 2,
-        CORDA_DO_BALANCO,
-      );
-      corda.rotation.z = Math.atan2(base - topo, L);
-      corda.rotation.x = -Math.atan2(dz, L);
-      corda.castShadow = false;
-    }
-  // assento (três tábuas), encosto e os braços nas pontas
-  for (const dz of [-0.2, 0, 0.2])
-    pecaDoBalanco(larguraDoBalanco, 0.08, 0.17, 0, -L, dz, MADEIRA_DO_BALANCO);
-  for (const dy of [0.3, 0.52])
-    pecaDoBalanco(larguraDoBalanco, 0.14, 0.07, 0, -L + dy, -0.3, MADEIRA_DO_BALANCO);
-  for (const lado of [-1, 1]) {
-    pecaDoBalanco(0.1, 0.62, 0.1, lado * (larguraDoBalanco / 2), -L + 0.3, -0.3, 0x6f4a28);
-    pecaDoBalanco(0.1, 0.1, 0.62, lado * (larguraDoBalanco / 2), -L + 0.34, 0, 0x6f4a28);
-  }
-  const lugaresDoBalanco = Array.from({ length: BALANCO.lugares }, (_, i) => {
-    const o = new THREE.Object3D();
-    // o HOKI senta com a base um pouco abaixo do tampo, como nos bancos da praça
-    o.position.set((i - (BALANCO.lugares - 1) / 2) * BALANCO.passo, -L + 0.01, 0.02);
-    eixoDoBalanco.add(o);
-    return o;
-  });
-  const pontoDoBalanco = new THREE.Vector3();
-  let anguloAtual = 0;
-
+  // ---------------- gotas da fonte: jatos subindo do topo e caindo nas taças ----------------
+  const GOTAS = 90;
+  const gGota = new THREE.SphereGeometry(0.06, 6, 4);
+  const mGota = new THREE.MeshBasicMaterial({ color: 0xd8f6ff, transparent: true, opacity: 0.85 });
+  const gotas = new THREE.InstancedMesh(gGota, mGota, GOTAS);
+  gotas.frustumCulled = false;
+  grupo.add(gotas);
+  lixo.push(gGota, mGota);
+  const aux = new THREE.Object3D();
   let nivelNoite = 0;
+
   return {
     grupo,
-    /** Onde está agora o lugar `i` do balanço (0 a 9) e o quanto o banco está inclinado. */
-    lugarDoBalanco(i: number) {
-      const o = lugaresDoBalanco[i];
-      if (!o) return null;
-      o.getWorldPosition(pontoDoBalanco);
-      return {
-        x: pontoDoBalanco.x,
-        y: pontoDoBalanco.y,
-        z: pontoDoBalanco.z,
-        inclina: -anguloAtual,
-      };
-    },
     atualizar(t: number) {
-      // o balanço segue o relógio do mundo real (igual para todos) e sobe e desce junto com o letreiro
-      anguloAtual = anguloDoBalanco();
-      eixoDoBalanco.rotation.x = -anguloAtual;
-      eixoDoBalanco.position.y = BALANCO.eixo.y + Math.sin(t * 0.6) * 0.25;
-      eixoDoBalanco.updateMatrixWorld(true);
-      tAgua.offset.y = t * 0.42;
+      tAgua.offset.y = -t * 0.42;
       tQueda.offset.y = t * 0.9;
+      tAguaCalha.offset.y = -t * 1.6;
       tParada.offset.set(Math.sin(t * 0.25) * 0.06, Math.cos(t * 0.2) * 0.06);
-      placa.position.y = 9.4 + Math.sin(t * 0.6) * 0.25;
-      // a vista do portal "respira" e balança de leve, como se o tabuleiro flutuasse lá do outro lado
-      mVista.color.setScalar(0.88 + Math.sin(t * 1.7) * 0.12);
-      tVista.offset.y = Math.sin(t * 0.8) * 0.012;
+      placa.position.y = LETREIRO.y + Math.sin(t * 0.6) * 0.25;
+      placa.rotation.y = Math.sin(t * 0.25) * 0.06;
+      uMagnata.uT.value = t;
+      // HOST FAZENDAS: o redemoinho gira, o clarão pulsa, as faíscas cintilam e o moinho roda
+      uPortal.uT.value = t;
+      mClaraoPortal.opacity = 0.42 + Math.sin(t * 2.2) * 0.12;
+      haloPortal.rotation.z = t * 0.15;
+      acenderFaiscasDoPortal(
+        (i) => Math.pow(Math.max(0, Math.sin(t * (1.2 + (i % 7) * 0.29) + i * 2.1)), 6) * 1.7,
+      );
+      pasDoMoinho.rotation.z = -t * 0.55;
       ceu.nuvens.forEach(
-        (n, i) => (n.malha.position.x = ((n.x0 + 70 + t * (0.22 + i * 0.04)) % 140) - 70),
+        (n, i) => (n.malha.position.x = ((n.x0 + 90 + t * (0.2 + i * 0.04)) % 180) - 90),
       );
       mar.nuvens.forEach((n, i) => (n.malha.position.x = n.x0 + Math.sin(t * 0.05 + i) * 2.5));
-      acenderLampadas(() => 0.5 + nivelNoite * 1.2 + Math.sin(t * 2.1) * 0.03);
+      acenderLampadas(() => 0.55 + nivelNoite * 1.25 + Math.sin(t * 2.1) * 0.03);
       acenderBrilhos(
-        (i) => Math.pow(Math.max(0, Math.sin(t * (1.1 + (i % 5) * 0.23) + i * 1.7)), 10) * 1.4,
+        (i) => Math.pow(Math.max(0, Math.sin(t * (1.1 + (i % 5) * 0.23) + i * 1.7)), 10) * 1.5,
       );
       for (let i = 0; i < GOTAS; i++) {
         const p = (t * 0.7 + i / GOTAS) % 1;
         const ang = i * 2.399;
-        // um terço sobe do bico e cai na taça de cima; o resto pinga das duas taças
         const tipo = i % 3;
-        const dist = tipo === 0 ? p * 0.4 : tipo === 1 ? 0.62 + p * 0.25 : 1.16 + p * 0.3;
+        const dist = tipo === 0 ? p * 0.5 : tipo === 1 ? 1.0 + p * 0.45 : 1.75 + p * 0.5;
         const y =
           tipo === 0
-            ? 2.98 + Math.sin(p * Math.PI) * 0.45 - p * 0.36
+            ? 3.6 + Math.sin(p * Math.PI) * 0.6 - p * 0.6
             : tipo === 1
-              ? 2.6 - p * p * 0.8
-              : 1.82 - p * p * 1.3;
-        aux.position.set(FX + Math.cos(ang) * dist, y, FZ + Math.sin(ang) * dist);
-        aux.scale.setScalar(tipo === 0 ? 1 : 0.8);
+              ? 2.95 - p * p * 1.0
+              : 1.9 - p * p * 1.4;
+        aux.position.set(FONTE.x + Math.cos(ang) * dist, y, FONTE.z + Math.sin(ang) * dist);
+        aux.scale.setScalar(tipo === 0 ? 1.1 : 0.85);
         aux.updateMatrix();
         gotas.setMatrixAt(i, aux.matrix);
       }
       gotas.instanceMatrix.needsUpdate = true;
     },
-    /** Noite (0 = dia, 1 = noite fechada): as nuvens escurecem e as luminárias aparecem mais. */
+    /** Noite (0 = dia, 1 = noite fechada): as nuvens escurecem e as luzes aparecem mais. */
     noite(v: number) {
       nivelNoite = v;
       for (const n of [ceu.nuvens[0], mar.nuvens[0]])

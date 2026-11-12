@@ -1,7 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { Coins, Cookie, Timer } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Check, Coins, Cookie, Lock, Timer } from "lucide-react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { aoVivo, ESPACOS, humor, peca, progresso, titulo, type HokiPet } from "@/lib/hoki";
+import { aoVivo, ESPACOS, humor, peca, type HokiPet } from "@/lib/hoki";
+import { CORES_LEVEL, corDoSelo, progressoDoNivel } from "@/lib/fazenda/catalogo";
+import { CHAVE_MEU_NIVEL, useMeuNivel, useSelos, type MeuNivel } from "@/lib/fazenda/selos";
+import { fazendaAcao } from "@/lib/fazenda.functions";
 import { QUERIDOMETRO } from "@/lib/termometro";
 import { cn } from "@/lib/utils";
 import { Hoki3D, type Reacao } from "./hoki-3d";
@@ -26,7 +32,18 @@ export function PerfilHoki({
   acoes?: ReactNode;
 }) {
   const pet = aoVivo(bruto);
-  const prog = progresso(pet.xp);
+  // nível = nível do HOST FAZENDAS (o meu com XP; o dos outros só o número e a cor)
+  const { data: meu } = useMeuNivel();
+  const souEu = !!meu && meu.userId === pet.user_id;
+  const { data: selos } = useSelos(souEu ? [] : [pet.user_id]);
+  const seloDeOutro = selos?.[pet.user_id];
+  const prog = progressoDoNivel(souEu ? meu.xp : 0);
+  const nivel = souEu ? prog.nivel : (seloDeOutro?.nivel ?? 1);
+  const cor = souEu
+    ? corDoSelo(meu.cor, nivel)
+    : seloDeOutro
+      ? { fundo: seloDeOutro.fundo, texto: seloDeOutro.texto }
+      : corDoSelo(null, 1);
   const vestindo = ESPACOS.map((g) => peca(pet.visual[g])).filter((p) => !!p);
   const [aceno] = useState<{ tipo: Reacao; n: number }>({ tipo: "acenar", n: 1 });
   const { quadro, tags } = useQueridometro("");
@@ -54,7 +71,7 @@ export function PerfilHoki({
               humor={humor(pet)}
               reacao={aceno}
               visual={pet.visual}
-              placa={{ nome: pet.nome, nivel: prog.nivel }}
+              placa={{ nome: pet.nome, nivel }}
               interativo
               className="absolute inset-0 cursor-grab active:cursor-grabbing"
             />
@@ -71,7 +88,7 @@ export function PerfilHoki({
                 aria-hidden
                 className="size-[5px] rounded-full bg-[#e5231b] shadow-[0_0_8px_rgba(229,35,27,0.95)]"
               />
-              {titulo(prog.nivel)}
+              Nível {nivel} · HOST FAZENDAS
             </p>
             <DialogTitle className="mt-1.5 truncate font-display text-[28px] font-semibold leading-none tracking-[-0.035em]">
               {pet.nome}
@@ -85,23 +102,42 @@ export function PerfilHoki({
               HOKI de {pet.username || "staff"}
             </p>
 
-            {/* nível e experiência */}
+            {/* nível do HOST FAZENDAS (a experiência só aparece no meu perfil) */}
             <div className="glass-inset mt-4 flex items-center gap-3 rounded-2xl border p-3">
-              <span className="font-display text-[34px] font-light leading-none tracking-[-0.04em] tabular-nums">
-                {prog.nivel}
+              <span
+                className="grid h-10 min-w-10 place-items-center rounded-full px-2 font-display text-[19px] font-extrabold leading-none tabular-nums"
+                style={{ background: cor.fundo, color: cor.texto }}
+              >
+                {nivel}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex justify-between text-[11px] text-muted-foreground">
-                  <span>Nível</span>
-                  <span className="tabular-nums">
-                    {prog.noNivel}/{prog.paraSubir} XP
-                  </span>
+                  <span>Nível · HOST FAZENDAS</span>
+                  {souEu && (
+                    <span className="tabular-nums">
+                      {prog.maximo
+                        ? "nível máximo"
+                        : `${prog.noNivel.toLocaleString("pt-BR")}/${prog.paraSubir.toLocaleString("pt-BR")} XP`}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                  <div className="h-full rounded-full bg-white" style={{ width: `${prog.pct}%` }} />
-                </div>
+                {souEu ? (
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                    <div
+                      className="h-full rounded-full bg-white"
+                      style={{ width: `${prog.pct}%` }}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-ink-3">
+                    {seloDeOutro
+                      ? "Sobe plantando, colhendo e cuidando da ilha."
+                      : "Ainda não entrou no HOST FAZENDAS."}
+                  </p>
+                )}
               </div>
             </div>
+            {souEu && <CorDoLevel meu={meu} />}
 
             <dl className="mt-2 grid grid-cols-3 gap-2">
               {numeros.map((x) => (
@@ -173,5 +209,70 @@ export function PerfilHoki({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Personalização: a cor do número do nível na plaquinha (libera com o nível do HOST FAZENDAS). */
+function CorDoLevel({ meu }: { meu: MeuNivel }) {
+  const acao = useServerFn(fazendaAcao);
+  const qc = useQueryClient();
+  const [trocando, setTrocando] = useState<string | null>(null);
+  const nivel = progressoDoNivel(meu.xp).nivel;
+  const equipar = async (id: string) => {
+    if (!meu.temIlha) {
+      toast.info("Entre no HOST FAZENDAS (portal do celeiro) para criar a sua ilha primeiro.");
+      return;
+    }
+    setTrocando(id);
+    try {
+      const r = await acao({ data: { op: crypto.randomUUID(), acao: { t: "cor", id } } });
+      if (r.erro) return void toast.error(r.erro);
+      qc.setQueryData<MeuNivel | null>(CHAVE_MEU_NIVEL, (v) => (v ? { ...v, cor: id } : v));
+      void qc.invalidateQueries({ queryKey: ["fazenda-selos"] });
+      toast.success("Cor do level equipada!");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para trocar a cor agora.");
+    } finally {
+      setTrocando(null);
+    }
+  };
+  return (
+    <div className="mt-2 rounded-2xl border border-white/[0.07] p-3">
+      <p className="text-[10.5px] font-medium uppercase tracking-[0.18em] text-ink-3">
+        Personalização · Cor do Level
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {CORES_LEVEL.map((c) => {
+          const liberada = nivel >= c.nivel;
+          const emUso = corDoSelo(meu.cor, nivel).id === c.id;
+          return (
+            <button
+              key={c.id}
+              disabled={!liberada || emUso || !!trocando}
+              onClick={() => void equipar(c.id)}
+              title={liberada ? c.nome : `${c.nome}: libera no nível ${c.nivel}`}
+              aria-label={liberada ? `Equipar ${c.nome}` : `${c.nome}, libera no nível ${c.nivel}`}
+              className={cn(
+                "relative grid h-7 min-w-9 place-items-center rounded-full px-2 text-[11px] font-extrabold tabular-nums transition",
+                emUso ? "ring-2 ring-white ring-offset-2 ring-offset-black" : "hover:scale-105",
+                !liberada && "cursor-not-allowed opacity-35",
+              )}
+              style={{ background: c.fundo, color: c.texto }}
+            >
+              {emUso ? (
+                <Check className="size-3.5" />
+              ) : liberada ? (
+                nivel
+              ) : (
+                <span className="flex items-center gap-0.5">
+                  <Lock className="size-2.5" />
+                  {c.nivel}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

@@ -4,7 +4,8 @@ import {
   ArrowLeftRight,
   Building2,
   Check,
-  Copy,
+  Bell,
+  BellRing,
   Crown,
   Dices,
   Eye,
@@ -14,11 +15,9 @@ import {
   LogOut,
   Smile,
   Timer,
-  UserPlus,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { copiarTexto } from "@/lib/copiar";
 import { playSfx } from "@/lib/sfx";
 import type { Visual } from "@/lib/hoki";
 import {
@@ -48,7 +47,7 @@ import {
   type Jogador,
   type Troca,
 } from "@/lib/hoki-magnata";
-import { guardarSala, useSalaMagnata, type Eu } from "@/lib/hoki-magnata-sala";
+import { guardarSala, marcarEmPartida, useSalaMagnata, type Eu } from "@/lib/hoki-magnata-sala";
 import { Hoki2D } from "./hoki-2d";
 import { criarCenaMagnata, type CenaMagnata } from "./magnata-cena";
 
@@ -76,6 +75,7 @@ const EMOTES: [string, string][] = [
   ["rebolar", "🕺"],
   ["mortal", "🤸"],
 ];
+const DESCANSO_DO_SINO = 30_000;
 const vidro =
   "rounded-2xl border border-white/10 bg-black/75 text-white shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl";
 const corDe = (j: Jogador | undefined) => CORES[j?.cor ?? 0]?.hex ?? "#fff";
@@ -149,6 +149,11 @@ export function Magnata({ codigo, criar, eu, amigos, onConvidar, onClose }: Prop
   const [verHistorico, setVerHistorico] = useState(true);
   const [menu, setMenu] = useState<null | "sair" | "emotes">(null);
 
+  // enquanto a partida está aberta, o sino de outras salas não interrompe (o convite fica no portal)
+  useEffect(() => {
+    marcarEmPartida(true);
+    return () => marcarEmPartida(false);
+  }, []);
   useEffect(() => {
     let morto = false;
     let c: CenaMagnata | null = null;
@@ -228,7 +233,7 @@ export function Magnata({ codigo, criar, eu, amigos, onConvidar, onClose }: Prop
       ) : !e ? (
         <Centro>
           <p className="flex items-center gap-2 text-sm text-white/80">
-            <Loader2 className="size-4 animate-spin" /> Procurando a sala {codigo}…
+            <Loader2 className="size-4 animate-spin" /> Entrando na partida…
           </p>
           <Botao onClick={onClose} className="mt-4">
             Cancelar
@@ -454,7 +459,17 @@ function SalaDeEspera({
   onConvidar: (id: string) => void;
   onSair: () => void;
 }) {
-  const [convidados, setConvidados] = useState<Set<string>>(new Set());
+  // o sino de cada pessoa descansa um pouco depois de tocar (para ninguém ser chamado sem parar)
+  const [tocados, setTocados] = useState<Map<string, number>>(new Map());
+  const agora = useAgora(tocados.size > 0);
+  const esperando = (id: string) =>
+    Math.max(0, Math.ceil(((tocados.get(id) ?? 0) + DESCANSO_DO_SINO - agora) / 1000));
+  const tocar = (id: string) => {
+    if (esperando(id)) return;
+    onConvidar(id);
+    playSfx("sino");
+    setTocados((m) => new Map(m).set(id, Date.now()));
+  };
   const souAnfitriao = e.anfitriao === eu.id;
   const eu_ = e.jogadores.find((j) => j.id === eu.id);
   const faltam = e.jogadores.filter((j) => !j.pronto && j.id !== e.anfitriao).length;
@@ -470,17 +485,9 @@ function SalaDeEspera({
             </p>
             <h2 className="font-display text-2xl font-semibold leading-tight">Magnata HOST</h2>
           </div>
-          <button
-            onClick={() =>
-              void copiarTexto(e.codigo).then((ok) => ok && toast.success("Código copiado."))
-            }
-            title="Copiar o código da sala"
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-1.5 hover:bg-white/10"
-          >
-            <span className="text-[10px] uppercase tracking-widest text-white/50">código</span>
-            <span className="font-mono text-lg font-bold tracking-[0.2em]">{e.codigo}</span>
-            <Copy className="size-3.5 text-white/60" />
-          </button>
+          <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11.5px] text-white/70">
+            <Bell className="size-3.5 text-[#ffd23f]" /> Toque o sino para chamar a galera
+          </span>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-1.5">
@@ -548,37 +555,58 @@ function SalaDeEspera({
             : "Aos 30 minutos o turno atual termina e vence o maior patrimônio."}
         </p>
 
-        {livres.length > 0 && e.jogadores.length < MAX_JOGADORES && (
-          <div className="mt-4">
-            <p className="mb-1.5 text-[11px] uppercase tracking-widest text-white/45">
-              Convidar quem está online
-            </p>
-            <div className="flex max-h-[104px] flex-wrap gap-1.5 overflow-y-auto">
-              {livres.map((a) => {
-                const foi = convidados.has(a.id);
-                return (
-                  <button
-                    key={a.id}
-                    disabled={foi}
-                    onClick={() => {
-                      onConvidar(a.id);
-                      setConvidados((s) => new Set(s).add(a.id));
-                    }}
-                    className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] pl-1 pr-2.5 text-[12px] hover:bg-white/10 disabled:opacity-50"
-                  >
-                    <span className="block size-6 overflow-hidden rounded-full bg-black/50">
-                      <Hoki2D visual={a.visual} busto />
-                    </span>
-                    {a.nome}
-                    {foi ? (
-                      <Check className="size-3 text-emerald-300" />
-                    ) : (
-                      <UserPlus className="size-3" />
-                    )}
-                  </button>
-                );
-              })}
+        {e.jogadores.length < MAX_JOGADORES && (
+          <div className="mt-4 rounded-2xl border border-[#ffd23f]/20 bg-[#ffd23f]/[0.05] p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-[#ffd23f]">
+                <BellRing className="size-4" /> Chamar quem está online
+              </p>
+              {livres.length > 1 && (
+                <button
+                  disabled={livres.every((a) => esperando(a.id))}
+                  onClick={() => livres.forEach((a) => tocar(a.id))}
+                  className="flex h-7 items-center gap-1.5 rounded-full bg-[#ffd23f] px-3 text-[11.5px] font-bold text-black transition hover:bg-[#ffe066] active:scale-95 disabled:opacity-40"
+                >
+                  <Bell className="size-3.5" /> Tocar para todos ({livres.length})
+                </button>
+              )}
             </div>
+            {livres.length === 0 ? (
+              <p className="text-[11.5px] text-white/50">
+                Ninguém mais online agora. Quando alguém entrar no painel, aparece aqui.
+              </p>
+            ) : (
+              <div className="flex max-h-[112px] flex-wrap gap-1.5 overflow-y-auto">
+                {livres.map((a) => {
+                  const falta = esperando(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      disabled={falta > 0}
+                      onClick={() => tocar(a.id)}
+                      title={
+                        falta
+                          ? `Chamado! Dá para tocar de novo em ${falta} s`
+                          : `Tocar o sino para ${a.nome}`
+                      }
+                      className="group flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-black/30 pl-1 pr-2.5 text-[12px] transition hover:border-[#ffd23f]/50 hover:bg-[#ffd23f]/10 disabled:cursor-default disabled:border-emerald-400/30 disabled:bg-emerald-400/10"
+                    >
+                      <span className="block size-6 overflow-hidden rounded-full bg-black/50">
+                        <Hoki2D visual={a.visual} busto />
+                      </span>
+                      {a.nome}
+                      {falta > 0 ? (
+                        <span className="flex items-center gap-0.5 text-[10.5px] text-emerald-300">
+                          <Check className="size-3" /> {falta}s
+                        </span>
+                      ) : (
+                        <Bell className="size-3.5 text-[#ffd23f] transition group-hover:rotate-12 group-active:-rotate-12" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

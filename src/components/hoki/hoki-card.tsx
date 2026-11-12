@@ -31,19 +31,17 @@ import {
   humor,
   meuPet,
   NOME_MAX,
-  nivelDoXp,
   nomeValido,
-  progresso,
-  rankingPets,
+  rankingPorNivel,
   salvarPet,
   SUJO_ABAIXO_DE,
   sugerirNome,
-  titulo,
-  XP_MAX_JOGO,
   type Barra,
   type Cuidado,
   type HokiPet,
 } from "@/lib/hoki";
+import { corDoSelo, progressoDoNivel } from "@/lib/fazenda/catalogo";
+import { useMeuNivel } from "@/lib/fazenda/selos";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
 import { PainelCoins, Saldo } from "./guarda-roupa";
@@ -121,9 +119,11 @@ export function HokiCard() {
   } = useQuery({ queryKey: KEY, queryFn: meuPet, staleTime: Infinity });
   const { data: ranking = [] } = useQuery({
     queryKey: ["hoki-ranking"],
-    queryFn: rankingPets,
+    queryFn: rankingPorNivel,
     staleTime: 30_000,
   });
+  // o nível do HOKI é o nível do HOST FAZENDAS
+  const { data: meuNivel } = useMeuNivel();
   const [, tique] = useState(0);
   const [reacao, setReacao] = useState<{ tipo: Reacao; n: number } | null>(null);
   const [jogando, setJogando] = useState(false);
@@ -179,26 +179,11 @@ export function HokiCard() {
   if (isError || !salvo) return null;
 
   const pet = aoVivo(salvo);
-  const prog = progresso(pet.xp);
+  const prog = progressoDoNivel(meuNivel?.xp ?? 0);
+  const selo = corDoSelo(meuNivel?.cor, prog.nivel);
   const entregador = pet.username.toLowerCase() === ENTREGADOR_DE_COINS;
   const estado = humor(pet);
   const reagir = (tipo: Reacao) => setReacao((r) => ({ tipo, n: (r?.n ?? 0) + 1 }));
-
-  /** Soma XP e comemora quando sobe de nível. */
-  const comXp = (ganho: number) => {
-    const xp = pet.xp + ganho;
-    const novoNivel = nivelDoXp(xp);
-    if (novoNivel > prog.nivel) {
-      setTimeout(() => {
-        reagir("festa");
-        playSfx("complete");
-        toast.success(
-          `${pet.nome} subiu para o nível ${novoNivel}! Veja se há recompensa nova na loja.`,
-        );
-      }, 500);
-    }
-    return xp;
-  };
 
   /** Tira uma unidade do item da mochila (some da lista quando acaba). */
   const semUm = (it: Item) => {
@@ -233,7 +218,6 @@ export function HokiCard() {
         sede: Math.min(100, pet.sede + (it.sede ?? 0)),
         energia: Math.min(100, pet.energia + (it.energia ?? 0)),
         carinho: Math.min(100, pet.carinho + (it.carinho ?? 0)),
-        xp: comXp(2),
       },
     });
   };
@@ -262,16 +246,12 @@ export function HokiCard() {
     reagir(REACAO[c.id]);
     salvar.mutate({
       pet: salvo,
-      patch: { [c.barra]: Math.min(100, pet[c.barra] + c.ganho), xp: comXp(c.xp) },
+      patch: { [c.barra]: Math.min(100, pet[c.barra] + c.ganho) },
     });
   };
 
   const fimDoJogo = (r: Resultado) => {
     setJogando(false);
-    const ganho = Math.min(
-      XP_MAX_JOGO,
-      r.jogo === "petiscos" ? r.valor * 2 : Math.round(Math.max(0, 700 - r.valor) / 14),
-    );
     const recordes =
       r.jogo === "petiscos"
         ? { recorde_petiscos: Math.max(pet.recorde_petiscos, r.valor) }
@@ -282,13 +262,16 @@ export function HokiCard() {
                 : pet.recorde_reflexo,
           };
     reagir("carinho");
-    toast.success(`+${ganho} XP para ${pet.nome}.`);
+    const recorde =
+      r.jogo === "petiscos"
+        ? r.valor > pet.recorde_petiscos
+        : r.valor > 0 && (pet.recorde_reflexo === 0 || r.valor < pet.recorde_reflexo);
+    toast.success(recorde ? `Novo recorde de ${pet.nome}!` : `${pet.nome} adorou brincar!`);
     salvar.mutate({
       pet: salvo,
       patch: {
         energia: Math.max(0, pet.energia - ENERGIA_POR_JOGO),
         carinho: Math.min(100, pet.carinho + 10),
-        xp: comXp(ganho),
         ...recordes,
       },
     });
@@ -357,8 +340,21 @@ export function HokiCard() {
             {/* controles por cima da cena */}
             <div className="absolute inset-x-2 bottom-2 rounded-[20px] border border-white/10 bg-black/65 p-2.5 text-white backdrop-blur-xl">
               <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-[10.5px] font-medium uppercase tracking-[0.16em] text-white/70">
-                  {titulo(prog.nivel)} · {prog.noNivel}/{prog.paraSubir} XP
+                <p
+                  className="flex min-w-0 items-center gap-1.5 truncate text-[10.5px] font-medium uppercase tracking-[0.16em] text-white/70"
+                  title="O nível do HOKI é o nível do HOST FAZENDAS"
+                >
+                  <span
+                    className="rounded-full px-1.5 text-[10px] font-extrabold leading-[16px] tracking-normal"
+                    style={{ background: selo.fundo, color: selo.texto }}
+                  >
+                    {prog.nivel}
+                  </span>
+                  <span className="truncate">
+                    {prog.maximo
+                      ? "Nível máximo"
+                      : `${prog.noNivel.toLocaleString("pt-BR")}/${prog.paraSubir.toLocaleString("pt-BR")} XP`}
+                  </span>
                 </p>
                 <Saldo coins={pet.coins} />
               </div>
@@ -584,8 +580,15 @@ export function HokiCard() {
                           {r.username || "staff"}
                         </span>
                       </span>
-                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                        Nv {nivelDoXp(r.xp)}
+                      <span
+                        className="shrink-0 rounded-full px-1.5 text-[10.5px] font-extrabold leading-[17px] tabular-nums"
+                        title="Nível do HOST FAZENDAS"
+                        style={{
+                          background: corDoSelo(r.corLevel, r.nivelFazenda).fundo,
+                          color: corDoSelo(r.corLevel, r.nivelFazenda).texto,
+                        }}
+                      >
+                        {r.nivelFazenda}
                       </span>
                     </button>
                   </li>

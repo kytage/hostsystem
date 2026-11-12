@@ -39,6 +39,57 @@ export const guardarSala = (codigo: string | null) => {
   }
 };
 
+/* ---------- convites do sino: chegam em qualquer tela do painel e ficam guardados até a pessoa entrar ---------- */
+export interface ConviteMagnata {
+  codigo: string;
+  nome: string;
+  quando: number;
+}
+const VALIDADE_DO_CONVITE = 15 * 60_000;
+let convites: ConviteMagnata[] = [];
+let pedidoDeAbrir: string | null = null;
+let emPartida = false;
+const ouvintes = new Set<() => void>();
+const avisarOuvintes = () => ouvintes.forEach((f) => f());
+export function guardarConvite(c: ConviteMagnata) {
+  convites = [c, ...convites.filter((x) => x.codigo !== c.codigo)].slice(0, 4);
+  avisarOuvintes();
+}
+export function esquecerConvite(codigo: string) {
+  convites = convites.filter((x) => x.codigo !== codigo);
+  avisarOuvintes();
+}
+/** O convite foi aceito fora da praça: ela abre a sala assim que estiver na tela. */
+export function pedirParaAbrir(codigo: string) {
+  pedidoDeAbrir = codigo;
+  avisarOuvintes();
+}
+export function pegarPedidoDeAbrir() {
+  const c = pedidoDeAbrir;
+  pedidoDeAbrir = null;
+  return c;
+}
+/** Quem já está numa partida não recebe o aviso do sino (o convite fica guardado no portal). */
+export const estouEmPartida = () => emPartida;
+export const marcarEmPartida = (v: boolean) => {
+  emPartida = v;
+};
+export function useConvitesMagnata() {
+  const [, setN] = useState(0);
+  useEffect(() => {
+    const f = () => setN((n) => n + 1);
+    ouvintes.add(f);
+    return () => {
+      ouvintes.delete(f);
+    };
+  }, []);
+  const agora = Date.now();
+  return {
+    convites: convites.filter((c) => agora - c.quando < VALIDADE_DO_CONVITE),
+    pedido: pedidoDeAbrir,
+  };
+}
+
 /** Quanto tempo sem aparecer até o anfitrião jogar no lugar de quem caiu, e de quem só demorou. */
 const AUSENTE_MS = 15_000;
 const PARADO_MS = 90_000;
@@ -194,7 +245,7 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
         if (!criar) {
           mandar("ola", {});
           if (agora - inicio > 8000 && !morto)
-            setErro("Sala não encontrada. Confira o código ou peça um novo convite.");
+            setErro("Essa partida não existe mais. Peça para tocarem o sino de novo.");
         }
         return;
       }

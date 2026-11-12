@@ -13,7 +13,6 @@ import { ASSENTO, criarMundo } from "./mundo-cena";
 import {
   ajustar,
   avancar,
-  BALANCO,
   BANCOS,
   BERCO,
   CORETO,
@@ -23,13 +22,12 @@ import {
   CHEGADA,
   CHUVEIRO,
   CORREIO,
-  ESCORREGADOR,
-  cliqueNaPonteDaFazenda,
-  cliqueNoPortal,
-  FRENTE_DO_PORTAL,
+  AGUA_DA_PISCINA,
+  MERGULHO,
+  noEscorregador,
+  alturaDoChao,
+  ILHA_FAZENDAS,
   frenteDoBanco,
-  naPonteDaFazenda,
-  PARKOUR,
   planejar,
   TERMOMETRO,
   vagaDoBerco,
@@ -46,13 +44,16 @@ import {
   texturaMancha,
 } from "./luz";
 import { ceu } from "./voxel";
+import { mundoPausado } from "./mundo-pausa";
 
 /** Uma pessoa na praça. (x, z) é para onde ela está indo; `banco` é o banco onde vai sentar. */
 export interface PessoaMundo {
   id: string;
   nome: string;
-  /** Sigla do cargo (ex.: SUP), em vermelho antes do nome. */
+  /** Sigla do cargo (ex.: SUP), depois do nome. */
   tag?: string;
+  /** Selo do nível (HOST FAZENDAS), antes do nome, com a cor que a pessoa equipou. */
+  selo?: { nivel: number; fundo: string; texto: string } | null;
   status: string;
   visual: Visual;
   x: number;
@@ -86,8 +87,6 @@ interface Eventos {
   onTermometro(): void;
   /** O meu HOKI terminou de andar e parou neste ponto. */
   onParou(p: Ponto): void;
-  /** Clicou no portal do parkour (ou no símbolo em cima dele). */
-  onParkour(): void;
   /** Clicou num lugar da fazenda (canteiro, árvore, bicho ou a mina de água). */
   onCanteiro(i: number): void;
   /** Clicou na caixa do correio (ou no envelope em cima dela). */
@@ -100,7 +99,6 @@ interface Eventos {
 
 const ESCALA = 0.62; // tamanho do HOKI no mundo (1 = um bloco do chão)
 /** Número (na lista de bancos) do primeiro lugar do balanço do letreiro. */
-const PRIMEIRO_DO_BALANCO = BANCOS.findIndex((b) => b.balanco);
 /** Quanto dura cada animação, em segundos (para repetir as que ficam rodando). */
 const DURACAO: Partial<Record<Reacao, number>> = {
   acenar: 2,
@@ -158,6 +156,8 @@ interface Avatar {
   truque: { tipo: Reacao; inicio: number } | null;
   rotulo: HTMLDivElement;
   nome: HTMLSpanElement;
+  /** Plaquinha: [nível] nick [CARGO], e o status embaixo. */
+  selo: HTMLSpanElement;
   tag: HTMLSpanElement;
   texto: HTMLSpanElement;
   status: HTMLSpanElement;
@@ -597,20 +597,6 @@ function criarMotor(
   const noCorreio = (px: number, py: number) =>
     cartaTela.visivel && Math.hypot(cartaTela.x - px, cartaTela.y - 12 - py) < 22;
 
-  // símbolo do parkour: uma bandeirinha em cima do portal
-  const blipPk = document.createElement("div");
-  blipPk.className = CL_ROTULO;
-  blipPk.innerHTML =
-    '<span class="relative grid size-6 place-items-center">' +
-    '<span class="absolute inset-0 animate-ping rounded-full bg-white opacity-40"></span>' +
-    '<span class="relative grid size-6 place-items-center rounded-full border-[1.5px] border-[#e5231b] bg-white text-black shadow-[0_4px_12px_rgba(0,0,0,0.5)]">' +
-    '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.3 2A6.5 6.5 0 0 0 19 3a1 1 0 0 1 1 1v9a1 1 0 0 1-.4.8A6 6 0 0 1 16 15c-3 0-5-2-8-2a6 6 0 0 0-4 1.5"/></svg>' +
-    "</span></span>";
-  camada.appendChild(blipPk);
-  const pkTela = { x: 0, y: 0, visivel: false };
-  const noParkour = (px: number, py: number) =>
-    pkTela.visivel && Math.hypot(pkTela.x - px, pkTela.y - 12 - py) < 22;
-
   const avatares = new Map<string, Avatar>();
   let dentro = false;
   let zoomUsuario = 0.52;
@@ -621,7 +607,7 @@ function criarMotor(
   let giroCam = 0;
   let alturaCam = ALTURA_PADRAO;
   // o centro da vista fica um pouco a leste, para a ilha e o escritório caberem juntos
-  const CENTRO = new THREE.Vector3(9, 2.2, -3);
+  const CENTRO = new THREE.Vector3(0, 2.2, 1);
   const olhar = CENTRO.clone();
   const vetor = new THREE.Vector3();
 
@@ -632,7 +618,7 @@ function criarMotor(
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     // de longe, a ilha inteira precisa caber na largura
-    distMax = Math.max(56, 36 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect));
+    distMax = Math.max(66, 44 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect));
   };
   const observador = new ResizeObserver(medir);
   observador.observe(el);
@@ -667,10 +653,6 @@ function criarMotor(
     const b = BANCOS[i];
     if (!b) return null;
     // lugar do balanço do letreiro: o assento se mexe, então a posição vem do mundo a cada quadro
-    if (b.balanco) {
-      const l = mundo.lugarDoBalanco(i - PRIMEIRO_DO_BALANCO);
-      return l ? { x: l.x, y: l.y, z: l.z, ang: b.ang, inclina: l.inclina, balanco: true } : null;
-    }
     return { x: b.x, y: ASSENTO, z: b.z, ang: b.ang, inclina: 0, balanco: false };
   };
 
@@ -692,11 +674,15 @@ function criarMotor(
     nome.className = cn(CL_NOME, p.souEu ? "bg-white text-black" : "bg-black/70 text-white");
     const status = document.createElement("span");
     status.className = CL_STATUS;
+    // plaquinha: [nível] nick [CARGO] (o nível é o do HOST FAZENDAS, com a cor que a pessoa equipou)
+    const selo = document.createElement("span");
+    selo.className = "mr-1 rounded-full px-1 text-[8.5px] font-extrabold tabular-nums";
+    selo.hidden = true;
     const tag = document.createElement("span");
     tag.className =
-      "mr-1 rounded-full bg-[#ce0e0e] px-1 text-[8.5px] font-bold tracking-wide text-white";
+      "ml-1 rounded-full bg-[#ce0e0e] px-1 text-[8.5px] font-bold tracking-wide text-white";
     const texto = document.createElement("span");
-    nome.append(tag, texto);
+    nome.append(selo, texto, tag);
     rotulo.append(fala, nome, status);
     camada.appendChild(rotulo);
     const s = !p.dorme && p.banco !== null ? assento(p.banco) : null;
@@ -725,6 +711,7 @@ function criarMotor(
       truque: null,
       rotulo,
       nome,
+      selo,
       tag,
       texto,
       status,
@@ -817,6 +804,12 @@ function criarMotor(
       a.texto.textContent = p.nome;
       a.tag.textContent = p.tag ?? "";
       a.tag.hidden = !p.tag;
+      if (p.selo) {
+        a.selo.textContent = String(p.selo.nivel);
+        a.selo.style.background = p.selo.fundo;
+        a.selo.style.color = p.selo.texto;
+      }
+      a.selo.hidden = !p.selo;
       a.status.textContent = p.dorme ? "💤 dormindo" : p.status;
       a.status.hidden = !p.dorme && !p.status;
       a.rotulo.style.opacity = p.dorme ? "0.82" : "";
@@ -834,6 +827,14 @@ function criarMotor(
     const t = (y - raio.ray.origin.y) / d.y;
     return t > 0 ? { x: raio.ray.origin.x + d.x * t, z: raio.ray.origin.z + d.z * t } : null;
   };
+  /** Onde o clique cai no chão, contando a escadaria e a ilha alta da HOST FAZENDAS (testa do alto para baixo). */
+  const noChao = (): Ponto | null => {
+    for (let h = ILHA_FAZENDAS.y; h > 0.01; h -= 0.25) {
+      const p = noPlano(h);
+      if (p && Math.abs(alturaDoChao(p.x, p.z) - h) < 0.2) return p;
+    }
+    return noPlano(0);
+  };
   let baixou: { x: number; y: number } | null = null;
   let ultimo: { x: number; y: number } | null = null;
   const aoBaixar = (e: PointerEvent) => {
@@ -848,8 +849,7 @@ function criarMotor(
       const r = el.getBoundingClientRect();
       const mx = e.clientX - r.left;
       const my = e.clientY - r.top;
-      el.style.cursor =
-        noTermometro(mx, my) || noParkour(mx, my) || noCorreio(mx, my) ? "pointer" : "";
+      el.style.cursor = noTermometro(mx, my) || noCorreio(mx, my) ? "pointer" : "";
       return;
     }
     if (!dentro) return;
@@ -901,17 +901,6 @@ function criarMotor(
       eventos.onCorreio();
       return;
     }
-    // o portal do parkour?
-    vetor.set(PARKOUR.x, 1.3, PARKOUR.z).project(camera);
-    if (
-      noParkour(px, py) ||
-      (vetor.z < 1 &&
-        Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) <
-          26)
-    ) {
-      eventos.onParkour();
-      return;
-    }
     // alguém embaixo do clique?
     for (const a of avatares.values()) {
       if (a.souEu) continue;
@@ -926,34 +915,6 @@ function criarMotor(
       }
     }
     if (!dentro) return;
-    // o balanço do letreiro? (clique perto do banco, de uma ponta à outra)
-    const pontaE = mundo.lugarDoBalanco(0);
-    const pontaD = mundo.lugarDoBalanco(BALANCO.lugares - 1);
-    if (pontaE && pontaD) {
-      const naTela = (l: { x: number; y: number; z: number }) => {
-        vetor.set(l.x, l.y + 0.45, l.z).project(camera);
-        return {
-          x: (vetor.x * 0.5 + 0.5) * r.width,
-          y: (-vetor.y * 0.5 + 0.5) * r.height,
-          z: vetor.z,
-        };
-      };
-      const a = naTela(pontaE);
-      const b = naTela(pontaD);
-      if (a.z < 1 && b.z < 1) {
-        // distância do clique até a linha do banco na tela
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const u = Math.max(
-          0,
-          Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / (dx * dx + dy * dy || 1)),
-        );
-        if (Math.hypot(a.x + dx * u - px, a.y + dy * u - py) < 26) {
-          eventos.onBalanco?.();
-          return;
-        }
-      }
-    }
     ndc.set((px / r.width) * 2 - 1, -(py / r.height) * 2 + 1);
     raio.setFromCamera(ndc, camera);
     const naAltura = noPlano(ASSENTO);
@@ -977,17 +938,10 @@ function criarMotor(
         return;
       }
     }
-    const chao = noPlano(0);
-    // perto da ponte da fazenda (até no vazio ao lado dela) conta como clique na ponte
-    if (chao && cliqueNaPonteDaFazenda(chao.x, chao.z)) {
-      eventos.onChao(chao);
-      return;
-    }
-    // no vazio em volta do portal do Magnata, o clique leva até a frente dele
-    const destino =
-      chao && (ajustar(chao) ?? (cliqueNoPortal(chao.x, chao.z) ? FRENTE_DO_PORTAL : null));
+    const chao = noChao();
+    const destino = chao && ajustar(chao);
     if (!destino) return;
-    marca.position.set(destino.x, 0.03, destino.z);
+    marca.position.set(destino.x, alturaDoChao(destino.x, destino.z) + 0.03, destino.z);
     marca.visible = true;
     eventos.onChao(destino);
   };
@@ -1151,9 +1105,10 @@ function criarMotor(
 
   // tempos do despertar, em segundos: levantar, pular até o escorregador, descer e pousar
   const T_LEVANTA = 0.6;
-  const T_PULO = 0.65;
-  const T_DESCE = 1.35;
-  const T_POUSA = 0.4;
+  const T_PULO = 0.8;
+  const T_DESCE = 3.4;
+  const T_CAI = 0.55;
+  const T_POUSA = 0.6;
   const suave = (x: number) => x * x * (3 - 2 * x);
 
   /** HOKI no berço: deitado dormindo, ou acordando (levanta, pula para o escorregador, desce e pousa no gramado). */
@@ -1180,7 +1135,11 @@ function criarMotor(
       return;
     }
     const s = (agora - (a.acorda ?? agora)) / 1000;
-    const { topo, pe } = ESCORREGADOR;
+    const topo = noEscorregador(0);
+    const saida = noEscorregador(1);
+    const fimPulo = T_LEVANTA + T_PULO;
+    const fimDescida = fimPulo + T_DESCE;
+    const fimQueda = fimDescida + T_CAI;
     let x = v.x;
     let y = v.y;
     let z = v.z;
@@ -1188,31 +1147,47 @@ function criarMotor(
     let giro = Math.PI;
     let sentado = false;
     if (s < T_LEVANTA) {
-      // levanta do colchão com um pulinho
+      // levanta da nuvem com um pulinho
       const f = suave(s / T_LEVANTA);
       deita = 1 - f;
       giro = 0;
       y = v.y + Math.sin(f * Math.PI) * 0.45;
-    } else if (s < T_LEVANTA + T_PULO) {
-      // pula em arco até o topo do escorregador, virando para a praça
+    } else if (s < fimPulo) {
+      // pula em arco até o topo do escorregador
       const f = (s - T_LEVANTA) / T_PULO;
-      giro = Math.PI * suave(f);
+      giro = Math.atan2(topo.x - v.x, topo.z - v.z);
       x = v.x + (topo.x - v.x) * f;
       z = v.z + (topo.z - v.z) * f;
-      y = v.y + (topo.y - v.y) * f + Math.sin(f * Math.PI) * 1.1;
-    } else if (s < T_LEVANTA + T_PULO + T_DESCE) {
-      // desce sentado, cada vez mais rápido
-      const f = Math.pow((s - T_LEVANTA - T_PULO) / T_DESCE, 1.7);
-      x = topo.x + (pe.x - topo.x) * f;
-      y = topo.y + (pe.y - topo.y) * f;
-      z = topo.z + (pe.z - topo.z) * f;
+      y = v.y + (topo.y + 0.12 - v.y) * f + Math.sin(f * Math.PI) * 1.1;
+    } else if (s < fimDescida) {
+      // desce sentado pela espiral, cada vez mais rápido
+      const f = Math.pow((s - fimPulo) / T_DESCE, 1.25);
+      const p = noEscorregador(f);
+      const q = noEscorregador(Math.min(1, f + 0.012));
+      x = p.x;
+      y = p.y + 0.12;
+      z = p.z;
+      if (Math.hypot(q.x - p.x, q.z - p.z) > 0.001) giro = Math.atan2(q.x - p.x, q.z - p.z);
+      sentado = true;
+    } else if (s < fimQueda) {
+      // sai voando da calha e cai na piscina
+      const f = (s - fimDescida) / T_CAI;
+      giro = Math.atan2(MERGULHO.x - saida.x, MERGULHO.z - saida.z);
+      x = saida.x + (MERGULHO.x - saida.x) * f;
+      z = saida.z + (MERGULHO.z - saida.z) * f;
+      y =
+        saida.y +
+        0.12 +
+        (AGUA_DA_PISCINA - 0.3 - saida.y - 0.12) * f * f +
+        Math.sin(f * Math.PI) * 0.35;
       sentado = true;
     } else {
-      // sai da calha com um pulinho e pousa no gramado
-      const f = Math.min(1, (s - T_LEVANTA - T_PULO - T_DESCE) / T_POUSA);
-      x = pe.x + (CHEGADA.x - pe.x) * f;
-      z = pe.z + (CHEGADA.z - pe.z) * f;
-      y = pe.y * (1 - f) + Math.sin(f * Math.PI) * 0.5;
+      // sai da piscina com um pulinho e pousa no gramado, do lado da praça
+      const f = Math.min(1, (s - fimQueda) / T_POUSA);
+      giro = Math.atan2(CHEGADA.x - MERGULHO.x, CHEGADA.z - MERGULHO.z);
+      x = MERGULHO.x + (CHEGADA.x - MERGULHO.x) * f;
+      z = MERGULHO.z + (CHEGADA.z - MERGULHO.z) * f;
+      y = (AGUA_DA_PISCINA - 0.3) * (1 - f) + Math.sin(f * Math.PI) * 0.9;
       if (f >= 1) {
         // acabou: daqui em diante anda normalmente até onde queria ir
         a.acorda = null;
@@ -1244,7 +1219,7 @@ function criarMotor(
     raf = requestAnimationFrame(quadro);
     const dt = Math.min(0.05, (agora - antes) / 1000);
     antes = agora;
-    if (!visivel || document.hidden) return;
+    if (!visivel || document.hidden || mundoPausado()) return;
     const t = agora / 1000;
     anoitecer(nivelDaNoite());
     regar(agora);
@@ -1276,9 +1251,7 @@ function criarMotor(
       let andando = false;
       const proximo = a.rota[0];
       if (proximo) {
-        // na ponte da fazenda o HOKI dispara, na ida e na volta
-        const turbo = naPonteDaFazenda(a.pos.x, a.pos.z);
-        const n = avancar(a.pos, proximo, VELOCIDADE * (turbo ? 5.5 : 1) * dt);
+        const n = avancar(a.pos, proximo, VELOCIDADE * dt);
         if (Math.hypot(n.x - a.pos.x, n.z - a.pos.z) > 0.0005)
           a.rumo = Math.atan2(n.x - a.pos.x, n.z - a.pos.z);
         a.pos = { x: n.x, z: n.z };
@@ -1292,7 +1265,8 @@ function criarMotor(
       let pose: "maoE" | "maoD" | "abraco" | "corda" | "carrega" | "montado" | undefined =
         tipoDeAcompanhado ? POSE_DO_ACOMPANHADO[tipoDeAcompanhado] : undefined;
       const outro = a.par ? parceiro(a) : null;
-      let chao = 0;
+      // a escadaria e a ilha da HOST FAZENDAS ficam no alto
+      let chao = alturaDoChao(a.pos.x, a.pos.z);
       if (outro && a.par) {
         const r = outro.grupo.rotation.y;
         const frente = { x: Math.sin(r), z: Math.cos(r) };
@@ -1363,12 +1337,7 @@ function criarMotor(
         calmo,
         andando,
         sentado: !!s,
-        pose:
-          andando && naPonteDaFazenda(a.pos.x, a.pos.z)
-            ? "turbo"
-            : s && a.alvo.banco !== null && BANCOS[a.alvo.banco]?.trabalho
-              ? "trabalha"
-              : pose,
+        pose: s && a.alvo.banco !== null && BANCOS[a.alvo.banco]?.trabalho ? "trabalha" : pose,
       });
       a.sombra.visible = pose !== "montado";
       const raio = 0.5 * (1 - Math.min(0.5, salto * 0.5));
@@ -1419,7 +1388,7 @@ function criarMotor(
     // só com o zoom quase todo para fora, e perto da ilha, ela volta para o meio da ilha
     const longeDaIlha = Math.min(
       1,
-      Math.max(0, (Math.hypot(fx - CENTRO.x, fz - CENTRO.z) - 16) / 10),
+      Math.max(0, (Math.hypot(fx - CENTRO.x, fz - CENTRO.z) - 22) / 12),
     );
     const centra =
       dentro && eu ? Math.pow(Math.max(0, (zoom - 0.8) / 0.2), 2) * (1 - longeDaIlha) : 1;
@@ -1497,13 +1466,6 @@ function criarMotor(
     blipCarta.style.display = cartaTela.visivel ? "" : "none";
     if (cartaTela.visivel)
       blipCarta.style.transform = `translate3d(${cartaTela.x.toFixed(1)}px, ${cartaTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
-    vetor.set(PARKOUR.x, 3.5, PARKOUR.z).project(camera);
-    pkTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
-    pkTela.x = (vetor.x * 0.5 + 0.5) * w;
-    pkTela.y = (-vetor.y * 0.5 + 0.5) * h;
-    blipPk.style.display = pkTela.visivel ? "" : "none";
-    if (pkTela.visivel)
-      blipPk.style.transform = `translate3d(${pkTela.x.toFixed(1)}px, ${pkTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
     blip.style.display = blipTela.visivel && !semBlip ? "" : "none";
     if (blipTela.visivel)
       blip.style.transform = `translate3d(${blipTela.x.toFixed(1)}px, ${blipTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
@@ -1594,7 +1556,6 @@ function criarMotor(
       el.removeEventListener("wheel", aoRolar);
       for (const a of [...avatares.values()]) removerAvatar(a);
       blip.remove();
-      blipPk.remove();
       blipCarta.remove();
       gPlanta.dispose();
       mPlanta.dispose();
@@ -1675,7 +1636,6 @@ export const Mundo3D = forwardRef<
           onPessoa: (id) => atual.current.onPessoa(id),
           onTermometro: () => atual.current.onTermometro(),
           onParou: (p) => atual.current.onParou(p),
-          onParkour: () => atual.current.onParkour(),
           onCanteiro: (i) => atual.current.onCanteiro(i),
           onCorreio: () => atual.current.onCorreio(),
           onAviso: (texto) => atual.current.onAviso?.(texto),

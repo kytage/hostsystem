@@ -1,7 +1,10 @@
 /**
- * Mapa da Praça HOST em 3D: o traçado da ilha (fonte, caminhos, rio, ponte,
- * coreto, morro), os 20 bancos e as regras de caminhada. Aqui só tem contas,
- * sem nada de desenho: o cenário é montado em mundo-cena.ts a partir disto.
+ * Mapa do lobby do HOKI em 3D (refeito do zero): a ilha central simétrica com a
+ * praça da fonte, os quatro caminhos, o rio com cachoeira à direita e o laguinho
+ * com cachoeira à esquerda; as ilhas do Magnata (oeste) e do Escritório (leste)
+ * ligadas por pontes; HOST FAZENDAS (noroeste) e EM BREVE (nordeste) no alto, com
+ * escadarias; o TOP 3 ao norte e, ao sul, o escorregador que desce da nuvem.
+ * Aqui só tem contas, sem desenho: o cenário é montado em mundo-cena.ts.
  * Unidades: 1 = um bloco do chão. X cresce para a direita, Z para a frente.
  */
 import type { Cultura } from "@/lib/hoki-itens";
@@ -11,22 +14,13 @@ export interface Ponto {
   z: number;
 }
 
-export const ILHA = { a: 23.5, b: 15.5, n: 3.2 };
-export const FONTE: Ponto = { x: -1, z: 0 };
-/** Anel calçado em volta da fonte. */
-export const ANEL = { dentro: 4.4, fora: 8.2 };
-export const CORETO: Ponto = { x: -14.5, z: -8.5 };
-export const RIO = { meia: 1.7, inicio: -9.5 };
-/** Morro com a cachoeira, no fundo à direita (não dá para subir). */
-export const MORRO = { x0: 16.5, z1: -8.5 };
-export const ENTRADA: Ponto = { x: FONTE.x, z: FONTE.z + 12 };
+/** Ilha central: um quadrado arredondado (superelipse), centrado na fonte. */
+export const ILHA = { a: 31, b: 23, n: 3.6 };
+export const FONTE: Ponto = { x: 0, z: 0 };
+/** Praça redonda: a fonte com o canteiro de flores vai até `dentro`; o calçamento, até `fora`. */
+export const ANEL = { dentro: 6.0, fora: 11.5 };
 /** Raio do "corpo" de um HOKI, para não atravessar as coisas. */
 export const CORPO = 0.45;
-
-/** Centro do rio em cada Z (ele serpenteia). */
-export const xRio = (z: number) => 15.5 + 1.8 * Math.sin(z * 0.22 + 0.6);
-/** A ponte fica alinhada com o caminho do leste. */
-export const PONTE = { z: FONTE.z, meia: 1.5 };
 
 export function dentroDaIlha(x: number, z: number, folga = 0) {
   return (
@@ -35,29 +29,336 @@ export function dentroDaIlha(x: number, z: number, folga = 0) {
     1
   );
 }
-export const naAgua = (x: number, z: number, folga = 0) =>
-  z >= RIO.inicio && Math.abs(x - xRio(z)) < RIO.meia + folga;
-export const naPonte = (z: number) => Math.abs(z - PONTE.z) < PONTE.meia - 0.4;
-export const noMorro = (x: number, z: number) => x > MORRO.x0 && z < MORRO.z1;
+/** Até onde vai a beirada da ilha nesta linha (z), para a direita (x positivo). */
+export const beiradaEmX = (z: number) =>
+  ILHA.a * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(z) / ILHA.b, ILHA.n)), 1 / ILHA.n);
+/** Até onde vai a beirada da ilha nesta coluna (x), para a frente (z positivo). */
+export const beiradaEmZ = (x: number) =>
+  ILHA.b * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(x) / ILHA.a, ILHA.n)), 1 / ILHA.n);
 
-/** Retângulos calçados: os caminhos, a pracinha do norte e o piso do coreto. */
-export const CAMINHOS = [
-  { x0: FONTE.x - 1.5, x1: FONTE.x + 1.5, z0: FONTE.z + 8, z1: 16 },
-  { x0: FONTE.x - 1.5, x1: FONTE.x + 1.5, z0: -14, z1: FONTE.z - 8 },
-  { x0: FONTE.x + 8, x1: 23, z0: FONTE.z - 1.5, z1: FONTE.z + 1.5 },
-  { x0: -23.2, x1: FONTE.x - 8, z0: FONTE.z - 1.5, z1: FONTE.z + 1.5 },
-  { x0: -16, x1: -13, z0: -6, z1: FONTE.z - 1.5 },
-  { x0: FONTE.x - 4, x1: FONTE.x + 4, z0: -14, z1: -11 },
-  { x0: CORETO.x - 3, x1: CORETO.x + 3, z0: CORETO.z - 3, z1: CORETO.z + 3 },
+/** Distância de um ponto até o segmento a-b. */
+function distSegmento(x: number, z: number, a: Ponto, b: Ponto) {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t));
+}
+/** Distância até uma linha de vários pontos. */
+export function distLinha(x: number, z: number, linha: readonly Ponto[]) {
+  let d = Infinity;
+  for (let i = 1; i < linha.length; i++)
+    d = Math.min(d, distSegmento(x, z, linha[i - 1]!, linha[i]!));
+  return d;
+}
+
+// ---------------- ilhas altas: HOST FAZENDAS (noroeste) e EM BREVE (nordeste), espelhadas ----------------
+export interface Escadaria {
+  pe: Ponto;
+  topo: Ponto;
+  meia: number;
+}
+export const ILHA_FAZENDAS = { x0: -33, x1: -12, z0: -50, z1: -34, y: 4.5 };
+export const PONTE_FAZENDAS: Escadaria = {
+  pe: { x: -12.5, z: -16.5 },
+  topo: { x: -21, z: ILHA_FAZENDAS.z1 },
+  meia: 2.2,
+};
+export const ILHA_EM_BREVE = { x0: 12, x1: 33, z0: -50, z1: -34, y: 4.5 };
+export const PONTE_EM_BREVE: Escadaria = {
+  pe: { x: 12.5, z: -16.5 },
+  topo: { x: 21, z: ILHA_EM_BREVE.z1 },
+  meia: 2.2,
+};
+const ESCADARIAS = [PONTE_FAZENDAS, PONTE_EM_BREVE];
+
+/** Onde um ponto fica em relação a uma escadaria: `s` ao longo dela (0 no pé) e `d` para o lado do eixo. */
+export function naEscadaria(x: number, z: number, e: Escadaria = PONTE_FAZENDAS) {
+  const { pe, topo } = e;
+  const comp = Math.hypot(topo.x - pe.x, topo.z - pe.z);
+  const ux = (topo.x - pe.x) / comp;
+  const uz = (topo.z - pe.z) / comp;
+  return {
+    s: (x - pe.x) * ux + (z - pe.z) * uz,
+    d: (x - pe.x) * uz - (z - pe.z) * ux,
+    comp,
+    ux,
+    uz,
+  };
+}
+/** Os dois pilares grandes no pé de cada escadaria (na ilha central). */
+export const pilaresDaEscadaria = (e: Escadaria): Ponto[] =>
+  [-1, 1].map((l) => {
+    const { ux, uz } = naEscadaria(0, 0, e);
+    const lado = l * (e.meia + 0.45);
+    return { x: e.pe.x - ux * 0.5 + uz * lado, z: e.pe.z - uz * 0.5 - ux * lado };
+  });
+export const PILARES_DA_ESCADARIA = pilaresDaEscadaria(PONTE_FAZENDAS);
+
+/** HOST FAZENDAS: celeiro (a porta é o portal), trigais, galpão, moinho e fardos. */
+export const CELEIRO = { x0: -26.4, x1: -15.6, z0: -49.4, z1: -45.2, porta: 2.3 };
+export const PORTAL_FAZENDAS: Ponto = { x: PONTE_FAZENDAS.topo.x, z: CELEIRO.z1 };
+/** Onde o HOKI fica ao voltar da fazenda (na frente da porta do celeiro). */
+export const FRENTE_DO_PORTAL_FAZENDAS: Ponto = { x: PORTAL_FAZENDAS.x, z: CELEIRO.z1 + 2.4 };
+/** Entrou na porta do celeiro (o portal do HOST FAZENDAS)? */
+export const naPortaDoCeleiro = (x: number, z: number) =>
+  Math.abs(x - PORTAL_FAZENDAS.x) < CELEIRO.porta - 0.4 && z < CELEIRO.z1 + 0.5 && z > CELEIRO.z0;
+export const TRIGAIS = [
+  { x0: -31.8, x1: -25.4, z0: -41.6, z1: -35.8 },
+  { x0: -16.6, x1: -13.2, z0: -41.6, z1: -35.8 },
 ];
-/** Tipo de piso de cada bloco do chão. */
+export const GALPAO = { x0: -31.6, x1: -29.0, z0: -45.0, z1: -42.8 };
+export const MOINHO: Ponto = { x: -29.8, z: -47.6 };
+export const FARDOS = { x0: -15.4, x1: -13.0, z0: -44.6, z1: -43.0 };
+export const ARVORES_FAZENDAS: (Ponto & { tipo: "copa" | "copinha" | "pinheiro" })[] = [
+  { x: -31.6, z: -48.8, tipo: "pinheiro" },
+  { x: -27.6, z: -48.6, tipo: "copinha" },
+  { x: -13.8, z: -48.4, tipo: "copa" },
+  { x: -13.6, z: -46, tipo: "pinheiro" },
+];
+export const POSTES_FAZENDAS: Ponto[] = [-37.2, -41].flatMap((z) =>
+  [-1, 1].map((l) => ({ x: PONTE_FAZENDAS.topo.x + l * 3.1, z })),
+);
+/** EM BREVE: prédio de pedra com o portão trancado (espelho do celeiro), árvores e postes. */
+export const PORTAO_EM_BREVE = { x0: 15.6, x1: 26.4, z0: -49.4, z1: -45.2 };
+export const ARVORES_EM_BREVE: (Ponto & { tipo: "copa" | "copinha" | "pinheiro" })[] =
+  ARVORES_FAZENDAS.map((a) => ({ ...a, x: -a.x }));
+export const POSTES_EM_BREVE: Ponto[] = POSTES_FAZENDAS.map((p) => ({ x: -p.x, z: p.z }));
+export const CANTEIROS_EM_BREVE = [
+  { x0: 13.2, x1: 18.8, z0: -41.6, z1: -36.4 },
+  { x0: 23.2, x1: 28.8, z0: -41.6, z1: -36.4 },
+];
+
+type Ret = { x0: number; x1: number; z0: number; z1: number };
+const dentroDe = (r: Ret, x: number, z: number, folga = 0) =>
+  x > r.x0 - folga && x < r.x1 + folga && z > r.z0 - folga && z < r.z1 + folga;
+const BLOQUEIOS_FAZENDAS: Ret[] = [CELEIRO, ...TRIGAIS, GALPAO, FARDOS];
+const BLOQUEIOS_EM_BREVE: Ret[] = [PORTAO_EM_BREVE, ...CANTEIROS_EM_BREVE];
+const ILHAS_ALTAS = [
+  { ilha: ILHA_FAZENDAS, bloqueios: BLOQUEIOS_FAZENDAS, porta: true },
+  { ilha: ILHA_EM_BREVE, bloqueios: BLOQUEIOS_EM_BREVE, porta: false },
+];
+
+export const naPonteFazendas = (x: number, z: number, folga = 0) =>
+  ESCADARIAS.some((e) => {
+    const { s: ao, d, comp } = naEscadaria(x, z, e);
+    return Math.abs(d) < e.meia - 0.45 + folga && ao >= -1 && ao <= comp + 1.4;
+  });
+export const naIlhaFazendas = (x: number, z: number, folga = 0) =>
+  ILHAS_ALTAS.some(
+    ({ ilha: I, bloqueios, porta }) =>
+      x >= I.x0 + 0.7 - folga &&
+      x <= I.x1 - 0.7 + folga &&
+      z >= I.z0 + 0.7 - folga &&
+      z <= I.z1 - 0.7 + folga &&
+      !bloqueios.some(
+        (b) =>
+          dentroDe(b, x, z, CORPO - folga) &&
+          // dentro do vão da porta do celeiro dá para dar um passo (é o portal)
+          !(
+            porta &&
+            b === CELEIRO &&
+            Math.abs(x - PORTAL_FAZENDAS.x) < CELEIRO.porta - CORPO &&
+            z > b.z1 - 0.9
+          ),
+      ),
+  );
+/** Altura do chão: a ilha central fica em 0; as escadarias sobem até as ilhas altas. */
+export function alturaDoChao(x: number, z: number) {
+  for (const { ilha: I } of ILHAS_ALTAS)
+    if (z <= I.z1 && x > I.x0 - 0.6 && x < I.x1 + 0.6 && z > I.z0 - 0.6) return I.y;
+  for (const e of ESCADARIAS) {
+    // a escadaria chega na altura da ilha um pouco antes do fim, para emendar sem degrau
+    const { s: ao, d, comp } = naEscadaria(x, z, e);
+    if (Math.abs(d) < e.meia + 0.7 && ao > 0 && ao < comp + 1.6)
+      return ILHA_FAZENDAS.y * Math.min(1, ao / (comp - 1.2));
+  }
+  return 0;
+}
+
+// ---------------- caminhos (faixas calçadas) ----------------
+export interface Faixa {
+  a: Ponto;
+  b: Ponto;
+  meia: number;
+}
+export const CAMINHOS: Faixa[] = [
+  { a: { x: 0, z: -ANEL.fora + 0.5 }, b: { x: 0, z: -20.5 }, meia: 2 },
+  { a: { x: 0, z: ANEL.fora - 0.5 }, b: { x: 0, z: 19.5 }, meia: 2 },
+  { a: { x: -ANEL.fora + 0.5, z: 0 }, b: { x: -31.5, z: 0 }, meia: 2 },
+  { a: { x: ANEL.fora - 0.5, z: 0 }, b: { x: 31.5, z: 0 }, meia: 2 },
+  { a: { x: -7.6, z: -8.2 }, b: PONTE_FAZENDAS.pe, meia: 1.6 },
+  { a: { x: 7.6, z: -8.2 }, b: PONTE_EM_BREVE.pe, meia: 1.6 },
+  // trilhas menores: até o coreto e até a ducha
+  { a: { x: -8.2, z: 7.6 }, b: { x: -16.4, z: 10.6 }, meia: 1.1 },
+  { a: { x: 8.2, z: 7.6 }, b: { x: 14.8, z: 12.2 }, meia: 1.1 },
+];
+/** Que piso tem neste ponto: o anel da praça, um caminho ou grama. */
 export function piso(x: number, z: number): "anel" | "caminho" | "grama" {
   const d = Math.hypot(x - FONTE.x, z - FONTE.z);
   if (d >= ANEL.dentro && d <= ANEL.fora) return "anel";
-  for (const c of CAMINHOS) if (x >= c.x0 && x <= c.x1 && z >= c.z0 && z <= c.z1) return "caminho";
+  for (const c of CAMINHOS) if (distSegmento(x, z, c.a, c.b) <= c.meia) return "caminho";
   return "grama";
 }
 
+// ---------------- água: o rio da direita (nasce no nordeste e cai no sudeste) e o laguinho da esquerda ----------------
+export const RIO: Ponto[] = [
+  { x: 15.5, z: -12.5 },
+  { x: 17.5, z: -6.5 },
+  { x: 19, z: 0 },
+  { x: 20.8, z: 6.5 },
+  { x: 22.6, z: 12.5 },
+  { x: 24.2, z: 18.4 },
+  { x: 25.2, z: 21.5 },
+];
+export const MEIA_RIO = 1.5;
+/** Nascente do rio (um laguinho de pedra) e o laguinho da esquerda, com o riacho até a cachoeira. */
+export const NASCENTE = { x: 15.2, z: -13.4, r: 2.1 };
+export const LAGO = { x: -21.5, z: 12.6, r: 2.7 };
+export const RIACHO: Ponto[] = [
+  { x: -22.6, z: 14.6 },
+  { x: -23.8, z: 18.2 },
+  { x: -24.6, z: 21.6 },
+];
+export const MEIA_RIACHO = 0.9;
+/** Pontezinha do caminho do leste por cima do rio. */
+export const PONTE = { z: 0, meia: 2, x: 19 };
+export const naPonte = (x: number, z: number) =>
+  Math.abs(z - PONTE.z) < PONTE.meia - 0.4 && Math.abs(x - PONTE.x) < 3;
+export const naAgua = (x: number, z: number, folga = 0) =>
+  distLinha(x, z, RIO) < MEIA_RIO + folga ||
+  Math.hypot(x - NASCENTE.x, z - NASCENTE.z) < NASCENTE.r + folga ||
+  Math.hypot(x - LAGO.x, z - LAGO.z) < LAGO.r + folga ||
+  distLinha(x, z, RIACHO) < MEIA_RIACHO + folga;
+
+// ---------------- ilhas laterais: Magnata (oeste) e Escritório (leste) ----------------
+export const PONTE_OESTE = { x0: -40, x1: -30.2, meia: 1.7 };
+export const PONTE_LESTE = { x0: 30.2, x1: 40, meia: 1.7 };
+export const ILHA_MAGNATA = { x0: -55, x1: -40, z0: -8.5, z1: 8.5 };
+export const ILHA_ESCRITORIO = { x0: 40, x1: 55, z0: -8.5, z1: 8.5 };
+/** Prédio do portal do Magnata, no fundo da ilha, de frente para a ponte; o portal fica na porta. */
+export const PREDIO_MAGNATA = { x0: -54.2, x1: -50.4, z0: -4.6, z1: 4.6, porta: 1.6 };
+export const PORTAL: Ponto = { x: PREDIO_MAGNATA.x1, z: 0 };
+export const FRENTE_DO_PORTAL: Ponto = { x: PREDIO_MAGNATA.x1 + 2.6, z: 0 };
+export const DADOS_DO_MAGNATA: Ponto[] = [
+  { x: -43.2, z: -5.6 },
+  { x: -42.4, z: 5.4 },
+];
+export const PEAO_DO_MAGNATA: Ponto = { x: -46.8, z: 5.9 };
+/** Escritório: prédio aberto para a ponte (oeste), com as mesas dentro. */
+export const ESCRITORIO = { x0: 42.4, x1: 53.4, z0: -6.4, z1: 4.6 };
+export const MESAS: Ponto[] = [-4.4, -1.6, 1.2].flatMap((z) =>
+  [45.2, 47.4, 49.6, 51.6].map((x) => ({ x, z })),
+);
+
+// ---------------- pontos da praça ----------------
+/** Totem do termômetro (queridômetro), à esquerda da fonte, e o ponto em frente onde o HOKI para. */
+export const TERMOMETRO: Ponto = { x: -13.6, z: 5.2 };
+export const FRENTE_DO_TERMOMETRO: Ponto = { x: -12.5, z: 4.4 };
+/** Caixa postal, à direita da fonte (espelho do termômetro). */
+export const CORREIO: Ponto = { x: 13.6, z: 5.2 };
+export const FRENTE_DO_CORREIO: Ponto = { x: 12.5, z: 4.4 };
+export const PLACA_QUERIDOMETRO: Ponto = { x: TERMOMETRO.x - 0.2, z: TERMOMETRO.z - 1.25 };
+export const PLACA_CORREIO: Ponto = { x: CORREIO.x + 0.2, z: CORREIO.z - 1.25 };
+/** Chuveirão, no fim da trilha da direita (o HOKI fica embaixo da ducha para tomar banho). */
+export const CHUVEIRO: Ponto = { x: 15.6, z: 12.8 };
+/** Coreto: à esquerda, embaixo, no fim da trilha. */
+export const CORETO: Ponto = { x: -18.4, z: 10.4 };
+export const RAIO_DO_CORETO = 3.1;
+/** Arco de flores (pérgola) na trilha do coreto. */
+export const ARCO_DE_FLORES: Ponto = { x: -11.9, z: 9.0 };
+/** TOP 3: pódio pequeno no terraço ao norte, embaixo do letreiro HOST. */
+export const TOP3: Ponto = { x: 0, z: -18.6 };
+export const TERRACO_TOP3 = { x0: -6, x1: 6, z0: -22, z1: -15.4 };
+/** Letreiro HOST flutuando atrás do terraço. */
+export const LETREIRO = { x: 0, y: 10, z: -28 };
+
+// ---------------- berço: a nuvem ao sul, e o escorregador turquesa que desce dela até a praça ----------------
+export const BERCO = { x: 0, y: 2.7, z: 31.2 };
+export const DECK_DO_BERCO = { meiaX: 4.6, meiaZ: 3.2 };
+const COLCHAO = BERCO.y + 0.36;
+/** As 20 vagas da nuvem: 5 colunas por 4 fileiras. Quem deita fica com a cabeça para o fundo. */
+export const VAGAS: { x: number; y: number; z: number }[] = [0, 1, 2, 3].flatMap((f) =>
+  [-2, -1, 0, 1, 2].map((c) => ({
+    x: BERCO.x + c * 1.15,
+    y: COLCHAO,
+    z: BERCO.z - 1.1 + f * 0.95,
+  })),
+);
+export function vagaDoBerco(i: number) {
+  const n = Math.max(0, Math.floor(i));
+  const camada = Math.floor(n / VAGAS.length);
+  const base = VAGAS[n % VAGAS.length] ?? VAGAS[0]!;
+  const torto = camada % 2 === 1;
+  return {
+    x: base.x + (torto ? 0.55 : 0),
+    y: base.y + camada * 0.42,
+    z: base.z + (torto ? 0.45 : 0),
+  };
+}
+/** Plataforma redonda e brilhante onde o escorregador chega, no fim do caminho sul. */
+export const PLATAFORMA = { x: 0, z: 17.6, r: 2.4 };
+/** Pontos de controle do escorregador (x, y, z), do topo (na nuvem) até a plataforma. */
+export const CURVA_DO_ESCORREGADOR: [number, number, number][] = [
+  [0.6, BERCO.y + 0.5, BERCO.z - DECK_DO_BERCO.meiaZ - 0.1],
+  [2.9, BERCO.y + 0.1, 26.6],
+  [2.6, 1.85, 24.0],
+  [-1.6, 1.25, 22.6],
+  [-1.9, 0.75, 21.0],
+  [0, 0.32, 19.6],
+];
+/** Curva suave (Catmull-Rom) passando pelos pontos de controle, com o comprimento de cada trecho. */
+const AMOSTRAS = (() => {
+  const p = CURVA_DO_ESCORREGADOR;
+  const pts: { x: number; y: number; z: number }[] = [];
+  for (let i = 0; i < p.length - 1; i++) {
+    const a = p[Math.max(0, i - 1)]!;
+    const b = p[i]!;
+    const c = p[i + 1]!;
+    const d = p[Math.min(p.length - 1, i + 2)]!;
+    for (let k = 0; k < 16; k++) {
+      const t = k / 16;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const f = (j: number) =>
+        0.5 *
+        (2 * b[j]! +
+          (-a[j]! + c[j]!) * t +
+          (2 * a[j]! - 5 * b[j]! + 4 * c[j]! - d[j]!) * t2 +
+          (-a[j]! + 3 * b[j]! - 3 * c[j]! + d[j]!) * t3);
+      pts.push({ x: f(0), y: f(1), z: f(2) });
+    }
+  }
+  const ult = p[p.length - 1]!;
+  pts.push({ x: ult[0], y: ult[1], z: ult[2] });
+  const acum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    acum.push(acum[i - 1]! + Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z));
+  }
+  return { pts, acum, total: acum[acum.length - 1]! };
+})();
+/** Pontos da curva do escorregador (para desenhar a calha). */
+export const PONTOS_DO_ESCORREGADOR = AMOSTRAS.pts;
+/** Onde está quem desce pelo escorregador: `f` vai de 0 (topo) a 1 (chegada), pelo comprimento da calha. */
+export function noEscorregador(f: number) {
+  const { pts, acum, total } = AMOSTRAS;
+  const alvo = Math.max(0, Math.min(1, f)) * total;
+  let i = 1;
+  while (i < pts.length - 1 && acum[i]! < alvo) i++;
+  const a = pts[i - 1]!;
+  const b = pts[i]!;
+  const t = (alvo - acum[i - 1]!) / Math.max(0.0001, acum[i]! - acum[i - 1]!);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
+}
+/** Fim da calha: o HOKI escorrega até a plataforma e dali pula para a praça. */
+export const AGUA_DA_PISCINA = 0.55;
+export const MERGULHO: Ponto = { x: PLATAFORMA.x, z: PLATAFORMA.z + 0.4 };
+export const CHEGADA: Ponto = { x: PLATAFORMA.x, z: PLATAFORMA.z - 3.2 };
+/** Ponto de referência ao sul da praça (usado nos shows do Founder). */
+export const ENTRADA: Ponto = { x: FONTE.x, z: 14.4 };
+
+// ---------------- bancos ----------------
 export interface Banco extends Ponto {
   /** Direção para onde quem senta fica olhando (ângulo em torno de Y). */
   ang: number;
@@ -65,368 +366,205 @@ export interface Banco extends Ponto {
   de?: Ponto;
   /** Cadeira de escritório: quem senta fica trabalhando no computador. */
   trabalho?: boolean;
-  /** Lugar do balanço do letreiro HOST (o assento se mexe; a posição vem do mundo 3D). */
+  /** (não usado mais: era o balanço do letreiro) */
   balanco?: boolean;
 }
-
-/**
- * Balanço pendurado no letreiro HOST: um banco comprido, para 10, que balança
- * para a frente e para trás sobre a beira de trás da ilha. O vai e vem sai do
- * relógio do mundo real, então todo mundo vê o balanço no mesmo ponto.
- */
-export const BALANCO = {
-  /** Onde as cordas prendem: no pé das letras do letreiro. */
-  eixo: { x: 0, y: 9.8, z: -19 },
-  /** Comprimento das cordas (do pé das letras até o assento). */
-  corda: 8.6,
-  lugares: 10,
-  /** Distância entre um lugar e outro. */
-  passo: 0.84,
-  /** O quanto ele abre (em radianos) e quanto dura um vai e vem (ms). */
-  amplitude: 0.4,
-  periodoMs: 5200,
-};
-/** Ângulo do balanço agora (positivo = para a frente, na direção da ilha). */
-export const anguloDoBalanco = (agoraMs = Date.now()) =>
-  BALANCO.amplitude * Math.sin((agoraMs / BALANCO.periodoMs) * Math.PI * 2);
-/** Na beira de trás da ilha, embaixo do balanço: dali o HOKI pula para o assento (tecla E). */
-export const EMBARQUE_DO_BALANCO: Ponto = { x: 0, z: -14.3 };
-
-/** Escritório HOST: um anexo flutuante a leste, ligado à ilha por uma ponte no fim do caminho. */
-export const ESCRITORIO = { x0: 33, x1: 43, z0: -4.5, z1: 4.5 };
-export const PONTE_DO_ESCRITORIO = { x0: 22.2, x1: ESCRITORIO.x0, meia: 1.25 };
-/** Mesas de trabalho (centro do tampo). A cadeira fica atrás, olhando para o monitor (para o fundo). */
-export const MESAS: Ponto[] = [-3.4, -0.6, 2.2].flatMap((z) =>
-  [2.9, 4.9, 6.9, 8.75].map((dx) => ({ x: ESCRITORIO.x0 + dx, z })),
-);
-/**
- * Fazenda: um anexo grande a oeste, no fim de uma ponte bem comprida. Ao pisar
- * na ponte o HOKI dispara e só para na outra ponta (na ida e na volta).
- */
-export const FAZENDA = { x0: -78, x1: -62, z0: -7, z1: 7 };
-export const PONTE_DA_FAZENDA = { x0: FAZENDA.x1, x1: -22.2, meia: 1.25 };
-/** Está em cima da ponte da fazenda (o trecho da disparada)? */
-export const naPonteDaFazenda = (x: number, z: number) =>
-  x > PONTE_DA_FAZENDA.x0 + 0.6 &&
-  x < PONTE_DA_FAZENDA.x1 - 0.6 &&
-  Math.abs(z) < PONTE_DA_FAZENDA.meia;
-/**
- * Portal do Magnata HOST: fica num pátio de pedra escura, no fim de um braço que
- * sai do meio da ponte da fazenda para o norte.
- */
-export const BRACO_DO_PORTAL = { x: -42, meia: 1.25, z0: -8.2, z1: -PONTE_DA_FAZENDA.meia };
-export const PATIO_DO_PORTAL = { x0: -45.6, x1: -38.4, z0: -13.8, z1: BRACO_DO_PORTAL.z0 };
-export const PORTAL: Ponto = { x: BRACO_DO_PORTAL.x, z: -12.9 };
-export const FRENTE_DO_PORTAL: Ponto = { x: PORTAL.x, z: -10.6 };
-/** Dá para pisar no braço ou no pátio do portal? */
-export const noBracoDoPortal = (x: number, z: number, folga = 0) =>
-  (Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia - 0.4 + folga &&
-    z >= BRACO_DO_PORTAL.z0 - 0.3 &&
-    z <= -0.5) ||
-  (x >= PATIO_DO_PORTAL.x0 + 0.6 - folga &&
-    x <= PATIO_DO_PORTAL.x1 - 0.6 + folga &&
-    z >= PATIO_DO_PORTAL.z0 + 0.7 - folga &&
-    z <= PATIO_DO_PORTAL.z1 + 0.3);
-/** O clique foi no braço, no pátio ou no próprio portal (e não na ponte de disparada)? */
-export const cliqueNoPortal = (x: number, z: number) =>
-  z < -1.6 &&
-  z > PATIO_DO_PORTAL.z0 - 1.5 &&
-  x > PATIO_DO_PORTAL.x0 - 0.8 &&
-  x < PATIO_DO_PORTAL.x1 + 0.8 &&
-  (z < BRACO_DO_PORTAL.z0 + 0.5 || Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia + 0.9);
-/** Um clique caiu na ponte da fazenda (inclusive bem perto das pontas)? Aí o HOKI vai direto até a outra ponta. */
-export const cliqueNaPonteDaFazenda = (x: number, z: number) =>
-  // de longe a ponte é uma linha fina: o clique vale com folga dos lados (ali só tem o vazio)
-  !cliqueNoPortal(x, z) &&
-  x > PONTE_DA_FAZENDA.x0 - 0.6 &&
-  x < PONTE_DA_FAZENDA.x1 + 1.4 &&
-  Math.abs(z) < PONTE_DA_FAZENDA.meia + 1.6;
-/** As duas pontas da ponte da fazenda: a do lado da fazenda e a do lado da ilha. */
-export const PONTAS_DA_FAZENDA: [Ponto, Ponto] = [
-  { x: PONTE_DA_FAZENDA.x0 - 0.9, z: 0 },
-  { x: PONTE_DA_FAZENDA.x1 + 0.9, z: 0 },
-];
-/** Um lugar da fazenda que dá para colher: canteiro da horta, árvore do pomar, bicho ou a mina de água. */
-export interface Canteiro extends Ponto {
-  cultura: Cultura;
-}
-const fileira = (cultura: Cultura, x: number, zs: number[]): Canteiro[] =>
-  zs.map((z) => ({ cultura, x, z }));
-export const CANTEIROS: Canteiro[] = [
-  // horta do norte e horta do sul, uma fileira por cultura
-  ...fileira("milho", -64.5, [-2.5, -4, -5.5]),
-  ...fileira("cenoura", -66.5, [-2.5, -4, -5.5]),
-  ...fileira("tomate", -68.5, [-2.5, -4, -5.5]),
-  ...fileira("batata", -70.5, [-2.5, -4, -5.5]),
-  ...fileira("morango", -64.5, [2.5, 4, 5.5]),
-  ...fileira("abobora", -66.5, [2.5, 4, 5.5]),
-  ...fileira("melancia", -68.5, [2.5, 4, 5.5]),
-  ...fileira("uva", -70.5, [2.5, 4, 5.5]),
-  // no fundo: o pomar, os bichos e a mina de água
-  { cultura: "maca", x: -73.5, z: -4.6 },
-  { cultura: "banana", x: -76, z: -2.4 },
-  { cultura: "laranja", x: -73.5, z: 4.6 },
-  { cultura: "coco", x: -76.2, z: 5.4 },
-  { cultura: "cafe", x: -73.2, z: 1.9 },
-  { cultura: "ovo", x: -76.2, z: -5.6 },
-  { cultura: "leite", x: -76, z: 1 },
-  { cultura: "agua", x: -72.6, z: -1.6 },
-  // na praça: a floricultura (vasos no gramado da frente) e a doceria (carrinho ao norte, perto da fonte)
-  { cultura: "rosa", x: 3.6, z: 11.3 },
-  { cultura: "girassol", x: 4.7, z: 12.3 },
-  { cultura: "tulipa", x: 3.6, z: 13.3 },
-  { cultura: "chocolate", x: 5.4, z: -6.5 },
-  { cultura: "bala", x: 6.3, z: -5.5 },
-  // no escritório: a prateleira de brindes, no canto da entrada
-  { cultura: "ursinho", x: ESCRITORIO.x0 + 1.0, z: ESCRITORIO.z1 - 1.2 },
-];
-/** Culturas que ocupam o chão (não dá para atravessar): árvores, bichos e a mina. As da horta, dá. */
-const OCUPA: Partial<Record<Cultura, number>> = {
-  maca: 0.5,
-  banana: 0.5,
-  laranja: 0.5,
-  coco: 0.5,
-  cafe: 0.35,
-  ovo: 0.6,
-  leite: 0.65,
-  agua: 0.7,
-  chocolate: 0.55,
-  bala: 0.55,
-  ursinho: 0.45,
-};
-
-/** Ilha da pista de corrida, atrás da ilha (ao norte), ligada por uma ponte que sai ao lado do morro. */
-export const PISTA = { x0: 1, x1: 21, z0: -40, z1: -26 };
-export const PONTE_DA_PISTA = { x: 10, meia: 1.25, z0: PISTA.z1, z1: -13.4 };
-/** Arco da largada: ali o HOKI abre (ou entra em) uma corrida, com a tecla E. */
-export const LARGADA: Ponto = { x: 10, z: -29.5 };
-export const naIlhaDaPista = (x: number, z: number, folga = 0) =>
-  x >= PISTA.x0 + 0.6 - folga &&
-  x <= PISTA.x1 - 0.6 + folga &&
-  z >= PISTA.z0 + 0.6 - folga &&
-  z <= PISTA.z1 - 0.1 + folga;
-
-/** Dá para pisar no anexo? (as pontes, o piso do escritório e o da fazenda, com `folga` a mais em volta) */
-export const noAnexo = (x: number, z: number, folga = 0) =>
-  (Math.abs(x - PONTE_DA_PISTA.x) < PONTE_DA_PISTA.meia - 0.4 + folga &&
-    z >= PONTE_DA_PISTA.z0 - 0.3 &&
-    z <= PONTE_DA_PISTA.z1 + folga) ||
-  naIlhaDaPista(x, z, folga) ||
-  noBracoDoPortal(x, z, folga) ||
-  (x >= PONTE_DA_FAZENDA.x0 - 0.3 &&
-    x <= PONTE_DA_FAZENDA.x1 + folga &&
-    Math.abs(z) < PONTE_DA_FAZENDA.meia - 0.4 + folga) ||
-  (x >= FAZENDA.x0 + 0.6 - folga &&
-    x <= FAZENDA.x1 - 0.1 + folga &&
-    z >= FAZENDA.z0 + 0.6 - folga &&
-    z <= FAZENDA.z1 - 0.6 + folga) ||
-  (x >= PONTE_DO_ESCRITORIO.x0 - folga &&
-    x <= PONTE_DO_ESCRITORIO.x1 + 0.3 &&
-    Math.abs(z) < PONTE_DO_ESCRITORIO.meia - 0.4 + folga) ||
-  (x >= ESCRITORIO.x0 + 0.1 - folga &&
-    x <= ESCRITORIO.x1 - 0.6 + folga &&
-    z >= ESCRITORIO.z0 + 0.6 - folga &&
-    z <= ESCRITORIO.z1 - 0.6 + folga);
 const olhando = (x: number, z: number, paraX: number, paraZ: number): Banco => ({
   x,
   z,
   ang: Math.atan2(paraX - x, paraZ - z),
 });
-/** Os 20 bancos: 8 em volta da fonte, 4 no caminho da frente, 2 na pracinha do norte, 2 no coreto, 2 no caminho do oeste e 2 na beira do rio. */
 export const BANCOS: Banco[] = [
-  ...[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((g) => {
-    const a = (g * Math.PI) / 180;
-    return olhando(FONTE.x + Math.cos(a) * 9.1, FONTE.z + Math.sin(a) * 9.1, FONTE.x, FONTE.z);
+  // oito em volta da fonte, entre os caminhos, olhando para ela
+  ...Array.from({ length: 8 }, (_, i) => {
+    const a = ((i + 0.5) / 8) * Math.PI * 2;
+    return olhando(FONTE.x + Math.cos(a) * 9.4, FONTE.z + Math.sin(a) * 9.4, FONTE.x, FONTE.z);
   }),
-  ...[10.5, 13].flatMap((dz) =>
-    [-1, 1].map((l) => olhando(FONTE.x + l * 2.7, FONTE.z + dz, FONTE.x, FONTE.z + dz)),
-  ),
-  ...[-1, 1].map((l) => olhando(FONTE.x + l * 3.2, -12.6, FONTE.x + l * 3.2, 0)),
-  ...[-1, 1].map((l) => olhando(CORETO.x + l * 1.5, CORETO.z, CORETO.x, CORETO.z)),
-  ...[-1, 1].map((l) => olhando(-12.2, FONTE.z + l * 2.7, -12.2, FONTE.z)),
-  olhando(xRio(5.5) - 4.2, 5.5, 30, 5.5),
-  olhando(xRio(9) - 4.2, 9, 30, 9),
+  // dois de cada lado do caminho do sul, olhando para ele
+  ...[-1, 1].map((l) => olhando(l * 3.4, 14.6, 0, 14.6)),
+  // dois na frente do terraço do TOP 3
+  ...[-1, 1].map((l) => olhando(l * 3.4, -13.4, 0, -13.4)),
+  // dois dentro do coreto, de frente um para o outro
+  ...[-1, 1].map((l) => olhando(CORETO.x + l * 1.3, CORETO.z, CORETO.x, CORETO.z)),
+  // dois na beira do caminho do oeste e dois na beira do caminho do leste (antes da pontezinha)
+  ...[-1, 1].map((l) => olhando(-22, l * 3.2, -22, 0)),
+  ...[-1, 1].map((l) => olhando(14.6, l * 3.2, 14.6, 0)),
   // cadeiras do escritório (uma por mesa): quem senta fica de frente para o monitor, trabalhando
   ...MESAS.map((m) => ({
     x: m.x,
     z: m.z + 1.0,
     ang: Math.PI,
-    // chega pelo corredor ao lado da cadeira (a última coluna, pelo outro lado)
-    de: { x: m.x + (m.x > ESCRITORIO.x1 - 2 ? -1.0 : 1.0), z: m.z + 1.0 },
+    de: { x: m.x + (m.x > ESCRITORIO.x1 - 2.5 ? -1.0 : 1.0), z: m.z + 1.0 },
     trabalho: true,
   })),
-  // os 10 lugares do balanço do letreiro (ficam no fim da lista para não mudar o número dos outros bancos)
-  ...Array.from({ length: BALANCO.lugares }, (_, i) => {
-    const x = (i - (BALANCO.lugares - 1) / 2) * BALANCO.passo;
-    return {
-      x,
-      z: BALANCO.eixo.z,
-      ang: 0,
-      // cada um sobe por um ponto da beira da ilha, na direção do seu lugar
-      de: { x: x * 0.62, z: EMBARQUE_DO_BALANCO.z },
-      balanco: true,
-    };
-  }),
 ];
-/** Números (na lista de bancos) dos lugares do balanço. */
-export const LUGARES_DO_BALANCO = BANCOS.flatMap((b, i) => (b.balanco ? [i] : []));
-/** Ponto em frente ao banco, de onde o HOKI "sobe" para sentar. */
 export const frenteDoBanco = (b: Banco): Ponto =>
   b.de ?? {
     x: b.x + Math.sin(b.ang) * 1.3,
     z: b.z + Math.cos(b.ang) * 1.3,
   };
+/** (não há mais balanço; ficam vazios para quem ainda procura por eles) */
+export const LUGARES_DO_BALANCO: number[] = [];
 
+/** Postes de luz: em volta da praça e ao longo dos caminhos. */
 export const POSTES: Ponto[] = [
+  ...Array.from({ length: 8 }, (_, i) => {
+    const a = ((i + 0.5) / 8) * Math.PI * 2;
+    return { x: Math.cos(a) * 12.4, z: Math.sin(a) * 12.4 };
+  }),
   ...[-1, 1].flatMap((l) => [
-    { x: FONTE.x + l * 2.2, z: FONTE.z + 8.9 },
-    { x: FONTE.x + l * 2.2, z: FONTE.z - 8.9 },
-    { x: FONTE.x + 8.9, z: FONTE.z + l * 2.2 },
-    { x: FONTE.x - 8.9, z: FONTE.z + l * 2.2 },
+    { x: l * 2.7, z: -16.2 },
+    { x: l * 2.7, z: 13.4 },
+    { x: -17.4, z: l * 2.7 },
+    { x: -26.6, z: l * 2.7 },
+    { x: 24.6, z: l * 2.7 },
   ]),
-  { x: xRio(0) - 3, z: 2.3 },
-  { x: xRio(0) + 3, z: -2.3 },
 ];
-export const ARVORES: (Ponto & {
-  tipo: "copa" | "copinha" | "pinheiro";
-  cor?: "laranja" | "amarelo";
-})[] = [
-  { x: -8, z: -9.5, tipo: "copa" },
-  { x: -19, z: -3.5, tipo: "pinheiro" },
-  { x: -18.5, z: 5, tipo: "copa", cor: "amarelo" },
-  { x: -11.5, z: 9.5, tipo: "copa", cor: "laranja" },
-  { x: -6.5, z: 11.5, tipo: "pinheiro" },
-  { x: 8, z: -9.5, tipo: "copa", cor: "laranja" },
-  { x: 11.5, z: -6, tipo: "pinheiro" },
-  { x: 4.5, z: -11.5, tipo: "copinha", cor: "amarelo" },
-  { x: -20, z: -8.5, tipo: "copinha", cor: "amarelo" },
-  { x: -9.5, z: -12.5, tipo: "pinheiro" },
-  { x: 21.4, z: 6, tipo: "copinha" },
-  { x: 19.5, z: -4.5, tipo: "copinha", cor: "laranja" },
-  { x: 20.9, z: 9.8, tipo: "copinha" },
-  { x: -15.5, z: 10, tipo: "pinheiro" },
-];
-export const PEDRAS: Ponto[] = [
-  { x: -10, z: 6.5 },
-  { x: 10.5, z: -9.5 },
-  { x: -5.5, z: -10.5 },
-  { x: 6, z: 9 },
-  { x: 19, z: 9.5 },
-];
-/** Poça onde cai a cachoeira do morro. */
-export const POCA: Ponto = { x: 18, z: -7.4 };
-/** Os 4 pilares do coreto. */
-export const PILARES: Ponto[] = [-1, 1].flatMap((i) =>
-  [-1, 1].map((j) => ({ x: CORETO.x + i * 2.4, z: CORETO.z + j * 2.4 })),
-);
 
-/** Pérgolas das áreas de descanso, cada uma cobrindo um ou dois bancos (retângulos no chão). */
-export const PERGOLAS = [
-  { x0: -13.6, x1: -10.8, z0: 1.9, z1: 3.7 },
-  { x0: 11.2, x1: 13.9, z0: 4.3, z1: 9.9 },
-  { x0: -5.4, x1: -3.0, z0: -13.5, z1: -11.7 },
-  { x0: 1.0, x1: 3.4, z0: -13.5, z1: -11.7 },
+/** Árvores (espelhadas dos dois lados), com o tipo e a cor da copa. */
+type Arvore = Ponto & { tipo: "copa" | "copinha" | "pinheiro"; cor?: "laranja" | "amarelo" };
+const METADE: Arvore[] = [
+  { x: -8.6, z: -14.6, tipo: "copa", cor: "amarelo" },
+  { x: -6.8, z: -19.6, tipo: "copinha" },
+  { x: -17.8, z: -11.6, tipo: "pinheiro" },
+  { x: -23.6, z: -8.4, tipo: "copa" },
+  { x: -27.4, z: -4.2, tipo: "copinha", cor: "amarelo" },
+  { x: -18.2, z: -4.6, tipo: "copa", cor: "laranja" },
+  { x: -27.2, z: 6.4, tipo: "copa" },
+  { x: -13.2, z: 15.8, tipo: "copa", cor: "amarelo" },
+  { x: -7.4, z: 19.2, tipo: "pinheiro" },
+  { x: -17.6, z: 17.8, tipo: "copinha" },
 ];
-/** Postes de uma pérgola: nos cantos e, nas compridas, também no meio. */
-export const postesDaPergola = (p: (typeof PERGOLAS)[number]): Ponto[] =>
-  (p.z1 - p.z0 > 4 ? [p.z0, (p.z0 + p.z1) / 2, p.z1] : [p.z0, p.z1]).flatMap((z) => [
-    { x: p.x0, z },
-    { x: p.x1, z },
-  ]);
+export const ARVORES: Arvore[] = [
+  ...METADE,
+  // do lado direito, o rio passa por onde ficariam algumas: elas vão um pouco para o lado
+  ...METADE.map((a) => ({ ...a, x: -a.x })).filter(
+    (a) => distLinha(a.x, a.z, RIO) > MEIA_RIO + 1.4,
+  ),
+  { x: 25.6, z: 9.6, tipo: "copa", cor: "amarelo" },
+];
 
-/**
- * Berçário: uma ilhota flutuante na frente da ilha, mais alta que a praça.
- * Quem está com o site aberto fica deitado aqui até acordar. (x, z) é o centro
- * do deck e `y` a altura do piso dele.
- */
-export const BERCO = { x: 8.25, y: 5, z: 18.2 };
-/** Meia largura (x) e meia fundura (z) do deck do berçário. */
-export const DECK_DO_BERCO = { meiaX: 3.25, meiaZ: 2.55 };
-/** Altura em que o HOKI deita (em cima do colchão). */
-const COLCHAO = BERCO.y + 0.36;
-/** As 20 vagas do berço: 5 colunas por 4 fileiras. Quem deita fica com a cabeça para o fundo. */
-export const VAGAS: { x: number; y: number; z: number }[] = [0, 1, 2, 3].flatMap((f) =>
-  [-2, -1, 0, 1, 2].map((c) => ({ x: BERCO.x + c * 1.0, y: COLCHAO, z: BERCO.z - 1.3 + f * 0.9 })),
-);
-/**
- * Vaga de quem dorme no berço. Passando de 20 pessoas, as próximas deitam numa
- * camada de cima, um pouco deslocada, para ninguém ficar escondido embaixo de outro.
- */
-export function vagaDoBerco(i: number) {
-  const n = Math.max(0, Math.floor(i));
-  const camada = Math.floor(n / VAGAS.length);
-  const base = VAGAS[n % VAGAS.length] ?? VAGAS[0]!;
-  const torto = camada % 2 === 1;
-  return {
-    x: base.x + (torto ? 0.5 : 0),
-    y: base.y + camada * 0.42,
-    z: base.z + (torto ? 0.45 : 0),
-  };
+// ---------------- colheita (a fazenda antiga saiu: fica a lista vazia, para a HOST FAZENDAS usar depois) ----------------
+export interface Canteiro extends Ponto {
+  cultura: Cultura;
 }
-/** Escorregador: sai do fundo do deck e desce até o gramado, entre duas árvores. */
-export const ESCORREGADOR = {
-  topo: { x: BERCO.x, y: BERCO.y + 0.05, z: BERCO.z - DECK_DO_BERCO.meiaZ },
-  pe: { x: BERCO.x, y: 0.3, z: 9.4 },
-};
-/** Onde o HOKI pousa ao sair do escorregador. */
-export const CHEGADA: Ponto = { x: BERCO.x - 0.15, z: 8.4 };
-/** Totem do termômetro (queridômetro), no gramado ao lado da praça, e o ponto em frente onde o HOKI para. */
-export const TERMOMETRO: Ponto = { x: -7.8, z: 6.8 };
-export const FRENTE_DO_TERMOMETRO: Ponto = { x: -6.95, z: 5.95 };
-/** Caixa do correio (cartão postal), na beira do anel da fonte (lado de cima, à esquerda), e o ponto em frente onde o HOKI para. */
-export const CORREIO: Ponto = { x: -7.3, z: -6.3 };
-export const FRENTE_DO_CORREIO: Ponto = { x: -6.45, z: -5.45 };
-/** Chuveirão: na beira do caminho do leste, antes da ponte do rio. O HOKI fica embaixo da ducha para tomar banho. */
-export const CHUVEIRO: Ponto = { x: 11.2, z: -2.9 };
-/** Portal do parkour, na beirada da frente da ilha, e o ponto onde o HOKI para diante dele. */
-export const PARKOUR: Ponto = { x: -13, z: 13.2 };
-export const FRENTE_DO_PARKOUR: Ponto = { x: -13, z: 11.9 };
+export const CANTEIROS: Canteiro[] = [];
 
-/** Coisas redondas que não dá para atravessar. */
+// ---------------- o que não dá para atravessar ----------------
 const OBSTACULOS: (Ponto & { r: number })[] = [
   { ...FONTE, r: ANEL.dentro - 0.1 },
   ...ARVORES.map((a) => ({ x: a.x, z: a.z, r: a.tipo === "copinha" ? 0.6 : 0.75 })),
   ...POSTES.map((p) => ({ ...p, r: 0.3 })),
-  ...PILARES.map((p) => ({ ...p, r: 0.4 })),
-  ...PEDRAS.map((p) => ({ ...p, r: 0.6 })),
-  { ...POCA, r: 1.3 },
-  // (os lugares do balanço ficam no ar, fora da ilha: não bloqueiam o chão)
-  ...BANCOS.filter((b) => !b.balanco).map((b) => ({ x: b.x, z: b.z, r: b.trabalho ? 0.42 : 0.7 })),
-  // tampos das mesas do escritório
+  ...BANCOS.filter((b) => !b.trabalho).map((b) => ({ x: b.x, z: b.z, r: 0.7 })),
   ...MESAS.flatMap((m) => [-0.42, 0.42].map((d) => ({ x: m.x + d, z: m.z, r: 0.42 }))),
-  ...PERGOLAS.flatMap(postesDaPergola).map((p) => ({ ...p, r: 0.2 })),
-  { ...TERMOMETRO, r: 0.5 },
-  { ...CORREIO, r: 0.35 },
-  // colunas do portal do Magnata
-  ...[-1, 1].map((l) => ({ x: PORTAL.x + l * 2.05, z: PORTAL.z, r: 0.6 })),
-  // poste do chuveirão (a ducha em si fica livre, para o HOKI entrar embaixo)
+  { ...TERMOMETRO, r: 0.55 },
+  { ...CORREIO, r: 0.4 },
+  ...[PLACA_QUERIDOMETRO, PLACA_CORREIO].map((p) => ({ ...p, r: 0.35 })),
   { x: CHUVEIRO.x - 0.62, z: CHUVEIRO.z - 0.62, r: 0.16 },
-  ...CANTEIROS.flatMap((c) =>
-    OCUPA[c.cultura] ? [{ x: c.x, z: c.z, r: OCUPA[c.cultura] ?? 0.5 }] : [],
-  ),
-  ...[-0.95, 0.95].map((d) => ({ x: PARKOUR.x + d, z: PARKOUR.z, r: 0.3 })),
-  // a parte baixa do escorregador e os dois pares de pés dele
-  ...[9.9, 10.7, 11.5].map((z) => ({ x: ESCORREGADOR.pe.x, z, r: 0.5 })),
-  ...[12.4, 14].flatMap((z) => [-0.5, 0.5].map((d) => ({ x: ESCORREGADOR.pe.x + d, z, r: 0.2 }))),
+  // colunas do coreto (oito, em volta) e do arco de flores
+  ...Array.from({ length: 8 }, (_, i) => {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    return {
+      x: CORETO.x + Math.cos(a) * RAIO_DO_CORETO,
+      z: CORETO.z + Math.sin(a) * RAIO_DO_CORETO,
+      r: 0.3,
+    };
+  }),
+  ...[-1, 1].map((l) => ({
+    x: ARCO_DE_FLORES.x + l * 1.05,
+    z: ARCO_DE_FLORES.z + l * 0.42,
+    r: 0.25,
+  })),
+  // pódio do TOP 3
+  ...[-0.7, 0, 0.7].map((d) => ({ x: TOP3.x + d, z: TOP3.z, r: 0.42 })),
+  // pilares no pé das escadarias
+  ...ESCADARIAS.flatMap(pilaresDaEscadaria).map((p) => ({ ...p, r: 0.6 })),
+  // ilhas altas: moinho, árvores e postes
+  { ...MOINHO, r: 1.1 },
+  ...[...ARVORES_FAZENDAS, ...ARVORES_EM_BREVE].map((a) => ({ x: a.x, z: a.z, r: 0.7 })),
+  ...[...POSTES_FAZENDAS, ...POSTES_EM_BREVE].map((p) => ({ ...p, r: 0.25 })),
+  // pé da calha do escorregador (os apoios que ficam na ilha)
+  ...PONTOS_DO_ESCORREGADOR.filter(
+    (p, i) => i % 8 === 4 && p.z < beiradaEmZ(p.x) - 0.3 && p.z > PLATAFORMA.z + 1.6,
+  ).map((p) => ({ x: p.x, z: p.z, r: 0.5 })),
+  // Magnata: dados e peão
+  ...DADOS_DO_MAGNATA.map((p) => ({ ...p, r: 0.6 })),
+  { ...PEAO_DO_MAGNATA, r: 0.4 },
+];
+/** Paredes e caixas que não dá para atravessar (prédios das ilhas laterais). */
+const PAREDES: Ret[] = [
+  // prédio do Magnata, menos o vão da porta (o portal)
+  {
+    x0: PREDIO_MAGNATA.x0,
+    x1: PREDIO_MAGNATA.x1,
+    z0: PREDIO_MAGNATA.z0,
+    z1: -PREDIO_MAGNATA.porta,
+  },
+  { x0: PREDIO_MAGNATA.x0, x1: PREDIO_MAGNATA.x1, z0: PREDIO_MAGNATA.porta, z1: PREDIO_MAGNATA.z1 },
+  {
+    x0: PREDIO_MAGNATA.x0,
+    x1: PREDIO_MAGNATA.x1 - 0.9,
+    z0: -PREDIO_MAGNATA.porta,
+    z1: PREDIO_MAGNATA.porta,
+  },
+  // escritório: paredes do fundo, de cima e de baixo (a frente, virada para a ponte, é aberta)
+  { x0: ESCRITORIO.x1 - 0.4, x1: ESCRITORIO.x1, z0: ESCRITORIO.z0, z1: ESCRITORIO.z1 },
+  { x0: ESCRITORIO.x0, x1: ESCRITORIO.x1, z0: ESCRITORIO.z0, z1: ESCRITORIO.z0 + 0.4 },
+  { x0: ESCRITORIO.x0, x1: ESCRITORIO.x1, z0: ESCRITORIO.z1 - 0.4, z1: ESCRITORIO.z1 },
+  // terraço do TOP 3: o morrinho de trás (na frente dá para chegar perto do pódio)
+  { x0: TERRACO_TOP3.x0, x1: TERRACO_TOP3.x1, z0: TERRACO_TOP3.z0 - 2, z1: TERRACO_TOP3.z0 + 1.6 },
 ];
 
-/** Dá para um HOKI ficar neste ponto? (dentro da ilha, fora da água, do morro e dos obstáculos) */
+/** Dá para pisar fora da ilha central? (pontes, ilhas laterais, escadarias e ilhas altas) */
+export const noAnexo = (x: number, z: number, folga = 0) =>
+  (Math.abs(z) < PONTE_OESTE.meia - 0.4 + folga &&
+    x >= PONTE_OESTE.x0 - 0.3 &&
+    x <= PONTE_OESTE.x1 + folga) ||
+  (Math.abs(z) < PONTE_LESTE.meia - 0.4 + folga &&
+    x >= PONTE_LESTE.x0 - folga &&
+    x <= PONTE_LESTE.x1 + 0.3) ||
+  dentroDe(
+    {
+      x0: ILHA_MAGNATA.x0 + 0.7,
+      x1: ILHA_MAGNATA.x1 - 0.1,
+      z0: ILHA_MAGNATA.z0 + 0.7,
+      z1: ILHA_MAGNATA.z1 - 0.7,
+    },
+    x,
+    z,
+    folga,
+  ) ||
+  dentroDe(
+    {
+      x0: ILHA_ESCRITORIO.x0 + 0.1,
+      x1: ILHA_ESCRITORIO.x1 - 0.7,
+      z0: ILHA_ESCRITORIO.z0 + 0.7,
+      z1: ILHA_ESCRITORIO.z1 - 0.7,
+    },
+    x,
+    z,
+    folga,
+  ) ||
+  naPonteFazendas(x, z, folga) ||
+  naIlhaFazendas(x, z, folga);
+
+/** Dá para um HOKI ficar neste ponto? (dentro da ilha ou de um anexo, fora da água e dos obstáculos) */
 export function livre(x: number, z: number) {
-  // fora da ilha só dá para pisar na ponte e no piso do escritório
   if (!noAnexo(x, z)) {
-    if (!dentroDaIlha(x, z, 0.9) || noMorro(x, z)) return false;
-    if (naAgua(x, z, CORPO) && !naPonte(z)) return false;
+    if (!dentroDaIlha(x, z, 0.9)) return false;
+    if (naAgua(x, z, CORPO) && !naPonte(x, z)) return false;
   }
+  for (const p of PAREDES) if (dentroDe(p, x, z, CORPO)) return false;
   for (const o of OBSTACULOS) if (Math.hypot(x - o.x, z - o.z) < o.r + CORPO) return false;
   return true;
 }
 
 // Grade de caminhada: a ilha dividida em quadradinhos de meio bloco, marcados como livres ou não.
 const PASSO = 0.5;
-const X0 = -79; // começa na fazenda, a oeste
-const Z0 = -41; // começa na ilha da pista, ao norte
-const NX = 247; // de x = -79 (fazenda) até x = 44 (escritório)
-const NZ = 115; // de z = -41 (pista) até z = 16
+const X0 = -56; // começa na ilha do Magnata, a oeste
+const Z0 = -51; // começa nas ilhas altas, ao norte
+const NX = 225; // de x = -56 (Magnata) até x = 56 (escritório)
+const NZ = 149; // de z = -51 (ilhas altas) até z = 23 (beirada sul)
 let grade: Uint8Array | null = null;
 function celulas() {
   if (!grade) {
@@ -436,7 +574,9 @@ function celulas() {
       for (let i = 0; i < NX; i++)
         solto[i + j * NX] = livre(X0 + i * PASSO, Z0 + j * PASSO) ? 1 : 0;
     // só vale o que dá para alcançar a partir da entrada: cantinhos isolados atrás de árvores ficam de fora
-    const fila = [Math.round((ENTRADA.x - X0) / PASSO) + Math.round((ENTRADA.z - Z0) / PASSO) * NX];
+    // (começa no anel da fonte: a entrada do sul agora tem a piscina do escorregador)
+    const inicio = { x: FONTE.x, z: FONTE.z + 6 };
+    const fila = [Math.round((inicio.x - X0) / PASSO) + Math.round((inicio.z - Z0) / PASSO) * NX];
     grade[fila[0]!] = 1;
     while (fila.length) {
       const c = fila.pop()!;

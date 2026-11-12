@@ -83,7 +83,7 @@ function sopro(dur: number, de: number, ate: number, gain = 0.012) {
 
 export type Sfx = "check" | "uncheck" | "complete" | "add" | "remove" | "click" | "tap" | "hover" | "nav" | "open" | "close" | "toggle" | "success" | "error" | "pop" | "toc"
   // eventos da praça do HOKI
-  | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito";
+  | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito" | "sino";
 
 /**
  * Ruído filtrado com ataque e queda: a base do trovão, do mergulho, dos fogos e
@@ -211,6 +211,15 @@ export function playSfx(kind: Sfx) {
         [523, 659, 784, 1047, 784, 1047].forEach((f, i) =>
           tone(f, i * 0.11, i === 5 ? 0.5 : 0.16, 0.06, "triangle"),
         );
+        break;
+      case "sino":
+        // "dlim-dlom" de sino: duas batidas com o harmônico agudo que fica soando
+        [0, 0.42].forEach((t, k) => {
+          const f = k ? 1318 : 1568;
+          tone(f, t, 1.1, 0.07, "sine");
+          tone(f * 2.76, t, 0.5, 0.018, "sine");
+          tone(f * 5.4, t, 0.18, 0.008, "sine");
+        });
         break;
       case "apito":
         // "piuí" do trenzinho

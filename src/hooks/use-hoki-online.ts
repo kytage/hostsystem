@@ -15,6 +15,12 @@ import { playSfx } from "@/lib/sfx";
 import { useMyRole } from "@/lib/permissions";
 import { ROLE_TAG } from "@/lib/roles";
 import { useSouVisita } from "@/lib/hoki-visita";
+import {
+  estouEmPartida,
+  guardarConvite,
+  limparCodigo,
+  pedirParaAbrir,
+} from "@/lib/hoki-magnata-sala";
 
 /** Pede (uma vez só) para o navegador deixar o painel mostrar avisos no computador. */
 function pedirAvisosNoComputador() {
@@ -45,13 +51,18 @@ function piscarTitulo(texto: string) {
 }
 
 /** Aviso do Windows/Mac quando a pessoa está em outra janela ou aba. */
-function avisarNoComputador(titulo: string, corpo: string, aoClicar: () => void) {
+function avisarNoComputador(
+  titulo: string,
+  corpo: string,
+  aoClicar: () => void,
+  tag = "hoki-chamar",
+) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   if (document.visibilityState === "visible" && document.hasFocus()) return;
   try {
     const n = new Notification(titulo, {
       body: corpo,
-      tag: "hoki-chamar",
+      tag,
       requireInteraction: true,
     });
     n.onclick = () => {
@@ -137,6 +148,38 @@ export function useHokiOnline() {
             window.location.pathname === "/"
               ? undefined
               : { label: "Ir para a praça", onClick: () => void navigate({ to: "/" }) },
+        });
+      }),
+    [navigate],
+  );
+
+  // Sino do Magnata: alguém me chamou para uma partida. Avisa em qualquer tela e guarda o convite no portal.
+  useEffect(
+    () =>
+      ouvirNaPraca("magnata", (m) => {
+        if (m.para !== meuIdNaPraca()) return;
+        const codigo = limparCodigo(String(m.codigo ?? ""));
+        if (codigo.length !== 5) return;
+        const nome = String(m.nome ?? "Alguém").slice(0, 24);
+        guardarConvite({ codigo, nome, quando: Date.now() });
+        if (estouEmPartida()) return;
+        playSfx("sino");
+        const entrar = () => {
+          pedirParaAbrir(codigo);
+          if (!["/", "/hoki"].includes(window.location.pathname)) void navigate({ to: "/" });
+        };
+        avisarNoComputador(
+          "🔔 Magnata HOST",
+          `${nome} está te chamando para uma partida de tabuleiro.`,
+          entrar,
+          "hoki-magnata",
+        );
+        piscarTitulo(`🔔 ${nome} te chamou para o Magnata!`);
+        toast(`${nome} te chamou para o Magnata HOST`, {
+          icon: "🔔",
+          description: "Partida de tabuleiro de imóveis na praça do HOKI.",
+          duration: 20_000,
+          action: { label: "Entrar", onClick: entrar },
         });
       }),
     [navigate],

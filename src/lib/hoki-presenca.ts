@@ -201,8 +201,8 @@ function publicar(forcar = false) {
 function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
   // quem ainda está na versão antiga só aparece quando entra na praça: conta como acordado
   const dorme = p.dorme === true;
-  const x = numero(p.x, -79, 44);
-  const z = numero(p.z, -41, 16);
+  const x = numero(p.x, -56, 56);
+  const z = numero(p.z, -51, 24);
   if (!dorme && (x === null || z === null)) return null;
   const banco = numero(p.banco, 0, 63);
   return {

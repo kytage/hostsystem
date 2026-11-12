@@ -57,7 +57,7 @@ export function HokiJogos({
               </button>
             ))}
             <p className="text-[11px] text-ink-3">
-              Cada partida gasta um pouco de energia e rende XP e carinho.
+              Cada partida gasta um pouco de energia e rende carinho (e recordes).
             </p>
           </div>
         )}

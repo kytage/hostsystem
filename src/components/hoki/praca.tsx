@@ -24,8 +24,6 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CONTAGEM_MS, LOBBY_MS } from "@/lib/hoki-corrida";
-import { Corrida } from "./corrida";
 import { Magnata } from "./magnata";
 import { SHOWS, infoDoShow, type Show, type TipoShow } from "@/lib/hoki-shows";
 import { cn } from "@/lib/utils";
@@ -51,9 +49,14 @@ import {
   type Par,
   type Mensagem,
   type PresencaHoki,
-  meuIdNaPraca,
 } from "@/lib/hoki-presenca";
-import { limparCodigo, novoCodigo, salaGuardada } from "@/lib/hoki-magnata-sala";
+import {
+  esquecerConvite,
+  novoCodigo,
+  pegarPedidoDeAbrir,
+  salaGuardada,
+  useConvitesMagnata,
+} from "@/lib/hoki-magnata-sala";
 import {
   criarJogo,
   gravarJogo,
@@ -74,27 +77,25 @@ import { copiarTexto } from "@/lib/copiar";
 import { ROLE_TAG } from "@/lib/roles";
 import { isCoordinatorPlus, useMyRole } from "@/lib/permissions";
 import { Mundo3D, type Mundo3DRef, type PessoaMundo } from "./mundo-3d";
+import { pausarMundo3D } from "./mundo-pausa";
 import {
   ajustar,
   BANCOS,
-  EMBARQUE_DO_BALANCO,
-  LARGADA,
-  naIlhaDaPista,
-  LUGARES_DO_BALANCO,
   CANTEIROS,
   CHEGADA,
   CHUVEIRO,
   CORREIO,
   FRENTE_DO_CORREIO,
-  FRENTE_DO_PARKOUR,
   FRENTE_DO_PORTAL,
+  FRENTE_DO_PORTAL_FAZENDAS,
+  naPortaDoCeleiro,
   PORTAL,
   FRENTE_DO_TERMOMETRO,
-  cliqueNaPonteDaFazenda,
-  PONTAS_DA_FAZENDA,
   type Ponto,
 } from "./mundo-mapa";
-import { Parkour } from "./parkour";
+import { Fazenda } from "./fazenda/fazenda";
+import { PortalDasFazendas } from "./fazenda/portal-fazendas";
+import { useSelos } from "@/lib/fazenda/selos";
 import { CULTURAS, faltaParaCrescer, item, ITENS, quantosCabem } from "@/lib/hoki-itens";
 import { Queridometro, useQueridometro } from "./queridometro";
 import { PerfilHoki } from "./perfil";
@@ -240,6 +241,13 @@ export function Praca({
     { de: string; nome: string; tipo: Dupla; ate: number }[]
   >([]);
   const [perfilDe, setPerfilDe] = useState<string | null>(null);
+  /** HOST FAZENDAS: o portal do celeiro e a ilha aberta (a minha ou a de um amigo). */
+  const [portalFazendas, setPortalFazendas] = useState(false);
+  const [fazenda, setFazenda] = useState<{
+    visitar: string | null;
+    painel: "vizinhos" | "correio" | null;
+    vez: number;
+  } | null>(null);
   const [jogosAberto, setJogosAberto] = useState(false);
   const [correioAberto, setCorreioAberto] = useState(false);
   /** Presentes que me ofereceram (cada um vence em 30 segundos). */
@@ -248,21 +256,20 @@ export function Praca({
   >([]);
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
-    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" | "pista" | "portal" }
+    | {
+        tipo: "termometro" | "chuveiro" | "correio" | "portal" | "fazendas";
+      }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
   >(null);
   const [indoAoCanteiro, setIndoAoCanteiro] = useState<number | null>(null);
-  const [indoAoParkour, setIndoAoParkour] = useState(false);
-  const [parkour, setParkour] = useState<"jogar" | "ranking" | null>(null);
   /** Sentado numa cadeira do escritório: o status vira "Trabalhando" até levantar. */
   const [trabalhando, setTrabalhando] = useState(() => {
     const l = meuLugar();
     return !l.dorme && l.banco !== null && l.status === "💻 Trabalhando";
   });
-  // sentado no balanço do letreiro, o status mostra isso (como "Trabalhando" no escritório)
-  const noBalanco = eu.banco !== null && !!BANCOS[eu.banco]?.balanco;
-  const statusAtual = trabalhando ? "💻 Trabalhando" : noBalanco ? "🎠 No balanço" : status;
+  // trabalhando no escritório ou dentro do HOST FAZENDAS, o status mostra isso para todos
+  const statusAtual = fazenda ? "🌾 No HOST FAZENDAS" : trabalhando ? "💻 Trabalhando" : status;
   const [velhaId, setVelhaId] = useState<string | null>(null);
   /** Partida aberta de dama, ligue 4 ou pedra-papel-tesoura. */
   const [desafioId, setDesafioId] = useState<string | null>(null);
@@ -742,10 +749,12 @@ export function Praca({
 
   /* ---------- andar, sentar e falar ---------- */
   /** Qualquer movimento meu encerra o que estava em andamento (animação, dupla, ida até alguém). */
+  /** Foi pela tecla E na entrada do braço: chegando na frente do portal, abre a escolha da partida. */
+  const abrirPortalAoChegar = useRef(false);
   const largarTudo = () => {
+    abrirPortalAoChegar.current = false;
     setIndoAoTermometro(false);
     setIndoAoCorreio(false);
-    setIndoAoParkour(false);
     setIndoAoCanteiro(null);
     setIndoAte(null);
     setAnimacao(null);
@@ -757,18 +766,17 @@ export function Praca({
   const pertoDe = (p: Ponto) => {
     if (!souVisita && Math.hypot(p.x - FRENTE_DO_TERMOMETRO.x, p.z - FRENTE_DO_TERMOMETRO.z) < 1.7)
       return { tipo: "termometro" as const };
-    if (Math.hypot(p.x - FRENTE_DO_PARKOUR.x, p.z - FRENTE_DO_PARKOUR.z) < 1.9)
-      return { tipo: "parkour" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
-    // no pátio do portal do Magnata
+    // na frente do portal do Magnata
     if (Math.hypot(p.x - FRENTE_DO_PORTAL.x, p.z - FRENTE_DO_PORTAL.z) < 3)
       return { tipo: "portal" as const };
-    // no arco da largada, na ilha da pista: abrir uma corrida
-    if (Math.hypot(p.x - LARGADA.x, p.z - LARGADA.z) < 2.4) return { tipo: "pista" as const };
-    // na beira de trás da ilha, embaixo do letreiro: o balanço
-    if (Math.abs(p.x - EMBARQUE_DO_BALANCO.x) < 5.2 && p.z < EMBARQUE_DO_BALANCO.z + 1.5)
-      return { tipo: "balanco" as const };
+    // na frente da porta do celeiro (portal do HOST FAZENDAS)
+    if (
+      Math.hypot(p.x - FRENTE_DO_PORTAL_FAZENDAS.x, p.z - FRENTE_DO_PORTAL_FAZENDAS.z) < 2.6 ||
+      naPortaDoCeleiro(p.x, p.z)
+    )
+      return { tipo: "fazendas" as const };
     const i = BANCOS.findIndex((b) => b.trabalho && Math.hypot(b.x - p.x, b.z - p.z) < 1.6);
     if (i >= 0) return { tipo: "cadeira" as const, i };
     // na fazenda: o lugar de colher mais perto
@@ -851,27 +859,8 @@ export function Praca({
     const falta = c ? faltaParaCrescer(c.cultura, pet.colheitas[String(i)]) : "";
     return falta ? `${nome}: pronto em ${falta}` : `${receita?.verbo ?? "colher"} ${nome}`;
   };
-  const irAoParkour = () => {
-    if (!dentro) {
-      toast.info("Acorde o seu HOKI para ir até o parkour.");
-      return;
-    }
-    if (perto?.tipo === "parkour") {
-      setParkour("jogar");
-      return;
-    }
-    largarTudo();
-    setAlvo(null);
-    setIndoAoParkour(true);
-    setEu({ ...FRENTE_DO_PARKOUR, banco: null });
-  };
   const andar = (clicado: Ponto) => {
-    // a ponte da fazenda é de disparada: quem clica nela vai até a outra ponta
-    let p = clicado;
-    if (cliqueNaPonteDaFazenda(p.x, p.z)) {
-      const [naFazenda, naIlha] = PONTAS_DA_FAZENDA;
-      p = eu.x > (naFazenda.x + naIlha.x) / 2 ? naFazenda : naIlha;
-    }
+    const p = clicado;
     largarTudo();
     setEu({ x: p.x, z: p.z, banco: null });
     setAlvo(null);
@@ -955,21 +944,13 @@ export function Praca({
   // Teclas: E usa o que está ao alcance; R abre o ranking do parkour. Não valem enquanto se digita ou com uma janela aberta.
   const usar = useRef<(tecla: "e" | "r") => void>(() => undefined);
   usar.current = (tecla) => {
-    // sentado no balanço, a tecla E desce
-    if (dentro && noBalanco) {
-      if (tecla === "e") sairDoBalanco();
-      return;
-    }
-    if (!dentro || !perto || eu.banco !== null) return;
-    if (perto.tipo === "parkour") setParkour(tecla === "r" ? "ranking" : "jogar");
-    else if (tecla !== "e") return;
-    else if (perto.tipo === "cadeira") sentar(perto.i);
+    if (!dentro || !perto || eu.banco !== null || tecla !== "e") return;
+    if (perto.tipo === "cadeira") sentar(perto.i);
     else if (perto.tipo === "canteiro") colher(perto.i);
     else if (perto.tipo === "chuveiro") tomarBanho();
     else if (perto.tipo === "correio") setCorreioAberto(true);
-    else if (perto.tipo === "balanco") sentarNoBalanco();
-    else if (perto.tipo === "pista") abrirCorrida();
     else if (perto.tipo === "portal") setPortalAberto(true);
+    else if (perto.tipo === "fazendas") setPortalFazendas(true);
     else setQueridometro(true);
   };
   useEffect(() => {
@@ -1071,10 +1052,7 @@ export function Praca({
   /* ---------- Magnata HOST: portal, convites e a partida aberta ---------- */
   const [portalAberto, setPortalAberto] = useState(false);
   const [magnata, setMagnata] = useState<{ codigo: string; criar: boolean } | null>(null);
-  const [conviteMagnata, setConviteMagnata] = useState<{ nome: string; codigo: string } | null>(
-    null,
-  );
-  const [codigoMagnata, setCodigoMagnata] = useState("");
+  const { convites: convitesMagnata, pedido: pedidoMagnata } = useConvitesMagnata();
   const [minhaSalaMagnata, setMinhaSalaMagnata] = useState<string | null>(null);
   useEffect(() => {
     if (portalAberto) setMinhaSalaMagnata(salaGuardada());
@@ -1082,34 +1060,18 @@ export function Praca({
   const abrirMagnata = (codigo: string, criar: boolean) => {
     playSfx("open");
     setPortalAberto(false);
-    setConviteMagnata(null);
-    setCodigoMagnata("");
+    esquecerConvite(codigo);
     setMagnata({ codigo, criar });
   };
-  const abrirMagnataRef = useRef(abrirMagnata);
-  abrirMagnataRef.current = abrirMagnata;
   // só para testes: abre uma sala direto, sem andar até o portal
   if (import.meta.env.DEV)
     (window as unknown as { __magnata?: typeof abrirMagnata }).__magnata = abrirMagnata;
-  const magnataAberto = useRef(false);
-  magnataAberto.current = !!magnata;
-  useEffect(
-    () =>
-      ouvirNaPraca("magnata", (m) => {
-        if (m.para !== meuIdNaPraca()) return;
-        const codigo = limparCodigo(String(m.codigo ?? ""));
-        if (codigo.length !== 5 || magnataAberto.current) return;
-        const nome = String(m.nome ?? "alguém").slice(0, 24);
-        setConviteMagnata({ nome, codigo });
-        playSfx("pop");
-        toast(`🎲 ${nome} te convidou para o Magnata HOST`, {
-          description: "Partida de tabuleiro de imóveis, na ilha do portal.",
-          duration: 20_000,
-          action: { label: "Entrar", onClick: () => abrirMagnataRef.current(codigo, false) },
-        });
-      }),
-    [],
-  );
+  // convite aceito em outra tela (pelo aviso do sino): abre a sala assim que a praça aparece
+  useEffect(() => {
+    if (!pedidoMagnata || magnata) return;
+    const codigo = pegarPedidoDeAbrir();
+    if (codigo) abrirMagnata(codigo, false);
+  }, [pedidoMagnata]);
   /** Ao sair da partida, o HOKI volta para a frente do portal. */
   const fecharMagnata = () => {
     setMagnata(null);
@@ -1123,129 +1085,56 @@ export function Praca({
     () => ({ id: euPessoa.id, nome: euPessoa.nome, visual: meuVisual }),
     [euPessoa.id, euPessoa.nome, meuVisual],
   );
+  /* ---------- HOST FAZENDAS: portal do celeiro, a minha ilha e as visitas ---------- */
+  const euNaFazenda = useMemo(
+    () => ({
+      id: euPessoa.id,
+      nome: euPessoa.nome,
+      visual: meuVisual,
+      ...(minhaTag ? { tag: minhaTag } : {}),
+    }),
+    [euPessoa.id, euPessoa.nome, meuVisual, minhaTag],
+  );
+  const abrirFazenda = (visitar: string | null, painel: "vizinhos" | "correio" | null = null) => {
+    playSfx("open");
+    setPortalFazendas(false);
+    setFazenda({ visitar, painel, vez: Date.now() });
+  };
+  /** Ao sair da fazenda, o HOKI volta para a frente da porta do celeiro. */
+  const fecharFazenda = () => {
+    setFazenda(null);
+    if (dentro) {
+      largarTudo();
+      setAlvo(null);
+      setEu({ ...FRENTE_DO_PORTAL_FAZENDAS, banco: null });
+    }
+  };
+  // a praça para de desenhar enquanto a fazenda ocupa a tela
+  useEffect(() => {
+    pausarMundo3D(!!fazenda);
+    return () => pausarMundo3D(false);
+  }, [fazenda]);
+  // "Visitar" dentro da fazenda (lista de vizinhos ou convite): troca de ilha sem voltar à praça
+  useEffect(() => {
+    const aoVisitar = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (typeof id === "string" && id)
+        setFazenda({ visitar: id === euPessoa.id ? null : id, painel: null, vez: Date.now() });
+    };
+    window.addEventListener("hoki-fazenda-visitar", aoVisitar);
+    return () => window.removeEventListener("hoki-fazenda-visitar", aoVisitar);
+  }, [euPessoa.id]);
+  // só para testes: abre a fazenda (ou o painel do portal) direto, sem andar até o celeiro
+  if (import.meta.env.DEV)
+    Object.assign(window, {
+      __fazenda: abrirFazenda,
+      __portalFazendas: () => setPortalFazendas(true),
+    });
   const amigosOnline = useMemo(
     () => Object.values(outros).map((o) => ({ id: o.id, nome: o.nome, visual: o.visual })),
     [outros],
   );
 
-  /* ---------- corrida de kart: lobby de 60 s (quem estiver na ilha da pista quando fechar, corre) ---------- */
-  const [lobby, setLobby] = useState<{ id: string; de: string; nome: string; fim: number } | null>(
-    null,
-  );
-  const [agoraDoLobby, setAgoraDoLobby] = useState(() => Date.now());
-  const [corrida, setCorrida] = useState<{ id: string; largada: number } | null>(null);
-  useEffect(
-    () =>
-      ouvirNaPraca("corrida", (m) => {
-        const { id, de, faltam } = m;
-        if (typeof id !== "string" || id.length > 40 || typeof de !== "string") return;
-        if (typeof faltam !== "number" || !(faltam > 0) || faltam > LOBBY_MS + 2000) return;
-        const nome = String(m.nome ?? "alguém").slice(0, 24);
-        const fim = Date.now() + faltam;
-        setLobby((l) => {
-          // o mesmo lobby chega várias vezes (para quem entrou depois): só adianta se for "largar agora"
-          if (l && l.id === id) return fim < l.fim - 1500 ? { ...l, fim } : l;
-          if (l) return l;
-          playSfx("apito");
-          toast(`🏁 ${nome} abriu uma corrida!`, {
-            description: "Vá até a pista (ponte no fundo da ilha) em 60 segundos para correr.",
-            duration: 7000,
-          });
-          return { id, de, nome, fim };
-        });
-      }),
-    [],
-  );
-  const abrirCorrida = () => {
-    if (!dentro || corrida) return;
-    if (lobby) {
-      toast.info("Já tem uma corrida abrindo. Fique na pista que você entra.");
-      return;
-    }
-    const novo = {
-      id: Math.random().toString(36).slice(2, 10),
-      de: euPessoa.id,
-      nome: euPessoa.nome,
-      fim: Date.now() + LOBBY_MS,
-    };
-    playSfx("apito");
-    setLobby(novo);
-    enviarNaPraca("corrida", { id: novo.id, de: novo.de, nome: novo.nome, faltam: LOBBY_MS });
-  };
-  /** Quem abriu pode largar antes dos 60 s. */
-  const largarAgora = () => {
-    if (!lobby || lobby.de !== euPessoa.id) return;
-    const fim = Date.now() + 3000;
-    setLobby({ ...lobby, fim });
-    enviarNaPraca("corrida", { id: lobby.id, de: lobby.de, nome: lobby.nome, faltam: 3000 });
-  };
-  const euRef = useRef(eu);
-  euRef.current = eu;
-  const dentroAgora = useRef(dentro);
-  dentroAgora.current = dentro;
-  useEffect(() => {
-    if (!lobby) return;
-    const meu = lobby.de === euPessoa.id;
-    let ultimoAviso = Date.now();
-    const id = setInterval(() => {
-      const agora = Date.now();
-      setAgoraDoLobby(agora);
-      // quem abriu repete o aviso a cada 5 s, para quem chegou na praça depois
-      if (meu && agora - ultimoAviso > 5000 && lobby.fim - agora > 1500) {
-        ultimoAviso = agora;
-        enviarNaPraca("corrida", {
-          id: lobby.id,
-          de: lobby.de,
-          nome: lobby.nome,
-          faltam: lobby.fim - agora,
-        });
-      }
-      if (agora < lobby.fim) return;
-      // fechou: corre quem está acordado na ilha da pista
-      setLobby(null);
-      const e = euRef.current;
-      if (dentroAgora.current && naIlhaDaPista(e.x, e.z, 0.6))
-        setCorrida({ id: lobby.id, largada: lobby.fim + CONTAGEM_MS });
-      else if (meu) toast.info("A corrida começou sem você: fique na ilha da pista até a largada.");
-    }, 250);
-    return () => clearInterval(id);
-  }, [lobby, euPessoa.id]);
-  const irParaAPista = () => {
-    if (!dentro) {
-      toast.info("Acorde o seu HOKI para ir até a pista.");
-      return;
-    }
-    largarTudo();
-    setAlvo(null);
-    setEu({ ...LARGADA, banco: null });
-  };
-
-  /** Balanço do letreiro: senta no lugar livre mais perto (são 10). */
-  const sentarNoBalanco = () => {
-    if (!dentro) {
-      toast.info("Acorde o seu HOKI para ir ao balanço.");
-      return;
-    }
-    if (noBalanco) return;
-    const ocupados = new Set(Object.values(outros).map((o) => o.banco));
-    const livres = LUGARES_DO_BALANCO.filter((i) => !ocupados.has(i));
-    if (!livres.length) {
-      toast.info("O balanço está cheio (cabem 10).");
-      return;
-    }
-    const maisPerto = livres.reduce((a, b) =>
-      Math.abs((BANCOS[a]?.x ?? 0) - eu.x) <= Math.abs((BANCOS[b]?.x ?? 0) - eu.x) ? a : b,
-    );
-    sentar(maisPerto);
-  };
-  /** Desce do balanço: volta para a beira da ilha, de onde subiu. */
-  const sairDoBalanco = () => {
-    const b = eu.banco !== null ? BANCOS[eu.banco] : undefined;
-    playSfx("click");
-    largarTudo();
-    setEu({ ...(b?.de ?? EMBARQUE_DO_BALANCO), banco: null });
-    setPerto({ tipo: "balanco" });
-  };
   const falar = (e: FormEvent) => {
     e.preventDefault();
     const t = texto.trim().slice(0, 90);
@@ -1260,12 +1149,15 @@ export function Praca({
     enviarNaPraca("fala", { id: euPessoa.id, texto: t });
   };
 
+  // plaquinha: o nível (HOST FAZENDAS) e a cor que cada um equipou
+  const { data: selos } = useSelos([euPessoa.id, ...Object.keys(outros)]);
   const pessoas = useMemo<PessoaMundo[]>(
     () => [
       // dos outros, só vale a animação que este site conhece
       ...Object.values(outros).map((o) => ({
         ...o,
         anim: TRUQUES.find((t) => t === o.anim) ?? null,
+        selo: selos?.[o.id] ?? null,
       })),
       // eu apareço sempre: no berço enquanto durmo, na praça depois de acordar
       {
@@ -1280,9 +1172,22 @@ export function Praca({
         anim: dentro ? animacao : null,
         sujo: pet.higiene < SUJO_ABAIXO_DE,
         souEu: true,
+        selo: selos?.[euPessoa.id] ?? null,
       },
     ],
-    [outros, dentro, euPessoa, meuVisual, eu, statusAtual, minhaTag, par, animacao, pet.higiene],
+    [
+      outros,
+      dentro,
+      euPessoa,
+      meuVisual,
+      eu,
+      statusAtual,
+      minhaTag,
+      par,
+      animacao,
+      pet.higiene,
+      selos,
+    ],
   );
   const baloes = useMemo(
     () => Object.fromEntries(Object.entries(falas).map(([id, f]) => [id, f.texto])),
@@ -1331,12 +1236,10 @@ export function Praca({
         dentro={dentro}
         onChao={andar}
         onBanco={sentar}
-        onBalanco={sentarNoBalanco}
         onPessoa={aoClicarPessoa}
         pendentes={souVisita ? 0 : pendentes}
         semTermometro={souVisita}
         onTermometro={irAoTermometro}
-        onParkour={irAoParkour}
         colheitas={pet.colheitas}
         cartas={naoLidas}
         onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
@@ -1349,19 +1252,27 @@ export function Praca({
           if (quem && !quem.dorme) setAlvo(quem);
           // o que ficou ao alcance (tecla E): termômetro, parkour ou uma cadeira do escritório
           setPerto(pertoDe(p));
-          // entrou na abertura do portal do Magnata: abre a escolha (criar ou entrar numa partida)
-          if (Math.abs(p.x - PORTAL.x) < 1.5 && p.z < PORTAL.z + 1.2 && p.z > PORTAL.z - 1.5)
+          if (
+            abrirPortalAoChegar.current &&
+            Math.hypot(p.x - FRENTE_DO_PORTAL.x, p.z - FRENTE_DO_PORTAL.z) < 1.2
+          ) {
+            abrirPortalAoChegar.current = false;
             setPortalAberto(true);
+          }
+          // entrou na abertura do portal do Magnata: abre a escolha (criar ou entrar numa partida)
+          if (
+            p.x < PORTAL.x + 0.9 &&
+            Math.abs(p.z - PORTAL.z) < 1.5 &&
+            Math.abs(p.x - PORTAL.x) < 2
+          )
+            setPortalAberto(true);
+          // entrou na porta do celeiro: abre o portal do HOST FAZENDAS
+          if (naPortaDoCeleiro(p.x, p.z) && !fazenda) setPortalFazendas(true);
           if (indoAoCanteiro !== null) {
             const i = indoAoCanteiro;
             const c = CANTEIROS[i];
             setIndoAoCanteiro(null);
             if (c && Math.hypot(p.x - c.x, p.z - c.z) < 1.9) colher(i);
-          }
-          if (indoAoParkour) {
-            setIndoAoParkour(false);
-            if (Math.hypot(p.x - FRENTE_DO_PARKOUR.x, p.z - FRENTE_DO_PARKOUR.z) < 1.9)
-              setParkour("jogar");
           }
           if (indoAoCorreio) {
             setIndoAoCorreio(false);
@@ -1515,7 +1426,7 @@ export function Praca({
             <span className="min-w-0 leading-tight">
               <span className="block text-[12.5px] font-medium">Petiscos e Reflexo</span>
               <span className="block text-[10.5px] text-white/55">
-                Você joga sozinho e ganha XP
+                Você joga sozinho e bate recordes
               </span>
             </span>
           </button>
@@ -2140,38 +2051,6 @@ export function Praca({
           {naoLidas === 1 ? "1 carta nova" : `${naoLidas} cartas novas`} · leia na caixa do correio
         </button>
       )}
-      {/* corrida abrindo: contagem para todos, com o atalho para ir até a pista */}
-      {lobby && !corrida && (
-        <div className="pf-pop absolute left-1/2 top-12 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 py-1 pl-3 pr-1 text-[12px] text-white backdrop-blur-md">
-          <span>🏁</span>
-          <span className="whitespace-nowrap">
-            Corrida de <b>{lobby.nome}</b> em{" "}
-            <b className="tabular-nums text-[#ff8a72]">
-              {Math.max(0, Math.ceil((lobby.fim - agoraDoLobby) / 1000))} s
-            </b>
-          </span>
-          {naIlhaDaPista(eu.x, eu.z, 0.6) && dentro ? (
-            <span className="whitespace-nowrap rounded-full bg-emerald-500/20 px-2 py-1 text-[11px] text-emerald-300">
-              você está na pista
-            </span>
-          ) : (
-            <button
-              onClick={irParaAPista}
-              className="h-7 whitespace-nowrap rounded-full bg-white px-3 text-[11.5px] font-semibold text-black"
-            >
-              Ir para a pista
-            </button>
-          )}
-          {lobby.de === euPessoa.id && lobby.fim - agoraDoLobby > 3500 && (
-            <button
-              onClick={largarAgora}
-              className="h-7 whitespace-nowrap rounded-full border border-white/20 px-3 text-[11.5px] font-medium hover:bg-white/10"
-            >
-              Largar agora
-            </button>
-          )}
-        </div>
-      )}
       {/* portal do Magnata: criar uma sala ou entrar numa (convite, código ou a partida em que eu já estava) */}
       {portalAberto && !magnata && (
         <div
@@ -2204,50 +2083,33 @@ export function Praca({
             </button>
             <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
               <p className="text-[13.5px] font-bold">Entrar em partida</p>
-              {conviteMagnata && (
+              {convitesMagnata.map((c) => (
                 <button
-                  onClick={() => abrirMagnata(conviteMagnata.codigo, false)}
-                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-[#ffd23f]/40 bg-[#ffd23f]/10 px-3 text-[12px]"
+                  key={c.codigo}
+                  onClick={() => abrirMagnata(c.codigo, false)}
+                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-[#ffd23f]/40 bg-[#ffd23f]/10 px-3 text-[12px] hover:bg-[#ffd23f]/20"
                 >
-                  <span>
-                    Convite de <b>{conviteMagnata.nome}</b>
+                  <span className="flex items-center gap-1.5">
+                    🔔 <b>{c.nome}</b> te chamou
                   </span>
-                  <b className="text-[#ffd23f]">aceitar</b>
+                  <b className="text-[#ffd23f]">entrar</b>
                 </button>
-              )}
+              ))}
               {minhaSalaMagnata && (
                 <button
                   onClick={() => abrirMagnata(minhaSalaMagnata, false)}
-                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 text-[12px]"
+                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 text-[12px] hover:bg-emerald-400/20"
                 >
                   <span>Voltar para a sua partida</span>
-                  <b className="font-mono tracking-widest text-emerald-300">{minhaSalaMagnata}</b>
+                  <b className="text-emerald-300">voltar</b>
                 </button>
               )}
-              <form
-                className="mt-2 flex gap-2"
-                onSubmit={(ev) => {
-                  ev.preventDefault();
-                  if (codigoMagnata.length === 5) abrirMagnata(codigoMagnata, false);
-                  else toast.info("O código da sala tem 5 letras ou números.");
-                }}
-              >
-                <input
-                  value={codigoMagnata}
-                  onChange={(ev) => setCodigoMagnata(limparCodigo(ev.target.value))}
-                  placeholder="CÓDIGO"
-                  aria-label="Código da sala"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  className="h-9 min-w-0 flex-1 rounded-full border border-white/10 bg-black/50 px-3.5 font-mono text-[13px] tracking-[0.25em] outline-none placeholder:tracking-[0.2em] placeholder:text-white/30 focus:border-white/30"
-                />
-                <button
-                  type="submit"
-                  className="h-9 rounded-full border border-white/15 bg-white/[0.08] px-4 text-[12.5px] font-semibold hover:bg-white/15"
-                >
-                  Entrar
-                </button>
-              </form>
+              {!convitesMagnata.length && !minhaSalaMagnata && (
+                <p className="mt-1 text-[11.5px] leading-snug text-white/50">
+                  Nenhum chamado ainda. Quando alguém tocar o sino 🔔 na sala dele, o convite
+                  aparece aqui e no seu computador.
+                </p>
+              )}
             </div>
             <button
               onClick={() => setPortalAberto(false)}
@@ -2270,24 +2132,26 @@ export function Praca({
           onClose={fecharMagnata}
         />
       )}
-      {corrida && (
-        <Corrida
-          id={corrida.id}
-          largada={corrida.largada}
-          eu={{ id: euPessoa.id, nome: euPessoa.nome, cor: coresDe(meuVisual).principal }}
-          onClose={() => setCorrida(null)}
+      {/* HOST FAZENDAS: portal da porta do celeiro e a ilha aberta */}
+      {portalFazendas && !fazenda && (
+        <PortalDasFazendas
+          onMinhaIlha={() => abrirFazenda(null)}
+          onVisitar={(id) => abrirFazenda(id)}
+          onAbrirNaIlha={(painel) => abrirFazenda(null, painel)}
+          onClose={() => setPortalFazendas(false)}
         />
       )}
-      {/* sentado no balanço: a tecla E desce */}
-      {dentro && noBalanco && (
-        <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
-          <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
-            E
-          </kbd>
-          sair do balanço
-        </div>
+      {fazenda && (
+        <Fazenda
+          key={`${fazenda.visitar ?? "minha"}-${fazenda.vez}`}
+          eu={euNaFazenda}
+          visitar={fazenda.visitar}
+          painelInicial={fazenda.painel}
+          online={amigosOnline}
+          onClose={fecharFazenda}
+        />
       )}
-      {/* ao alcance: o que a tecla E (e a R, no parkour) faz aqui */}
+      {/* ao alcance: o que a tecla E faz aqui */}
       {dentro && perto && eu.banco === null && (
         <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
           <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
@@ -2295,31 +2159,17 @@ export function Praca({
           </kbd>
           {perto.tipo === "cadeira"
             ? "sentar e trabalhar"
-            : perto.tipo === "parkour"
-              ? "correr"
-              : perto.tipo === "canteiro"
-                ? textoDoCanteiro(perto.i)
-                : perto.tipo === "chuveiro"
-                  ? `tomar banho (higiene ${pet.higiene}%)`
-                  : perto.tipo === "correio"
-                    ? "abrir o correio"
-                    : perto.tipo === "balanco"
-                      ? "sentar no balanço"
-                      : perto.tipo === "portal"
-                        ? "entrar no portal do Magnata"
-                        : perto.tipo === "pista"
-                          ? lobby
-                            ? "corrida abrindo: fique na pista"
-                            : "abrir corrida (60 s para a galera chegar)"
-                          : "abrir o queridômetro"}
-          {perto.tipo === "parkour" && (
-            <>
-              <kbd className="ml-1 rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
-                R
-              </kbd>{" "}
-              ranking
-            </>
-          )}
+            : perto.tipo === "canteiro"
+              ? textoDoCanteiro(perto.i)
+              : perto.tipo === "chuveiro"
+                ? `tomar banho (higiene ${pet.higiene}%)`
+                : perto.tipo === "correio"
+                  ? "abrir a caixa postal"
+                  : perto.tipo === "portal"
+                    ? "entrar no portal do Magnata"
+                    : perto.tipo === "fazendas"
+                      ? "entrar no HOST FAZENDAS"
+                      : "abrir o queridômetro"}
         </div>
       )}
       {correioAberto && (
@@ -2332,7 +2182,6 @@ export function Praca({
           onClose={() => setCorreioAberto(false)}
         />
       )}
-      {parkour && <Parkour pet={pet} aba={parkour} onClose={() => setParkour(null)} />}
       {escolhendoDesafio && (
         <div className="pf-pop absolute inset-x-3 bottom-[68px] z-20 mx-auto w-fit max-w-[calc(100%-1.5rem)] rounded-2xl border border-white/15 bg-black/90 p-2.5 text-xs text-white backdrop-blur-md">
           <div className="flex items-center gap-2 px-1">

@@ -1001,7 +1001,6 @@ const DESGASTE: Record<Barra, number> = { fome: 5, sede: 7, energia: 2, carinho:
 export const BARRAS: Barra[] = ["fome", "sede", "energia", "carinho", "higiene"];
 /** Abaixo disso o HOKI está sujo (com mosquitos em volta). */
 export const SUJO_ABAIXO_DE = 30;
-export const NIVEL_MAX = 99;
 
 const limitar = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
@@ -1018,35 +1017,11 @@ export function aoVivo(pet: HokiPet, agora = Date.now()): HokiPet {
   };
 }
 
-/* ---------------- nível ---------------- */
-
-/** XP total necessário para chegar a um nível. */
-export const xpDoNivel = (nivel: number) => 40 * (nivel - 1) * (nivel - 1);
-export const nivelDoXp = (xp: number) =>
-  Math.min(NIVEL_MAX, 1 + Math.floor(Math.sqrt(Math.max(0, xp) / 40)));
-
-export function progresso(xp: number) {
-  const nivel = nivelDoXp(xp);
-  const base = xpDoNivel(nivel);
-  const proximo = xpDoNivel(nivel + 1);
-  return {
-    nivel,
-    noNivel: xp - base,
-    paraSubir: proximo - base,
-    pct: nivel >= NIVEL_MAX ? 100 : ((xp - base) / (proximo - base)) * 100,
-  };
-}
-
-const TITULOS = [
-  { min: 1, nome: "Filhote" },
-  { min: 5, nome: "Mascote" },
-  { min: 10, nome: "Parceiro" },
-  { min: 20, nome: "Guardião" },
-  { min: 35, nome: "Estrela" },
-  { min: 50, nome: "Lenda da HOST" },
-];
-export const titulo = (nivel: number) =>
-  [...TITULOS].reverse().find((t) => nivel >= t.min)?.nome ?? "Filhote";
+/*
+ * Nível: o HOKI não tem mais nível próprio (nem XP de cuidar ou de mini-game).
+ * O único nível é o do HOST FAZENDAS (src/lib/fazenda), mostrado na plaquinha,
+ * no cartão, no perfil, no ranking e usado nas recompensas "por nível" da loja.
+ */
 
 export type Humor = "feliz" | "normal" | "triste" | "dormindo";
 export function humor(p: HokiPet): Humor {
@@ -1088,8 +1063,6 @@ export const CUIDADOS: Cuidado[] = [
 
 /** Jogar cansa: cada partida gasta energia. */
 export const ENERGIA_POR_JOGO = 12;
-/** Teto de XP por partida, para o ranking refletir cuidado e não só cliques. */
-export const XP_MAX_JOGO = 36;
 
 /* ---------------- nomes ---------------- */
 
@@ -1217,14 +1190,26 @@ export async function salvarPet(
   return doBanco(data);
 }
 
-export async function rankingPets(): Promise<HokiPet[]> {
-  const { data, error } = await supabase
+/** Ranking pelo nível do HOST FAZENDAS (top 10), com o HOKI de cada um para o avatar. */
+export type PetNoRanking = HokiPet & { nivelFazenda: number; corLevel: string };
+export async function rankingPorNivel(): Promise<PetNoRanking[]> {
+  const { data, error } = await supabase.rpc("fazenda_ranking" as never, { limite: 10 } as never);
+  if (error) throw new Error(error.message);
+  const linhas = (data ?? []) as { user_id: string; nivel: number; cor: string }[];
+  if (!linhas.length) return [];
+  const { data: pets, error: e2 } = await supabase
     .from("hoshi_pets")
     .select(COLUNAS)
-    .order("xp", { ascending: false })
-    .limit(10);
-  if (error) throw error;
-  return (data ?? []).map((p) => doBanco(p));
+    .in(
+      "user_id",
+      linhas.map((l) => l.user_id),
+    );
+  if (e2) throw e2;
+  const porId = new Map((pets ?? []).map((p) => doBanco(p)).map((p) => [p.user_id, p]));
+  return linhas.flatMap((l) => {
+    const p = porId.get(l.user_id);
+    return p ? [{ ...p, nivelFazenda: l.nivel, corLevel: l.cor }] : [];
+  });
 }
 
 /** Ranking do parkour: quem foi mais longe (só quem já jogou). */
