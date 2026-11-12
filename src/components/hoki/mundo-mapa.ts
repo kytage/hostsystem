@@ -110,9 +110,34 @@ export const naPonteDaFazenda = (x: number, z: number) =>
   x > PONTE_DA_FAZENDA.x0 + 0.6 &&
   x < PONTE_DA_FAZENDA.x1 - 0.6 &&
   Math.abs(z) < PONTE_DA_FAZENDA.meia;
+/**
+ * Portal do Magnata HOST: fica num pátio de pedra escura, no fim de um braço que
+ * sai do meio da ponte da fazenda para o norte.
+ */
+export const BRACO_DO_PORTAL = { x: -42, meia: 1.25, z0: -8.2, z1: -PONTE_DA_FAZENDA.meia };
+export const PATIO_DO_PORTAL = { x0: -45.6, x1: -38.4, z0: -13.8, z1: BRACO_DO_PORTAL.z0 };
+export const PORTAL: Ponto = { x: BRACO_DO_PORTAL.x, z: -12.9 };
+export const FRENTE_DO_PORTAL: Ponto = { x: PORTAL.x, z: -10.6 };
+/** Dá para pisar no braço ou no pátio do portal? */
+export const noBracoDoPortal = (x: number, z: number, folga = 0) =>
+  (Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia - 0.4 + folga &&
+    z >= BRACO_DO_PORTAL.z0 - 0.3 &&
+    z <= -0.5) ||
+  (x >= PATIO_DO_PORTAL.x0 + 0.6 - folga &&
+    x <= PATIO_DO_PORTAL.x1 - 0.6 + folga &&
+    z >= PATIO_DO_PORTAL.z0 + 0.7 - folga &&
+    z <= PATIO_DO_PORTAL.z1 + 0.3);
+/** O clique foi no braço, no pátio ou no próprio portal (e não na ponte de disparada)? */
+export const cliqueNoPortal = (x: number, z: number) =>
+  z < -1.6 &&
+  z > PATIO_DO_PORTAL.z0 - 1.5 &&
+  x > PATIO_DO_PORTAL.x0 - 0.8 &&
+  x < PATIO_DO_PORTAL.x1 + 0.8 &&
+  (z < BRACO_DO_PORTAL.z0 + 0.5 || Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia + 0.9);
 /** Um clique caiu na ponte da fazenda (inclusive bem perto das pontas)? Aí o HOKI vai direto até a outra ponta. */
 export const cliqueNaPonteDaFazenda = (x: number, z: number) =>
   // de longe a ponte é uma linha fina: o clique vale com folga dos lados (ali só tem o vazio)
+  !cliqueNoPortal(x, z) &&
   x > PONTE_DA_FAZENDA.x0 - 0.6 &&
   x < PONTE_DA_FAZENDA.x1 + 1.4 &&
   Math.abs(z) < PONTE_DA_FAZENDA.meia + 1.6;
@@ -187,6 +212,7 @@ export const noAnexo = (x: number, z: number, folga = 0) =>
     z >= PONTE_DA_PISTA.z0 - 0.3 &&
     z <= PONTE_DA_PISTA.z1 + folga) ||
   naIlhaDaPista(x, z, folga) ||
+  noBracoDoPortal(x, z, folga) ||
   (x >= PONTE_DA_FAZENDA.x0 - 0.3 &&
     x <= PONTE_DA_FAZENDA.x1 + folga &&
     Math.abs(z) < PONTE_DA_FAZENDA.meia - 0.4 + folga) ||
@@ -371,6 +397,8 @@ const OBSTACULOS: (Ponto & { r: number })[] = [
   ...PERGOLAS.flatMap(postesDaPergola).map((p) => ({ ...p, r: 0.2 })),
   { ...TERMOMETRO, r: 0.5 },
   { ...CORREIO, r: 0.35 },
+  // colunas do portal do Magnata
+  ...[-1, 1].map((l) => ({ x: PORTAL.x + l * 2.05, z: PORTAL.z, r: 0.6 })),
   // poste do chuveirão (a ducha em si fica livre, para o HOKI entrar embaixo)
   { x: CHUVEIRO.x - 0.62, z: CHUVEIRO.z - 0.62, r: 0.16 },
   ...CANTEIROS.flatMap((c) =>

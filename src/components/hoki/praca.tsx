@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { CONTAGEM_MS, LOBBY_MS } from "@/lib/hoki-corrida";
 import { Corrida } from "./corrida";
+import { Magnata } from "./magnata";
 import { SHOWS, infoDoShow, type Show, type TipoShow } from "@/lib/hoki-shows";
 import { cn } from "@/lib/utils";
 import {
@@ -50,7 +51,9 @@ import {
   type Par,
   type Mensagem,
   type PresencaHoki,
+  meuIdNaPraca,
 } from "@/lib/hoki-presenca";
+import { limparCodigo, novoCodigo, salaGuardada } from "@/lib/hoki-magnata-sala";
 import {
   criarJogo,
   gravarJogo,
@@ -84,6 +87,8 @@ import {
   CORREIO,
   FRENTE_DO_CORREIO,
   FRENTE_DO_PARKOUR,
+  FRENTE_DO_PORTAL,
+  PORTAL,
   FRENTE_DO_TERMOMETRO,
   cliqueNaPonteDaFazenda,
   PONTAS_DA_FAZENDA,
@@ -243,7 +248,7 @@ export function Praca({
   >([]);
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
-    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" | "pista" }
+    | { tipo: "termometro" | "parkour" | "chuveiro" | "correio" | "balanco" | "pista" | "portal" }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
   >(null);
@@ -756,6 +761,9 @@ export function Praca({
       return { tipo: "parkour" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
+    // no pátio do portal do Magnata
+    if (Math.hypot(p.x - FRENTE_DO_PORTAL.x, p.z - FRENTE_DO_PORTAL.z) < 3)
+      return { tipo: "portal" as const };
     // no arco da largada, na ilha da pista: abrir uma corrida
     if (Math.hypot(p.x - LARGADA.x, p.z - LARGADA.z) < 2.4) return { tipo: "pista" as const };
     // na beira de trás da ilha, embaixo do letreiro: o balanço
@@ -961,6 +969,7 @@ export function Praca({
     else if (perto.tipo === "correio") setCorreioAberto(true);
     else if (perto.tipo === "balanco") sentarNoBalanco();
     else if (perto.tipo === "pista") abrirCorrida();
+    else if (perto.tipo === "portal") setPortalAberto(true);
     else setQueridometro(true);
   };
   useEffect(() => {
@@ -1059,6 +1068,66 @@ export function Praca({
     if (BANCOS[i]?.trabalho) setTrabalhando(true);
     setEu((e) => ({ ...e, banco: i }));
   };
+  /* ---------- Magnata HOST: portal, convites e a partida aberta ---------- */
+  const [portalAberto, setPortalAberto] = useState(false);
+  const [magnata, setMagnata] = useState<{ codigo: string; criar: boolean } | null>(null);
+  const [conviteMagnata, setConviteMagnata] = useState<{ nome: string; codigo: string } | null>(
+    null,
+  );
+  const [codigoMagnata, setCodigoMagnata] = useState("");
+  const [minhaSalaMagnata, setMinhaSalaMagnata] = useState<string | null>(null);
+  useEffect(() => {
+    if (portalAberto) setMinhaSalaMagnata(salaGuardada());
+  }, [portalAberto]);
+  const abrirMagnata = (codigo: string, criar: boolean) => {
+    playSfx("open");
+    setPortalAberto(false);
+    setConviteMagnata(null);
+    setCodigoMagnata("");
+    setMagnata({ codigo, criar });
+  };
+  const abrirMagnataRef = useRef(abrirMagnata);
+  abrirMagnataRef.current = abrirMagnata;
+  // só para testes: abre uma sala direto, sem andar até o portal
+  if (import.meta.env.DEV)
+    (window as unknown as { __magnata?: typeof abrirMagnata }).__magnata = abrirMagnata;
+  const magnataAberto = useRef(false);
+  magnataAberto.current = !!magnata;
+  useEffect(
+    () =>
+      ouvirNaPraca("magnata", (m) => {
+        if (m.para !== meuIdNaPraca()) return;
+        const codigo = limparCodigo(String(m.codigo ?? ""));
+        if (codigo.length !== 5 || magnataAberto.current) return;
+        const nome = String(m.nome ?? "alguém").slice(0, 24);
+        setConviteMagnata({ nome, codigo });
+        playSfx("pop");
+        toast(`🎲 ${nome} te convidou para o Magnata HOST`, {
+          description: "Partida de tabuleiro de imóveis, na ilha do portal.",
+          duration: 20_000,
+          action: { label: "Entrar", onClick: () => abrirMagnataRef.current(codigo, false) },
+        });
+      }),
+    [],
+  );
+  /** Ao sair da partida, o HOKI volta para a frente do portal. */
+  const fecharMagnata = () => {
+    setMagnata(null);
+    if (dentro) {
+      largarTudo();
+      setAlvo(null);
+      setEu({ ...FRENTE_DO_PORTAL, banco: null });
+    }
+  };
+  const euNoMagnata = useMemo(
+    () => ({ id: euPessoa.id, nome: euPessoa.nome, visual: meuVisual }),
+    [euPessoa.id, euPessoa.nome, meuVisual],
+  );
+  const amigosOnline = useMemo(
+    () => Object.values(outros).map((o) => ({ id: o.id, nome: o.nome, visual: o.visual })),
+    [outros],
+  );
+
   /* ---------- corrida de kart: lobby de 60 s (quem estiver na ilha da pista quando fechar, corre) ---------- */
   const [lobby, setLobby] = useState<{ id: string; de: string; nome: string; fim: number } | null>(
     null,
@@ -1280,6 +1349,9 @@ export function Praca({
           if (quem && !quem.dorme) setAlvo(quem);
           // o que ficou ao alcance (tecla E): termômetro, parkour ou uma cadeira do escritório
           setPerto(pertoDe(p));
+          // entrou na abertura do portal do Magnata: abre a escolha (criar ou entrar numa partida)
+          if (Math.abs(p.x - PORTAL.x) < 1.5 && p.z < PORTAL.z + 1.2 && p.z > PORTAL.z - 1.5)
+            setPortalAberto(true);
           if (indoAoCanteiro !== null) {
             const i = indoAoCanteiro;
             const c = CANTEIROS[i];
@@ -2100,6 +2172,104 @@ export function Praca({
           )}
         </div>
       )}
+      {/* portal do Magnata: criar uma sala ou entrar numa (convite, código ou a partida em que eu já estava) */}
+      {portalAberto && !magnata && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Portal do Magnata HOST"
+          className="absolute inset-0 z-30 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={(ev) => ev.target === ev.currentTarget && setPortalAberto(false)}
+        >
+          <div className="pf-pop w-full max-w-[420px] rounded-2xl border border-white/10 bg-black/85 p-5 text-white shadow-[0_24px_70px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-primary">
+              Portal
+            </p>
+            <h3 className="font-display text-2xl font-semibold leading-tight">Magnata HOST</h3>
+            <p className="mt-1 text-[12px] text-white/60">
+              Jogo de tabuleiro de imóveis para 2 a 6 amigos: compre lugares da cidade, cobre
+              aluguel e seja o último de pé.
+            </p>
+            <button
+              onClick={() => abrirMagnata(novoCodigo(), true)}
+              className="mt-4 flex w-full items-center gap-3 rounded-xl bg-white p-3 text-left text-black transition hover:bg-white/90 active:scale-[0.99]"
+            >
+              <span className="text-2xl">🎲</span>
+              <span className="leading-tight">
+                <span className="block text-[13.5px] font-bold">Criar partida</span>
+                <span className="text-[11.5px] text-black/60">
+                  Abre uma sala privada e convida quem está online
+                </span>
+              </span>
+            </button>
+            <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+              <p className="text-[13.5px] font-bold">Entrar em partida</p>
+              {conviteMagnata && (
+                <button
+                  onClick={() => abrirMagnata(conviteMagnata.codigo, false)}
+                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-[#ffd23f]/40 bg-[#ffd23f]/10 px-3 text-[12px]"
+                >
+                  <span>
+                    Convite de <b>{conviteMagnata.nome}</b>
+                  </span>
+                  <b className="text-[#ffd23f]">aceitar</b>
+                </button>
+              )}
+              {minhaSalaMagnata && (
+                <button
+                  onClick={() => abrirMagnata(minhaSalaMagnata, false)}
+                  className="mt-2 flex h-9 w-full items-center justify-between rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 text-[12px]"
+                >
+                  <span>Voltar para a sua partida</span>
+                  <b className="font-mono tracking-widest text-emerald-300">{minhaSalaMagnata}</b>
+                </button>
+              )}
+              <form
+                className="mt-2 flex gap-2"
+                onSubmit={(ev) => {
+                  ev.preventDefault();
+                  if (codigoMagnata.length === 5) abrirMagnata(codigoMagnata, false);
+                  else toast.info("O código da sala tem 5 letras ou números.");
+                }}
+              >
+                <input
+                  value={codigoMagnata}
+                  onChange={(ev) => setCodigoMagnata(limparCodigo(ev.target.value))}
+                  placeholder="CÓDIGO"
+                  aria-label="Código da sala"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  className="h-9 min-w-0 flex-1 rounded-full border border-white/10 bg-black/50 px-3.5 font-mono text-[13px] tracking-[0.25em] outline-none placeholder:tracking-[0.2em] placeholder:text-white/30 focus:border-white/30"
+                />
+                <button
+                  type="submit"
+                  className="h-9 rounded-full border border-white/15 bg-white/[0.08] px-4 text-[12.5px] font-semibold hover:bg-white/15"
+                >
+                  Entrar
+                </button>
+              </form>
+            </div>
+            <button
+              onClick={() => setPortalAberto(false)}
+              className="mt-3 w-full text-center text-[12px] text-white/50 hover:text-white"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+      {magnata && (
+        <Magnata
+          codigo={magnata.codigo}
+          criar={magnata.criar}
+          eu={euNoMagnata}
+          amigos={amigosOnline}
+          onConvidar={(id, codigo) =>
+            enviarNaPraca("magnata", { para: id, de: euPessoa.id, nome: euPessoa.nome, codigo })
+          }
+          onClose={fecharMagnata}
+        />
+      )}
       {corrida && (
         <Corrida
           id={corrida.id}
@@ -2135,11 +2305,13 @@ export function Praca({
                     ? "abrir o correio"
                     : perto.tipo === "balanco"
                       ? "sentar no balanço"
-                      : perto.tipo === "pista"
-                        ? lobby
-                          ? "corrida abrindo: fique na pista"
-                          : "abrir corrida (60 s para a galera chegar)"
-                        : "abrir o queridômetro"}
+                      : perto.tipo === "portal"
+                        ? "entrar no portal do Magnata"
+                        : perto.tipo === "pista"
+                          ? lobby
+                            ? "corrida abrindo: fique na pista"
+                            : "abrir corrida (60 s para a galera chegar)"
+                          : "abrir o queridômetro"}
           {perto.tipo === "parkour" && (
             <>
               <kbd className="ml-1 rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">

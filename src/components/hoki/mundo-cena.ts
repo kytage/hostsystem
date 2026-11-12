@@ -5,6 +5,7 @@
  * pérgolas, as árvores e o letreiro HOST no céu. As posições vêm de
  * mundo-mapa.ts; aqui é só o desenho.
  */
+import { GRUPOS } from "@/lib/hoki-magnata";
 import type * as TH from "three";
 import { acabamento, criarManchas, texturaMancha, type Mancha } from "./luz";
 import {
@@ -32,6 +33,9 @@ import {
   PILARES,
   POCA,
   PONTE,
+  BRACO_DO_PORTAL,
+  PATIO_DO_PORTAL,
+  PORTAL,
   PONTE_DA_FAZENDA,
   PISTA,
   PONTE_DA_PISTA,
@@ -77,6 +81,110 @@ const MADEIRA_ESCURA = 0x6b4526;
 const FERRO = 0x2b2d32;
 const TELHA = [0xb5533c, 0xa64632, 0xc46045] as const;
 const FLORES = [0xffffff, 0xff5a5a, 0xffd84a, 0xff8fc8, 0xfff1a8] as const;
+
+/** Pintura que aparece pela abertura do portal: o tabuleiro do Magnata flutuando no céu. */
+function vistaDoTabuleiro() {
+  const tela = document.createElement("canvas");
+  tela.width = 256;
+  tela.height = 378;
+  const c = tela.getContext("2d");
+  if (!c) return tela;
+  const ceu = c.createLinearGradient(0, 0, 0, 378);
+  ceu.addColorStop(0, "#16388f");
+  ceu.addColorStop(0.55, "#4f95ea");
+  ceu.addColorStop(1, "#bfe0fb");
+  c.fillStyle = ceu;
+  c.fillRect(0, 0, 256, 378);
+  c.fillStyle = "rgba(255,255,255,0.85)";
+  for (const [x, y, s] of [
+    [40, 70, 1],
+    [205, 110, 0.8],
+    [70, 330, 1.2],
+    [215, 300, 0.9],
+  ] as const) {
+    c.beginPath();
+    c.ellipse(x, y, 34 * s, 11 * s, 0, 0, Math.PI * 2);
+    c.ellipse(x + 16 * s, y - 8 * s, 20 * s, 10 * s, 0, 0, Math.PI * 2);
+    c.fill();
+  }
+  const cx = 128;
+  const cy = 196;
+  const a = 112;
+  const b = 58;
+  /** Ponto do tabuleiro (u e v de 0 a 1) visto de cima, em diagonal. */
+  const P = (u: number, v: number): [number, number] => [cx + (u - v) * a, cy + (u + v - 1) * b];
+  const quadro = (u0: number, v0: number, u1: number, v1: number, cor: string) => {
+    c.fillStyle = cor;
+    c.beginPath();
+    c.moveTo(...P(u0, v0));
+    c.lineTo(...P(u1, v0));
+    c.lineTo(...P(u1, v1));
+    c.lineTo(...P(u0, v1));
+    c.fill();
+  };
+  // rocha embaixo da ilha
+  c.fillStyle = "#6f4a30";
+  c.beginPath();
+  c.moveTo(cx - a, cy);
+  c.lineTo(cx, cy + b);
+  c.lineTo(cx + a, cy);
+  c.lineTo(cx + 44, cy + b + 78);
+  c.lineTo(cx - 36, cy + b + 92);
+  c.fill();
+  c.fillStyle = "rgba(0,0,0,0.22)";
+  c.beginPath();
+  c.moveTo(cx, cy + b);
+  c.lineTo(cx + a, cy);
+  c.lineTo(cx + 44, cy + b + 78);
+  c.lineTo(cx - 36, cy + b + 92);
+  c.fill();
+  quadro(0, 0, 1, 1, "#efe8d8");
+  quadro(0.15, 0.15, 0.85, 0.85, "#62b84a");
+  // casas coloridas em volta
+  const cores = GRUPOS.map((g) => g.cor);
+  for (let k = 0; k < 9; k++) {
+    const u0 = 0.15 + (k * 0.7) / 9 + 0.008;
+    const u1 = 0.15 + ((k + 1) * 0.7) / 9 - 0.008;
+    quadro(u0, 0.03, u1, 0.13, cores[k % 8] ?? "#888");
+    quadro(u0, 0.87, u1, 0.97, cores[(k + 2) % 8] ?? "#888");
+    quadro(0.03, u0, 0.13, u1, cores[(k + 4) % 8] ?? "#888");
+    quadro(0.87, u0, 0.97, u1, cores[(k + 6) % 8] ?? "#888");
+  }
+  for (const [u, v, cor] of [
+    [0, 0, "#3b4c70"],
+    [0.86, 0, "#ee8a22"],
+    [0, 0.86, "#2f9e58"],
+    [0.86, 0.86, "#d8281f"],
+  ] as const)
+    quadro(u + 0.01, v + 0.01, u + 0.13, v + 0.13, cor);
+  // prédios do centro
+  for (const [u, v, h, cor] of [
+    [0.36, 0.34, 44, "#f2e9d8"],
+    [0.5, 0.36, 62, "#d9e4ee"],
+    [0.62, 0.42, 38, "#f0d9c8"],
+    [0.4, 0.52, 52, "#e8dff0"],
+    [0.56, 0.56, 70, "#fbf5e8"],
+    [0.44, 0.68, 34, "#dfe8d6"],
+    [0.66, 0.64, 46, "#e3d4c0"],
+  ] as const) {
+    const [x, y] = P(u, v);
+    c.fillStyle = "rgba(0,0,0,0.25)";
+    c.fillRect(x - 2, y - h, 13, h);
+    c.fillStyle = cor;
+    c.fillRect(x - 11, y - h, 13, h);
+    c.fillStyle = "#d8281f";
+    c.fillRect(x - 12, y - h - 3, 26, 4);
+    c.fillStyle = "#ffe9a8";
+    for (let j = 8; j < h - 6; j += 9) c.fillRect(x - 8, y - h + j, 7, 4);
+  }
+  // brilho vermelho nas bordas, da cor do portal
+  const brilho = c.createRadialGradient(128, 189, 90, 128, 189, 230);
+  brilho.addColorStop(0, "rgba(255,40,40,0)");
+  brilho.addColorStop(1, "rgba(255,40,40,0.55)");
+  c.fillStyle = brilho;
+  c.fillRect(0, 0, 256, 378);
+  return tela;
+}
 
 export function criarMundo(THREE: typeof TH) {
   const lixo: { dispose: () => void }[] = [];
@@ -1222,6 +1330,87 @@ export function criarMundo(THREE: typeof TH) {
     );
   }
 
+  // ---------------- portal do Magnata: braço que sai da ponte da fazenda e pátio de pedra escura ----------------
+  {
+    const B = BRACO_DO_PORTAL;
+    const T = PATIO_DO_PORTAL;
+    const ESCURA = [0x3d3d46, 0x47474f, 0x34343c] as const;
+    const BRASA = 0xff2a2a;
+    // braço: lajes, muretas e balizas vermelhas na saída da ponte
+    const lajes = 3;
+    const passo = (B.z1 - B.z0) / lajes;
+    for (let i = 0; i < lajes; i++) {
+      const z = B.z1 - (i + 0.5) * passo;
+      piso3d.base(B.x, -0.4, z, B.meia * 2, 0.4, passo, escolhe(PAVE), 0.04);
+      for (const l of [-1, 1])
+        pedra.base(B.x + l * B.meia, 0, z, 0.2, 0.36, passo, escolhe(PEDRA_CLARA), 0.04);
+    }
+    for (const l of [-1, 1]) {
+      pedra.base(B.x + l * (B.meia + 0.05), 0, B.z1 - 0.1, 0.34, 1.1, 0.34, escolhe(ESCURA), 0.03);
+      aceso.base(B.x + l * (B.meia + 0.05), 1.1, B.z1 - 0.1, 0.22, 0.22, 0.22, BRASA, 0);
+    }
+    // faixa vermelha no chão, guiando da ponte até o portal
+    for (let k = 0; k < 9; k++)
+      piso3d.base(B.x, 0, B.z1 - 0.6 - k * 0.8, 0.5, 0.03, 0.34, k % 2 ? 0xf4f1ea : 0xd8281f, 0);
+    // pátio: ilhota de rocha com piso escuro
+    const cx = (T.x0 + T.x1) / 2;
+    const cz = (T.z0 + T.z1) / 2;
+    const larg = T.x1 - T.x0;
+    const fund = T.z1 - T.z0;
+    for (let k = 1; k <= 3; k++) {
+      const f = 1 - k * 0.24;
+      encosta.base(cx, -0.4 - k, cz, larg * f, 1, fund * f, escolhe(k < 2 ? ESCURA : ROCHA), 0.05);
+    }
+    for (let x = T.x0 + 0.6; x < T.x1; x += 1.2)
+      for (let z = T.z0 + 0.7; z < T.z1; z += 1.4)
+        piso3d.base(x, -0.4, z, 1.2, 0.4, 1.4, escolhe(ESCURA), 0.05);
+    for (const l of [-1, 1])
+      for (let z = T.z0 + 0.3; z < T.z1 - 0.2; z += 1.1)
+        pedra.base(cx + l * (larg / 2 - 0.15), 0, z, 0.3, 0.42, 1.1, escolhe(ESCURA), 0.04);
+    for (const l of [-1, 1]) {
+      const meio = (larg / 2 - B.meia) / 2 + B.meia;
+      pedra.base(
+        cx + l * meio,
+        0,
+        T.z1 - 0.15,
+        larg / 2 - B.meia - 0.3,
+        0.42,
+        0.3,
+        escolhe(ESCURA),
+        0.04,
+      );
+    }
+    // moldura do portal: colunas de blocos, verga, degrau e brasas vermelhas por dentro
+    const { x: px, z: pz } = PORTAL;
+    for (const l of [-1, 1]) {
+      for (let k = 0; k < 6; k++)
+        pedra.base(
+          px + l * 2.05,
+          k * 0.8,
+          pz,
+          1.05 - (k % 2) * 0.1,
+          0.8,
+          1.05,
+          escolhe(ESCURA),
+          0.04,
+        );
+      pedra.base(px + l * 2.05, 4.8, pz, 1.25, 0.34, 1.25, escolhe(ESCURA), 0.03);
+      for (let k = 0; k < 9; k++)
+        aceso.base(px + l * 1.5, 0.2 + k * 0.5, pz + 0.3, 0.07, 0.3, 0.07, BRASA, 0);
+      // tochas ao lado da entrada
+      pedra.base(px + l * 3.05, 0, pz + 1.5, 0.3, 1.3, 0.3, escolhe(ESCURA), 0.03);
+      aceso.base(px + l * 3.05, 1.3, pz + 1.5, 0.24, 0.34, 0.24, 0xff5a3a, 0);
+      clarao.push({ x: px + l * 3.05, z: pz + 1.5, rx: 1.6, rz: 1.6 });
+    }
+    pedra.base(px, 4.5, pz, 5.4, 0.95, 1.1, escolhe(ESCURA), 0.04);
+    pedra.base(px, 5.45, pz, 4.4, 0.3, 0.9, escolhe(ESCURA), 0.04);
+    aceso.base(px, 4.42, pz + 0.3, 3.0, 0.07, 0.07, BRASA, 0);
+    pedra.base(px, 0, pz + 0.75, 3.4, 0.14, 0.6, escolhe(ESCURA), 0.04);
+    aceso.base(px, 0.14, pz + 0.75, 2.6, 0.02, 0.12, BRASA, 0);
+    clarao.push({ x: px, z: pz + 1.4, rx: 2.6, rz: 2 });
+    sombras.push({ x: px, z: pz, rx: 3, rz: 0.9 });
+  }
+
   // ---------------- ilha da pista de corrida: ao norte, ligada pela ponte que sai ao lado do morro ----------------
   {
     const A = PISTA;
@@ -1439,8 +1628,12 @@ export function criarMundo(THREE: typeof TH) {
     for (let i = 0; i < lajes; i++) {
       const x = P.x0 + (i + 0.5) * passo;
       piso3d.base(x, -0.4, 0, passo, 0.4, P.meia * 2, escolhe(PAVE), 0.04);
-      for (const l of [-1, 1])
+      for (const l of [-1, 1]) {
+        // a mureta do norte abre onde sai o braço do portal
+        if (l < 0 && Math.abs(x - BRACO_DO_PORTAL.x) < BRACO_DO_PORTAL.meia + passo / 2 - 0.2)
+          continue;
         pedra.base(x, 0, l * P.meia, passo, 0.36, 0.2, escolhe(PEDRA_CLARA), 0.04);
+      }
       if (i % 3 === 1)
         for (let a = 0; a < 12; a++) {
           const ang = (a / 12) * Math.PI * 2;
@@ -1655,6 +1848,29 @@ export function criarMundo(THREE: typeof TH) {
   grupo.add(placaEscritorio);
   lixo.push({ dispose: mEscritorio.descartar });
 
+  // portal do Magnata: o nome em cima e, pela abertura, o tabuleiro flutuando do outro lado
+  const letrasPortal = new Blocos(r);
+  letrasDePedra(letrasPortal, "MAGNATA", 0.078, 0.3, {
+    linhas: 10,
+    relevo: 0.5,
+    cores: [0xff3b30, 0xe23b30, 0xff5a4a, 0xd8281f],
+  });
+  const mPortal = letrasPortal.construir(THREE, {
+    recebe: false,
+    sombra: false,
+    material: new THREE.MeshBasicMaterial({ toneMapped: false }),
+  });
+  mPortal.malha.position.set(PORTAL.x, 5.85, PORTAL.z + 0.2);
+  grupo.add(mPortal.malha);
+  const tVista = new THREE.CanvasTexture(vistaDoTabuleiro());
+  tVista.colorSpace = THREE.SRGBColorSpace;
+  const mVista = new THREE.MeshBasicMaterial({ map: tVista, toneMapped: false });
+  const gVista = new THREE.PlaneGeometry(3.05, 4.5);
+  const vista = new THREE.Mesh(gVista, mVista);
+  vista.position.set(PORTAL.x, 2.25, PORTAL.z - 0.15);
+  grupo.add(vista);
+  lixo.push({ dispose: mPortal.descartar }, tVista, mVista, gVista);
+
   // ---------------- letreiro HOST no céu: letras de pedra clara em relevo ----------------
   const placa = new THREE.Group();
   placa.position.set(0, 9.4, -19);
@@ -1841,6 +2057,9 @@ export function criarMundo(THREE: typeof TH) {
       tQueda.offset.y = t * 0.9;
       tParada.offset.set(Math.sin(t * 0.25) * 0.06, Math.cos(t * 0.2) * 0.06);
       placa.position.y = 9.4 + Math.sin(t * 0.6) * 0.25;
+      // a vista do portal "respira" e balança de leve, como se o tabuleiro flutuasse lá do outro lado
+      mVista.color.setScalar(0.88 + Math.sin(t * 1.7) * 0.12);
+      tVista.offset.y = Math.sin(t * 0.8) * 0.012;
       ceu.nuvens.forEach(
         (n, i) => (n.malha.position.x = ((n.x0 + 70 + t * (0.22 + i * 0.04)) % 140) - 70),
       );

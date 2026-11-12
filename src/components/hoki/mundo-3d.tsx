@@ -25,6 +25,8 @@ import {
   CORREIO,
   ESCORREGADOR,
   cliqueNaPonteDaFazenda,
+  cliqueNoPortal,
+  FRENTE_DO_PORTAL,
   frenteDoBanco,
   naPonteDaFazenda,
   PARKOUR,
@@ -981,7 +983,9 @@ function criarMotor(
       eventos.onChao(chao);
       return;
     }
-    const destino = chao && ajustar(chao);
+    // no vazio em volta do portal do Magnata, o clique leva até a frente dele
+    const destino =
+      chao && (ajustar(chao) ?? (cliqueNoPortal(chao.x, chao.z) ? FRENTE_DO_PORTAL : null));
     if (!destino) return;
     marca.position.set(destino.x, 0.03, destino.z);
     marca.visible = true;

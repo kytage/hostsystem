@@ -58,7 +58,8 @@ type Evento =
   | "tchau"
   | "reiniciar"
   | "show"
-  | "corrida";
+  | "corrida"
+  | "magnata";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -75,6 +76,7 @@ const EVENTOS: Evento[] = [
   "reiniciar",
   "show",
   "corrida",
+  "magnata",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -90,6 +92,8 @@ export interface Mensagem {
   aceita?: unknown;
   /** Corrida: quanto falta (ms) para o lobby fechar. */
   faltam?: unknown;
+  /** Magnata: código da sala para a qual a pessoa foi convidada. */
+  codigo?: unknown;
   /** Presentes: qual item e quantos. */
   item?: unknown;
   n?: unknown;
