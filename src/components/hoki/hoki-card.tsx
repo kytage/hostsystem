@@ -51,7 +51,7 @@ const TRUQUES: { id: Reacao; nome: string }[] = INTERACOES_BONECO;
  * Painel do HOKI, em formato panorâmico: mascote e cuidados à esquerda,
  * a Praça HOST no centro e o ranking (com a entrega de coins) à direita.
  */
-export function HokiCard() {
+export function HokiCard({ alto = false }: { /** Na tela só do HOKI: a praça ocupa a altura que sobra da janela. */ alto?: boolean } = {}) {
   const qc = useQueryClient();
   useRealtimeTable("hoshi_pets", [["hoki-ranking"], ["hoki-todos"], KEY]);
   const {
@@ -285,7 +285,16 @@ export function HokiCard() {
           }
         />
       )}
-      <div className={cn("grid gap-3", telaCheia ? "min-h-full lg:h-full" : "lg:h-[420px]")}>
+      <div
+        className={cn(
+          "grid gap-3",
+          telaCheia
+            ? "min-h-full lg:h-full"
+            : alto
+              ? "lg:h-[max(420px,calc(100svh-118px))]"
+              : "lg:h-[420px]",
+        )}
+      >
         {/* ---------- praça em 3D, com o ranking abrindo por cima ---------- */}
         <div className="relative h-[420px] overflow-hidden rounded-[28px] border border-white/[0.08] lg:h-auto">
           <Praca

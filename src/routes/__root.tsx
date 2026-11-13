@@ -13,7 +13,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppSidebar } from "@/components/app-sidebar";
-import { instalarBordaElastica } from "@/lib/borda-elastica";
+import { instalarRolagemSuave } from "@/lib/rolagem-suave";
+import { instalarFundoPontilhado } from "@/lib/fundo-pontilhado";
 import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
@@ -188,7 +189,10 @@ function RootComponent() {
   }, [pathname]);
 
   // Borda elástica: o fio de luz que estica na moldura dos componentes, perto do ponteiro.
-  useEffect(() => instalarBordaElastica(), []);
+  // rolagem macia com a roda do mouse (a borda elástica foi desligada a pedido: visual limpo)
+  useEffect(() => instalarRolagemSuave(), []);
+  // fundo pontilhado com o feixe de luz (feito uma vez só)
+  useEffect(() => instalarFundoPontilhado(), []);
 
   if (isAuthPage) {
     return (

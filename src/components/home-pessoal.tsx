@@ -399,7 +399,7 @@ export function TarefasParticulares() {
   };
 
   return (
-    <section className="glass rounded-[22px] p-5">
+    <section className="glass flex flex-col rounded-[22px] p-5">
       <div className="flex items-center gap-3">
         <span className="hc-icone">
           <NotebookPen className="size-4" strokeWidth={1.75} />
@@ -489,8 +489,8 @@ export function TarefasParticulares() {
         </div>
       )}
 
-      {/* Colunas */}
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+      {/* Colunas (esticam até o fim do cartão) */}
+      <div className="mt-4 grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
         {COLUNAS_TAREFA.map((col) => {
           const items = tarefas.filter((t) => t.coluna === col.key);
           return (

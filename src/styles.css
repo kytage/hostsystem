@@ -1820,3 +1820,213 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 :root:not(.dark) .pontilhado { background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1.4px); }
 :root:not(.dark) .campo-busca { background: #ffffff; }
 :root:not(.dark) .hc-dia[data-escolhido], :root:not(.dark) .hc-dia[data-escolhido]:hover { box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.45); }
+
+/* ================================================================== */
+/* Visual do painel (14/11/2026) — o estilo preferido do Henrique:     */
+/* fundo preto "pontilhado" com um feixe de luz vermelha (a cor da     */
+/* HOST; o vermelho fica só no fundo)                                 */
+/* (src/lib/fundo-pontilhado.ts), cartões e menu lateral de vidro      */
+/* escuro translúcido, quase sem borda, sem brilhos nem luz no topo.   */
+/* Tudo o que este bloco muda fica aqui (ele vem por último e vence).  */
+/* ================================================================== */
+
+/* ---------- fundo ---------- */
+.pagina-luz,
+.aurora { display: none !important; }
+.dark body::before { display: none !important; }
+.dark body { background: #000; }
+/* o fundo fica atrás de tudo (da página e do menu lateral), parado enquanto a página rola */
+.dark .moldura { background: #060606; }
+.dark .moldura::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--fundo-pontilhado, none);
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+}
+.dark .page-main { background: transparent; }
+
+/* ---------- cartões e janelas: vidro escuro ---------- */
+.dark :is(.page-main, [role="dialog"], .glass-modal) :is(.hc, .glass, .glass-elevated, .metal),
+.dark :is([role="dialog"], .glass-modal):is(.glass, .glass-elevated, .metal),
+.dark .glass-modal {
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  background: linear-gradient(155deg, rgba(54, 52, 54, 0.4) 0%, rgba(21, 20, 21, 0.78) 55%, rgba(13, 13, 14, 0.88) 100%);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+.dark .hc { border-radius: 18px; }
+.dark :is([role="dialog"], .glass-modal) :is(.glass, .glass-elevated):first-child,
+.dark .glass-modal { box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9); }
+/* sem fio de luz, brasa, retícula ou facho */
+.dark :is(.glass, .glass-elevated, .glass-inset, .metal, .hc)::before,
+.dark :is(.glass, .glass-elevated, .glass-inset, .metal, .hc)::after { display: none !important; }
+.hc-brasa,
+.hc-reticula,
+.hc-facho,
+.hc-luz-icone { display: none !important; }
+
+/* ---------- dentro dos cartões: um véu claro, sem borda ---------- */
+.dark :is(.hc-dentro, .hc-indice, .segmentos, .glass-inset) {
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.dark :is(a, button):is(.hc-dentro, .hc-indice):hover {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.075);
+}
+.dark :is(.hc-icone, .hc-seta, .hc-pilula, .hc-selo, .hc-estado, .hc-indice-icone) {
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.dark .hc-indice-valor { font-weight: 500; }
+.dark .page-main .hc .border-dashed {
+  border-style: solid;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.045);
+}
+.dark .page-main .hc .border-t { border-top-color: rgba(255, 255, 255, 0.05); }
+.dark .page-main table thead th { background: transparent; }
+
+/* ---------- soltos sobre o fundo (fora de cartão) ---------- */
+/* quadros de número: o mesmo vidro dos cartões */
+.dark .page-main .hc-indice:not(:is(.hc, .glass, .glass-elevated, [role="dialog"]) *) {
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  background: linear-gradient(155deg, rgba(54, 52, 54, 0.4) 0%, rgba(21, 20, 21, 0.78) 55%, rgba(13, 13, 14, 0.88) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+/* busca, filtros, abas e botões de contorno: vidro escuro, para não sumirem no pontilhado */
+.dark .page-main :is(.campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], button[class*="border-white/[0.08]"]):not(:is(.hc, .glass, .glass-elevated, .glass-inset, [role="dialog"]) *) {
+  border-color: rgba(255, 255, 255, 0.045);
+  background-color: rgba(17, 16, 17, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+.dark .page-main :is(.pilula, [role="combobox"], button[class*="border-white/[0.08]"]):not(:is(.hc, .glass, .glass-elevated, .glass-inset, [role="dialog"]) *):hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(34, 32, 33, 0.78);
+}
+/* quadrinhos e avisos de "nada por aqui": fundo escuro firme (sem desfoque, porque numa lista
+   podem ser centenas), para o texto não disputar com o feixe de luz */
+.dark .page-main :is(.hc-dentro, .glass-inset, .border-dashed):not(:is(.hc, .glass, .glass-elevated, [role="dialog"]) *) {
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  background: rgba(15, 14, 15, 0.86);
+}
+.dark .page-main :is(a, button).hc-dentro:not(:is(.hc, .glass, .glass-elevated, [role="dialog"]) *):hover {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(34, 32, 33, 0.92);
+}
+
+/* ---------- menu lateral: painel de vidro solto da borda, igual aos cartões ---------- */
+.dark .menu-lateral {
+  height: calc(100svh - 20px);
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-radius: 18px;
+  background: linear-gradient(170deg, rgba(54, 52, 54, 0.4) 0%, rgba(21, 20, 21, 0.78) 45%, rgba(13, 13, 14, 0.88) 100%);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+.dark .menu-lateral::before,
+.dark .menu-lateral::after { display: none; }
+/* em tela estreita ele abre por cima da página: mais fechado, para o texto de trás não atrapalhar */
+.dark .menu-lateral-por-cima {
+  background: rgba(13, 13, 14, 0.96);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+}
+.dark .menu-lateral .border-t { border-top-color: rgba(255, 255, 255, 0.05); }
+/* sem caixas em volta do H, da busca, da página atual e das configurações: só o ícone */
+.menu-selo,
+.dark .menu-selo,
+.menu-busca,
+.dark .menu-busca,
+.menu-item[data-ativo],
+.menu-item[data-ativo]:hover,
+.dark .menu-item[data-ativo],
+.dark .menu-item[data-ativo]:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.menu-busca:hover,
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: transparent;
+}
+.menu-item[data-ativo]::before { box-shadow: none; height: 14px; }
+.dark .menu-config { border-color: transparent; background: transparent; }
+.dark .menu-conta:hover .menu-config,
+.dark .menu-conta[data-state="open"] .menu-config { background: rgba(255, 255, 255, 0.06); }
+
+/* ---------- espaços iguais em todas as telas ---------- */
+/* a página começa na mesma altura do menu e os blocos ficam a 14 px um do outro
+   (antes variava de 16 a 44 px conforme a tela) */
+.pagina,
+.home { padding: 10px 10px 20px 2px; }
+@media (min-width: 768px) {
+  .pagina,
+  .home { padding: 10px 14px 22px 4px; }
+}
+/* sem o menu lateral (visita), a margem da esquerda é a da página */
+.moldura > main:first-child :is(.pagina, .home) { padding-left: 14px; }
+.pagina > * + * { margin-top: 14px !important; }
+.pagina:is(.flex, .grid) { gap: 14px !important; }
+.pagina:is(.flex, .grid) > * + * { margin-top: 0 !important; }
+.pagina-topo { padding: 8px 4px 2px; }
+
+/* ---------- movimento ---------- */
+/* transições curtas e macias em tudo o que reage ao mouse */
+.dark :is(.hc, .glass, .hc-dentro, .hc-indice, .hc-seta, .hc-pilula, .hc-selo, .menu-item, .menu-busca, .segmentos button) {
+  transition:
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dark :is(a, button):is(.hc-dentro, .hc-indice):hover,
+.dark a.glass:hover,
+.dark a.hc:hover { transform: translateY(-1px); }
+.dark :is(a, button):is(.hc-dentro, .hc-indice):active { transform: translateY(0) scale(0.995); }
+/* entrada das páginas: sem desfoque (mais leve), subindo de leve; os blocos entram um depois do outro */
+.page-main > * { animation: page-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.home-grade > * { animation-duration: 460ms; }
+.page-main :is(section.glass, section.hc, .glass.hc) { animation: entra 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(2) { animation-delay: 40ms; }
+.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(3) { animation-delay: 80ms; }
+.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(n + 4) { animation-delay: 120ms; }
+@media (prefers-reduced-motion: reduce) {
+  .page-main > *,
+  .page-main :is(section.glass, section.hc, .glass.hc) { animation: none !important; }
+}
+
+/* ---------- rolagem ---------- */
+/* barra fina e discreta; a rolagem macia da roda do mouse é feita em src/lib/rolagem-suave.ts */
+.page-main { overscroll-behavior: contain; scroll-behavior: auto; }
+.dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.dark ::-webkit-scrollbar-track { background: transparent; }
+.dark ::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1) padding-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22) padding-box; }

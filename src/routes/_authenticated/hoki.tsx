@@ -28,7 +28,7 @@ function HokiPage() {
           </button>
         )}
       </div>
-      <HokiCard />
+      <HokiCard alto />
     </div>
   );
 }
