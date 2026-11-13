@@ -11,7 +11,10 @@ import {
   novaIlha,
   novoJogador,
   registrarPresenca,
+  roubar,
+  roubosRestantes,
   semanaBR,
+  textoDoRoubo,
   type Acao,
   type Estado,
   type Evento,
@@ -317,4 +320,103 @@ test("colheita e coleta mandam o produto para a mochila do HOKI (e os Ouros cont
   e = faz(e, { t: "colocar", id: "g1", x: 0, z: 0, rot: 0 }, T0 + 61_000);
   const coleta = faz(e, { t: "coletar", id: "g1" }, T0 + 61_000 + 21 * 60_000);
   assert.ok(coleta.ev.some((x) => x.tipo === "produto" && x.fonte === "galinha"));
+});
+
+test("estruturas dos animais (projetos 2 × 2) mudam de lugar com a mão", () => {
+  let e: Estado = { j: novoJogador(T0), i: novaIlha() };
+  e.j.nivel = 8;
+  e = faz(e, { t: "projetoColocar", id: "galinheiro", x: 0, z: 0 });
+  e.j.inventario.push({ id: "g1", item: "galinha", restanteMs: null, origem: "loja" });
+  e = faz(e, { t: "colocar", id: "g1", x: 6, z: 0, rot: 0 });
+  // os canteiros (3..4, 3..4), a galinha e a borda do terreno barram o 2 × 2
+  erro(() => faz(e, { t: "mover", id: "galinheiro", x: 2, z: 2, rot: 0 }));
+  erro(() => faz(e, { t: "mover", id: "galinheiro", x: 5, z: 0, rot: 0 }));
+  erro(() => faz(e, { t: "mover", id: "galinheiro", x: 7, z: 7, rot: 0 }));
+  // pode encostar no lugar onde ele mesmo está
+  e = faz(e, { t: "mover", id: "galinheiro", x: 1, z: 1, rot: 0 });
+  assert.deepEqual([e.i.projetos[0]!.x, e.i.projetos[0]!.z], [1, 1]);
+  e = faz(e, { t: "mover", id: "galinheiro", x: 5, z: 6, rot: 0 });
+  assert.deepEqual([e.i.projetos[0]!.x, e.i.projetos[0]!.z], [5, 6]);
+  assert.equal(e.i.projetos[0]!.etapa, 0);
+  // o lugar antigo ficou livre para outra coisa
+  e = faz(e, { t: "arar", x: 0, z: 0 });
+  assert.equal(e.i.canteiros["0,0"]?.estado, "arado");
+});
+
+test("roubo: leva as maduras mais valiosas e a produção pronta, pisoteia 2 e respeita os limites", () => {
+  const ladrao = novoJogador(T0);
+  const ilha = novaIlha();
+  const planta = (k: string, cultura: string, maduroEm: number, valorVenda: number) =>
+    (ilha.canteiros[k] = {
+      estado: "crescendo",
+      cultura,
+      plantadoEm: T0 - 3_600_000,
+      maduroEm,
+      plantioId: `p${k}`,
+      valorVenda,
+      xpColheita: 1,
+    });
+  planta("0,0", "morango", T0 - 1, 75);
+  planta("1,0", "melancia", T0 - 1, 500);
+  planta("2,0", "morango", T0 - 1, 75);
+  planta("3,0", "alface", T0 - 1, 90);
+  planta("0,1", "milho", T0 + 3_600_000, 200);
+  planta("1,1", "milho", T0 + 3_600_000, 200);
+  planta("2,1", "milho", T0 + 3_600_000, 200);
+  ilha.objetos.push({
+    id: "g",
+    item: "galinha",
+    x: 7,
+    z: 7,
+    rot: 0,
+    prontoEm: T0 - 1,
+    origem: "loja",
+  });
+  const vit = { id: "dono-1", tutorial: 7 };
+  const r = roubar(ladrao, ilha, vit, { ...ctx(T0), sorte: () => 0 });
+  // as 3 maduras mais valiosas (melancia, alface e um morango) e os ovos da galinha
+  assert.equal(r.roubo.ouros, 500 + 90 + 75 + 45);
+  assert.equal(r.ladrao.ouros, ladrao.ouros + 710);
+  assert.equal(r.ladrao.xp, 0);
+  assert.equal(Object.values(r.ilha.canteiros).filter((c) => c.cultura === "morango").length, 1);
+  assert.equal(r.ilha.canteiros["1,0"], undefined);
+  assert.equal(r.ilha.objetos[0]!.prontoEm, T0 + 20 * 60_000);
+  // pisoteou 2 dos 3 milhos (viram canteiro arado) e um ficou
+  assert.equal(r.roubo.estragados, 2);
+  const milhos = ["0,1", "1,1", "2,1"].map((k) => r.ilha.canteiros[k]!);
+  assert.equal(milhos.filter((c) => c.estado === "arado" && !c.cultura).length, 2);
+  assert.equal(milhos.filter((c) => c.cultura === "milho").length, 1);
+  assert.deepEqual(
+    r.ev.filter((x) => x.tipo === "produto").map((x) => x.fonte),
+    ["melancia", "alface", "morango", "galinha"],
+  );
+  assert.equal(
+    textoDoRoubo(r.roubo),
+    "levou 1× Melancia, 1× Alface, 1× Morango e 1× Ovos e estragou 2 canteiros",
+  );
+  assert.equal(roubosRestantes(r.ladrao, T0), 2);
+  assert.deepEqual(r.ilha.roubos, { dia: diaBR(T0), quantos: 1 });
+  // a mesma fazenda só uma vez por dia; quem está no tutorial não é roubado
+  erro(() => roubar(r.ladrao, r.ilha, vit, ctx(T0)));
+  erro(() => roubar(r.ladrao, ilha, { id: "novato", tutorial: 3 }, ctx(T0)));
+  // terra vazia: nada para levar nem estragar (e não gasta o roubo)
+  erro(() => roubar(r.ladrao, novaIlha(), { id: "vazia", tutorial: 7 }, ctx(T0)));
+  // 3 por dia para quem rouba
+  let l = r.ladrao;
+  for (const id of ["dono-2", "dono-3"]) l = roubar(l, ilha, { id, tutorial: 7 }, ctx(T0)).ladrao;
+  assert.equal(roubosRestantes(l, T0), 0);
+  erro(() => roubar(l, ilha, { id: "dono-4", tutorial: 7 }, ctx(T0)));
+  // no dia seguinte volta a ter 3, e a mesma fazenda pode ser roubada de novo
+  const amanha = T0 + 86_400_000;
+  assert.equal(roubosRestantes(l, amanha), 3);
+  assert.ok(roubar(l, ilha, vit, ctx(amanha)).roubo.ouros > 0);
+  // cada fazenda aguenta até 3 roubos por dia, de pessoas diferentes
+  let alvo = ilha;
+  for (let k = 0; k < 3; k++) {
+    alvo.canteiros["5,5"] = { ...ilha.canteiros["0,0"]! };
+    alvo = roubar(novoJogador(T0), alvo, vit, ctx(T0)).ilha;
+  }
+  alvo.canteiros["5,5"] = { ...ilha.canteiros["0,0"]! };
+  erro(() => roubar(novoJogador(T0), alvo, vit, ctx(T0)));
+  assert.equal(roubar(novoJogador(T0), alvo, vit, ctx(amanha)).ilha.roubos?.quantos, 1);
 });

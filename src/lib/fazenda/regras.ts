@@ -86,6 +86,8 @@ export interface Ilha {
   objetos: Objeto[];
   projetos: ProjetoNaIlha[];
   maquinas: Partial<Record<QualTrator, { cargas: number }>>;
+  /** Quantas vezes a fazenda foi roubada no dia (horário de Brasília). */
+  roubos?: { dia: string; quantos: number };
 }
 export interface Jogador {
   xp: number;
@@ -121,6 +123,9 @@ export interface Jogador {
     adubosPorIlha: Record<string, number>;
     presentes: number;
     presentesPara: string[];
+    /** Roubos feitos hoje e as fazendas (donos) já roubadas hoje. */
+    roubos?: number;
+    roubadas?: string[];
   };
   semanal: {
     semana: string;
@@ -228,6 +233,8 @@ const novoDiario = (dia: string): Jogador["diario"] => ({
   adubosPorIlha: {},
   presentes: 0,
   presentesPara: [],
+  roubos: 0,
+  roubadas: [],
 });
 const novaSemana = (semana: string): Jogador["semanal"] => ({
   semana,
@@ -706,7 +713,16 @@ export function aplicar(antes: Estado, a: Acao, ctx: Contexto): Resultado {
       break;
     }
     case "mover": {
-      const o = i.objetos.find((x) => x.id === a.id) ?? falha("Objeto não encontrado.");
+      const o = i.objetos.find((x) => x.id === a.id);
+      if (!o) {
+        // estruturas dos animais e as outras obras (galinheiro, aprisco, pomar...) ocupam 2 × 2
+        const p = i.projetos.find((x) => x.id === a.id) ?? falha("Objeto não encontrado.");
+        if (!lugarLivre(i, a.x, a.z, p.id, 2, 2))
+          falha("O projeto precisa de 2 × 2 quadrados livres.");
+        p.x = a.x;
+        p.z = a.z;
+        break;
+      }
       if (!lugarLivre(i, a.x, a.z, o.id)) falha("Esse lugar está ocupado ou fora do terreno.");
       o.x = a.x;
       o.z = a.z;
@@ -1013,6 +1029,112 @@ export function adubacaoNaIlhaDoVisitante(i: Ilha) {
   const nova = structuredClone(i);
   metaDeProjeto(nova, (m) => m.tipo === "adubacoes", 1);
   return nova;
+}
+
+// ---------------- visitante: roubar a fazenda de alguém ----------------
+export interface Roubo {
+  /** O que foi levado (cultura ou item da ilha), com o nome para mostrar. */
+  levou: { id: string; nome: string; qtd: number }[];
+  ouros: number;
+  /** Canteiros em crescimento pisoteados (a planta morre e o canteiro volta a arado). */
+  estragados: number;
+}
+/**
+ * Um roubo leva as colheitas maduras mais valiosas e a produção pronta de animais e árvores
+ * (o ciclo recomeça para o dono) e pisoteia canteiros em crescimento, sorteados. Quem rouba
+ * fica com os Ouros e com o produto na mochila do HOKI, sem XP nem missões.
+ * Limites: 3 por dia para quem rouba (uma vez em cada fazenda), 3 por dia em cada fazenda e
+ * nada de roubar quem ainda está no tutorial.
+ */
+export function roubar(
+  ladrao: Jogador,
+  ilhaDaVitima: Ilha,
+  vitima: { id: string; tutorial: number },
+  ctx: Contexto & { sorte?: () => number },
+) {
+  const j = structuredClone(ladrao);
+  const i = structuredClone(ilhaDaVitima);
+  const ev: Evento[] = [];
+  renovarPeriodos(j, ctx.agora);
+  const dia = diaBR(ctx.agora);
+  const feitos = j.diario.roubos ?? 0;
+  const roubadas = j.diario.roubadas ?? [];
+  if (feitos >= SOCIAL.roubosPorDia)
+    falha(`Você já fez os ${SOCIAL.roubosPorDia} roubos de hoje. Volte amanhã!`);
+  if (roubadas.includes(vitima.id)) falha("Você já roubou essa fazenda hoje.");
+  if (vitima.tutorial < TUTORIAL_FIM)
+    falha("Essa fazenda ainda está no tutorial: deixe o vizinho aprender em paz.");
+  const recebidos = i.roubos?.dia === dia ? i.roubos.quantos : 0;
+  if (recebidos >= SOCIAL.roubosRecebidosPorDia)
+    falha(
+      `Essa fazenda já foi roubada ${SOCIAL.roubosRecebidosPorDia} vezes hoje: a vizinhança está de olho.`,
+    );
+  const sorte = ctx.sorte ?? Math.random;
+  const levou = new Map<string, Roubo["levou"][number]>();
+  const anotar = (id: string, nome: string) => {
+    const x = levou.get(id);
+    if (x) x.qtd += 1;
+    else levou.set(id, { id, nome, qtd: 1 });
+  };
+  let ouros = 0;
+  // 1) colheitas maduras, das mais valiosas (o canteiro fica livre, como numa colheita)
+  const maduros = Object.entries(i.canteiros)
+    .filter(([, c]) => estadoDoCanteiro(c, ctx.agora) === "maduro")
+    .sort((a, b) => (b[1].valorVenda ?? 0) - (a[1].valorVenda ?? 0))
+    .slice(0, SOCIAL.rouboMaduros);
+  for (const [k, c] of maduros) {
+    ouros += c.valorVenda ?? 0;
+    delete i.canteiros[k];
+    if (!c.cultura) continue;
+    anotar(c.cultura, cultura(c.cultura)?.nome ?? c.cultura);
+    ev.push({ tipo: "produto", texto: "", fonte: c.cultura });
+  }
+  // 2) produção pronta de animais e árvores (o dono espera o ciclo inteiro de novo)
+  const prontos = i.objetos
+    .filter((o) => o.prontoEm !== null && ctx.agora >= o.prontoEm && !!item(o.item)?.tempoMs)
+    .sort((a, b) => (item(b.item)?.venda ?? 0) - (item(a.item)?.venda ?? 0))
+    .slice(0, SOCIAL.rouboProducoes);
+  for (const o of prontos) {
+    const it = item(o.item)!;
+    ouros += it.venda ?? 0;
+    o.prontoEm = ctx.agora + (it.tempoMs ?? 0);
+    anotar(o.item, it.produto ?? (it.tipo === "arvore" ? `Frutas (${it.nome})` : it.nome));
+    ev.push({ tipo: "produto", texto: "", fonte: o.item });
+  }
+  // 3) na fuga, pisoteia canteiros que ainda estavam crescendo
+  const crescendo = Object.keys(i.canteiros)
+    .filter((k) => estadoDoCanteiro(i.canteiros[k], ctx.agora) === "crescendo")
+    .sort();
+  let estragados = 0;
+  while (estragados < SOCIAL.rouboEstragos && crescendo.length) {
+    const sorteado = Math.min(crescendo.length - 1, Math.floor(sorte() * crescendo.length));
+    const [k] = crescendo.splice(sorteado, 1);
+    i.canteiros[k!] = { estado: "arado" };
+    estragados += 1;
+  }
+  if (!levou.size && !estragados)
+    falha("Não há nada para roubar nem estragar nessa fazenda agora.");
+  j.ouros += ouros;
+  j.diario.roubos = feitos + 1;
+  j.diario.roubadas = [...roubadas, vitima.id];
+  i.roubos = { dia, quantos: recebidos + 1 };
+  const roubo: Roubo = { levou: [...levou.values()], ouros, estragados };
+  if (ouros > 0) ev.push({ tipo: "ouros", texto: `+${ouros} Ouros do roubo` });
+  return { ladrao: j, ilha: i, ev, roubo };
+}
+const juntar = (l: string[]) =>
+  l.length <= 1 ? (l[0] ?? "") : `${l.slice(0, -1).join(", ")} e ${l[l.length - 1]}`;
+/** "levou 2× Morango e 1× Ovos e estragou 2 canteiros" (registro da ilha e avisos). */
+export function textoDoRoubo(r: Roubo) {
+  const partes: string[] = [];
+  if (r.levou.length) partes.push(`levou ${juntar(r.levou.map((x) => `${x.qtd}× ${x.nome}`))}`);
+  if (r.estragados) partes.push(`estragou ${r.estragados} canteiro${r.estragados > 1 ? "s" : ""}`);
+  return partes.join(" e ") || "não levou nada";
+}
+/** Quantos roubos ainda dá para fazer hoje. */
+export function roubosRestantes(j: Jogador, agora: number) {
+  if (j.diario.dia !== diaBR(agora)) return SOCIAL.roubosPorDia;
+  return Math.max(0, SOCIAL.roubosPorDia - (j.diario.roubos ?? 0));
 }
 
 // ---------------- ajuda para a interface ----------------

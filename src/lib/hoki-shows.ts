@@ -66,7 +66,7 @@ export const SHOWS: InfoShow[] = [
   {
     id: "baile",
     nome: "Baile da praça",
-    emoji: "🪩",
+    emoji: "🕺",
     texto: "Globo de luz na fonte e todo mundo dançando junto.",
     minimo: 1,
   },

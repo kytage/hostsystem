@@ -2265,12 +2265,15 @@ export function Praca({
               <button
                 key={r.chave}
                 onClick={() => setPaginaRanking(i)}
+                aria-pressed={quadroRanking.pagina === i}
+                title={r.titulo}
                 className={cn(
-                  "rounded-full px-3 py-1 text-[11.5px] font-semibold transition-colors",
+                  "rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition-colors",
                   quadroRanking.pagina === i ? "bg-[#ffd84a] text-black" : "text-white/75 hover:text-white",
                 )}
               >
-                {r.titulo}
+                {/* o título grande no arco já diz "TOP …": aqui fica só o nome, para caber numa linha */}
+                {r.titulo.replace(/^Top /, "")}
               </button>
             ))}
           </div>
@@ -2294,14 +2297,18 @@ export function Praca({
       )}
       {/* com fome ou sede (10% ou menos): o HOKI anda devagar */}
       {dentro && lento && !vistaRanking && (
-        <div className="pf-pop pointer-events-none absolute left-1/2 top-12 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300/30 bg-black/75 px-3 py-1 text-[11.5px] text-amber-100 backdrop-blur-md">
+        <div className="pf-pop pointer-events-none absolute left-1/2 top-12 z-10 flex w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-2 rounded-2xl border border-amber-300/30 bg-black/75 px-3 py-1 text-center text-[11.5px] text-amber-100 backdrop-blur-md">
           <span className="text-[13px] leading-none">🐢</span>
-          {pet.fome <= 10 && pet.sede <= 10
-            ? "Com fome e sede: andando devagar"
-            : pet.fome <= 10
-              ? "Com fome: andando devagar"
-              : "Com sede: andando devagar"}
-          <span className="text-amber-100/60">· pegue água na fonte</span>
+          <span className="whitespace-nowrap">
+            {pet.fome <= 10 && pet.sede <= 10
+              ? "Com fome e sede: andando devagar"
+              : pet.fome <= 10
+                ? "Com fome: andando devagar"
+                : "Com sede: andando devagar"}
+          </span>
+          <span className="whitespace-nowrap text-amber-100/60">
+            {pet.sede <= 10 ? "· água grátis na fonte" : "· coma algo da mochila"}
+          </span>
         </div>
       )}
       {/* carta nova: aviso discreto no topo (clicar leva o HOKI até a caixa) */}

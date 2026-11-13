@@ -6,9 +6,9 @@
 
 export type Material = "tabua" | "tijolo" | "cimento" | "ferramenta";
 export const MATERIAIS: { id: Material; nome: string; icone: string }[] = [
-  { id: "tabua", nome: "Tábua", icone: "🪵" },
+  { id: "tabua", nome: "Tábua", icone: "🌲" },
   { id: "tijolo", nome: "Tijolo", icone: "🧱" },
-  { id: "cimento", nome: "Cimento", icone: "🪨" },
+  { id: "cimento", nome: "Cimento", icone: "🏗️" },
   { id: "ferramenta", nome: "Ferramenta", icone: "🔧" },
 ];
 export const nomeDoMaterial = (m: Material) => MATERIAIS.find((x) => x.id === m)?.nome ?? m;
@@ -378,7 +378,7 @@ export const DECORACOES: ItemDoCatalogo[] = [
   {
     id: "toco",
     nome: "Banquinho de toco",
-    icone: "🪵",
+    icone: "🌲",
     tipo: "decoracao",
     nivel: 2,
     compra: 60,
@@ -500,7 +500,7 @@ export const DECORACOES: ItemDoCatalogo[] = [
   {
     id: "placa-garagem",
     nome: "Placa da Garagem",
-    icone: "🪧",
+    icone: "🏷️",
     tipo: "decoracao",
     nivel: 1,
     compra: 0,
@@ -510,7 +510,7 @@ export const DECORACOES: ItemDoCatalogo[] = [
   {
     id: "placa-pomar",
     nome: "Placa do Pomar",
-    icone: "🪧",
+    icone: "🏷️",
     tipo: "decoracao",
     nivel: 1,
     compra: 0,
@@ -520,7 +520,7 @@ export const DECORACOES: ItemDoCatalogo[] = [
   {
     id: "capivara",
     nome: "Capivara",
-    icone: "🦫",
+    icone: "🐹",
     tipo: "decoracao",
     nivel: 1,
     compra: 0,
@@ -1023,4 +1023,11 @@ export const SOCIAL = {
   presentesReceberDia: 5,
   presenteValidadeMs: 7 * 24 * H,
   alcanceFerramenta: 3,
+  /** Roubos: cada um faz até 3 por dia (uma vez em cada fazenda) e cada fazenda sofre até 3 por dia. */
+  roubosPorDia: 3,
+  roubosRecebidosPorDia: 3,
+  /** Num roubo: as colheitas maduras mais valiosas, produções prontas e canteiros pisoteados. */
+  rouboMaduros: 3,
+  rouboProducoes: 2,
+  rouboEstragos: 2,
 };

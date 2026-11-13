@@ -23,6 +23,25 @@ export const PORTAL_DA_ILHA = { x: 0, z: MEIA - 3.2 };
 export const CORREIO_DA_ILHA = { x: 3.4, z: MEIA - 4.4 };
 export const CHEGADA_DA_ILHA = { x: 0, z: MEIA - 5.6 };
 
+/** Lado maior da casa da fazenda (em metros) quando ela cabe inteira. */
+const CASA_LADO = 10.5;
+/**
+ * Onde fica a casa (atrás do terreno, no meio): no lugar de sempre enquanto couber; com o
+ * terreno maior ela recua até a beira da ilha e, se ainda assim faltar espaço, diminui.
+ * A frente fica sempre a 0,7 m da cerca. `fundo` = fundo da casa ÷ lado maior do modelo.
+ */
+export function lugarDaCasa(tamanho: number, fundo = 1) {
+  const cerca = tamanho / 2 + 0.35;
+  const frente = -(cerca + 0.7);
+  const beira = -MEIA + 0.6;
+  const prof = CASA_LADO * fundo;
+  const z0 = -MEIA + 6.6;
+  if (z0 + prof / 2 <= frente) return { lado: CASA_LADO, z: z0 };
+  const cabe = frente - beira;
+  if (cabe >= prof) return { lado: CASA_LADO, z: frente - prof / 2 };
+  return { lado: cabe / fundo, z: (frente + beira) / 2 };
+}
+
 /** Centro do quadrado (x, z) do terreno no mundo. */
 export const centroDoQuadrado = (tamanho: number, x: number, z: number) => ({
   x: x + 0.5 - tamanho / 2,
@@ -314,6 +333,16 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
   }
   const cenario = new THREE.Group();
   cena.add(cenario);
+  // a casa acompanha o tamanho do terreno: recua e, se precisar, diminui para ficar atrás da cerca
+  let casa: TH.Object3D | null = null;
+  let maiorDaCasa = 1;
+  let fundoDaCasa = 1;
+  function posicionarCasa() {
+    if (!casa) return;
+    const { lado, z } = lugarDaCasa(ilha?.tamanho ?? 8, fundoDaCasa);
+    casa.scale.setScalar(lado / maiorDaCasa);
+    casa.position.set(0, 0, z);
+  }
   function montarCenario() {
     cenario.clear();
     const por = (modelo: string, x: number, z: number, giro: number, lado: number) => {
@@ -323,7 +352,14 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
       m.rotation.y = giro;
       cenario.add(m);
     };
-    por("casa", 0, -MEIA + 6.6, 0, 10.5);
+    casa = modeloDoPacote("casa", CASA_LADO);
+    if (casa) {
+      const b = (casa as TH.Mesh).geometry.boundingBox!;
+      maiorDaCasa = Math.max(0.001, b.max.x - b.min.x, b.max.z - b.min.z);
+      fundoDaCasa = (b.max.z - b.min.z) / maiorDaCasa;
+      cenario.add(casa);
+      posicionarCasa();
+    }
     por("carroca", 13.6, -6, -0.6, 3.2);
     por("mesa", -13.4, -7, 0.4, 3.6);
     por("fogueira", -13.2, 7.5, 0, 2.2);
@@ -963,6 +999,38 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
   tela.addEventListener("pointerup", aoSoltar);
   tela.addEventListener("wheel", aoRolar, { passive: false });
 
+  // ---------------- teclado: W A S D ou as setas andam com o meu HOKI (para onde a câmera olha) ----------------
+  /** [lado, frente] de cada tecla: D/→ = direita, W/↑ = para longe da câmera. */
+  const DIRECAO: Record<string, [number, number]> = {
+    KeyW: [0, 1],
+    ArrowUp: [0, 1],
+    KeyS: [0, -1],
+    ArrowDown: [0, -1],
+    KeyA: [-1, 0],
+    ArrowLeft: [-1, 0],
+    KeyD: [1, 0],
+    ArrowRight: [1, 0],
+  };
+  const POR_LETRA: Record<string, string> = { w: "KeyW", a: "KeyA", s: "KeyS", d: "KeyD" };
+  const teclaDe = (e: KeyboardEvent) =>
+    DIRECAO[e.code] ? e.code : (POR_LETRA[e.key?.toLowerCase() ?? ""] ?? "");
+  const apertadas = new Set<string>();
+  let tecladoLigado = true;
+  let andandoPorTecla = false;
+  const aoApertar = (e: KeyboardEvent) => {
+    const k = teclaDe(e);
+    if (!k || !tecladoLigado || e.ctrlKey || e.metaKey || e.altKey) return;
+    const alvo = e.target as HTMLElement | null;
+    if (alvo?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+    e.preventDefault();
+    apertadas.add(k);
+  };
+  const aoLargar = (e: KeyboardEvent) => void apertadas.delete(teclaDe(e));
+  const largarTudo = () => apertadas.clear();
+  window.addEventListener("keydown", aoApertar);
+  window.addEventListener("keyup", aoLargar);
+  window.addEventListener("blur", largarTudo);
+
   // ---------------- quadro a quadro ----------------
   const aux = new THREE.Object3D();
   const vetor = new THREE.Vector3();
@@ -1017,6 +1085,32 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
         malhaFantasma.visible = true;
       }
     } else if (malhaFantasma) malhaFantasma.visible = false;
+    // W A S D: o alvo vai sempre um pouco à frente (anda e anima); ao soltar, para onde está
+    const euAqui = eu();
+    if (euAqui) {
+      let lado = 0;
+      let frente = 0;
+      for (const k of apertadas) {
+        lado += DIRECAO[k]?.[0] ?? 0;
+        frente += DIRECAO[k]?.[1] ?? 0;
+      }
+      const n = Math.hypot(lado, frente);
+      if (n > 0) {
+        // frente = (−sen giro, −cos giro) e direita = (cos giro, −sen giro), no chão
+        const mx = (lado * Math.cos(giro) - frente * Math.sin(giro)) / n;
+        const mz = (-lado * Math.sin(giro) - frente * Math.cos(giro)) / n;
+        const lim = MEIA - 1.2;
+        euAqui.alvo = {
+          x: Math.max(-lim, Math.min(lim, euAqui.pos.x + mx * 0.6)),
+          z: Math.max(-lim, Math.min(lim, euAqui.pos.z + mz * 0.6)),
+        };
+        aoChegar = null;
+        andandoPorTecla = true;
+      } else if (andandoPorTecla) {
+        andandoPorTecla = false;
+        euAqui.alvo = { ...euAqui.pos };
+      }
+    }
     // pessoas andando
     for (const a of avatares.values()) {
       const dx = a.alvo.x - a.pos.x;
@@ -1087,6 +1181,7 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
       montarTerreno();
       montarObjetos();
       marcarProntos();
+      posicionarCasa();
     },
     setPessoas,
     /** Com uma ferramenta na mão, o quadrado sob o mouse fica marcado (e a área do trator, se houver). */
@@ -1115,6 +1210,11 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
       }
     },
     irAte,
+    /** W A S D e setas só valem sem janela aberta por cima da ilha. */
+    setTeclado(ligado: boolean) {
+      tecladoLigado = ligado;
+      if (!ligado) apertadas.clear();
+    },
     meuPos() {
       const a = eu();
       return a ? { ...a.pos } : { ...CHEGADA_DA_ILHA };
@@ -1133,6 +1233,9 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
       tela.removeEventListener("pointermove", aoMover);
       tela.removeEventListener("pointerup", aoSoltar);
       tela.removeEventListener("wheel", aoRolar);
+      window.removeEventListener("keydown", aoApertar);
+      window.removeEventListener("keyup", aoLargar);
+      window.removeEventListener("blur", largarTudo);
       for (const a of avatares.values()) {
         a.mascote.descartar();
         a.rotulo.remove();

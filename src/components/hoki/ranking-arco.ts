@@ -87,16 +87,42 @@ function desenhar(ctx: CanvasRenderingContext2D, q: QuadroRanking) {
     if (f.id === "titulo") {
       ctx.font = `900 96px ${FONTE}`;
       ctx.textAlign = "center";
-      escrever(ctx, q.titulo.toUpperCase(), LARG / 2, meio + 4, "#ffe066", "rgba(255, 196, 60, 0.85)", 14);
+      escrever(
+        ctx,
+        q.titulo.toUpperCase(),
+        LARG / 2,
+        meio + 4,
+        "#ffe066",
+        "rgba(255, 196, 60, 0.85)",
+        14,
+      );
     } else if (f.id === "sub") {
       ctx.font = `700 42px ${FONTE}`;
       ctx.textAlign = "center";
-      const bolinhas = Array.from({ length: q.total }, (_, i) => (i === q.pagina ? "●" : "○")).join(" ");
-      escrever(ctx, `${q.sub}   ${bolinhas}`, LARG / 2, meio, "#dfe8ff", "rgba(150, 190, 255, 0.7)", 7);
+      const bolinhas = Array.from({ length: q.total }, (_, i) => (i === q.pagina ? "●" : "○")).join(
+        " ",
+      );
+      escrever(
+        ctx,
+        `${q.sub}   ${bolinhas}`,
+        LARG / 2,
+        meio,
+        "#dfe8ff",
+        "rgba(150, 190, 255, 0.7)",
+        7,
+      );
     } else if (f.id === "rodape") {
       ctx.font = `800 50px ${FONTE}`;
       ctx.textAlign = "center";
-      escrever(ctx, "E  PRÓXIMO          F  SAIR", LARG / 2, meio, "#ffffff", "rgba(255,255,255,0.55)", 8);
+      escrever(
+        ctx,
+        "E  PRÓXIMO          F  SAIR",
+        LARG / 2,
+        meio,
+        "#ffffff",
+        "rgba(255,255,255,0.55)",
+        8,
+      );
     } else {
       const i = Number(f.id.slice(1));
       const l = q.linhas[i];
@@ -105,18 +131,38 @@ function desenhar(ctx: CanvasRenderingContext2D, q: QuadroRanking) {
       escrever(ctx, `${i + 1}.`, 70, meio, "#ffd84a", "rgba(255, 196, 60, 0.8)", 11);
       ctx.font = `800 70px ${FONTE}`;
       const nome = l ? l.nome.toUpperCase() : "—";
-      escrever(ctx, cortar(ctx, nome, 520), 175, meio, l ? "#ffffff" : "rgba(255,255,255,0.45)", "rgba(255,255,255,0.6)", 11);
+      escrever(
+        ctx,
+        cortar(ctx, nome, 520),
+        175,
+        meio,
+        l ? "#ffffff" : "rgba(255,255,255,0.45)",
+        "rgba(255,255,255,0.6)",
+        11,
+      );
       if (l) {
         ctx.font = `900 70px ${FONTE}`;
         ctx.textAlign = "right";
-        escrever(ctx, l.valor.toUpperCase(), LARG - 70, meio, "#ffd84a", "rgba(255, 196, 60, 0.8)", 11);
+        escrever(
+          ctx,
+          l.valor.toUpperCase(),
+          LARG - 70,
+          meio,
+          "#ffd84a",
+          "rgba(255, 196, 60, 0.8)",
+          11,
+        );
       }
     }
     topo += f.h;
   }
 }
 
-export function criarArcoDoRanking(THREE: typeof TH, pai: TH.Object3D, pos: { x: number; z: number }) {
+export function criarArcoDoRanking(
+  THREE: typeof TH,
+  pai: TH.Object3D,
+  pos: { x: number; z: number },
+) {
   const raiz = new THREE.Group();
   raiz.position.set(pos.x, 0, pos.z);
   pai.add(raiz);
@@ -186,7 +232,13 @@ export function criarArcoDoRanking(THREE: typeof TH, pai: TH.Object3D, pos: { x:
     topo += f.h;
   });
 
-  let quadro: QuadroRanking = { titulo: "Ranking", sub: "Carregando…", linhas: [], pagina: 0, total: 5 };
+  let quadro: QuadroRanking = {
+    titulo: "Ranking",
+    sub: "Carregando…",
+    linhas: [],
+    pagina: 0,
+    total: 5,
+  };
   let chave = "";
   let trocou = true;
   let inicioDaTroca = 0;

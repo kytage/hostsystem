@@ -271,7 +271,7 @@ export function PerfilCartao() {
           </div>
           <div className="border-b border-white/[0.06] p-4 lg:border-b-0 lg:border-r">
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="text-[13px] leading-none">🪙</span> Staff Coins
+              <span className="text-[13px] leading-none">💰</span> Staff Coins
             </p>
             <p className="mt-1.5 font-display text-2xl font-semibold tabular-nums">{coins.toLocaleString("pt-BR")}</p>
             <p className="mt-2 text-[10.5px] leading-snug text-ink-3">

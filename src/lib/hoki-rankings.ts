@@ -17,14 +17,30 @@ export const RANKINGS: {
 }[] = [
   { chave: "horas", titulo: "Top Horas", sub: "Tempo total no site", valor: horas },
   { chave: "level", titulo: "Top Level", sub: "Nível na HOST FAZENDAS", valor: (n) => `NV ${n}` },
-  { chave: "solicitacoes", titulo: "Top Solicitações", sub: "Pendências abertas nas áreas", valor: (n) => `${n}` },
-  { chave: "captacoes", titulo: "Top Captações", sub: "Captações registradas", valor: (n) => `${n}` },
+  {
+    chave: "solicitacoes",
+    titulo: "Top Solicitações",
+    sub: "Pendências abertas nas áreas",
+    valor: (n) => `${n}`,
+  },
+  {
+    chave: "captacoes",
+    titulo: "Top Captações",
+    sub: "Captações registradas",
+    valor: (n) => `${n}`,
+  },
   { chave: "dormindo", titulo: "Top Dormindo", sub: "Tempo do HOKI no berço", valor: horas },
 ];
 
 export type DadosRanking = Record<ChaveRanking, { nome: string; valor: number }[]>;
 
-const vazio = (): DadosRanking => ({ horas: [], level: [], solicitacoes: [], captacoes: [], dormindo: [] });
+const vazio = (): DadosRanking => ({
+  horas: [],
+  level: [],
+  solicitacoes: [],
+  captacoes: [],
+  dormindo: [],
+});
 
 /** Os Top 5 de cada ranking (o banco monta tudo de uma vez). */
 export async function buscarRankings(): Promise<DadosRanking> {
@@ -33,7 +49,9 @@ export async function buscarRankings(): Promise<DadosRanking> {
   const bruto = (data ?? {}) as Record<string, unknown>;
   const dados = vazio();
   for (const r of RANKINGS) {
-    const lista = Array.isArray(bruto[r.chave]) ? (bruto[r.chave] as { nome?: unknown; valor?: unknown }[]) : [];
+    const lista = Array.isArray(bruto[r.chave])
+      ? (bruto[r.chave] as { nome?: unknown; valor?: unknown }[])
+      : [];
     dados[r.chave] = lista
       .map((l) => ({ nome: String(l.nome ?? "").slice(0, 24), valor: Number(l.valor) || 0 }))
       .filter((l) => l.nome)

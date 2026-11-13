@@ -9,22 +9,27 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { SOCIAL, type Material } from "@/lib/fazenda/catalogo";
+import { SOCIAL, TUTORIAL_FIM, type Material } from "@/lib/fazenda/catalogo";
 import {
   adubacaoNaIlhaDoVisitante,
   adubar,
   aplicar,
+  diaBR,
   ErroDoJogo,
   inicioDoDiaBR,
   novaIlha,
   novoJogador,
   registrarPresenca,
   renovarPeriodos,
+  roubar,
+  textoDoRoubo,
   type Acao,
   type Evento,
   type Ilha,
   type Jogador,
+  type Roubo,
 } from "@/lib/fazenda/regras";
+import { escolherRoubo, escreverBoletim, sementeDe } from "@/lib/fazenda/boletim";
 
 type Db = SupabaseClient;
 async function banco(): Promise<Db> {
@@ -523,6 +528,197 @@ export const fazendaAdubar = createServerFn({ method: "POST" })
       return { ev: [], erro: "A ilha está movimentada agora. Tente de novo." };
     },
   );
+
+// ---------------- roubar (visitante) ----------------
+/** O visitante está mesmo na ilha agora (bateu presença nos últimos 2 minutos e não foi removido)? */
+async function estaNaIlha(db: Db, dono: string, visitante: string) {
+  const { data: v } = await db
+    .from("fazenda_visitas")
+    .select("visto_em, removido")
+    .eq("ilha_dono", dono)
+    .eq("visitante", visitante)
+    .maybeSingle();
+  const visita = v as { visto_em: string; removido: boolean } | null;
+  return !!visita && !visita.removido && Date.now() - Date.parse(visita.visto_em) <= 120_000;
+}
+export const fazendaRoubar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ op: opSchema, dono: z.string().uuid() }).parse(d))
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      ilha?: Ilha;
+      jogador?: Jogador;
+      ev: Evento[];
+      erro?: string;
+      roubo?: Roubo;
+      resumo?: string;
+    }> => {
+      const db = await banco();
+      const user = context.userId;
+      if (user === data.dono) return { ev: [], erro: "Não dá para roubar a própria fazenda." };
+      await podeUsarHoki(db, user);
+      const [nome, nomeDono] = await Promise.all([nomeDe(db, user), nomeDe(db, data.dono)]);
+      for (let tentativa = 0; tentativa < 4; tentativa++) {
+        const [{ j }, dono, { data: dj }] = await Promise.all([
+          carregar(db, user),
+          carregarIlha(db, data.dono),
+          db
+            .from("fazenda_jogadores")
+            .select("tutorial:dados->tutorial")
+            .eq("user_id", data.dono)
+            .maybeSingle(),
+        ]);
+        if (!j) return { ev: [], erro: "Crie a sua ilha primeiro (entre em Minha Ilha)." };
+        if (!dono) return { ev: [], erro: "Ilha não encontrada." };
+        if (!(await acessoAIlha(db, user, data.dono, dono.dados.privacidade)))
+          return { ev: [], erro: "Você não tem acesso a essa ilha." };
+        if (!(await estaNaIlha(db, data.dono, user)))
+          return { ev: [], erro: "Entre na ilha para roubar." };
+        try {
+          const agora = Date.now();
+          const tutorial = Number((dj as { tutorial?: unknown } | null)?.tutorial ?? TUTORIAL_FIM);
+          const r = roubar(
+            j.dados,
+            dono.dados,
+            { id: data.dono, tutorial: Number.isFinite(tutorial) ? tutorial : TUTORIAL_FIM },
+            { agora, novoId: uuid },
+          );
+          const resumo = textoDoRoubo(r.roubo);
+          const { data: g, error } = await db.rpc("fazenda_roubar", {
+            p_op: data.op,
+            p_user: user,
+            p_jogador: r.ladrao,
+            p_jogador_versao: j.versao,
+            p_ilhas: [{ dono: data.dono, dados: r.ilha, versao: dono.versao }],
+            p_resultado: { ev: r.ev, roubo: r.roubo },
+            p_registro: { ilha: data.dono, nome, tipo: "roubo", detalhe: resumo },
+            p_roubo: {
+              vitima: data.dono,
+              ladraoNome: nome,
+              vitimaNome: nomeDono,
+              levou: r.roubo.levou,
+              ouros: r.roubo.ouros,
+              estragados: r.roubo.estragados,
+            },
+          });
+          if (error) {
+            if (error.message.includes("fazenda_conflito")) continue;
+            throw new Error(error.message);
+          }
+          if ((g as { repetida?: boolean } | null)?.repetida) {
+            const [atual, ilhaAtual] = await Promise.all([
+              carregar(db, user),
+              carregarIlha(db, data.dono),
+            ]);
+            return {
+              ...(atual.j ? { jogador: atual.j.dados } : {}),
+              ...(ilhaAtual ? { ilha: ilhaAtual.dados } : {}),
+              ev: [],
+            };
+          }
+          return { ilha: r.ilha, jogador: r.ladrao, ev: r.ev, roubo: r.roubo, resumo };
+        } catch (e) {
+          if (e instanceof ErroDoJogo) return { ev: [], erro: e.message };
+          throw e;
+        }
+      }
+      return { ev: [], erro: "A ilha está movimentada agora. Tente de novo." };
+    },
+  );
+
+// ---------------- Boletim da Roça (uma história por dia sobre alguém que roubou) ----------------
+export interface Boletim {
+  dia: string;
+  titulo: string;
+  texto: string;
+}
+interface LinhaDoBoletim {
+  dia: string;
+  roubo_id: string | null;
+  titulo: string;
+  texto: string;
+}
+/**
+ * O boletim do dia sai na primeira vez que alguém abre o correio da fazenda: sorteia um roubo
+ * de ontem ou de hoje (que ainda não tenha saído) e grava a história uma vez só por dia
+ * (quem chegar junto fica com a que foi gravada primeiro). Sem roubo, sem boletim novo.
+ */
+export const fazendaBoletim = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ hoje: Boletim | null; anteriores: Boletim[] }> => {
+    const db = await banco();
+    await podeUsarHoki(db, context.userId);
+    const agora = Date.now();
+    const dia = diaBR(agora);
+    const ler = async () => {
+      const { data } = await db
+        .from("fazenda_boletins")
+        .select("dia, roubo_id, titulo, texto")
+        .order("dia", { ascending: false })
+        .limit(8);
+      return (data ?? []) as LinhaDoBoletim[];
+    };
+    let lista = await ler();
+    if (lista[0]?.dia !== dia) {
+      const { data: roubos } = await db
+        .from("fazenda_roubos")
+        .select("id, ladrao, ladrao_nome, vitima_nome, levou, ouros, estragados, criado_em")
+        .gte("criado_em", new Date(inicioDoDiaBR(agora) - 86_400_000).toISOString())
+        .order("criado_em", { ascending: false })
+        .limit(300);
+      const r = escolherRoubo(
+        (roubos ?? []) as {
+          id: string;
+          ladrao: string | null;
+          ladrao_nome: string;
+          vitima_nome: string;
+          levou: { nome: string; qtd: number }[];
+          ouros: number;
+          estragados: number;
+          criado_em: string;
+        }[],
+        dia,
+        new Set(lista.map((b) => b.roubo_id).filter((x): x is string => !!x)),
+      );
+      if (r) {
+        const b = escreverBoletim(
+          {
+            ladrao: r.ladrao_nome || "Alguém",
+            vitima: r.vitima_nome || "um vizinho",
+            levou: Array.isArray(r.levou) ? r.levou : [],
+            ouros: r.ouros,
+            estragados: r.estragados,
+            em: Date.parse(r.criado_em),
+          },
+          sementeDe(`${dia}:${r.id}`),
+        );
+        await db.from("fazenda_boletins").upsert(
+          {
+            dia,
+            roubo_id: r.id,
+            ladrao: r.ladrao,
+            ladrao_nome: r.ladrao_nome,
+            vitima_nome: r.vitima_nome,
+            titulo: b.titulo,
+            texto: b.texto,
+          },
+          { onConflict: "dia", ignoreDuplicates: true },
+        );
+        lista = await ler();
+      }
+    }
+    const ver = ({ dia: d, titulo, texto }: LinhaDoBoletim): Boletim => ({ dia: d, titulo, texto });
+    return {
+      hoje: lista[0]?.dia === dia ? ver(lista[0]) : null,
+      anteriores: lista
+        .filter((b) => b.dia !== dia)
+        .slice(0, 3)
+        .map(ver),
+    };
+  });
 
 // ---------------- amizades e convites ----------------
 export interface Amigo {

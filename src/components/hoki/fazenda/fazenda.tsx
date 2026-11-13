@@ -11,6 +11,7 @@ import {
   Hammer,
   Loader2,
   Mail,
+  Newspaper,
   Palette,
   RotateCw,
   ShoppingBasket,
@@ -64,6 +65,8 @@ import {
   objetosContados,
   limiteDeObjetos,
   progressoDoProjeto,
+  diaBR,
+  roubosRestantes,
   textoDaRecompensa,
   type Acao,
   type Evento,
@@ -75,6 +78,7 @@ import {
   fazendaAcao,
   fazendaAdubar,
   fazendaAmigos,
+  fazendaBoletim,
   fazendaConvidar,
   fazendaCorreio,
   fazendaEntrar,
@@ -85,7 +89,9 @@ import {
   fazendaResgatarPresente,
   fazendaResponderAmizade,
   fazendaRevogarConvite,
+  fazendaRoubar,
   fazendaVisitar,
+  type Boletim,
 } from "@/lib/fazenda.functions";
 import { CHAVE_MEU_NIVEL, useSelos, type MeuNivel } from "@/lib/fazenda/selos";
 import { enviarNaPraca } from "@/lib/hoki-presenca";
@@ -119,12 +125,29 @@ type Ferramenta =
   | { t: "trator"; qual: QualTrator; modo: "arar" | "plantar" | "colher"; rot: number }
   | { t: "colocar"; id: string; item: string; rot: number }
   | { t: "mover"; id: string; item: string; rot: number }
-  | { t: "projeto"; id: string };
+  | { t: "projeto"; id: string }
+  | { t: "moverProjeto"; id: string };
 
 const vidro =
   "rounded-2xl border border-white/10 bg-black/75 text-white shadow-[0_18px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl";
 const ouros = (v: number) => Math.floor(v).toLocaleString("pt-BR");
 const novoOp = () => crypto.randomUUID();
+/** Último Boletim da Roça que a pessoa abriu (só neste navegador; serve para o aviso no Correio). */
+const CHAVE_BOLETIM = (id: string) => `hoki-fazenda-boletim-lido:${id}`;
+function lerBoletimLido(id: string) {
+  try {
+    return localStorage.getItem(CHAVE_BOLETIM(id)) ?? "";
+  } catch {
+    return "";
+  }
+}
+function guardarBoletimLido(id: string, dia: string) {
+  try {
+    localStorage.setItem(CHAVE_BOLETIM(id), dia);
+  } catch {
+    // sem armazenamento (aba anônima): o aviso volta a aparecer, sem problema
+  }
+}
 function tempoRestante(ms: number) {
   const s = Math.max(0, Math.ceil(ms / 1000));
   if (s < 60) return `${s} s`;
@@ -225,6 +248,8 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
   const visitarFn = useServerFn(fazendaVisitar);
   const presencaFn = useServerFn(fazendaPresenca);
   const adubarFn = useServerFn(fazendaAdubar);
+  const roubarFn = useServerFn(fazendaRoubar);
+  const boletimFn = useServerFn(fazendaBoletim);
   const souVisita = !!visitar && visitar !== eu.id;
   const donoId = souVisita ? visitar! : eu.id;
   const [jogador, setJogador] = useState<Jogador | null>(null);
@@ -242,6 +267,11 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
     { tipo: "canteiro"; x: number; z: number } | { tipo: "objeto"; id: string } | null
   >(null);
   const [ocupado, setOcupado] = useState(false);
+  const [roubando, setRoubando] = useState(false);
+  const [boletins, setBoletins] = useState<{ hoje: Boletim | null; anteriores: Boletim[] } | null>(
+    null,
+  );
+  const [boletimLido, setBoletimLido] = useState(() => lerBoletimLido(eu.id));
   const [agora, setAgora] = useState(() => Date.now());
   const relogio = useRef(0);
   const palco = useRef<HTMLDivElement>(null);
@@ -378,6 +408,55 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
   useEffect(() => {
     if (ilha && cenaPronta) cena.current?.setIlha(ilha, Date.now() + relogio.current);
   }, [ilha, cenaPronta]);
+  // W A S D e setas andam com o HOKI, menos quando uma janela está aberta por cima da ilha
+  useEffect(() => {
+    if (cenaPronta) cena.current?.setTeclado(!painel);
+  }, [painel, cenaPronta]);
+
+  // Boletim da Roça: sai no Correio uma vez por dia (o aviso some depois de aberto)
+  const carregarBoletim = useCallback(async () => {
+    try {
+      setBoletins(await boletimFn());
+    } catch {
+      // sem boletim agora: o Correio funciona igual
+    }
+  }, [boletimFn]);
+  useEffect(() => {
+    void carregarBoletim();
+  }, [carregarBoletim]);
+  useEffect(() => {
+    if (painel === "correio") void carregarBoletim();
+  }, [painel, carregarBoletim]);
+  const diaDoBoletim = boletins?.hoje?.dia;
+  useEffect(() => {
+    if (painel !== "correio" || !diaDoBoletim || boletimLido === diaDoBoletim) return;
+    guardarBoletimLido(eu.id, diaDoBoletim);
+    setBoletimLido(diaDoBoletim);
+  }, [painel, diaDoBoletim, boletimLido, eu.id]);
+  const boletimNovo = !!boletins?.hoje && boletins.hoje.dia !== boletimLido;
+  // minha fazenda foi roubada hoje: avisa uma vez quando eu entro (quem foi fica no Correio)
+  const roubosDeHoje = !souVisita && ilha?.roubos?.dia === diaBR(agora) ? ilha.roubos.quantos : 0;
+  useEffect(() => {
+    if (!roubosDeHoje) return;
+    const chave = `hoki-fazenda-roubada:${eu.id}:${diaBR(Date.now())}`;
+    try {
+      if (Number(sessionStorage.getItem(chave) ?? 0) >= roubosDeHoje) return;
+      sessionStorage.setItem(chave, String(roubosDeHoje));
+    } catch {
+      // sem armazenamento: avisa mesmo assim
+    }
+    toast(
+      roubosDeHoje === 1
+        ? "Sua fazenda foi roubada hoje!"
+        : `Sua fazenda foi roubada ${roubosDeHoje} vezes hoje!`,
+      {
+        icon: "🦹",
+        description: "Veja quem foi no Registro da ilha, no Correio.",
+        duration: 9000,
+        action: { label: "Abrir", onClick: () => setPainel("correio") },
+      },
+    );
+  }, [roubosDeHoje, eu.id]);
 
   // pessoas na ilha (eu + quem está na mesma ilha agora), com o selo de nível de cada um
   const { data: selos } = useSelos([eu.id, ...Object.keys(outros)]);
@@ -503,6 +582,59 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
     const k = (d - 1.6) / d;
     cena.current.irAte(p.x + (c.x - p.x) * k, p.z + (c.z - p.z) * k, f);
   };
+  // o que impede o roubo agora (o servidor confere de novo): o botão já avisa antes
+  const hoje = diaBR(agora);
+  const motivoSemRoubo = !souVisita
+    ? ""
+    : jogador && roubosRestantes(jogador, agora) === 0
+      ? `Você já fez os ${SOCIAL.roubosPorDia} roubos de hoje. Volte amanhã!`
+      : jogador?.diario.dia === hoje && (jogador.diario.roubadas ?? []).includes(donoId)
+        ? "Você já roubou esta fazenda hoje. Volte amanhã!"
+        : ilha?.roubos?.dia === hoje && ilha.roubos.quantos >= SOCIAL.roubosRecebidosPorDia
+          ? `Esta fazenda já foi roubada ${SOCIAL.roubosRecebidosPorDia} vezes hoje: a vizinhança está de olho.`
+          : "";
+  /** Visita: rouba a fazenda (3 por dia). O servidor escolhe o que leva e o que pisoteia. */
+  const roubarAqui = async () => {
+    if (!souVisita || !jogador || roubando) return;
+    const restam = roubosRestantes(jogador, agora);
+    if (motivoSemRoubo) return void toast.info(motivoSemRoubo, { icon: "🦹" });
+    if (
+      !window.confirm(
+        `Roubar a fazenda de ${dono?.nome || "alguém"}?\n\n` +
+          `Você leva as colheitas maduras mais valiosas (até ${SOCIAL.rouboMaduros}) e a produção ` +
+          `pronta de animais e árvores (até ${SOCIAL.rouboProducoes}). Na fuga, pisoteia até ` +
+          `${SOCIAL.rouboEstragos} canteiros que ainda estão crescendo.\n\n` +
+          `O dono fica sabendo. Restam ${restam} de ${SOCIAL.roubosPorDia} roubos hoje.`,
+      )
+    )
+      return;
+    setRoubando(true);
+    try {
+      const r = await roubarFn({ data: { op: novoOp(), dono: donoId } });
+      if (r.ilha) setIlha(r.ilha);
+      if (r.jogador) setJogador(r.jogador);
+      if (r.erro) return void toast.error(r.erro);
+      if (!r.resumo) return;
+      toast.success(`Roubo feito: você ${r.resumo}.`, {
+        icon: "🦹",
+        description: r.roubo?.ouros ? `+${ouros(r.roubo.ouros)} Ouros para você.` : undefined,
+      });
+      entregarProdutos(r.ev);
+      avisarMudanca();
+      // o dono recebe o aviso onde estiver no painel
+      enviarNaPraca("fazenda-visita", {
+        de: eu.id,
+        para: donoId,
+        nome: eu.nome,
+        tipo: "roubo",
+        texto: r.resumo,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para roubar agora.");
+    } finally {
+      setRoubando(false);
+    }
+  };
   const livre = useCallback(
     (w: number, h: number, exceto?: string) => (x: number, z: number) => {
       if (!ilha) return false;
@@ -534,12 +666,12 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
         h: 1,
         valido: livre(1, 1, ferramenta.t === "mover" ? ferramenta.id : undefined),
       });
-    } else if (ferramenta.t === "projeto") {
+    } else if (ferramenta.t === "projeto" || ferramenta.t === "moverProjeto") {
       c.setFantasma({
         modelo: PROJETOS.find((p) => p.id === ferramenta.id)?.modelo ?? "garagem",
         w: 2,
         h: 2,
-        valido: livre(2, 2),
+        valido: livre(2, 2, ferramenta.t === "moverProjeto" ? ferramenta.id : undefined),
       });
     } else {
       c.setFantasma(null);
@@ -631,6 +763,10 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
         return void agir({ t: "projetoColocar", id: f.id, x, z }).then(
           (ok) => ok && setFerramenta({ t: "mao" }),
         );
+      if (f.t === "moverProjeto")
+        return void agir({ t: "mover", id: f.id, x, z, rot: 0 }).then(
+          (ok) => ok && setFerramenta({ t: "mao" }),
+        );
     },
     onObjeto: (id) => setSel({ tipo: "objeto", id }),
     onChao: (x, z) => cena.current?.irAte(x, z),
@@ -706,7 +842,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
                 />
               </div>
               <div className="mt-1.5 flex items-center gap-3 text-[12px] font-semibold tabular-nums">
-                <span title="HOST Ouros">🪙 {ouros(jogador.ouros)}</span>
+                <span title="HOST Ouros">💰 {ouros(jogador.ouros)}</span>
                 <span title="HOST Granas">💎 {jogador.granas}</span>
               </div>
             </div>
@@ -784,9 +920,10 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
               icone={<Users className="size-4" />}
             />
             <Atalho
-              titulo="Correio"
+              titulo={boletimNovo ? "Correio: Boletim da Roça novo!" : "Correio"}
               onClick={() => setPainel("correio")}
               icone={<Mail className="size-4" />}
+              aviso={boletimNovo ? 1 : 0}
             />
             <Atalho
               titulo="Voltar ao Mundo HOST"
@@ -831,7 +968,10 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
             setFerramenta={setFerramenta}
             jogador={jogador}
             ilha={ilha}
-            ocupado={ocupado}
+            ocupado={ocupado || roubando}
+            roubosRestam={roubosRestantes(jogador, agora)}
+            motivoSemRoubo={motivoSemRoubo}
+            onRoubar={() => void roubarAqui()}
           />
           {/* menu do canteiro ou do objeto selecionado */}
           {sel && (
@@ -905,6 +1045,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
               agir={agir}
               onClose={() => setPainel(null)}
               setJogador={setJogador}
+              boletins={boletins}
             />
           )}
           <p className="pointer-events-none absolute bottom-1 right-3 z-0 text-[9px] text-white/35">
@@ -965,6 +1106,9 @@ function Ferramentas({
   jogador,
   ilha,
   ocupado,
+  roubosRestam,
+  motivoSemRoubo,
+  onRoubar,
 }: {
   souVisita: boolean;
   ferramenta: Ferramenta;
@@ -972,15 +1116,18 @@ function Ferramentas({
   jogador: Jogador;
   ilha: Ilha;
   ocupado: boolean;
+  roubosRestam: number;
+  motivoSemRoubo: string;
+  onRoubar: () => void;
 }) {
   const [sementes, setSementes] = useState(false);
   const lista: { f: Ferramenta; icone: string; nome: string }[] = souVisita
     ? [
-        { f: { t: "mao" }, icone: "✋", nome: "Andar e inspecionar" },
+        { f: { t: "mao" }, icone: "✋", nome: "Andar (clique ou W A S D) e inspecionar" },
         { f: { t: "regador" }, icone: "💧", nome: "Adubar (ajudar o amigo)" },
       ]
     : [
-        { f: { t: "mao" }, icone: "✋", nome: "Andar e inspecionar" },
+        { f: { t: "mao" }, icone: "✋", nome: "Andar (clique ou W A S D) e inspecionar" },
         { f: { t: "enxada" }, icone: "⛏️", nome: `Enxada: arar (${PRECO_ARAR} Ouros)` },
         { f: { t: "cesto" }, icone: "🧺", nome: "Cesto: colher" },
         { f: { t: "pa" }, icone: "🧹", nome: "Pá: remover" },
@@ -989,6 +1136,13 @@ function Ferramentas({
   const sementeAtual = ferramenta.t === "semente" ? cultura(ferramenta.cultura) : null;
   return (
     <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2">
+      {ferramenta.t === "moverProjeto" && (
+        <div className={cn(vidro, "flex items-center gap-2 px-3 py-1.5 text-[12px]")}>
+          Clique no novo lugar de {PROJETOS.find((p) => p.id === ferramenta.id)?.nome ?? "projeto"}{" "}
+          (2 × 2 livres)
+          <Botao onClick={() => setFerramenta({ t: "mao" })}>Cancelar</Botao>
+        </div>
+      )}
       {(ferramenta.t === "colocar" || ferramenta.t === "mover" || ferramenta.t === "projeto") && (
         <div className={cn(vidro, "flex items-center gap-2 px-3 py-1.5 text-[12px]")}>
           Clique num quadrado livre para {ferramenta.t === "mover" ? "mover" : "colocar"}{" "}
@@ -1025,7 +1179,7 @@ function Ferramentas({
                 <span className="text-lg">{c.icone}</span>
                 {c.nome}
                 <span className="text-white/50">
-                  {bloqueada ? `nv ${c.nivel}` : `🪙${c.semente}`}
+                  {bloqueada ? `nv ${c.nivel}` : `💰${c.semente}`}
                 </span>
               </button>
             );
@@ -1046,6 +1200,26 @@ function Ferramentas({
             {x.icone}
           </button>
         ))}
+        {souVisita && (
+          <button
+            onClick={onRoubar}
+            disabled={ocupado}
+            title={
+              motivoSemRoubo ||
+              `Roubar esta fazenda (restam ${roubosRestam} de ${SOCIAL.roubosPorDia} hoje)`
+            }
+            className={cn(
+              "flex h-11 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold transition hover:bg-white/10 disabled:opacity-40",
+              motivoSemRoubo && "opacity-45",
+            )}
+          >
+            <span className="text-xl">🦹</span>
+            Roubar
+            <span className="rounded-full bg-white/10 px-1.5 text-[10.5px] tabular-nums text-white/75">
+              {roubosRestam}/{SOCIAL.roubosPorDia}
+            </span>
+          </button>
+        )}
         {!souVisita && (
           <button
             onClick={() => setSementes((s) => !s)}
@@ -1170,7 +1344,7 @@ function PainelDaSelecao({
         </p>
         {can?.valorVenda && (
           <p className="text-[11.5px] text-white/60">
-            Venda: 🪙 {can.valorVenda} · {can.xpColheita} XP
+            Venda: 💰 {can.valorVenda} · {can.xpColheita} XP
           </p>
         )}
         {can?.adubo && (
@@ -1261,16 +1435,23 @@ function PainelDaSelecao({
               ? "Projeto concluído"
               : `Etapa ${(pi?.etapa ?? 0) + 1} de ${p?.etapas.length}`}
           </p>
-          {!souVisita &&
-            (projetoId === "galinheiro" || projetoId === "aprisco" || projetoId === "pomar") && (
-              <Botao
-                tipo="verde"
-                className="mt-2"
-                onClick={() => void agir({ t: "coletarGrupo", projeto: projetoId })}
-              >
-                Coletar em grupo
-              </Botao>
-            )}
+          {!souVisita && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(projetoId === "galinheiro" || projetoId === "aprisco" || projetoId === "pomar") && (
+                <Botao
+                  tipo="verde"
+                  onClick={() => void agir({ t: "coletarGrupo", projeto: projetoId })}
+                >
+                  Coletar em grupo
+                </Botao>
+              )}
+              {pi && (
+                <Botao onClick={() => (setFerramenta({ t: "moverProjeto", id: pi.id }), onClose())}>
+                  Mover
+                </Botao>
+              )}
+            </div>
+          )}
         </>
       );
     } else {
@@ -1285,7 +1466,7 @@ function PainelDaSelecao({
           {it.tempoMs && (
             <p className="text-[11.5px] text-white/60">
               {pronto
-                ? `Pronto! ${it.produto ?? "Frutas"}: 🪙 ${it.venda} · ${it.xp} XP`
+                ? `Pronto! ${it.produto ?? "Frutas"}: 💰 ${it.venda} · ${it.xp} XP`
                 : `Próxima coleta em ${tempoRestante((o.prontoEm ?? 0) - agora)}`}
             </p>
           )}
@@ -1332,7 +1513,7 @@ function PainelDaSelecao({
                     ) && void agir({ t: "vender", id: o.id }).then(onClose)
                   }
                 >
-                  Vender 🪙{Math.floor(it.compra * 0.25)}
+                  Vender 💰{Math.floor(it.compra * 0.25)}
                 </Botao>
               )}
             </div>
@@ -1374,7 +1555,7 @@ function Loja({
   >("sementes");
   const linhaDoItem = (it: ItemDoCatalogo) => {
     const bloqueado = jogador.nivel < it.nivel;
-    const preco = it.granas ? `💎 ${it.granas}` : `🪙 ${ouros(it.compra)}`;
+    const preco = it.granas ? `💎 ${it.granas}` : `💰 ${ouros(it.compra)}`;
     const falta = it.granas ? jogador.granas < it.granas : jogador.ouros < it.compra;
     return (
       <div key={it.id} className="flex items-center gap-2 rounded-xl bg-white/[0.05] p-2">
@@ -1385,7 +1566,7 @@ function Loja({
             {bloqueado
               ? `Libera no nível ${it.nivel}`
               : it.tempoMs
-                ? `${it.produto ?? "Frutas"} a cada ${duracao(it.tempoMs)} · 🪙 ${it.venda} · ${it.xp} XP`
+                ? `${it.produto ?? "Frutas"} a cada ${duracao(it.tempoMs)} · 💰 ${it.venda} · ${it.xp} XP`
                 : "Decoração"}
           </p>
         </div>
@@ -1447,7 +1628,7 @@ function Loja({
                   <span className="text-[11px] text-white/55">
                     {bloqueada
                       ? `Libera no nível ${c.nivel}`
-                      : `${duracao(c.tempoMs)} · semente 🪙${c.semente} · venda 🪙${c.venda} · lucro 🪙${lucroDe(c)} · ${c.xpPlantar}+${c.xpColher} XP`}
+                      : `${duracao(c.tempoMs)} · semente 💰${c.semente} · venda 💰${c.venda} · lucro 💰${lucroDe(c)} · ${c.xpPlantar}+${c.xpColher} XP`}
                   </span>
                 </span>
               </button>
@@ -1483,7 +1664,7 @@ function Loja({
                   ) && void agir({ t: "expandir", rota: "ouros" })
                 }
               >
-                🪙 {ouros(prox.ouros)} + {prox.vizinhos} vizinho(s)
+                💰 {ouros(prox.ouros)} + {prox.vizinhos} vizinho(s)
               </Botao>
               <Botao
                 disabled={jogador.nivel < prox.nivel || jogador.granas < prox.granas}
@@ -1496,7 +1677,7 @@ function Loja({
               </Botao>
             </div>
             <p className="text-[11px] text-white/45">
-              Saldo depois: 🪙 {ouros(Math.max(0, jogador.ouros - prox.ouros))} ou 💎{" "}
+              Saldo depois: 💰 {ouros(Math.max(0, jogador.ouros - prox.ouros))} ou 💎{" "}
               {Math.max(0, jogador.granas - prox.granas)}
             </p>
           </div>
@@ -1531,7 +1712,7 @@ function Loja({
                             void agir({ t: "bateria", qual: q, pacote: b.id, moeda: "ouros" })
                           }
                         >
-                          +{b.cargas}⚡ 🪙{ouros(b.ouros)}
+                          +{b.cargas}⚡ 💰{ouros(b.ouros)}
                         </Botao>
                         <Botao
                           disabled={tem.cargas + b.cargas > 100}
@@ -1551,7 +1732,7 @@ function Loja({
                     disabled={jogador.nivel < t.nivel || jogador.ouros < t.compra}
                     onClick={() => void agir({ t: "comprarTrator", qual: q })}
                   >
-                    Comprar 🪙 {ouros(t.compra)}
+                    Comprar 💰 {ouros(t.compra)}
                   </Botao>
                 )}
               </div>
@@ -2405,19 +2586,90 @@ function Vizinhos({
   );
 }
 
-// ---------------- correio (kit do tutorial, presentes e registro) ----------------
+// ---------------- correio (boletim do dia, kit do tutorial, presentes e registro) ----------------
+const dataDoBoletim = (dia: string) =>
+  new Date(`${dia}T12:00:00Z`).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+function BoletimDaRoca({
+  boletins,
+}: {
+  boletins: { hoje: Boletim | null; anteriores: Boletim[] } | null;
+}) {
+  const [aberto, setAberto] = useState<string | null>(null);
+  if (!boletins) return null;
+  const { hoje, anteriores } = boletins;
+  return (
+    <div className="mb-4 rounded-xl border border-[#ffd23f]/25 bg-[#ffd23f]/[0.07] p-3">
+      <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[#ffd23f]">
+        <Newspaper className="size-3.5" /> Boletim da Roça
+        {hoje && (
+          <span className="font-normal normal-case tracking-normal text-white/45">
+            · {dataDoBoletim(hoje.dia)}
+          </span>
+        )}
+      </p>
+      {hoje ? (
+        <>
+          <p className="mt-1.5 font-display text-[15px] font-semibold leading-snug">
+            {hoje.titulo}
+          </p>
+          <p className="mt-1.5 whitespace-pre-line text-[12.5px] leading-relaxed text-white/80">
+            {hoje.texto}
+          </p>
+          <p className="mt-2 text-[10.5px] italic text-white/40">
+            Redação do Boletim da Roça · esta história é de ficção
+          </p>
+        </>
+      ) : (
+        <p className="mt-1.5 text-[12px] text-white/60">
+          Nenhum roubo para contar hoje. A roça anda tranquila… por enquanto.
+        </p>
+      )}
+      {anteriores.length > 0 && (
+        <div className="mt-2 border-t border-white/10 pt-2">
+          <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-widest text-white/40">
+            Edições anteriores
+          </p>
+          {anteriores.map((b) => (
+            <div key={b.dia} className="text-[12px]">
+              <button
+                onClick={() => setAberto((a) => (a === b.dia ? null : b.dia))}
+                className="w-full py-0.5 text-left text-white/75 hover:text-white"
+              >
+                <span className="text-white/40">
+                  {new Date(`${b.dia}T12:00:00Z`).toLocaleDateString("pt-BR")} ·{" "}
+                </span>
+                {b.titulo}
+              </button>
+              {aberto === b.dia && (
+                <p className="mb-1.5 whitespace-pre-line text-[12px] leading-relaxed text-white/65">
+                  {b.texto}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 function Correio({
   jogador,
   souVisita,
   agir,
   onClose,
   setJogador,
+  boletins,
 }: {
   jogador: Jogador;
   souVisita: boolean;
   agir: (a: Acao) => Promise<boolean>;
   onClose: () => void;
   setJogador: (j: Jogador) => void;
+  boletins: { hoje: Boletim | null; anteriores: Boletim[] } | null;
 }) {
   const ler = useServerFn(fazendaCorreio);
   const resgatar = useServerFn(fazendaResgatarPresente);
@@ -2437,6 +2689,7 @@ function Correio({
       onClose={onClose}
       largura="max-w-[560px]"
     >
+      <BoletimDaRoca boletins={boletins} />
       {!souVisita && jogador.tutorial === 6 && (
         <div className="mb-3 rounded-xl bg-emerald-500/15 p-3 text-[12.5px]">
           <p className="text-[14px] font-semibold">📦 Kit do Fazendeiro</p>
@@ -2496,6 +2749,7 @@ function Correio({
                 key={k}
                 className="border-t border-white/[0.06] py-1 text-[11.5px] text-white/75 first:border-0"
               >
+                {r.tipo === "roubo" && <span className="mr-1">🦹</span>}
                 <b>{r.ator_nome}</b> {r.detalhe} ·{" "}
                 {new Date(r.em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
               </p>
