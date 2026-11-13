@@ -10,6 +10,7 @@ import {
   type AmostraMovimento,
   type MensagemMovimento,
 } from "@/lib/hoki-fluxo";
+import { prenderNoMundo } from "./hoki-areas";
 
 /**
  * Presença dos HOKIs, ao vivo. Um canal só para o site inteiro: enquanto a
@@ -45,8 +46,8 @@ export interface PresencaHoki {
 }
 /** Status que aparece para todos enquanto a pessoa está dentro da HOST FAZENDAS. */
 export const STATUS_NA_FAZENDA = "🌾 No HOST FAZENDAS";
-/** Interações em dupla: de mãos dadas, de cavalinho, pulando corda ou num abraço. */
-export const DUPLAS = ["maos", "cavalinho", "corda", "abraco"] as const;
+/** Interações em dupla: de mãos dadas, de cavalinho, no colo, pulando corda ou num abraço. */
+export const DUPLAS = ["maos", "cavalinho", "colo", "corda", "abraco"] as const;
 export type Dupla = (typeof DUPLAS)[number];
 export interface Par {
   /** Com quem (id da outra pessoa). */
@@ -77,7 +78,8 @@ type Evento =
   | "corrida"
   | "magnata"
   | "fazenda-visita"
-  | "comercio";
+  | "comercio"
+  | "siege";
 const EVENTOS: Evento[] = [
   "fala",
   "truque",
@@ -97,6 +99,7 @@ const EVENTOS: Evento[] = [
   "magnata",
   "fazenda-visita",
   "comercio",
+  "siege",
 ];
 /** Eventos internos da presença (não passam para quem ouve a praça). */
 const INTERNOS = new Set<Evento>(["estado", "ola", "tchau"]);
@@ -225,8 +228,12 @@ function publicar(forcar = false) {
 function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
   // quem ainda está na versão antiga só aparece quando entra na praça: conta como acordado
   const dorme = p.dorme === true;
-  const x = numero(p.x, -56, 56);
-  const z = numero(p.z, -51, 24);
+  // a praça ou uma arena de mini-game (longe da praça)
+  const bx = numero(p.x, -1e4, 1e4);
+  const bz = numero(p.z, -1e4, 1e4);
+  const pos = bx !== null && bz !== null ? prenderNoMundo(bx, bz) : null;
+  const x = pos ? pos.x : null;
+  const z = pos ? pos.z : null;
   if (!dorme && (x === null || z === null)) return null;
   const banco = numero(p.banco, 0, 63);
   const status = limpar(String(p.status ?? ""));

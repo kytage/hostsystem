@@ -144,6 +144,8 @@ export const POSTES_FAZENDAS: Ponto[] = [-37.2, -41].flatMap((z) =>
 );
 /** EM BREVE: prédio de pedra com o portão trancado (espelho do celeiro), árvores e postes. */
 export const PORTAO_EM_BREVE = { x0: 15.6, x1: 26.4, z0: -49.4, z1: -45.2 };
+/** Portal do HOST SIEGE: na frente do prédio da ilha EM BREVE (onde se aperta E). */
+export const FRENTE_SIEGE: Ponto = { x: 21, z: -43.4 };
 export const ARVORES_EM_BREVE: (Ponto & { tipo: "copa" | "copinha" | "pinheiro" })[] =
   ARVORES_FAZENDAS.map((a) => ({ ...a, x: -a.x }));
 export const POSTES_EM_BREVE: Ponto[] = POSTES_FAZENDAS.map((p) => ({ x: -p.x, z: p.z }));
@@ -197,6 +199,8 @@ export interface TerrenoExtra {
   livre(x: number, z: number): boolean;
 }
 const TERRENOS: TerrenoExtra[] = [];
+/** Altura dos pés de quem está andando agora (os terrenos extras usam para saber o que é degrau e o que é parede). */
+export const corpoAndando = { y: 0 };
 export function registrarTerreno(t: TerrenoExtra) {
   TERRENOS.push(t);
 }

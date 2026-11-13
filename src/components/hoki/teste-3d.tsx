@@ -6,6 +6,24 @@ import { ControlesDeToque } from "./controles-toque";
 import { gerarPassos } from "./boneco-passos";
 import { vestirBoneco } from "./boneco-roupa";
 import { CAPA_GLITTER, COROA_GLITTER, VIP_BLACK, vestirAcessorios } from "./boneco-acessorios";
+import {
+  ASAS_ANJO,
+  ASAS_FADA,
+  AUREOLA_ANJO,
+  BONE_HOST,
+  CAPACETE_VIKING,
+  CHAPEU_COWBOY,
+  CHAPEU_PIRATA,
+  CORACOES_FLUTUANDO,
+  GORRO_INVERNO,
+  GORRO_NATAL,
+  LACO_FOFO,
+  ORELHAS_GATO,
+  ORELHAS_URSO,
+  URSINHO_COSTAS,
+} from "./boneco-enfeites";
+import { LOOKS, TRAJE_TIME_AZUL, TRAJE_TIME_VERMELHO } from "./boneco-roupa";
+import { peca } from "@/lib/hoki";
 import { montarLuzes, prepararDesenho, SOL, COR_NEVOA } from "./luz";
 import { MODELOS_NATUREZA, Natureza, type ModeloNatureza } from "./natureza";
 import { ceu, sorteador } from "./voxel";
@@ -156,11 +174,68 @@ const DIRECOES: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
 };
 
+/** O que está sendo provado em cada espaço ("" = nada). */
+interface Provando {
+  chapeu: string;
+  costas: string;
+  traje: string;
+  efeito: string;
+}
+const NADA: Provando = { chapeu: "", costas: "", traje: "", efeito: "" };
+
+/** Botões de provar, por espaço (os looks de cada corpo e as roupas dos times do HOST SIEGE). */
+const PROVADOR: { espaco: keyof Provando; nome: string; itens: { id: string; nome: string }[] }[] =
+  [
+    {
+      espaco: "traje",
+      nome: "Looks e trajes",
+      itens: [
+        ...Object.keys(LOOKS).map((id) => ({
+          id,
+          nome: `${peca(id)?.nome ?? id} (${LOOKS[id]!.corpo === "feminino" ? "F" : "M"})`,
+        })),
+        { id: VIP_BLACK, nome: "VIP BLACK" },
+        { id: TRAJE_TIME_VERMELHO, nome: "Time Vermelho" },
+        { id: TRAJE_TIME_AZUL, nome: "Time Azul" },
+      ],
+    },
+    {
+      espaco: "chapeu",
+      nome: "Cabeça",
+      itens: [
+        COROA_GLITTER,
+        BONE_HOST,
+        CHAPEU_COWBOY,
+        CHAPEU_PIRATA,
+        GORRO_INVERNO,
+        CAPACETE_VIKING,
+        GORRO_NATAL,
+        ORELHAS_GATO,
+        ORELHAS_URSO,
+        LACO_FOFO,
+        AUREOLA_ANJO,
+      ].map((id) => ({ id, nome: peca(id)?.nome ?? id })),
+    },
+    {
+      espaco: "costas",
+      nome: "Costas",
+      itens: [CAPA_GLITTER, URSINHO_COSTAS, ASAS_ANJO, ASAS_FADA].map((id) => ({
+        id,
+        nome: peca(id)?.nome ?? id,
+      })),
+    },
+    {
+      espaco: "efeito",
+      nome: "Efeitos",
+      itens: [{ id: CORACOES_FLUTUANDO, nome: peca(CORACOES_FLUTUANDO)?.nome ?? "Corações" }],
+    },
+  ];
+
 interface Motor {
   tocar(nome: string): void;
   boneco(qual: QualBoneco): void;
   /** Prova os cosméticos (sem comprar). */
-  cosmeticos(chapeu: string, costas: string, traje: string): void;
+  cosmeticos(p: Provando): void;
   joystick(lado: number, frente: number, correr: boolean): void;
   pular(): void;
   descartar(): void;
@@ -331,7 +406,7 @@ async function criarMotor(
   };
 
   let acessorios: ReturnType<typeof vestirAcessorios> | null = null;
-  let provando = { chapeu: "", costas: "", traje: "" };
+  let provando: Provando = { ...NADA };
   let qualAtual: QualBoneco = "padrao";
   const montarBoneco = async (qual: QualBoneco) => {
     const [base, pacote1, modelo] = await Promise.all([
@@ -357,7 +432,7 @@ async function criarMotor(
         m.frustumCulled = false;
       }
     });
-    vestirBoneco(THREE, figura, qual, undefined, provando.traje === VIP_BLACK);
+    vestirBoneco(THREE, figura, qual, provando.traje, provando.traje === VIP_BLACK);
     acessorios = vestirAcessorios(THREE, figura, {
       ...provando,
       alturaCabeca: qual === "feminino" ? 1.81 : 1.83,
@@ -562,8 +637,8 @@ async function criarMotor(
       // de novo a mesma animação: recomeça do início
       atual?.reset().play();
     },
-    cosmeticos(chapeu, costas, traje) {
-      provando = { chapeu, costas, traje };
+    cosmeticos(p) {
+      provando = { ...p };
       void montarBoneco(qualAtual);
     },
     boneco(qual) {
@@ -601,7 +676,7 @@ export function Teste3D({ className }: { className?: string }) {
   const [fps, setFps] = useState(0);
   const [boneco, setBoneco] = useState<QualBoneco>("padrao");
   const [aberto, setAberto] = useState(true);
-  const [prova, setProva] = useState<string[]>([]);
+  const [prova, setProva] = useState<Provando>(NADA);
 
   useEffect(() => {
     const el = caixa.current;
@@ -692,38 +767,37 @@ export function Teste3D({ className }: { className?: string }) {
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
               Provar cosméticos
             </p>
-            <div className="mb-3 grid grid-cols-2 gap-1.5">
-              {[
-                { id: "coroa", nome: "Coroa" },
-                { id: "capa", nome: "Capa" },
-                { id: "vip", nome: "VIP BLACK" },
-              ].map((c) => {
-                const ativo = prova.includes(c.id);
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      const nova = ativo ? prova.filter((x) => x !== c.id) : [...prova, c.id];
-                      setProva(nova);
-                      motor.current?.cosmeticos(
-                        nova.includes("coroa") ? COROA_GLITTER : "",
-                        nova.includes("capa") ? CAPA_GLITTER : "",
-                        nova.includes("vip") ? VIP_BLACK : "",
-                      );
-                    }}
-                    className={cn(
-                      "rounded-lg border px-2 py-1.5 text-[12px] font-medium transition-colors",
-                      ativo
-                        ? "border-amber-300 bg-amber-300/20 text-white"
-                        : "border-white/12 bg-white/5 text-white/75 hover:bg-white/10",
-                    )}
-                  >
-                    {c.nome}
-                  </button>
-                );
-              })}
-            </div>
+            {PROVADOR.map((g) => (
+              <div key={g.espaco} className="mb-2">
+                <p className="mb-1 text-[10px] text-white/40">{g.nome}</p>
+                <div className="flex flex-wrap gap-1">
+                  {g.itens.map((c) => {
+                    const ativo = prova[g.espaco] === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        title={c.id}
+                        onClick={() => {
+                          const nova = { ...prova, [g.espaco]: ativo ? "" : c.id };
+                          setProva(nova);
+                          motor.current?.cosmeticos(nova);
+                        }}
+                        className={cn(
+                          "rounded-md border px-2 py-1 text-[11.5px] transition-colors",
+                          ativo
+                            ? "border-amber-300 bg-amber-300/20 text-white"
+                            : "border-white/10 bg-white/5 text-white/80 hover:bg-white/12",
+                        )}
+                      >
+                        {c.nome}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="mb-3" />
             {GRUPOS_ANIMACAO.map((g) => (
               <div key={g.nome} className="mb-2.5">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">

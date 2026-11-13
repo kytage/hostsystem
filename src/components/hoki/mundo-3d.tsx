@@ -31,7 +31,9 @@ import {
   type UltimoEnvio,
 } from "@/lib/hoki-fluxo";
 import { ASSENTO, criarMundo } from "./mundo-cena";
-import { corpoNoMapa, criarMapaBreeze } from "./mapa-breeze";
+import { criarSiegeMundo, type EstadoSiege } from "./siege/siege-mundo";
+import type { Kit } from "@/lib/siege/config";
+import type { InicioPartida } from "@/lib/siege/rede";
 import {
   ajustar,
   avancar,
@@ -60,6 +62,8 @@ import {
   TOP3,
   vagaDoBerco,
   type Ponto,
+  corpoAndando,
+  FRENTE_SIEGE,
 } from "./mundo-mapa";
 import { ALTURA_ARCO, LARGURA_ARCO, PROFUNDIDADE_ARCO, type QuadroRanking } from "./ranking-arco";
 import {
@@ -116,6 +120,14 @@ export interface Mundo3DRef {
   pular(): void;
   /** Soco (botão direito ou botão de soco no celular). Ainda sem dano. */
   socar(): void;
+  /** HOST SIEGE: começa o treino (este computador é o dono da partida). */
+  siegeTreino(): void;
+  /** HOST SIEGE: começa uma partida em rede (fila pública ou sala privada). */
+  siegeRede(m: InicioPartida): void;
+  /** HOST SIEGE: sai da partida e volta para a frente do portal. */
+  siegeSair(): void;
+  /** HOST SIEGE: escolhe o kit (na preparação na hora; na partida, no próximo respawn). */
+  siegeKit(kit: Kit): boolean;
   /** Leva o meu boneco direto para (x, z). Falso se ele estiver dormindo. */
   teleportar(x: number, z: number): boolean;
   /** Uma amostra do movimento contínuo de outra pessoa (andar com o teclado, correr, pular). */
@@ -145,6 +157,10 @@ interface Eventos {
   onFluxo?(amostra: AmostraMovimento): void;
   /** Dei um soco (para mostrar aos outros). */
   onSoco?(): void;
+  /** Uma animação minha que os outros também devem ver (ataques do HOST SIEGE). */
+  onTruque?(tipo: Reacao): void;
+  /** Estado do HOST SIEGE para a tela (várias vezes por segundo). */
+  onSiege?(e: EstadoSiege): void;
   /** Quantos outros estão com a praça aberta (para escolher o ritmo do envio). */
   olhando?(): number;
 }
@@ -296,9 +312,47 @@ function criarMotor(
 
   const mundo = criarMundo(THREE);
   cena.add(mundo.grupo);
-  // mapa Breeze Island (longe da ilha; chega-se com /sg)
-  const breeze = criarMapaBreeze(THREE);
-  cena.add(breeze.grupo);
+  // HOST SIEGE: a arena fica longe (fora da vista); o motor dele roda junto com a praça
+  let siegeTravado = false;
+  let siegeFator = 1;
+  const siege = criarSiegeMundo(THREE, cena, {
+    eu: () => {
+      const a = [...avatares.values()].find((x) => x.souEu);
+      if (!a) return null;
+      return {
+        id: a.id,
+        nome: a.nome.textContent || "",
+        x: a.mostra.x,
+        z: a.mostra.z,
+        y: a.corpo ? a.corpo.y : a.mostra.y,
+        rumo: a.grupo.rotation.y,
+      };
+    },
+    teleportar: (x, z) => void teleportarEu(x, z),
+    mira: () => giroSuave + Math.PI,
+    uniforme: (id, traje) => {
+      if (traje) uniformes.set(id, traje);
+      else uniformes.delete(id);
+      const a = avatares.get(id);
+      if (a) a.chave = "";
+      setPessoas(ultimaLista);
+    },
+    controle: (travado, fator) => {
+      siegeTravado = travado;
+      siegeFator = fator;
+    },
+    animar: (reacao) => {
+      for (const a of avatares.values())
+        if (a.souEu) a.truque = { tipo: reacao, inicio: performance.now() };
+      eventos.onTruque?.(reacao);
+    },
+    aoEstado: (e) => eventos.onSiege?.(e),
+    virarCamera: (giro) => {
+      giroCam = giro;
+      giroSuave = giro;
+      alturaCam = ALTURA_PERTO;
+    },
+  });
   let espia: number[] | null = null;
 
   // ---------------- noite: de tempos em tempos escurece, com estrelas e uma lua grande e clara ----------------
@@ -905,9 +959,15 @@ function criarMotor(
   let pedindoPed = false;
   let ultimaLista: PessoaMundo[] = [];
   /** Chave do boneco: muda quando a aparência muda. */
-  const chaveDe = (p: PessoaMundo) => JSON.stringify(p.visual);
+  /** Uniforme do mini-game por cima do look (por pessoa). */
+  const uniformes = new Map<string, string>();
+  const visualDe = (p: PessoaMundo) => {
+    const u = uniformes.get(p.id);
+    return u ? { ...p.visual, traje: u } : p.visual;
+  };
+  const chaveDe = (p: PessoaMundo) => JSON.stringify(visualDe(p));
   const montar = (p: PessoaMundo): Boneco => {
-    const visual = p.visual;
+    const visual = visualDe(p);
     if (peca(visual.traje)?.ped && !pedLeve && !pedindoPed) {
       pedindoPed = true;
       void modeloLeve(THREE, "bonne").then((m) => {
@@ -1144,8 +1204,33 @@ function criarMotor(
   };
   // soco: o meu boneco dá um gancho (sem dano por enquanto; a arena PvP vem depois)
   let ultimoSoco = 0;
+  function teleportarEu(x: number, z: number) {
+    for (const a of avatares.values()) {
+      if (!a.souEu || a.dorme || a.acorda !== null) continue;
+      const y = alturaDoChao(x, z);
+      a.par = null;
+      a.rota = [];
+      a.sentado = false;
+      a.truque = null;
+      a.pos = { x, z };
+      a.mostra.x = x;
+      a.mostra.y = y;
+      a.mostra.z = z;
+      a.corpo = null;
+      a.fluxo = null;
+      a.alvo = { x, z, banco: null };
+      // a câmera vai junto na hora (não atravessa o céu deslizando)
+      olhar.set(x, y + 0.9, z);
+      eventos.onMover?.({ x, z });
+      enviarMovimento(a, "para", true);
+      eventos.onParou({ x, z });
+      return true;
+    }
+    return false;
+  }
+
   const socar = () => {
-    if (!dentro) return;
+    if (!dentro || siege.ativo()) return;
     const agora = performance.now();
     if (agora - ultimoSoco < 380) return;
     for (const a of avatares.values()) {
@@ -1192,6 +1277,11 @@ function criarMotor(
     }
     // só o botão esquerdo (ou o dedo) clica
     if (e.button !== 0) return;
+    // no HOST SIEGE o clique esquerdo é o ataque (não anda até o ponto)
+    if (siege.ativo()) {
+      if (inicio && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) <= 8) siege.atacar();
+      return;
+    }
     if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8) return;
     // preso num evento (ou congelado na batata quente): não anda até acabar
     for (const a of avatares.values())
@@ -1375,6 +1465,7 @@ function criarMotor(
     corda: "corda",
     abraco: "abraco",
     cavalinho: "carrega",
+    colo: "colo",
   } as const;
   // cordas de pular: uma linha por dupla, refeita a cada quadro
   const PONTOS_DA_CORDA = 18;
@@ -1604,7 +1695,9 @@ function criarMotor(
           entrada.frente = entrada.lado = 0;
           entrada.pular = false;
         }
-        const ent = e ?? entrada;
+        const ent = siegeTravado
+          ? { frente: 0, lado: 0, correr: false, pular: false }
+          : (e ?? entrada);
         const temEntrada = ent.frente !== 0 || ent.lado !== 0 || ent.pular;
         if (!a.corpo && temEntrada && !a.par) {
           // começou a andar pelo teclado: larga a rota do clique, levanta do banco e avisa a praça
@@ -1617,8 +1710,8 @@ function criarMotor(
           eventos.onMover?.(p);
         }
         if (a.corpo) {
-          corpoNoMapa.y = a.corpo.y;
-          const r = passo(a.corpo, ent, giroSuave, dt, MAPA_MOV, a.lento, PROPORCAO);
+          corpoAndando.y = a.corpo.y;
+          const r = passo(a.corpo, ent, giroSuave, dt, MAPA_MOV, a.lento, PROPORCAO * siegeFator);
           vel = r.velocidade;
           if (r.aterrissou) a.pouso = 0.28;
           a.pos = { x: a.corpo.x, z: a.corpo.z };
@@ -1688,8 +1781,16 @@ function criarMotor(
       }
       // dupla: quem acompanha fica colado no outro (de mãos dadas, na corda, no abraço ou de cavalinho)
       const tipoDeAcompanhado = acompanhados.get(a.id);
-      let pose: "maoE" | "maoD" | "abraco" | "corda" | "carrega" | "montado" | undefined =
-        tipoDeAcompanhado ? POSE_DO_ACOMPANHADO[tipoDeAcompanhado] : undefined;
+      let pose:
+        | "maoE"
+        | "maoD"
+        | "abraco"
+        | "corda"
+        | "carrega"
+        | "montado"
+        | "colo"
+        | "nocolo"
+        | undefined = tipoDeAcompanhado ? POSE_DO_ACOMPANHADO[tipoDeAcompanhado] : undefined;
       const outro = a.par ? parceiro(a) : null;
       // a escadaria e a ilha da HOST FAZENDAS ficam no alto
       let chao = alturaDoChao(a.pos.x, a.pos.z);
@@ -1712,10 +1813,18 @@ function criarMotor(
           a.rumo = r + Math.PI;
           pose = "abraco";
         } else if (a.par.tipo === "cavalinho") {
-          ox = -frente.x * 0.1;
-          oz = -frente.z * 0.1;
-          chao = outro.mostra.y + 0.47;
+          // sentado nas costas de quem carrega (o quadril na altura da cintura dele)
+          ox = -frente.x * 0.22;
+          oz = -frente.z * 0.22;
+          chao = outro.mostra.y + 0.8;
           pose = "montado";
+        } else if (a.par.tipo === "colo") {
+          // deitado nos braços, atravessado na frente do peito de quem carrega
+          ox = frente.x * 0.32;
+          oz = frente.z * 0.32;
+          chao = outro.mostra.y + 0.78;
+          a.rumo = r + Math.PI / 2;
+          pose = "nocolo";
         }
         a.rota = [];
         a.sentado = false;
@@ -1779,7 +1888,7 @@ function criarMotor(
         sentado: !!s,
         pose: s && a.alvo.banco !== null && BANCOS[a.alvo.banco]?.trabalho ? "trabalha" : pose,
       });
-      a.sombra.visible = pose !== "montado";
+      a.sombra.visible = pose !== "montado" && pose !== "nocolo";
       // no pulo a sombra fica no chão e encolhe com a altura
       const altura = a.noAr ? Math.max(0, a.mostra.y - chao) : 0;
       const raio = (0.5 * (1 - Math.min(0.5, salto * 0.5))) / (1 + altura * 0.7);
@@ -1840,13 +1949,13 @@ function criarMotor(
       fx + (CENTRO.x - fx) * centra + (dentro ? 0 : Math.sin(t * 0.12) * 1.2),
       // bem de perto a câmera mira o rosto; de longe, o corpo inteiro
       (zoom < 0.3 ? 0.9 + (1 - zoom / 0.3) * 0.25 : 0.9) +
-        (CENTRO.y - 0.9) * peso +
-        alturaDoEu * (1 - peso),
+        // (no HOST SIEGE a arena é bem mais alta: a mira fica sempre na altura do boneco)
+        (CENTRO.y - 0.9) * (siege.ativo() ? 0 : peso) +
+        alturaDoEu * (siege.ativo() ? 1 : 1 - peso),
       fz + (CENTRO.z - fz) * centra,
     );
     // de perto a vista fica colada no HOKI (correndo não fica para trás); de longe ela desliza
     olhar.lerp(vetor, 1 - Math.exp(-dt * (dentro && zoom < 0.6 ? 14 : 5)));
-    breeze.atualizar(olhar, t);
     // o sol (e a área das sombras) vai junto com a vista, em passos, para a fazenda e o escritório também terem sombra
     const solX = Math.round(olhar.x / 6) * 6;
     const solZ = Math.round(olhar.z / 6) * 6;
@@ -1885,6 +1994,22 @@ function criarMotor(
     // a câmera nunca entra no chão (escadaria, ilha alta, olhando de baixo)
     const chaoDaCamera = alturaDoChao(camera.position.x, camera.position.z) + 0.45;
     if (camera.position.y < chaoDaCamera) camera.position.y = chaoDaCamera;
+    // no HOST SIEGE há paredes altas: a câmera chega mais perto em vez de entrar nelas
+    if (siege.ativo()) {
+      const dx = camera.position.x - olhar.x;
+      const dy = camera.position.y - olhar.y;
+      const dz = camera.position.z - olhar.z;
+      for (let k = 0.08; k <= 1; k += 0.04) {
+        const x = olhar.x + dx * k;
+        const y = olhar.y + dy * k;
+        const z = olhar.z + dz * k;
+        if (alturaDoChao(x, z) > y - 0.25) {
+          const v = Math.max(0.08, k - 0.06);
+          camera.position.set(olhar.x + dx * v, olhar.y + dy * v, olhar.z + dz * v);
+          break;
+        }
+      }
+    }
     mira.copy(olhar);
     // de perto, a câmera fica por cima do ombro direito (como nos jogos de tiro em terceira pessoa)
     const ombro = OMBRO * (1 - peso) * (dentro && eu ? 1 : 0);
@@ -1950,6 +2075,7 @@ function criarMotor(
       camera.updateProjectionMatrix();
       camera.lookAt(ox, oy, oz);
     }
+    siege.atualizar(performance.now(), dt, t);
     renderer.render(cena, camera);
     contarQuadro(agora);
 
@@ -2087,28 +2213,24 @@ function criarMotor(
       socar();
     },
     teleportar(x: number, z: number) {
-      for (const a of avatares.values()) {
-        if (!a.souEu || a.dorme || a.acorda !== null) continue;
-        const y = alturaDoChao(x, z);
-        a.par = null;
-        a.rota = [];
-        a.sentado = false;
-        a.truque = null;
-        a.pos = { x, z };
-        a.mostra.x = x;
-        a.mostra.y = y;
-        a.mostra.z = z;
-        a.corpo = null;
-        a.fluxo = null;
-        a.alvo = { x, z, banco: null };
-        // a câmera vai junto na hora (não atravessa o céu deslizando)
-        olhar.set(x, y + 0.9, z);
-        eventos.onMover?.({ x, z });
-        enviarMovimento(a, "para", true);
-        eventos.onParou({ x, z });
-        return true;
-      }
-      return false;
+      return teleportarEu(x, z);
+    },
+    siegeTreino() {
+      const eu = [...avatares.values()].find((a) => a.souEu && !a.dorme && a.acorda === null);
+      if (!eu) return;
+      siege.iniciar("treino", eu.nome.textContent || "Você", eu.id);
+    },
+    siegeRede(m: InicioPartida) {
+      const eu = [...avatares.values()].find((a) => a.souEu && !a.dorme && a.acorda === null);
+      if (!eu) return;
+      siege.iniciarRede(m, eu.id);
+    },
+    siegeSair() {
+      siege.sair();
+      teleportarEu(FRENTE_SIEGE.x, FRENTE_SIEGE.z);
+    },
+    siegeKit(kit: Kit) {
+      return siege.escolherKit(kit);
     },
     /** Uma amostra do movimento contínuo de outra pessoa (descarta a atrasada e a de quem dorme). */
     movimento(id: string, amostra: AmostraMovimento) {
@@ -2156,7 +2278,7 @@ function criarMotor(
       mEstrelas.dispose();
       mCorda.dispose();
       mundo.descartar();
-      breeze.descartar();
+      siege.descartar();
       texCeu.dispose();
       tSombra.dispose();
       gSombra.dispose();
@@ -2229,6 +2351,9 @@ export const Mundo3D = forwardRef<
           onBalanco: () => atual.current.onBalanco?.(),
           onMover: (p) => atual.current.onMover?.(p),
           onFluxo: (a) => atual.current.onFluxo?.(a),
+          onSoco: () => atual.current.onSoco?.(),
+          onTruque: (tipo) => atual.current.onTruque?.(tipo),
+          onSiege: (e) => atual.current.onSiege?.(e),
           olhando: () => atual.current.olhando?.() ?? 0,
         });
         motor.current = m;
@@ -2274,6 +2399,10 @@ export const Mundo3D = forwardRef<
       joystick: (lado, frente, correr) => motor.current?.joystick(lado, frente, correr),
       pular: () => motor.current?.pular(),
       socar: () => motor.current?.socar(),
+      siegeTreino: () => motor.current?.siegeTreino(),
+      siegeRede: (m) => motor.current?.siegeRede(m),
+      siegeSair: () => motor.current?.siegeSair(),
+      siegeKit: (k) => motor.current?.siegeKit(k) ?? false,
       teleportar: (x, z) => motor.current?.teleportar(x, z) ?? false,
       movimento: (id, amostra) => motor.current?.movimento(id, amostra),
     }),

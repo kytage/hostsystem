@@ -151,6 +151,10 @@ export const DURACAO_REACAO: Partial<Record<Reacao, number>> = {
   levantar: 1.53,
   poseT: 2.5,
   soco: 0.66,
+  atkEspada: 0.4,
+  atkArco: 0.6,
+  atkCajado: 0.5,
+  atkAdaga: 0.45,
   dancar: 2,
   dancinha: 2,
   rebolar: 2,
@@ -189,6 +193,15 @@ export const INTERACOES_BONECO: { id: Reacao; nome: string; grupo: string }[] = 
   { id: "gancho", nome: "Gancho", grupo: "Luta" },
   { id: "arremessar", nome: "Arremessar", grupo: "Luta" },
 ];
+
+/** Golpes rápidos (tocam por cima de andar e pular). */
+const ATAQUES: Record<string, { clipes: readonly string[]; ritmo: number }> = {
+  soco: { clipes: ["Punch_Jab", "Melee_Hook"], ritmo: 1.3 },
+  atkEspada: { clipes: ["Sword_Regular_A", "Sword_Attack"], ritmo: 1.15 },
+  atkArco: { clipes: ["OverhandThrow", "Spell_Simple_Shoot"], ritmo: 1.6 },
+  atkCajado: { clipes: ["Spell_Simple_Shoot"], ritmo: 1.1 },
+  atkAdaga: { clipes: ["Punch_Cross", "Punch_Jab"], ritmo: 1.7 },
+};
 
 /** As reações que o corpo inteiro faz girando (sem animação no arquivo). */
 const GIROS = new Set<string>(["girar", "rolar", "mortal"]);
@@ -267,6 +280,7 @@ export function criarBoneco(
     chapeu?: string | undefined;
     costas?: string | undefined;
     traje?: string | undefined;
+    efeito?: string | undefined;
   } = {},
 ): Boneco {
   let acessorios: ReturnType<typeof vestirAcessorios> | null = null;
@@ -291,11 +305,12 @@ export function criarBoneco(
     const figura = clone(molde);
     // o arquivo tem 1,83 m; aqui ele fica com a ALTURA do mascote
     figura.scale.setScalar(ALTURA / 1.83);
-    vestirBoneco(THREE, figura, corpo, undefined, extras.traje === VIP_BLACK);
+    vestirBoneco(THREE, figura, corpo, extras.traje, extras.traje === VIP_BLACK);
     acessorios = vestirAcessorios(THREE, figura, {
       chapeu: extras.chapeu,
       costas: extras.costas,
       traje: extras.traje,
+      efeito: extras.efeito,
       alturaCabeca: corpo === "feminino" ? 1.81 : 1.83,
     });
     figura.traverse((o) => {
@@ -372,9 +387,15 @@ export function criarBoneco(
     if (q.deitado) {
       // no berço: deitado de costas (primeiro quadro do "levantar do chão")
       tocar("deitado", ["LayToIdle"], { tempo: 0, fade: 0.1 });
+    } else if (q.pose === "nocolo") {
+      // no colo: deitado de costas (primeiro quadro do "levantar do chão"), centrado nos braços
+      tocar("nocolo", ["LayToIdle"], { tempo: 0, fade: 0.15 });
+      giro.position.set(0, 0, -0.35 * (ALTURA / 1.83));
     } else if (q.pose === "montado") {
-      if (primeiro(clipes, SITUACAO.sentado)) tocar("montado", SITUACAO.sentado);
-      else tocar("montado", ["LayToIdle"], { tempo: 0.34 });
+      if (primeiro(clipes, SITUACAO.sentado)) {
+        tocar("montado", SITUACAO.sentado);
+        giro.position.set(0, -0.44 * (ALTURA / 1.83), 0.245 * (ALTURA / 1.83));
+      } else tocar("montado", ["LayToIdle"], { tempo: 0.34 });
     } else if (q.sentado) {
       // sentado no banco: pose de sentar do pacote 1; sem ele, o "sentado no chão" do levantar
       if (primeiro(clipes, SITUACAO.sentado)) {
@@ -383,13 +404,15 @@ export function criarBoneco(
         // desce e adianta o corpo para o bumbum ficar no assento, onde a praça põe o boneco
         giro.position.set(0, -0.44 * (ALTURA / 1.83), 0.245 * (ALTURA / 1.83));
       } else tocar("sentado", ["LayToIdle"], { tempo: 0.34 });
-    } else if (r === "soco") {
-      // soco (botão direito): sai até correndo ou no ar, e é rápido
-      tocar("r:soco", ["Punch_Jab", "Melee_Hook"], { uma: true, ritmo: 1.3, fade: 0.06, recomeca });
+    } else if (r && ATAQUES[r]) {
+      // soco e ataques do HOST SIEGE: saem até correndo ou no ar, e são rápidos
+      const a = ATAQUES[r]!;
+      tocar(`r:${r}`, a.clipes, { uma: true, ritmo: a.ritmo, fade: 0.06, recomeca });
     } else if (q.noAr) {
       tocar("ar", SITUACAO.ar, { fade: 0.12 });
     } else if (q.andando) {
-      if (q.pose === "carrega") tocar("carrega", SITUACAO.carregando, { ritmo: 1.2 });
+      if (q.pose === "carrega" || q.pose === "colo")
+        tocar("carrega", SITUACAO.carregando, { ritmo: 1.2 });
       else if (q.correndo || q.pose === "turbo")
         tocar("correr", SITUACAO.correr, {
           ritmo: clipes.has("Sprint_Loop")
@@ -440,12 +463,15 @@ export function criarBoneco(
         fade: 0.2,
         recomeca,
       });
-    } else if (q.pose === "carrega") {
+    } else if (q.pose === "carrega" || q.pose === "colo") {
       tocar("carrega-parado", SITUACAO.carregando, { tempo: 0.1 });
     } else if (q.pose === "abraco") {
-      tocar("abraco", ["Idle_FoldArms_Loop"]);
+      // abraço: braços para a frente (o meio do "interagir"), de frente um para o outro
+      tocar("abraco", ["Interact", "Idle_FoldArms_Loop"], { tempo: 0.45, fade: 0.2 });
     } else if (q.pose === "corda") {
-      tocar("corda", ["NinjaJump_Start"], { ritmo: 1.5 });
+      // pulando corda: pulinhos no ritmo da corda
+      tocar("corda", ["Jump_Loop", "NinjaJump_Idle_Loop"], { fade: 0.15 });
+      giro.position.y = Math.abs(Math.sin(q.t * Math.PI * 1.6)) * 0.28;
     } else {
       tocar("parado", SITUACAO.parado, { fade: 0.25 });
     }

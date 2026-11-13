@@ -23,6 +23,9 @@ test("lê e confere a mensagem; recusa o que não serve", () => {
   // limites e velocidades absurdas são presos
   const fora = lerMensagem({ ...BASE, id: "a", aba: "b", x: 999, vx: 500 });
   assert.ok(fora && fora.x === 56 && fora.vx === 12);
+  // numa arena de mini-game (longe da praça) a posição e a altura valem como chegaram
+  const arena = lerMensagem({ ...BASE, id: "a", aba: "b", x: -770.5, z: 3, y: 30 });
+  assert.ok(arena && arena.x === -770.5 && arena.z === 3 && arena.y === 30);
   // parado não tem velocidade
   const parado = lerMensagem({ ...BASE, id: "a", aba: "b", k: "para" });
   assert.ok(parado && parado.vx === 0 && parado.vz === 0);

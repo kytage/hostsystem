@@ -39,7 +39,17 @@ import { Hoki2D } from "./hoki-2d";
 import { ControlesDeToque } from "./controles-toque";
 import { INTERACOES_BONECO } from "./boneco";
 import { RodaDeAnimacoes } from "./roda-animacoes";
-import { CENTRO_BREEZE, CREDITO_BREEZE, noMapaBreeze } from "./mapa-breeze";
+import { SiegeHud } from "./siege/siege-hud";
+import { PortalSiege, SalaSiege } from "./siege/portal-siege";
+import {
+  entrarNaFila,
+  entrarNaSala,
+  novoCodigo as novoCodigoDeSala,
+  type InicioPartida,
+  type NaFila,
+} from "@/lib/siege/rede";
+import { SIEGE } from "@/lib/siege/config";
+import type { EstadoSiege } from "./siege/siege-mundo";
 import {
   abrirMovimento,
   definirLugar,
@@ -107,6 +117,7 @@ import {
   PORTAL,
   FRENTE_DO_TERMOMETRO,
   type Ponto,
+  FRENTE_SIEGE,
 } from "./mundo-mapa";
 import { buscarRankings, quadroDoRanking, RANKINGS } from "@/lib/hoki-rankings";
 import { Fazenda } from "./fazenda/fazenda";
@@ -141,11 +152,16 @@ const TRUQUES: Reacao[] = [
   "disco",
   ...INTERACOES_BONECO.map((i) => i.id),
   "soco",
+  "atkEspada",
+  "atkArco",
+  "atkCajado",
+  "atkAdaga",
 ];
 /** Interações em dupla: o nome no botão, o que aparece no convite e quanto duram (as de tempo certo). */
 const INTERACOES: Record<Dupla, { nome: string; convite: string; emoji: string; dura?: number }> = {
   maos: { nome: "Mãos dadas", convite: "andar de mãos dadas", emoji: "🤝" },
   cavalinho: { nome: "Cavalinho", convite: "te carregar de cavalinho", emoji: "🐴" },
+  colo: { nome: "Pegar no colo", convite: "te pegar no colo", emoji: "🤗" },
   corda: { nome: "Pular corda", convite: "pular corda", emoji: "✨", dura: 12_000 },
   abraco: { nome: "Abraço", convite: "te dar um abraço", emoji: "💞", dura: 4_500 },
 };
@@ -241,6 +257,20 @@ export function Praca({
   const [perfilDe, setPerfilDe] = useState<string | null>(null);
   /** HOST FAZENDAS: o portal do celeiro e a ilha aberta (a minha ou a de um amigo). */
   const [portalFazendas, setPortalFazendas] = useState(false);
+  /** HOST SIEGE: o painel do portal e o estado da partida (para a tela do jogo). */
+  const [siegeAberto, setSiegeAberto] = useState(false);
+  const [estadoSiege, setEstadoSiege] = useState<EstadoSiege | null>(null);
+  /** Fila pública: quem está nela e quando a partida começa. */
+  const [fila, setFila] = useState<{ lista: NaFila[]; comecaEm: number | null } | null>(null);
+  const filaRef = useRef<{ sair: () => void } | null>(null);
+  /** Sala privada: código, quem entrou e quem é o anfitrião. */
+  const [sala, setSala] = useState<{
+    codigo: string;
+    lista: NaFila[];
+    anfitriao: string | null;
+  } | null>(null);
+  const salaRef = useRef<ReturnType<typeof entrarNaSala> | null>(null);
+  const [, setTiqueFila] = useState(0);
   const [fazenda, setFazenda] = useState<{
     visitar: string | null;
     painel: "vizinhos" | "correio" | null;
@@ -266,7 +296,8 @@ export function Praca({
           | "fazendas"
           | "comercio"
           | "ranking"
-          | "fonte";
+          | "fonte"
+          | "siege";
       }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
@@ -363,6 +394,82 @@ export function Praca({
       fecharMovimento();
     };
   }, []);
+
+  /* ---------- HOST SIEGE: fila pública, sala privada e aviso para todos ---------- */
+  const comecarPartidaSiege = (m: InicioPartida) => {
+    filaRef.current?.sair();
+    filaRef.current = null;
+    setFila(null);
+    salaRef.current?.sair();
+    salaRef.current = null;
+    setSala(null);
+    setSiegeAberto(false);
+    mundo.current?.siegeRede(m);
+  };
+  const alternarFila = () => {
+    if (filaRef.current) {
+      filaRef.current.sair();
+      filaRef.current = null;
+      setFila(null);
+      return;
+    }
+    if (!dentro) {
+      toast.info("Acorde o seu HOKI primeiro.");
+      return;
+    }
+    filaRef.current = entrarNaFila(
+      { id: euPessoa.id, nome: euPessoa.nome },
+      {
+        aoMudar: (lista, comecaEm) => setFila({ lista, comecaEm }),
+        aoPartida: comecarPartidaSiege,
+        aoAvisarTodos: () =>
+          enviarNaPraca("siege", {
+            texto: "HOST SIEGE começa em 2 minutos! Entre na fila pelo portal da ilha EM BREVE.",
+          }),
+      },
+    );
+    setFila({ lista: [], comecaEm: null });
+    setSiegeAberto(false);
+    toast.success("Você entrou na fila do HOST SIEGE. Pode continuar andando pelo lobby.");
+  };
+  const abrirSala = (codigo: string) => {
+    salaRef.current?.sair();
+    const c = codigo.trim().toUpperCase();
+    if (c.length !== 4) {
+      toast.info("O código tem 4 letras.");
+      return;
+    }
+    salaRef.current = entrarNaSala(
+      c,
+      { id: euPessoa.id, nome: euPessoa.nome },
+      {
+        aoMudar: (lista, anfitriao) => setSala({ codigo: c, lista, anfitriao }),
+        aoPartida: comecarPartidaSiege,
+      },
+    );
+    setSala({ codigo: c, lista: [], anfitriao: null });
+  };
+  // a contagem da fila anda na tela, e sair da praça tira da fila e da sala
+  useEffect(() => {
+    if (!fila?.comecaEm) return;
+    const t = setInterval(() => setTiqueFila((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [fila?.comecaEm]);
+  useEffect(
+    () => () => {
+      filaRef.current?.sair();
+      salaRef.current?.sair();
+    },
+    [],
+  );
+  // aviso para todo mundo online quando uma partida vai começar
+  useEffect(
+    () =>
+      ouvirNaPraca("siege", (m) => {
+        if (typeof m.texto === "string") toast.info(m.texto, { duration: 8000 });
+      }),
+    [],
+  );
 
   /* ---------- interações em dupla: convite, resposta e soltar ---------- */
   useEffect(() => {
@@ -817,6 +924,9 @@ export function Praca({
       naPortaDoCeleiro(p.x, p.z)
     )
       return { tipo: "fazendas" as const };
+    // na frente do prédio da ilha EM BREVE (portal do HOST SIEGE)
+    if (Math.hypot(p.x - FRENTE_SIEGE.x, p.z - FRENTE_SIEGE.z) < 2.8)
+      return { tipo: "siege" as const };
     const i = BANCOS.findIndex((b) => b.trabalho && Math.hypot(b.x - p.x, b.z - p.z) < 1.6);
     if (i >= 0) return { tipo: "cadeira" as const, i };
     // na fazenda: o lugar de colher mais perto
@@ -1085,6 +1195,7 @@ export function Praca({
     else if (perto.tipo === "comercio") setComercioAberto(true);
     else if (perto.tipo === "portal") setPortalAberto(true);
     else if (perto.tipo === "fazendas") setPortalFazendas(true);
+    else if (perto.tipo === "siege") setSiegeAberto(true);
     else setQueridometro(true);
   };
   useEffect(() => {
@@ -1344,15 +1455,14 @@ export function Praca({
     // Enter com o campo vazio só fecha a barra
     if (!t) setFalando(false);
     if (!t || !dentro || Date.now() - ultimaFala.current < 700) return;
-    // comandos (não vão para o chat): /sg leva ao centro do mapa Breeze Island, /praca volta
+    // comandos (não vão para o chat): /praca volta para a praça
     const comando = t.toLowerCase();
-    if (comando === "/sg" || comando === "/praca" || comando === "/praça") {
+    if (comando === "/praca" || comando === "/praça") {
       setTexto("");
       setFalando(false);
-      const destino = comando === "/sg" ? CENTRO_BREEZE : { x: 0, z: 14 };
-      if (mundo.current?.teleportar(destino.x, destino.z)) {
+      if (mundo.current?.teleportar(0, 14)) {
         playSfx("toggle");
-        toast.success(comando === "/sg" ? "Indo para a Breeze Island…" : "De volta à praça.");
+        toast.success("De volta à praça.");
       } else toast.info("Acorde o seu HOKI primeiro.");
       return;
     }
@@ -1494,6 +1604,8 @@ export function Praca({
         }}
         onFluxo={enviarMovimento}
         onSoco={() => enviarNaPraca("truque", { id: euPessoa.id, tipo: "soco" })}
+        onTruque={(tipo) => enviarNaPraca("truque", { id: euPessoa.id, tipo })}
+        onSiege={(e) => setEstadoSiege(e.ativo ? e : null)}
         olhando={olhandoMovimento}
         onParou={(p) => {
           // parou depois de andar pelo teclado: o lugar onde parou vira o destino (todos veem, até a versão antiga)
@@ -1558,11 +1670,61 @@ export function Praca({
         onSocar={() => mundo.current?.socar()}
       />
       <DicaDeTeclas ativo={dentro && !vistaRanking && !fazenda} />
-      {/* crédito do mapa (a licença CC-BY pede) quando o jogador está nele */}
-      {dentro && noMapaBreeze(eu.x, eu.z) && (
-        <p className="pointer-events-none absolute bottom-[60px] right-3 z-10 rounded-md bg-black/55 px-2 py-0.5 text-[10px] text-white/70 backdrop-blur-sm">
-          {CREDITO_BREEZE} · /praca volta
-        </p>
+      {/* HOST SIEGE: a tela do jogo durante a partida e o painel do portal */}
+      {estadoSiege && (
+        <SiegeHud
+          e={estadoSiege}
+          onKit={(k) => mundo.current?.siegeKit(k)}
+          onSair={() => mundo.current?.siegeSair()}
+        />
+      )}
+      {fila && !estadoSiege && (
+        <div className="absolute left-1/2 top-12 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
+          <span className="font-semibold text-[#CE0E0E]">HOST SIEGE</span>
+          <span>
+            na fila ({fila.lista.length}/{SIEGE.FILA_MAX})
+            {fila.comecaEm
+              ? ` · começa em ${Math.max(0, Math.ceil((fila.comecaEm - Date.now()) / 1000))} s`
+              : ` · esperando ${Math.max(0, SIEGE.FILA_MIN - fila.lista.length)} jogador(es)`}
+          </span>
+          <button
+            type="button"
+            onClick={alternarFila}
+            className="rounded-full bg-white/10 px-2 py-0.5 hover:bg-white/20"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+      {sala && (
+        <SalaSiege
+          sala={sala}
+          euId={euPessoa.id}
+          onComecar={() => {
+            if (!salaRef.current?.comecar())
+              toast.info("Precisa de 4, 6 ou 8 jogadores (times do mesmo tamanho).");
+          }}
+          onSair={() => {
+            salaRef.current?.sair();
+            salaRef.current = null;
+            setSala(null);
+          }}
+        />
+      )}
+      {siegeAberto && (
+        <PortalSiege
+          naFila={!!fila}
+          onClose={() => setSiegeAberto(false)}
+          onTreinar={() => {
+            setSiegeAberto(false);
+            mundo.current?.siegeTreino();
+          }}
+          onBuscar={alternarFila}
+          onPrivada={(codigo) => {
+            setSiegeAberto(false);
+            abrirSala(codigo ?? novoCodigoDeSala());
+          }}
+        />
       )}
       {/* B: roda de animações */}
       <RodaDeAnimacoes
@@ -2538,11 +2700,13 @@ export function Praca({
                       ? "entrar no portal do Magnata"
                       : perto.tipo === "fazendas"
                         ? "entrar no HOST FAZENDAS"
-                        : perto.tipo === "ranking"
-                          ? "ver o ranking"
-                          : perto.tipo === "fonte"
-                            ? "pegar água na fonte"
-                            : "abrir o queridômetro"}
+                        : perto.tipo === "siege"
+                          ? "entrar no HOST SIEGE"
+                          : perto.tipo === "ranking"
+                            ? "ver o ranking"
+                            : perto.tipo === "fonte"
+                              ? "pegar água na fonte"
+                              : "abrir o queridômetro"}
         </div>
       )}
       {correioAberto && (

@@ -13,6 +13,8 @@
 
 export type TipoAmostra = "anda" | "para" | "pula";
 
+import { prenderNoMundo } from "./hoki-areas";
+
 export interface AmostraMovimento {
   x: number;
   z: number;
@@ -35,8 +37,6 @@ export interface MensagemMovimento extends AmostraMovimento {
   aba: string;
 }
 
-/** Os limites da praça (os mesmos que a presença aceita). */
-const LIMITE = { x0: -56, x1: 56, z0: -51, z1: 24 };
 const VEL_MAX = 12;
 const VY_MAX = 12;
 
@@ -103,12 +103,14 @@ export function lerMensagem(dados: unknown): MensagemMovimento | null {
   if (x === null || z === null || s === null) return null;
   const k = d.k === "anda" || d.k === "para" || d.k === "pula" ? d.k : null;
   if (!k) return null;
+  // a praça ou uma arena de mini-game (os mesmos limites que a presença aceita)
+  const pos = prenderNoMundo(x, z, num(d.y) ?? 0);
   return {
     id: d.id,
     aba: d.aba,
-    x: prende(x, LIMITE.x0, LIMITE.x1),
-    z: prende(z, LIMITE.z0, LIMITE.z1),
-    y: prende(num(d.y) ?? 0, -2, 12),
+    x: pos.x,
+    z: pos.z,
+    y: pos.y,
     r: num(d.r) ?? 0,
     vx: k === "para" ? 0 : prende(num(d.vx) ?? 0, -VEL_MAX, VEL_MAX),
     vz: k === "para" ? 0 : prende(num(d.vz) ?? 0, -VEL_MAX, VEL_MAX),

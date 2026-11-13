@@ -97,6 +97,7 @@ import { CHAVE_MEU_NIVEL, useSelos, type MeuNivel } from "@/lib/fazenda/selos";
 import { enviarNaPraca } from "@/lib/hoki-presenca";
 import { itemDaFazenda } from "@/lib/hoki-itens";
 import { Hoki2D } from "../hoki-2d";
+import { ChatJogo } from "../chat-jogo";
 import { alertaDeLadrao } from "./alerta-ladrao";
 import { centroDoQuadrado, criarCenaDaFazenda, type CenaDaFazenda } from "./fazenda-cena";
 import { NaIlhaAgora } from "./portal-fazendas";
@@ -266,7 +267,9 @@ function CaixaDePergunta() {
           {p.titulo}
         </p>
         {p.texto && (
-          <div className="mt-2.5 space-y-1.5 text-[12.5px] leading-relaxed text-white/75">{p.texto}</div>
+          <div className="mt-2.5 space-y-1.5 text-[12.5px] leading-relaxed text-white/75">
+            {p.texto}
+          </div>
         )}
         <div className="mt-5 flex justify-end gap-2">
           <Botao onClick={() => p.responder(false)}>Cancelar</Botao>
@@ -1033,36 +1036,51 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
               icone={<ArrowLeft className="size-4" />}
             />
           </div>
-          {/* tutorial */}
-          {tutorialAtivo && (
-            <div className={cn(vidro, "pf-pop absolute left-3 top-[86px] z-10 w-[260px] p-3")}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd23f]">
-                Tutorial · {jogador.tutorial} de {ETAPAS_TUTORIAL.length}
-              </p>
-              <p className="mt-1 text-[13px] font-semibold leading-snug">
-                {ETAPAS_TUTORIAL[jogador.tutorial - 1]}
-              </p>
-              {(jogador.tutorial === 2 || jogador.tutorial === 4) && (
-                <p className="mt-1 text-[11.5px] text-white/60">{jogador.tutorialConta} de 4</p>
-              )}
-              {jogador.tutorial === 3 && <ProximoMaduro ilha={ilha} agora={agora} />}
-              {jogador.tutorial === 1 && (
-                <Botao tipo="forte" className="mt-2" onClick={() => setPainel("loja")}>
-                  Abrir a Loja
-                </Botao>
-              )}
-              {jogador.tutorial === 5 && (
-                <Botao tipo="forte" className="mt-2" onClick={() => setPainel("inventario")}>
-                  Abrir o inventário
-                </Botao>
-              )}
-              {jogador.tutorial === 6 && (
-                <Botao tipo="forte" className="mt-2" onClick={() => setPainel("correio")}>
-                  Abrir o Correio
-                </Botao>
-              )}
-            </div>
-          )}
+          {/* coluna da esquerda, abaixo do painel principal: o tutorial e, embaixo dele, o chat */}
+          <div className="pointer-events-none absolute left-3 top-[86px] z-10 flex w-[min(360px,calc(100%-5rem))] flex-col items-start gap-2">
+            {/* tutorial */}
+            {tutorialAtivo && (
+              <div className={cn(vidro, "pf-pop pointer-events-auto w-[260px] max-w-full p-3")}>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd23f]">
+                  Tutorial · {jogador.tutorial} de {ETAPAS_TUTORIAL.length}
+                </p>
+                <p className="mt-1 text-[13px] font-semibold leading-snug">
+                  {ETAPAS_TUTORIAL[jogador.tutorial - 1]}
+                </p>
+                {(jogador.tutorial === 2 || jogador.tutorial === 4) && (
+                  <p className="mt-1 text-[11.5px] text-white/60">{jogador.tutorialConta} de 4</p>
+                )}
+                {jogador.tutorial === 3 && <ProximoMaduro ilha={ilha} agora={agora} />}
+                {jogador.tutorial === 1 && (
+                  <Botao tipo="forte" className="mt-2" onClick={() => setPainel("loja")}>
+                    Abrir a Loja
+                  </Botao>
+                )}
+                {jogador.tutorial === 5 && (
+                  <Botao tipo="forte" className="mt-2" onClick={() => setPainel("inventario")}>
+                    Abrir o inventário
+                  </Botao>
+                )}
+                {jogador.tutorial === 6 && (
+                  <Botao tipo="forte" className="mt-2" onClick={() => setPainel("correio")}>
+                    Abrir o Correio
+                  </Botao>
+                )}
+              </div>
+            )}
+            {/* chat: o mesmo canal da praça (quem está na praça e na fazenda conversa junto) */}
+            <ChatJogo
+              eu={eu}
+              ativo={!painel}
+              className="w-full"
+              onComando={(c) => {
+                // /praca volta para o Mundo HOST
+                if (c !== "/praca" && c !== "/praça") return false;
+                onClose();
+                return true;
+              }}
+            />
+          </div>
           {/* ferramentas */}
           <Ferramentas
             souVisita={souVisita}

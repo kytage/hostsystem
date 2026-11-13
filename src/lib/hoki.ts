@@ -204,6 +204,15 @@ const fantasia = (
   recolore: ["principal"],
   ocupa,
 });
+/** Peça do boneco novo (look ou cosmético da lojinha da HUD). Preço 0 = já vem de graça. */
+const boneco = (
+  id: string,
+  grupo: Grupo,
+  nome: string,
+  preco: number,
+  cor: string,
+  raridade: Raridade,
+): Peca => ({ id, grupo, nome, preco, nivel: 0, cor, raridade });
 /**
  * Catálogo do HOKI. Preço e nível daqui são só o padrão: o banco (hoshi_loja)
  * é quem decide na hora da compra ou do resgate, e a tela lê de lá.
@@ -239,6 +248,34 @@ export const PECAS: Peca[] = [
     cor: "#141416",
     raridade: "epico",
   },
+  // looks do boneco (cores e estampas da roupa; "m" = corpo masculino, "f" = feminino)
+  boneco("traje:look-m-clean", "traje", "Clean Branco", 0, "#efefec", "comum"),
+  boneco("traje:look-m-street", "traje", "Street Vermelho", 60, "#ce0e0e", "comum"),
+  boneco("traje:look-m-surfista", "traje", "Surfista", 90, "#1f5fbf", "raro"),
+  boneco("traje:look-m-lenhador", "traje", "Lenhador", 120, "#b3141b", "raro"),
+  boneco("traje:look-m-camuflado", "traje", "Camuflado", 150, "#4b5a2f", "epico"),
+  boneco("traje:look-m-neon", "traje", "Neon Night", 200, "#39ff6a", "epico"),
+  boneco("traje:look-f-fofa", "traje", "Fofa Branca", 0, "#f7a8c8", "comum"),
+  boneco("traje:look-f-jeans", "traje", "Jeans Total", 60, "#3d5f92", "comum"),
+  boneco("traje:look-f-marinheira", "traje", "Marinheira", 90, "#1f2a52", "raro"),
+  boneco("traje:look-f-colegial", "traje", "Colegial", 120, "#a8141c", "raro"),
+  boneco("traje:look-f-pastel", "traje", "Pastel Sonho", 150, "#c9b3f2", "epico"),
+  boneco("traje:look-f-neon", "traje", "Neon Night", 200, "#ff3fb4", "epico"),
+  // cosméticos do boneco: cabeça, costas e efeitos
+  boneco("chapeu:bone-host", "chapeu", "Boné HOST", 80, "#ce0e0e", "comum"),
+  boneco("chapeu:gorro-inverno", "chapeu", "Gorro de inverno", 90, "#1f3a7a", "comum"),
+  boneco("chapeu:orelhas-gato", "chapeu", "Orelhinhas de gato", 70, "#1a1a1d", "comum"),
+  boneco("chapeu:orelhas-urso", "chapeu", "Orelhinhas de urso", 70, "#8a5a36", "comum"),
+  boneco("chapeu:laco-fofo", "chapeu", "Laço fofo", 60, "#ff6fae", "comum"),
+  boneco("chapeu:gorro-natal", "chapeu", "Gorro de Natal", 120, "#c8141c", "raro"),
+  boneco("chapeu:cowboy", "chapeu", "Chapéu de cowboy", 150, "#9a6331", "raro"),
+  boneco("chapeu:pirata-capitao", "chapeu", "Chapéu de pirata", 180, "#141416", "raro"),
+  boneco("chapeu:aureola-anjo", "chapeu", "Auréola de anjo", 200, "#ffd75e", "epico"),
+  boneco("chapeu:capacete-viking", "chapeu", "Capacete viking", 250, "#9aa1a8", "epico"),
+  boneco("costas:ursinho", "costas", "Ursinho de pelúcia", 120, "#a0673a", "raro"),
+  boneco("costas:asas-fada", "costas", "Asinhas de fada", 220, "#e7b8ff", "epico"),
+  boneco("costas:asas-anjo", "costas", "Asas de anjo", 300, "#fbfaf6", "epico"),
+  boneco("efeito:coracoes-flutuando", "efeito", "Coraçõezinhos", 160, "#ff4d7d", "raro"),
   {
     id: "traje:hoshi",
     grupo: "traje",

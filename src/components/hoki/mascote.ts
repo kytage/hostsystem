@@ -70,7 +70,12 @@ export type Reacao =
   | "cambalhota"
   | "cair"
   | "magia"
-  | "consertar";
+  | "consertar"
+  // ataques do HOST SIEGE (um por kit)
+  | "atkEspada"
+  | "atkArco"
+  | "atkCajado"
+  | "atkAdaga";
 
 export interface Quadro {
   t: number;
@@ -96,7 +101,17 @@ export interface Quadro {
   deitado?: boolean;
   /** Na praça, em dupla: dá a mão (esquerda ou direita), abraça, pula corda, carrega alguém ou vai montado. */
   pose?:
-    "maoE" | "maoD" | "abraco" | "corda" | "carrega" | "montado" | "trabalha" | "turbo" | undefined;
+    | "maoE"
+    | "maoD"
+    | "abraco"
+    | "corda"
+    | "carrega"
+    | "montado"
+    | "colo"
+    | "nocolo"
+    | "trabalha"
+    | "turbo"
+    | undefined;
 }
 
 // medidas do boneco (o chão é y = 0)
@@ -134,6 +149,7 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
     chapeu: visual.chapeu,
     costas: visual.costas,
     traje: visual.traje,
+    efeito: visual.efeito,
   });
 }
 

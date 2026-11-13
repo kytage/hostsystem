@@ -1,11 +1,13 @@
 import type * as TH from "three";
 import { criarRastro, tempoVip, viseira, VIP_BLACK } from "./boneco-vip";
+import { criarEnfeite, type Enfeite } from "./boneco-enfeites";
 
 /**
  * Cosméticos do boneco (presos aos ossos, então acompanham as animações):
  * - "chapeu:coroa-glitter": coroa dourada com pedrinhas e glitter que cintila;
  * - "costas:capa-glitter": capa preta com glitter preto (pontinhos prateados
- *   que piscam), balançando parada e voando para trás quando o boneco corre.
+ *   que piscam), balançando parada e voando para trás quando o boneco corre;
+ * - os chapéus, orelhinhas, ursinho, asinhas e coraçõezinhos de boneco-enfeites.ts.
  *
  * As medidas são do boneco parado (metros, pés em y = 0, rosto para +Z).
  */
@@ -189,6 +191,7 @@ export function vestirAcessorios(
     chapeu?: string | undefined;
     costas?: string | undefined;
     traje?: string | undefined;
+    efeito?: string | undefined;
     alturaCabeca: number;
   },
 ) {
@@ -211,6 +214,24 @@ export function vestirAcessorios(
       lixo.push(c.mat);
     }
   }
+  // os enfeites novos (chapéus, costas e efeitos)
+  const animados: Enfeite[] = [];
+  for (const id of [o.chapeu, o.costas, o.efeito]) {
+    if (!id) continue;
+    const e = criarEnfeite(THREE, id, o.alturaCabeca);
+    if (!e) continue;
+    let s: TH.Object3D | null;
+    if (e.osso) s = suporte(THREE, figura, e.osso);
+    else {
+      // solto em volta do corpo: no mesmo "chão" do boneco
+      s = new THREE.Group();
+      s.name = "suporte-acessorio";
+      figura.add(s);
+    }
+    if (!s) continue;
+    s.add(e.enfeite.objeto);
+    if (e.enfeite.animar) animados.push(e.enfeite);
+  }
   let rastro: ReturnType<typeof criarRastro> | null = null;
   if (o.traje === VIP_BLACK) {
     const s = suporte(THREE, figura, "Head");
@@ -227,6 +248,7 @@ export function vestirAcessorios(
       rastro?.atualizar(dt, mexendo);
       vooSuave += (mexendo - vooSuave) * Math.min(1, dt * 4);
       if (voo) voo.value = vooSuave;
+      for (const a of animados) a.animar?.(t, vooSuave);
     },
     descartar() {
       for (const l of lixo) l.dispose();
