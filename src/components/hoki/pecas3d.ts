@@ -1494,16 +1494,6 @@ export const PECAS_3D: Record<string, readonly Monta[]> = {
     capacete(),
     peito(0x8fe9ff, 0x39d0f0),
   ],
-  "traje:sombra": [
-    camiseta(0x0e0e10),
-    jaqueta(0x121214, { barra: 0x1d1d21, gola: 0x121214, aberta: 0.0025, estampa: recortes }),
-    zipers,
-    calcaCargo(0x0f0f11, 0x19191c),
-    luvas(0x0c0c0e, 0x1a1a1d),
-    sapato(0x0b0b0d, { cano: 0.108, sola: 0x202024, bico: 0x141417, cadarco: 0x2c2c31 }),
-    bone(0x131315),
-    oculosDeNeve,
-  ],
   "traje:cyber": [
     macacao(0x131317, { barra: 0x23e0ff, estampa: neon }),
     luvas(0x131317, 0x23e0ff),

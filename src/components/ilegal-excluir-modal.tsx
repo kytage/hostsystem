@@ -32,9 +32,9 @@ export function IlegalExcluirModal({ org, onClose, onDone }: IlegalExcluirModalP
 
   return (
     <AlertDialog open onOpenChange={(open) => { if (!open && !mutation.isPending) onClose(); }}>
-      <AlertDialogContent className="z-[60] max-w-[calc(100%-2rem)] sm:max-w-lg">
+      <AlertDialogContent className="z-[60] max-w-[calc(100%-2rem)] rounded-[22px] sm:max-w-lg sm:rounded-[22px]">
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir setagem {nome}?</AlertDialogTitle>
+          <AlertDialogTitle className="hc-titulo">Excluir setagem {nome}?</AlertDialogTitle>
         <AlertDialogDescription className="space-y-1">
           <span className="block">
             Isso exclui <strong className="text-destructive">TUDO</strong> da setagem{" "}
@@ -54,11 +54,11 @@ export function IlegalExcluirModal({ org, onClose, onDone }: IlegalExcluirModalP
           <input aria-label="Digite EXCLUIR para confirmar" value={confirmacao}
             onChange={(event) => setConfirmacao(event.target.value)} disabled={mutation.isPending}
             autoComplete="off" placeholder="EXCLUIR"
-            className="w-full rounded-md border border-input bg-black/25 px-3 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            className="w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
         </label>
         {mutation.error && <p role="alert" className="text-sm text-destructive">{mutation.error.message}</p>}
         <AlertDialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancelar</Button>
+          <Button variant="outline" className="pilula rounded-full" onClick={onClose} disabled={mutation.isPending}>Cancelar</Button>
           <Button variant="destructive" onClick={() => mutation.mutate()}
             disabled={mutation.isPending || !confirmaExclusaoSetagem(org.setagem, confirmacao)}>
             {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}

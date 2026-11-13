@@ -81,7 +81,7 @@ function PlayersPage() {
     return (
       <div className="pagina">
         <PageHeader kicker="SERVIDOR" title="Players" />
-        <p className="glass-inset mt-6 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="mt-6 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           Você não tem acesso a esta área. Peça liberação da categoria “Players” a um Founder.
         </p>
       </div>
@@ -90,11 +90,6 @@ function PlayersPage() {
 
   const colunas =
     "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_90px_minmax(0,1fr)_90px_90px_40px]";
-  const seg = (on: boolean) =>
-    cn(
-      "flex-1 rounded-full px-3 py-1.5 text-xs capitalize transition-colors",
-      on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-    );
 
   return (
     <div className="pagina">
@@ -107,7 +102,7 @@ function PlayersPage() {
               onClick={() => setIntegracao(true)}
               aria-label="Integração"
               title="Integração"
-              className="glass-inset grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+              className="hc-seta !size-9"
             >
               <PlugZap className="size-4" />
             </button>
@@ -123,22 +118,31 @@ function PlayersPage() {
         onFiltro={setFiltro}
       />
 
-      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[280px_minmax(0,1fr)_210px]">
-        <div className="glass-inset flex h-10 items-center gap-1 rounded-full p-1">
+      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[auto_minmax(0,1fr)_210px]">
+        <div
+          className="segmentos justify-self-start"
+          role="group"
+          aria-label="Situação dos players"
+        >
           {(["todos", "online", "offline", "banidos"] as const).map((f) => (
-            <button key={f} onClick={() => setFiltro(f)} className={seg(filtro === f)}>
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filtro === f}
+              onClick={() => setFiltro(f)}
+              className="capitalize"
+            >
               {f}
             </button>
           ))}
         </div>
-        <label className="glass-inset flex h-10 items-center gap-2 rounded-full px-4">
-          <Search className="size-4 text-ink-3" />
+        <label className="campo-busca">
+          <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar player, passaporte, license, Discord ou veículo"
             aria-label="Buscar player"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-3"
           />
         </label>
         <MinimalSelect
@@ -148,6 +152,7 @@ function PlayersPage() {
             { value: "todos", label: "Todos os grupos" },
             ...todosGrupos.map((g) => ({ value: g, label: g })),
           ]}
+          className="rounded-full px-4"
         />
       </div>
 
@@ -156,15 +161,18 @@ function PlayersPage() {
           <Loader2 className="size-4 animate-spin" /> Carregando players…
         </div>
       ) : lista.length === 0 ? (
-        <p className="glass-inset mt-4 rounded-[24px] px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="mt-4 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           {players.length === 0
             ? "Nenhum player ainda — os dados chegam pela integração com o servidor."
             : "Nenhum player com esses filtros."}
         </p>
       ) : (
-        <div className="glass mt-4 overflow-hidden rounded-[24px]">
+        <div className="glass hc mt-4">
           <div
-            className={cn("hidden gap-4 px-5 pb-2 pt-4 text-[11px] text-ink-3 md:grid", colunas)}
+            className={cn(
+              "hidden gap-4 border-b border-white/[0.06] px-5 py-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3 md:grid",
+              colunas,
+            )}
           >
             <span>Personagem</span>
             <span className="text-center">Level</span>
@@ -173,7 +181,7 @@ function PlayersPage() {
             <span className="text-center">Veículos</span>
             <span />
           </div>
-          <ul>
+          <ul className="divide-y divide-white/[0.06]">
             {lista.map((p, n) => (
               <li
                 key={p.id}
@@ -183,7 +191,7 @@ function PlayersPage() {
                 <button
                   onClick={() => setSelId(p.id)}
                   className={cn(
-                    "grid h-16 w-full items-center gap-4 border-t border-white/[0.04] px-5 text-left transition-colors first:border-t-0 hover:bg-white/[0.03]",
+                    "grid h-16 w-full items-center gap-4 px-5 text-left transition-colors hover:bg-white/[0.03]",
                     colunas,
                   )}
                 >
@@ -280,8 +288,11 @@ function IntegracaoDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent aria-describedby={undefined} className="max-w-2xl">
-        <DialogTitle className="flex items-center gap-2">
-          <PlugZap className="size-4 text-primary" /> Integração com o servidor
+        <DialogTitle className="hc-titulo flex items-center gap-3">
+          <span className="hc-icone">
+            <PlugZap className="size-4" strokeWidth={1.75} />
+          </span>
+          Integração com o servidor
         </DialogTitle>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
@@ -304,7 +315,7 @@ function IntegracaoDialog({ onClose }: { onClose: () => void }) {
             </li>
           </ul>
           <div className="relative">
-            <pre className="glass-inset max-h-[48vh] overflow-auto rounded-xl p-4 font-mono text-[11.5px] leading-relaxed text-foreground/90">
+            <pre className="hc-dentro max-h-[48vh] overflow-auto p-4 font-mono text-[11.5px] leading-relaxed text-foreground/90">
               {EXEMPLO}
             </pre>
             <div className="absolute right-2 top-2">
@@ -315,7 +326,7 @@ function IntegracaoDialog({ onClose }: { onClose: () => void }) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2"
+              className="hc-pilula"
               onClick={() =>
                 toast.info("Peça o token ao responsável pelo deploy — ele não aparece no painel.")
               }

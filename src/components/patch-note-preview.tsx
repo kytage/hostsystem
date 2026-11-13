@@ -133,30 +133,31 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl glass">
-        <div className="flex items-center justify-between border-b border-border p-5">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-              <Sparkles className="size-5 text-primary" /> Preview — Patch Notes
-            </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[22px] glass-modal">
+        <div className="flex items-center gap-3 border-b border-white/[0.06] p-5">
+          <span className="hc-icone">
+            <Sparkles className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="hc-titulo">Preview — Patch Notes</h2>
+            <p className="hc-nota mt-1">
               Data: {dataHoje} · {totalItens} alterações · {categorias?.length ?? 0} categorias
             </p>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground">
-            <X className="size-5" />
+          <button onClick={onClose} aria-label="Fechar" className="hc-seta">
+            <X className="size-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
           {!categorias && !erro && (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-muted-foreground">
-              <Loader2 className="size-6 animate-spin text-primary" />
+              <Loader2 className="size-6 animate-spin" />
               A IA está organizando as {cards.length} alterações em categorias...
             </div>
           )}
           {erro && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-[14px] border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
               {erro}
             </div>
           )}
@@ -165,7 +166,7 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
               {/* Editor estruturado */}
               <div className="space-y-4">
                 {categorias.map((cat, ci) => (
-                  <div key={ci} className="rounded-xl border border-border p-3.5">
+                  <div key={ci} className="hc-dentro p-3.5">
                     <input
                       value={cat.nome}
                       onChange={(e) =>
@@ -216,14 +217,14 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
               {/* Texto final */}
               <div className="lg:sticky lg:top-0 lg:self-start">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground">Texto final</p>
+                  <p className="hc-sobre">Texto final</p>
                   <button
                     onClick={() => {
                       void navigator.clipboard.writeText(texto);
                       setCopiado(true);
                       setTimeout(() => setCopiado(false), 1200);
                     }}
-                    className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-white/[0.08]"
+                    className="hc-pilula"
                   >
                     {copiado ? (
                       <Check className="size-3.5 text-success" />
@@ -233,7 +234,7 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
                     Copiar
                   </button>
                 </div>
-                <pre className="mt-2 max-h-[55vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-black/25 p-4 font-sans text-sm text-foreground">
+                <pre className="hc-dentro mt-2 max-h-[55vh] overflow-y-auto whitespace-pre-wrap p-4 font-sans text-sm text-foreground">
                   {texto}
                 </pre>
               </div>
@@ -241,7 +242,7 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-border p-4">
+        <div className="flex items-center justify-end gap-3 border-t border-white/[0.06] p-4">
           {confirmar.isError && (
             <p className="mr-auto text-xs font-semibold text-destructive">
               {confirmar.error instanceof Error
@@ -251,7 +252,7 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
           )}
           <button
             onClick={onClose}
-            className="rounded-full border border-border px-5 py-2 text-sm font-semibold text-foreground hover:bg-white/[0.08]"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
@@ -259,7 +260,7 @@ export function PatchNotePreview({ cards, username, onClose, onConfirmado }: Pro
             onClick={() => confirmar.mutate()}
             disabled={!categorias || totalItens === 0 || confirmar.isPending}
             className={cn(
-              "flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              "flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
             )}
           >
             {confirmar.isPending && <Loader2 className="size-4 animate-spin" />}

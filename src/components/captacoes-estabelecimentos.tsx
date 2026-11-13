@@ -1,6 +1,18 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Building2,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+  Bookmark,
+  CircleCheck,
+  CircleDashed,
+  CircleOff,
+} from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import {
   Dialog,
   DialogContent,
@@ -72,65 +84,43 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
   }, [estabelecimentos]);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-4">
-      {/* Resumo + ações */}
-      <div className="flex flex-wrap items-center gap-6 rounded-2xl glass p-4">
-        <div>
-          <p className="text-[11px] text-muted-foreground">Estabelecimentos</p>
-          <p className="text-2xl font-semibold text-foreground font-display">{totais.total}</p>
-        </div>
-        <div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full bg-emerald-500" /> Livres
-          </p>
-          <p className="text-2xl font-semibold text-foreground font-display">{totais.livres}</p>
-        </div>
-        <div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full bg-blue-500" /> Reservados
-          </p>
-          <p className="text-2xl font-semibold text-foreground font-display">{totais.reservados}</p>
-        </div>
-        <div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full bg-destructive" /> Ocupados
-          </p>
-          <p className="text-2xl font-semibold text-foreground font-display">{totais.ocupados}</p>
-        </div>
-        <div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full bg-muted-foreground" /> Desativados
-          </p>
-          <p className="text-2xl font-semibold text-foreground font-display">{totais.desativados}</p>
-        </div>
-        {podeEditar && <div className="ml-auto flex gap-2">
-          <button
-            type="button"
-            onClick={() => setNovaCategoria(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-          >
+    <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+      {/* ações e números, no padrão da tela inicial */}
+      {podeEditar && (
+        <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={() => setNovaCategoria(true)} className="pilula rounded-full">
             <Building2 className="size-3.5" /> Nova categoria
           </button>
           <button
             type="button"
             onClick={() => setNovoEstab(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
           >
-            <Plus className="size-3.5" /> Novo estabelecimento
+            <Plus className="size-4" /> Novo estabelecimento
           </button>
-        </div>}
-      </div>
+        </div>
+      )}
+      <Indices>
+        <Indice valor={totais.total} titulo="Estabelecimentos" nota="cadastrados" icone={Building2} />
+        <Indice valor={totais.livres} titulo="Livres" nota="esperando alguém" cor="#10b981" icone={CircleDashed} />
+        <Indice valor={totais.reservados} titulo="Reservados" nota="em conversa" cor="#3b82f6" icone={Bookmark} />
+        <Indice valor={totais.ocupados} titulo="Ocupados" nota="com dono" cor="#ef4444" icone={CircleCheck} />
+        <Indice valor={totais.desativados} titulo="Desativados" nota="fora de uso" cor="#a1a1aa" icone={CircleOff} />
+      </Indices>
 
       {/* Categorias */}
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3.5 xl:grid-cols-2">
         {(categorias ?? []).map((cat) => {
           const itens = (estabelecimentos ?? []).filter((e) => e.categoriaId === cat.id);
           const livres = itens.filter((e) => e.status === "livre").length;
           return (
-            <section key={cat.id} className="rounded-2xl glass p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
+            <section key={cat.id} className="glass hc p-5">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  <h3 className="truncate text-sm font-semibold text-foreground">{cat.nome}</h3>
+                  <span className="hc-icone mr-1">
+                    <Building2 className="size-4" strokeWidth={1.75} />
+                  </span>
+                  <h3 className="hc-titulo truncate">{cat.nome}</h3>
                   {cat.staff &&
                     cat.staff.split(",").map((s) => (
                       <span
@@ -142,7 +132,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                       </span>
                     ))}
                 </div>
-                {podeEditar && <div className="flex shrink-0 items-center gap-1">
+                {podeEditar && <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     type="button"
                     title="Adicionar estabelecimento"
@@ -150,7 +140,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                       setEditEst(null);
                       setNovoEstab(true);
                     }}
-                    className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground"
+                    className="hc-seta"
                   >
                     <Plus className="size-3.5" />
                   </button>
@@ -158,21 +148,22 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                     type="button"
                     title="Editar categoria"
                     onClick={() => setEditCat(cat)}
-                    className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground"
+                    className="hc-seta"
                   >
                     <MoreHorizontal className="size-3.5" />
                   </button>
                 </div>}
               </div>
-              <p className="mb-2 text-[11px] text-muted-foreground">
+              <p className="hc-nota mb-3 mt-3">
                 {livres} livre{livres === 1 ? "" : "s"},{" "}
                 {itens.filter((e) => e.status === "reservado" || e.status === "ocupado").length} reservados/ocupados
                 {itens.some((e) => e.status === "desativado") && `, ${itens.filter((e) => e.status === "desativado").length} desativados`}
                 {cat.id && cat.nome === "Outros" && " • Staff definido por estabelecimento"}
               </p>
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <tr className="border-b border-white/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
                     <th className="py-1.5 pr-2">Nome</th>
                     <th className="py-1.5 pr-2">Status</th>
                     <th className="py-1.5 pr-2">Observação</th>
@@ -185,7 +176,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                     <tr
                       key={e.id}
                       className={cn(
-                        "border-b border-border/50 last:border-0",
+                        "border-b border-white/[0.06] transition-colors last:border-0 hover:bg-white/[0.03]",
                         e.status === "livre" && "border-l-2 border-l-emerald-500",
                       )}
                     >
@@ -202,12 +193,12 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                         <td className="py-2 pr-2 text-muted-foreground">{e.staff || "—"}</td>
                       )}
                       <td className="py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
                           {e.status === "livre" && onCaptar && (
                             <button
                               type="button"
                               onClick={() => onCaptar(e, cat.nome)}
-                              className="flex items-center gap-1 rounded-lg border border-primary/40 px-2 py-1 text-[10px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+                              className="hc-pilula"
                             >
                               <Plus className="size-3" /> Captar
                             </button>
@@ -217,7 +208,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                             type="button"
                             title="Editar"
                             onClick={() => setEditEst(e)}
-                            className="text-muted-foreground hover:text-foreground"
+                            className="hc-seta !size-7"
                           >
                             <Pencil className="size-3.5" />
                           </button>
@@ -231,7 +222,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                                   invalidar();
                                 });
                             }}
-                            className="text-muted-foreground hover:text-destructive"
+                            className="hc-seta !size-7 hover:!border-destructive/40 hover:!bg-destructive/15 hover:!text-destructive"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -249,6 +240,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                   )}
                 </tbody>
               </table>
+              </div>
             </section>
           );
         })}
@@ -289,9 +281,9 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
 /* ---------- Dialogs ---------- */
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+  "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const labelCls =
-  "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+  "hc-sobre mb-1.5 block";
 
 function CategoriaDialog({
   categoria,
@@ -312,7 +304,7 @@ function CategoriaDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{categoria ? "Editar categoria" : "Nova categoria"}</DialogTitle>
+          <DialogTitle className="hc-titulo">{categoria ? "Editar categoria" : "Nova categoria"}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div>
@@ -345,7 +337,7 @@ function CategoriaDialog({
                 .catch(() => toast.error("Falha ao salvar"))
                 .finally(() => setSalvando(false));
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvando && <Loader2 className="size-4 animate-spin" />} Salvar
           </button>
@@ -391,7 +383,7 @@ function EstabelecimentoDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="hc-titulo">
             {estabelecimento ? "Editar estabelecimento" : "Novo estabelecimento"}
           </DialogTitle>
         </DialogHeader>
@@ -416,7 +408,7 @@ function EstabelecimentoDialog({
           </div>
           <div>
             <label className={labelCls}>Status</label>
-            <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Status do estabelecimento">
+            <div className="segmentos w-full" role="group" aria-label="Status do estabelecimento">
               {(Object.keys(ESTAB_STATUS_LABELS) as EstabStatus[]).map((s) => (
                 <Button
                   key={s}
@@ -425,12 +417,7 @@ function EstabelecimentoDialog({
                   size="sm"
                   aria-pressed={status === s}
                   onClick={() => setStatus(s)}
-                  className={cn(
-                    "flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors",
-                    status === s
-                      ? "border-white/15 bg-white/[0.09] text-foreground"
-                      : "border-border bg-black/25 text-muted-foreground hover:text-foreground",
-                  )}
+                  className="flex-1 justify-center border-0 bg-transparent hover:bg-transparent"
                 >
                   {ESTAB_STATUS_LABELS[s]}
                 </Button>
@@ -478,7 +465,7 @@ function EstabelecimentoDialog({
                 .catch(() => toast.error("Falha ao salvar"))
                 .finally(() => setSalvando(false));
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvando && <Loader2 className="size-4 animate-spin" />} Salvar
           </button>

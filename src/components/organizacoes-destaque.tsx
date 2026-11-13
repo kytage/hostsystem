@@ -7,8 +7,9 @@ import { isSemLocal } from "@/lib/ilegal-status";
 import { useRealtimeTable } from "@/lib/realtime";
 
 /**
- * Atalho em destaque da tela inicial para "Organizações livres", com a
+ * Cartão em destaque da tela inicial para "Organizações livres", com a
  * contagem do que está livre agora (legais e facções). Toda a equipe vê.
+ * O cartão inteiro leva à tela das organizações.
  */
 export function OrganizacoesDestaque() {
   useRealtimeTable("captacoes_estabelecimentos", [["captacoes-estabelecimentos"]]);
@@ -29,31 +30,40 @@ export function OrganizacoesDestaque() {
     0,
   );
 
+  const numero =
+    "font-display text-[30px] font-medium leading-none tracking-[-0.04em] tabular-nums text-foreground";
   return (
     <Link
       to="/organizacoes"
-      className="group flex h-10 w-fit max-w-full items-center gap-2.5 rounded-full border border-primary/35 bg-gradient-to-r from-primary/20 via-primary/[0.08] to-transparent py-1 pl-1 pr-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/60"
+      className="glass hc hc-vidro flex w-full flex-col justify-between gap-5 p-5"
     >
-      <span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-primary text-white shadow-[0_0_18px_rgba(206,14,14,0.45)]">
-        <Building2 className="size-4" strokeWidth={1.8} />
-        <span className="absolute -right-0.5 -top-0.5 size-2.5 animate-pulse rounded-full bg-emerald-400 ring-2 ring-[#120404]" />
-      </span>
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="hidden text-[10.5px] font-semibold uppercase tracking-[0.16em] text-red-200 sm:block">
+      {/* luz localizada: o vermelho da HOST e anéis finos saindo do ícone */}
+      <span aria-hidden className="hc-luz-icone" />
+      <span className="flex items-center gap-3">
+        <span className="hc-icone hc-icone-vivo">
+          <Building2 className="size-4" strokeWidth={1.9} />
+        </span>
+        <span className="hc-sobre min-w-0 flex-1 truncate !text-foreground">
           Organizações livres
         </span>
-        <span className="flex items-center gap-x-3 text-[13px] text-foreground/85">
-          <span className="flex items-center gap-1">
-            <Building2 className="size-3.5 text-ink-3" />{" "}
-            <b className="tabular-nums">{legaisLivres}</b> legais
+        <span className="hc-seta" aria-hidden>
+          <ArrowUpRight className="size-3.5" />
+        </span>
+      </span>
+      <span className="flex flex-wrap items-end gap-x-8 gap-y-3 text-[12.5px] text-muted-foreground">
+        <span className="flex items-baseline gap-2">
+          <b className={numero}>{legaisLivres}</b>
+          <span className="flex items-center gap-1.5">
+            <Building2 className="size-3.5 translate-y-[2px] text-ink-3" /> legais
           </span>
-          <span className="flex items-center gap-1">
-            <Swords className="size-3.5 text-ink-3" />{" "}
-            <b className="tabular-nums">{faccoesLivres}</b> facções
+        </span>
+        <span className="flex items-baseline gap-2">
+          <b className={numero}>{faccoesLivres}</b>
+          <span className="flex items-center gap-1.5">
+            <Swords className="size-3.5 translate-y-[2px] text-ink-3" /> facções
           </span>
         </span>
       </span>
-      <ArrowUpRight className="ml-1 size-4 shrink-0 text-red-200 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
     </Link>
   );
 }

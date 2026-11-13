@@ -62,8 +62,8 @@ function fromEvento(evento: EventoGestao): EventoInput {
 }
 
 const inputCls =
-  "w-full rounded-xl border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60";
-const labelCls = "text-xs font-semibold text-muted-foreground";
+  "w-full rounded-xl border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-white/25";
+const labelCls = "hc-sobre";
 
 export function EventoModal({
   evento,
@@ -165,20 +165,20 @@ export function EventoModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
-      <div className="my-6 w-full max-w-5xl rounded-2xl glass-modal">
+      <div className="my-6 w-full max-w-5xl rounded-[22px] glass-modal">
         {/* Header */}
-        <header className="flex items-start justify-between gap-4 border-b border-border p-5">
+        <header className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-5">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+            <p className="hc-sobre">
               {evento ? "Editar evento" : "Novo evento"}
             </p>
-            <h2 className="mt-1 truncate text-xl font-semibold text-foreground font-display">
+            <h2 className="hc-titulo mt-1.5 truncate">
               {form.nome || "Sem nome"}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
             aria-label="Fechar"
           >
             <X className="size-4" />
@@ -218,7 +218,7 @@ export function EventoModal({
                   type="date"
                   value={form.data}
                   onChange={(e) => set("data", e.target.value)}
-                  className={cn(inputCls, "mt-1 [color-scheme:dark]")}
+                  className={cn(inputCls, "mt-1")}
                 />
               </div>
               <div>
@@ -229,7 +229,7 @@ export function EventoModal({
                   type="time"
                   value={form.horario}
                   onChange={(e) => set("horario", e.target.value || "21:00")}
-                  className={cn(inputCls, "mt-1 [color-scheme:dark]")}
+                  className={cn(inputCls, "mt-1")}
                 />
               </div>
             </div>
@@ -265,7 +265,7 @@ export function EventoModal({
                       <img
                         src={src}
                         alt={`Anexo ${i + 1}`}
-                        className="size-20 rounded-lg border border-border object-cover"
+                        className="size-20 rounded-xl border border-white/[0.08] object-cover"
                       />
                       <button
                         onClick={() =>
@@ -283,13 +283,13 @@ export function EventoModal({
             </div>
 
             {/* Banner */}
-            <div className="rounded-xl glass-inset p-4">
+            <div className="hc-dentro p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    <ImageIcon className="size-4 text-primary" /> Banner do evento
+                  <p className="hc-titulo flex items-center gap-1.5">
+                    <ImageIcon className="size-4 text-muted-foreground" /> Banner do evento
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="hc-nota mt-0.5">
                     Tamanho recomendado 2190x1080 — exibido completo, sem cortes.
                   </p>
                 </div>
@@ -297,10 +297,8 @@ export function EventoModal({
                   <button
                     onClick={() => set("solicitacaoBanner", !form.solicitacaoBanner)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                      form.solicitacaoBanner
-                        ? "border-white/15 bg-white/[0.07] text-foreground"
-                        : "glass text-muted-foreground hover:text-foreground"
+                      "pilula !h-[30px] !gap-1.5 !px-3 !text-xs",
+                      form.solicitacaoBanner && "pilula-ativa"
                     )}
                   >
                     <Check className="size-3" />
@@ -308,7 +306,7 @@ export function EventoModal({
                   </button>
                   <button
                     onClick={() => bannerInput.current?.click()}
-                    className="rounded-full glass px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-white/[0.08]"
+                    className="hc-pilula"
                   >
                     {carregandoBanner ? "Carregando..." : form.bannerUrl ? "Trocar" : "Anexar banner"}
                   </button>
@@ -322,7 +320,7 @@ export function EventoModal({
                 </div>
               </div>
               {form.bannerUrl && (
-                <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-black/40">
+                <div className="relative mt-3 overflow-hidden rounded-xl border border-white/[0.08] bg-black/40">
                   <img
                     src={form.bannerUrl}
                     alt="Banner do evento"
@@ -344,9 +342,9 @@ export function EventoModal({
           {/* Coluna lateral */}
           <div className="space-y-5 lg:col-span-2">
             {/* Staff */}
-            <div className="rounded-xl glass-inset p-4">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <Users className="size-4 text-primary" /> Staff responsável
+            <div className="hc-dentro p-4">
+              <p className="hc-titulo flex items-center gap-1.5">
+                <Users className="size-4 text-muted-foreground" /> Staff responsável
               </p>
 
               <button
@@ -354,31 +352,29 @@ export function EventoModal({
                   setForm((f) => ({ ...f, todosDaArea: !f.todosDaArea, staff: f.todosDaArea ? f.staff : [] }))
                 }
                 className={cn(
-                  "mt-3 w-full rounded-xl border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                  form.todosDaArea
-                    ? "border-white/15 bg-white/[0.09] text-foreground"
-                    : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                  "pilula mt-3 w-full justify-center !text-xs",
+                  form.todosDaArea && "pilula-ativa"
                 )}
               >
                 Todos da área {equipe.label} ({daArea})
               </button>
 
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-black/25 px-3 py-2">
-                <Search className="size-3.5 text-muted-foreground" />
+              <label className="campo-busca mt-3">
+                <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Pesquisar pelo nome..."
-                  className="w-full bg-transparent text-sm text-foreground outline-none"
+                  aria-label="Pesquisar pelo nome"
                 />
-              </div>
+              </label>
 
               {form.staff.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {form.staff.map((s) => (
                     <span
                       key={s.id}
-                      className="flex items-center gap-1 rounded-full glass px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                      className="hc-selo !text-foreground"
                     >
                       {s.username}
                       <button
@@ -405,8 +401,8 @@ export function EventoModal({
                       className={cn(
                         "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors",
                         ativo
-                          ? "bg-primary/15 text-primary"
-                          : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                          ? "bg-white/[0.08] text-foreground"
+                          : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
                       )}
                     >
                       <span className="truncate font-semibold">{opt.username}</span>
@@ -437,7 +433,7 @@ export function EventoModal({
                       "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
                       form.status === s.key
                         ? s.style
-                        : "glass text-muted-foreground hover:text-foreground"
+                        : "border-white/[0.08] text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <span>{s.emoji}</span> {s.label}
@@ -453,10 +449,8 @@ export function EventoModal({
                 <button
                   onClick={() => set("adicoes", [])}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                    form.adicoes.length === 0
-                      ? "border-white/15 bg-white/[0.07] text-foreground"
-                      : "glass text-muted-foreground hover:text-foreground"
+                    "pilula !h-8 !px-3 !text-xs",
+                    form.adicoes.length === 0 && "pilula-ativa"
                   )}
                 >
                   Não tem
@@ -466,10 +460,8 @@ export function EventoModal({
                     key={a.key}
                     onClick={() => toggleAdicao(a.key)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                      form.adicoes.includes(a.key)
-                        ? "border-white/15 bg-white/[0.07] text-foreground"
-                        : "glass text-muted-foreground hover:text-foreground"
+                      "pilula !h-8 !px-3 !text-xs",
+                      form.adicoes.includes(a.key) && "pilula-ativa"
                     )}
                   >
                     {a.emoji} {a.label}
@@ -479,9 +471,9 @@ export function EventoModal({
             </div>
 
             {/* Frequência */}
-            <div className="rounded-xl glass-inset p-4">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <Repeat className="size-4 text-primary" /> Frequência
+            <div className="hc-dentro p-4">
+              <p className="hc-titulo flex items-center gap-1.5">
+                <Repeat className="size-4 text-muted-foreground" /> Frequência
               </p>
               <div className="mt-2">
                 <MinimalSelect
@@ -531,17 +523,17 @@ export function EventoModal({
         </div>
 
         {/* Footer */}
-        <footer className="flex items-center justify-end gap-2 border-t border-border p-5">
+        <footer className="flex items-center justify-end gap-2 border-t border-white/[0.06] p-5">
           <button
             onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            className="pilula rounded-full"
           >
             Descartar
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
             {evento ? "Salvar alterações" : "Criar evento"}

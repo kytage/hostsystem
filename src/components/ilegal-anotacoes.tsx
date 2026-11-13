@@ -80,12 +80,12 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-6 backdrop-blur-sm">
-      <div className="my-auto w-full max-w-2xl rounded-2xl glass-modal p-6">
+      <div className="my-auto w-full max-w-2xl rounded-[22px] glass-modal p-6">
         <div className="flex items-start justify-between">
-          <h3 className="text-base font-semibold text-foreground">{titulo}</h3>
+          <h3 className="hc-titulo">{titulo}</h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
             aria-label="Fechar"
           >
             <X className="size-4" />
@@ -94,32 +94,32 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
 
         <div className="mt-5 space-y-4">
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Título</label>
+            <label className="hc-sobre">Título</label>
             <input
               value={form.titulo}
               onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
               placeholder="Ex.: Ideia de rota nova para lavagem"
-              className="mt-1.5 w-full rounded-xl border border-border bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
+              className="mt-1.5 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-white/30"
             />
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Descrição</label>
+            <label className="hc-sobre">Descrição</label>
             <textarea
               value={form.descricao}
               onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
               rows={7}
               placeholder="Escreva a ideia, detalhes, coordenadas, o que precisa ser ajustado..."
-              className="mt-1.5 w-full resize-y rounded-xl border border-border bg-white/[0.05] px-3 py-2 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
+              className="mt-1.5 w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-white/30"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="hc-sobre">
                 Fotos ({form.imagens.length})
               </label>
-              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground">
+              <label className="hc-pilula cursor-pointer hover:!border-transparent hover:!bg-[var(--gf-tx-1)] hover:!text-[var(--gf-painel)]">
                 {carregandoImg ? (
                   <Loader2 className="size-3.5 animate-spin" />
                 ) : (
@@ -143,7 +143,7 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
                 {form.imagens.map((img, i) => (
                   <div
                     key={i}
-                    className="group relative aspect-square overflow-hidden rounded-xl border border-border"
+                    className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08]"
                   >
                     <img src={img} alt={`Anexo ${i + 1}`} className="size-full object-cover" />
                     <button
@@ -153,7 +153,7 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
                           imagens: f.imagens.filter((_, idx) => idx !== i),
                         }))
                       }
-                      className="absolute right-1 top-1 rounded-md bg-background/80 p-1 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+                      className="absolute right-1 top-1 rounded-full bg-background/80 p-1 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
                       aria-label="Remover foto"
                     >
                       <X className="size-3" />
@@ -170,14 +170,14 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
             Salvar
@@ -206,15 +206,15 @@ function ImageLightbox({
     >
       <button
         onClick={onClose}
-        className="absolute right-4 top-4 rounded-full border border-border bg-card/80 p-2 text-foreground shadow-lg transition-colors hover:bg-white/[0.08]"
+        className="hc-seta !size-9 absolute right-4 top-4 shadow-lg"
         aria-label="Fechar imagem"
       >
-        <X className="size-5" />
+        <X className="size-4" />
       </button>
       <img
         src={src}
         alt={alt}
-        className="max-h-[90vh] max-w-[92vw] rounded-xl border border-border object-contain shadow-2xl"
+        className="max-h-[90vh] max-w-[92vw] rounded-xl border border-white/[0.08] object-contain shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
@@ -232,17 +232,17 @@ function AnotacaoViewer({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-6 backdrop-blur-sm">
-        <div className="my-auto w-full max-w-3xl rounded-2xl glass-modal p-6">
+        <div className="my-auto w-full max-w-3xl rounded-[22px] glass-modal p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-foreground font-display">{anotacao.titulo}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="hc-titulo">{anotacao.titulo}</h3>
+              <p className="hc-nota mt-1">
                 {anotacao.criadoPor || "—"} · {formatarData(anotacao.updatedAt)}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+              className="hc-seta"
               aria-label="Fechar"
             >
               <X className="size-4" />
@@ -261,7 +261,7 @@ function AnotacaoViewer({
                 <button
                   key={i}
                   onClick={() => setAmpliada(img)}
-                  className="group overflow-hidden rounded-xl glass-inset text-left transition-colors hover:border-primary/50"
+                  className="hc-dentro group overflow-hidden text-left transition-colors"
                   aria-label={`Ampliar foto ${i + 1}`}
                 >
                   <img
@@ -352,18 +352,18 @@ export function IlegalAnotacoes() {
   return (
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <label className="campo-busca w-64">
+          <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar anotação..."
-            className="w-64 rounded-full glass py-2 pl-9 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"
+            aria-label="Buscar anotação"
           />
-        </div>
+        </label>
         <button
           onClick={() => setCriando(true)}
-          className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
         >
           <Plus className="size-4" /> Nova anotação
         </button>
@@ -374,7 +374,7 @@ export function IlegalAnotacoes() {
           <Loader2 className="size-4 animate-spin" /> Carregando anotações...
         </div>
       ) : visiveis.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-border p-12 text-center">
+        <div className="mt-6 rounded-[22px] border border-dashed border-white/[0.1] p-12 text-center">
           <StickyNote className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-3 text-sm font-medium text-foreground">
             {busca ? "Nenhuma anotação encontrada." : "Nenhuma anotação por aqui."}
@@ -384,17 +384,17 @@ export function IlegalAnotacoes() {
           </p>
         </div>
       ) : (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {visiveis.map((a) => (
             <article
               key={a.id}
               onClick={() => setVendo(a)}
               className={cn(
-                "group cursor-pointer rounded-2xl glass p-4 transition-colors hover:border-primary/50 hover:bg-accent/40"
+                "glass hc group cursor-pointer p-5 transition-colors hover:!border-white/[0.14]"
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
+                <h3 className="hc-titulo line-clamp-2">
                   {a.titulo}
                 </h3>
                 <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -403,7 +403,7 @@ export function IlegalAnotacoes() {
                       e.stopPropagation();
                       setEditando(a);
                     }}
-                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    className="hc-seta !size-7"
                     aria-label="Editar anotação"
                   >
                     <Pencil className="size-3.5" />
@@ -413,7 +413,7 @@ export function IlegalAnotacoes() {
                       e.stopPropagation();
                       if (confirm(`Apagar a anotação "${a.titulo}"?`)) remover.mutate(a.id);
                     }}
-                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                    className="hc-seta !size-7 hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive"
                     aria-label="Apagar anotação"
                   >
                     <Trash2 className="size-3.5" />
@@ -435,18 +435,18 @@ export function IlegalAnotacoes() {
                       src={img}
                       alt={`${a.titulo} — miniatura ${i + 1}`}
                       loading="lazy"
-                      className="size-14 rounded-lg border border-border object-cover"
+                      className="size-14 rounded-lg border border-white/[0.08] object-cover"
                     />
                   ))}
                   {a.imagens.length > 3 && (
-                    <span className="flex size-14 items-center justify-center rounded-lg border border-border bg-white/[0.05] text-xs font-semibold text-muted-foreground">
+                    <span className="hc-dentro flex size-14 items-center justify-center !rounded-lg text-xs font-semibold text-muted-foreground">
                       +{a.imagens.length - 3}
                     </span>
                   )}
                 </div>
               )}
 
-              <p className="mt-3 text-[11px] text-muted-foreground">
+              <p className="mt-3 text-[11px] text-ink-3">
                 {a.criadoPor || "—"} · {formatarData(a.updatedAt)}
               </p>
             </article>

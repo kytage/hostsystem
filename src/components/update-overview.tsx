@@ -38,14 +38,14 @@ export function UpdateOverview({ projetos }: UpdateOverviewProps) {
   const r = 26, c = 2 * Math.PI * r;
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-5 rounded-xl border border-border bg-card/60 px-4 py-3 lg:w-auto">
+    <div className="glass hc flex w-full flex-wrap items-center gap-5 p-5 lg:w-auto">
       <div className="relative size-16 shrink-0" title="Progresso ponderado da atualização">
         <svg viewBox="0 0 64 64" className="size-16 -rotate-90">
           <circle cx="32" cy="32" r={r} className="fill-none stroke-secondary" strokeWidth="6" />
           <circle cx="32" cy="32" r={r} className="fill-none stroke-primary transition-all" strokeWidth="6"
             strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} />
         </svg>
-        <span className="absolute inset-0 grid place-items-center text-sm font-semibold text-foreground">{pct}%</span>
+        <span className="absolute inset-0 grid place-items-center font-display text-sm font-semibold tabular-nums text-foreground">{pct}%</span>
       </div>
 
       <div className="min-w-[260px] flex-1">
@@ -59,15 +59,15 @@ export function UpdateOverview({ projetos }: UpdateOverviewProps) {
             <div key={s.id} className="flex items-center gap-1.5 whitespace-nowrap leading-tight">
               <span className={cn("size-1.5 shrink-0 rounded-full", s.dot)} />
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</span>
-              <span className="text-sm font-semibold text-foreground">{s.n}</span>
+              <span className="text-sm font-semibold tabular-nums text-foreground">{s.n}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="border-l border-border pl-4 leading-tight">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Itens entregues</div>
-        <div className="text-base font-semibold text-foreground">{itensFeitos}<span className="text-muted-foreground">/{itens.length}</span></div>
+      <div className="border-l border-white/[0.06] pl-4 leading-tight">
+        <div className="hc-sobre">Itens entregues</div>
+        <div className="mt-1 font-display text-base font-semibold tabular-nums text-foreground">{itensFeitos}<span className="text-muted-foreground">/{itens.length}</span></div>
         <div className="text-[11px] text-warning">{itensAndamento} em execução</div>
       </div>
     </div>

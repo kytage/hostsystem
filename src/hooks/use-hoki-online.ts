@@ -17,6 +17,7 @@ import { alertaDeLadrao } from "@/components/hoki/fazenda/alerta-ladrao";
 import { useMyRole } from "@/lib/permissions";
 import { ROLE_TAG } from "@/lib/roles";
 import { useSouVisita } from "@/lib/hoki-visita";
+import { hokiNaTela, ROTA_DO_HOKI } from "@/lib/hoki-lugar";
 import {
   estouEmPartida,
   guardarConvite,
@@ -135,7 +136,7 @@ export function useHokiOnline() {
         playSfx("toc");
         setTimeout(() => playSfx("toc"), 520);
         const irParaPraca = () => {
-          if (window.location.pathname !== "/") void navigate({ to: "/" });
+          if (!hokiNaTela(window.location.pathname)) void navigate({ to: ROTA_DO_HOKI });
         };
         avisarNoComputador(
           "Toc toc! 🚪",
@@ -147,9 +148,9 @@ export function useHokiOnline() {
           icon: "🚪",
           duration: 9000,
           action:
-            window.location.pathname === "/"
+            hokiNaTela(window.location.pathname)
               ? undefined
-              : { label: "Ir para a praça", onClick: () => void navigate({ to: "/" }) },
+              : { label: "Ir para a praça", onClick: () => void navigate({ to: ROTA_DO_HOKI }) },
         });
       }),
     [navigate],
@@ -168,7 +169,7 @@ export function useHokiOnline() {
         playSfx("sino");
         const entrar = () => {
           pedirParaAbrir(codigo);
-          if (!["/", "/hoki"].includes(window.location.pathname)) void navigate({ to: "/" });
+          if (!hokiNaTela(window.location.pathname)) void navigate({ to: ROTA_DO_HOKI });
         };
         avisarNoComputador(
           "🔔 Magnata HOST",

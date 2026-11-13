@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, FileText, Handshake, Skull } from "lucide-react";
+import { Building2, FileText, Handshake, Loader2, Skull } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { CaptacoesVagas } from "@/components/captacoes-vagas";
 import { CaptacoesPipeline } from "@/components/captacoes-pipeline";
@@ -13,7 +13,6 @@ import {
   fetchEstabelecimentos,
   type Estabelecimento,
 } from "@/lib/captacoes";
-import { cn } from "@/lib/utils";
 import { useMyAreas, useMyRole } from "@/lib/permissions";
 import { hasCaptacoesAccess } from "@/lib/captacoes-access";
 
@@ -45,9 +44,9 @@ type Aba = "reunioes" | "estabelecimentos" | "proposta";
 function CaptacoesPage() {
   const { data: areas, isPending, isError } = useMyAreas();
   const { data: role, isPending: rolePending } = useMyRole();
-  if (isPending || rolePending) return <div className="p-6 text-muted-foreground" role="status">Carregando acesso…</div>;
+  if (isPending || rolePending) return <div className="pagina" role="status"><p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Carregando acesso…</p></div>;
   if (isError || !hasCaptacoesAccess(role, areas)) {
-    return <div className="p-6"><PageHeader title="Acesso restrito" subtitle="Captações está disponível para as áreas ILEGAL, CAPTAÇÃO e POLÍCIA e para os cargos Coordinator, Direção, CEO e Founder." /></div>;
+    return <div className="pagina"><PageHeader title="Acesso restrito" subtitle="Captações está disponível para as áreas ILEGAL, CAPTAÇÃO e POLÍCIA e para os cargos Coordinator, Direção, CEO e Founder." /></div>;
   }
   return <CaptacoesContent />;
 }
@@ -92,96 +91,60 @@ function CaptacoesContent() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 pagina">
+    <div className="flex flex-col gap-4 pagina">
       <PageHeader
         title="Captações"
         subtitle="Encontre organizações para as vagas livres, marque reuniões e gere a proposta."
         actions={
-          <div className="flex rounded-xl glass p-1">
-            <button
-              type="button"
-              onClick={() => setModo("ilegal")}
-              className={cn(
-                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold tracking-wide transition-colors",
-                modo === "ilegal"
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
+          <div className="segmentos" role="group" aria-label="Ilegal ou legal">
+            <button type="button" aria-pressed={modo === "ilegal"} onClick={() => setModo("ilegal")}>
               <Skull className="size-3.5" /> ILEGAL
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px]",
-                  modo === "ilegal" ? "bg-white/20" : "bg-muted",
-                )}
-              >
-                {livresIlegal} livres
-              </span>
+              <span className="tabular-nums opacity-60">{livresIlegal} livres</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setModo("legal")}
-              className={cn(
-                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold tracking-wide transition-colors",
-                modo === "legal"
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
+            <button type="button" aria-pressed={modo === "legal"} onClick={() => setModo("legal")}>
               <Building2 className="size-3.5" /> LEGAL
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px]",
-                  modo === "legal" ? "bg-white/20" : "bg-muted",
-                )}
-              >
-                {livresLegal} livres
-              </span>
+              <span className="tabular-nums opacity-60">{livresLegal} livres</span>
             </button>
           </div>
         }
       />
 
-      <section aria-label="Legenda de Captações" className="grid gap-4 border-y border-border py-4 md:grid-cols-2 md:gap-6">
-        <div className="flex items-start gap-3 border-l-2 border-warning pl-3">
-          <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-warning" />
+      <section aria-label="Legenda de Captações" className="glass hc grid gap-2.5 p-5 md:grid-cols-2">
+        <div className="hc-dentro flex items-start gap-3 p-3.5">
+          <span aria-hidden="true" className="mt-[5px] size-2 shrink-0 rounded-full bg-warning" />
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-warning">Amarelo · Primeiro contato</h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Primeiro contato feito, DM criada e reunião sendo marcada ou aguardando resposta.</p>
+            <h2 className="hc-titulo">Amarelo · Primeiro contato</h2>
+            <p className="hc-nota mt-1 leading-relaxed">Primeiro contato feito, DM criada e reunião sendo marcada ou aguardando resposta.</p>
           </div>
         </div>
-        <div className="flex items-start gap-3 border-l-2 border-info pl-3">
-          <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-info" />
+        <div className="hc-dentro flex items-start gap-3 p-3.5">
+          <span aria-hidden="true" className="mt-[5px] size-2 shrink-0 rounded-full bg-info" />
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-info">Azul · Proposta aceita</h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tudo certo! Falta apenas entregar a organização e os benefícios.</p>
+            <h2 className="hc-titulo">Azul · Proposta aceita</h2>
+            <p className="hc-nota mt-1 leading-relaxed">Tudo certo! Falta apenas entregar a organização e os benefícios.</p>
           </div>
         </div>
       </section>
 
       {/* Abas */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="segmentos self-start" role="tablist" aria-label="Seções de Captações">
         {abas
           .filter((a) => !a.soLegal || modo === "legal")
           .map((a) => (
             <button
               key={a.id}
               type="button"
+              role="tab"
+              aria-selected={aba === a.id}
               onClick={() => setAba(a.id)}
-              className={cn(
-                "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors",
-                aba === a.id
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
             >
-              <a.icon className={cn("size-4", aba === a.id && "text-primary")} />
+              <a.icon className="size-3.5" />
               {a.label}
             </button>
           ))}
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start">
         {aba === "reunioes" && (
           <CaptacoesPipeline
             prefill={prefill}

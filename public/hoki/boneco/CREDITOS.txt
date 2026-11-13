@@ -1,0 +1,5 @@
+padrao.glb, feminino.glb, animacoes-2.glb (Universal Animation Library 2) e animacoes-1.glb (Universal Animation Library 1), separados e enxutos a partir dos pacotes originais
+"Universal Animation Library 2 [Standard]", por Quaternius - https://quaternius.com
+Licença: CC0 1.0 (domínio público). Uso livre, inclusive comercial, sem necessidade de crédito.
+"Universal Animation Library [Standard]" (versão 1), por Quaternius - https://quaternius.com
+Licença: CC0 1.0 (domínio público). Uso livre, inclusive comercial, sem necessidade de crédito.

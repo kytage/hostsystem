@@ -2,20 +2,20 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { meuPet } from "@/lib/hoki";
 import { meuLugar, usePresencaHoki } from "@/lib/hoki-presenca";
+import { hokiNaTela, ROTA_DO_HOKI } from "@/lib/hoki-lugar";
 import { Hoki2D } from "./hoki-2d";
 
 /**
- * O HOKI fora da tela dele: ao sair da tela inicial, ele vira um botão
- * flutuante no canto de baixo (vidro com desfoque, boiando de leve, com um
- * brilho pulsando atrás). Mostra o rosto do seu HOKI e quantos estão acordados
- * na praça; clicar volta para a tela do HOKI.
+ * O HOKI fora da tela dele: um botão flutuante no canto de baixo (vidro com
+ * desfoque, boiando de leve, com um brilho pulsando atrás). Mostra o rosto do
+ * seu HOKI e quantos estão acordados na praça; clicar leva para a tela do HOKI.
  */
 export function HokiFlutuante() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: pet } = useQuery({ queryKey: ["hoki-meu"], queryFn: meuPet, staleTime: Infinity });
   const { outros } = usePresencaHoki();
-  // na tela inicial (e na tela só do HOKI) ele já está lá, inteiro
-  if (pathname === "/" || pathname === "/hoki" || !pet) return null;
+  // na tela do HOKI ele já está lá, inteiro; na tela inicial o HOKI não aparece, nem este atalho
+  if (pathname === "/" || hokiNaTela(pathname) || !pet) return null;
 
   const euAcordado = !meuLugar().dorme;
   const naPraca = Object.values(outros).filter((o) => !o.dorme).length + (euAcordado ? 1 : 0);
@@ -24,7 +24,7 @@ export function HokiFlutuante() {
 
   return (
     <Link
-      to="/"
+      to={ROTA_DO_HOKI}
       aria-label={rotulo}
       title={rotulo}
       className="hoki-flutuante group fixed bottom-5 right-5 z-[80] block size-14"

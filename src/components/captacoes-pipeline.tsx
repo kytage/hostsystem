@@ -5,6 +5,7 @@ import {
   Copy,
   LayoutGrid,
   Loader2,
+  MapPin,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -14,7 +15,11 @@ import {
   Users,
   Video,
   X,
+  Handshake,
+  Hourglass,
+  PackageCheck,
 } from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +51,7 @@ const COLUNAS: { id: CaptacaoStatus; cor: string }[] = [
 ];
 
 const TIPO_CORES: Record<CaptacaoTipo, string> = {
-  pvp: "bg-primary/15 text-primary",
+  pvp: "bg-violet-500/15 text-violet-400",
   hibrido: "bg-emerald-500/15 text-emerald-400",
   p1_crew: "bg-blue-500/15 text-blue-400",
 };
@@ -146,6 +151,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
       valor: (captacoes ?? []).filter((c) => c.status === "pendente" || c.status === "aguardando").length,
       sub: `${(captacoes ?? []).filter((c) => c.status === "pendente").length} pendentes, ${(captacoes ?? []).filter((c) => c.status === "aguardando").length} aguardando`,
       destaque: true,
+      icone: Handshake,
     },
     {
       label: "Reuniões na semana",
@@ -153,16 +159,19 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
       sub: reunioesFuturas[0]
         ? `Próxima ${labelDia(reunioesFuturas[0].dataHora).hoje ? "hoje" : `${labelDia(reunioesFuturas[0].dataHora).dia}/${labelDia(reunioesFuturas[0].dataHora).mes}`} às ${horaSP(reunioesFuturas[0].dataHora)}`
         : "Nenhuma agendada",
+      icone: CalendarDays,
     },
     {
       label: "Aguardando resposta",
       valor: (captacoes ?? []).filter((c) => c.status === "aguardando").length,
       sub: (captacoes ?? []).find((c) => c.status === "aguardando")?.organizacao ?? "—",
+      icone: Hourglass,
     },
     {
       label: "A entregar",
       valor: (captacoes ?? []).filter((c) => c.status === "aceito").length,
       sub: (captacoes ?? []).some((c) => c.status === "aceito") ? "Org aceitou a proposta" : "Nenhuma aceita ainda",
+      icone: PackageCheck,
     },
   ];
 
@@ -170,32 +179,30 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
   const negadas = filtradas.filter((c) => c.status === "negado");
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-4">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+      {/* números das captações, no padrão da tela inicial */}
+      <Indices>
         {kpis.map((k) => (
-          <div
+          <Indice
             key={k.label}
-            className={cn(
-              "rounded-2xl border p-4",
-              k.destaque ? "border-primary/40 bg-primary/5" : "glass",
-            )}
-          >
-            <p className="text-[11px] font-semibold text-muted-foreground">{k.label}</p>
-            <p className="mt-1 text-2xl font-semibold text-foreground font-display">{k.valor}</p>
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{k.sub}</p>
-          </div>
+            valor={k.valor}
+            titulo={k.label}
+            nota={k.sub}
+            icone={k.icone}
+            alerta={Boolean(k.destaque) && k.valor > 0}
+          />
         ))}
-      </div>
+      </Indices>
 
       {/* Próximas reuniões */}
-      <section className="rounded-2xl glass p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <CalendarDays className="size-4 text-primary" /> Próximas reuniões
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-              {reunioesFuturas.length}
+      <section className="glass hc p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="flex min-w-0 items-center gap-3">
+            <span className="hc-icone">
+              <CalendarDays className="size-4" strokeWidth={1.75} />
             </span>
+            <span className="hc-titulo truncate">Próximas reuniões</span>
+            <span className="hc-selo tabular-nums">{reunioesFuturas.length}</span>
           </h2>
           <button
             type="button"
@@ -204,7 +211,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
               if (primeira) setReuniaoPara(primeira);
               else toast.info("Crie uma captação primeiro");
             }}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            className="hc-pilula shrink-0"
           >
             <CalendarDays className="size-3.5" /> Agendar reunião
           </button>
@@ -214,11 +221,12 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
             const cap = (captacoes ?? []).find((c) => c.id === r.captacaoId);
             const d = labelDia(r.dataHora);
             return (
-              <div key={r.id} className="flex gap-3 rounded-xl border border-border bg-black/25 p-3">
+              <div key={r.id} className="hc-dentro flex gap-3 p-3">
                 <div
                   className={cn(
-                    "flex w-14 shrink-0 flex-col items-center justify-center rounded-lg py-2",
-                    d.hoje ? "bg-white/[0.09] text-foreground ring-1 ring-white/10" : "bg-muted text-foreground",
+                    "flex w-14 shrink-0 flex-col items-center justify-center rounded-xl py-2",
+                    // hoje ganha um fio vermelho, como no calendário da tela inicial
+                    d.hoje ? "bg-muted text-foreground shadow-[inset_0_0_0_1px_rgba(206,14,14,0.8)]" : "bg-muted text-foreground",
                   )}
                 >
                   <span className="text-[9px] font-semibold">{d.hoje ? "HOJE" : d.semana}</span>
@@ -231,7 +239,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                       {cap?.organizacao ?? "Reunião"}
                     </p>
                     {cap && (
-                      <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold", TIPO_CORES[cap.tipo])}>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[9.5px] font-semibold", TIPO_CORES[cap.tipo])}>
                         {TIPO_LABELS[cap.tipo]}
                       </span>
                     )}
@@ -253,7 +261,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                       void qc.invalidateQueries({ queryKey: ["captacoes-reunioes"] });
                     });
                   }}
-                  className="self-start text-muted-foreground hover:text-destructive"
+                  className="hc-seta !size-7 self-start hover:!border-destructive/40 hover:!bg-destructive/15 hover:!text-destructive"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -267,7 +275,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
               if (primeira) setReuniaoPara(primeira);
               else toast.info("Crie uma captação primeiro");
             }}
-            className="flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+            className="flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-white/[0.1] text-muted-foreground transition-colors hover:border-white/25 hover:text-foreground"
           >
             <CalendarDays className="size-5" />
             <span className="text-xs font-semibold">Marcar reunião</span>
@@ -277,76 +285,68 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
       </section>
 
       {/* Pipeline */}
-      <section className="rounded-2xl glass p-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <LayoutGrid className="size-4 text-primary" /> Pipeline
-            <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-              {filtradas.length}
+      <section className="glass hc p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <h2 className="flex min-w-0 items-center gap-3">
+            <span className="hc-icone">
+              <LayoutGrid className="size-4" strokeWidth={1.75} />
             </span>
+            <span className="hc-titulo truncate">Pipeline</span>
+            <span className="hc-selo tabular-nums">{filtradas.length}</span>
           </h2>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg border border-border">
+            <div className="segmentos" role="group" aria-label="Como mostrar o pipeline">
               <button
                 type="button"
+                aria-pressed={visao === "kanban"}
                 onClick={() => setVisao("kanban")}
-                className={cn(
-                  "flex items-center gap-1 rounded-l-lg px-2.5 py-1.5 text-[11px] font-semibold",
-                  visao === "kanban" ? "bg-muted text-foreground" : "text-muted-foreground",
-                )}
               >
-                <LayoutGrid className="size-3" /> Kanban
+                <LayoutGrid className="size-3.5" /> Kanban
               </button>
               <button
                 type="button"
+                aria-pressed={visao === "tabela"}
                 onClick={() => setVisao("tabela")}
-                className={cn(
-                  "flex items-center gap-1 rounded-r-lg px-2.5 py-1.5 text-[11px] font-semibold",
-                  visao === "tabela" ? "bg-muted text-foreground" : "text-muted-foreground",
-                )}
               >
-                <Table2 className="size-3" /> Tabela
+                <Table2 className="size-3.5" /> Tabela
               </button>
             </div>
             <button
               type="button"
               onClick={() => onNovaChange(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
             >
-              <Plus className="size-3.5" /> Nova captação
+              <Plus className="size-4" /> Nova captação
             </button>
           </div>
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <label className="campo-busca w-56">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar org, líder ou contato"
-              className="w-56 rounded-lg border border-border bg-black/25 py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Buscar captação"
             />
+          </label>
+          <div className="segmentos" role="group" aria-label="Filtrar por tipo">
+            {(["todos", "p1_crew", "hibrido", "pvp"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={filtroTipo === t}
+                onClick={() => setFiltroTipo(t)}
+              >
+                {t === "todos" ? "Todos" : TIPO_LABELS[t]}
+              </button>
+            ))}
           </div>
-          {(["todos", "p1_crew", "hibrido", "pvp"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setFiltroTipo(t)}
-              className={cn(
-                "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
-                filtroTipo === t
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "bg-muted text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t === "todos" ? "Todos" : TIPO_LABELS[t]}
-            </button>
-          ))}
           <select
             value={filtroCaptador}
             onChange={(e) => setFiltroCaptador(e.target.value)}
-            className="rounded-lg border border-border bg-black/25 px-2 py-1.5 text-[11px] text-foreground"
+            className="h-9 rounded-full border border-input bg-transparent px-3 text-[12.5px] text-foreground"
           >
             <option value="todos">Captador: Todos</option>
             {captadores.map((c) => (
@@ -378,14 +378,14 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                   setOverCol(null);
                 }}
                 className={cn(
-                  "flex w-60 shrink-0 flex-col gap-2 rounded-xl border p-2 transition-colors",
-                  overCol === col.id ? "border-primary/60 bg-primary/5" : "border-border bg-black/25",
+                  "hc-dentro flex w-60 shrink-0 flex-col gap-2 p-2 transition-colors",
+                  overCol === col.id && "!border-foreground/25 !bg-foreground/[0.06]",
                 )}
               >
-                <div className="flex items-center gap-1.5 px-1">
-                  <span className={cn("size-2 rounded-full", col.cor)} />
-                  <p className="text-xs font-semibold text-foreground">{STATUS_LABELS[col.id]}</p>
-                  <span className="ml-auto text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 px-1 pt-0.5">
+                  <span className={cn("size-2 shrink-0 rounded-full", col.cor)} />
+                  <p className="truncate text-[12.5px] font-semibold text-foreground">{STATUS_LABELS[col.id]}</p>
+                  <span className="hc-selo ml-auto shrink-0 tabular-nums">
                     {porColuna(col.id).length}
                   </span>
                 </div>
@@ -410,7 +410,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                   />
                 ))}
                 {porColuna(col.id).length === 0 && (
-                  <div className="flex min-h-16 items-center justify-center rounded-lg border border-dashed border-border text-[10px] text-muted-foreground">
+                  <div className="flex min-h-16 items-center justify-center rounded-xl border border-dashed border-white/[0.1] px-2 text-center text-[10.5px] text-muted-foreground">
                     {col.id === "aceito"
                       ? "Arraste para cá quando a org aceitar"
                       : col.id === "entregue"
@@ -421,11 +421,11 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
               </div>
             ))}
             {/* Negado */}
-            <div className="flex w-40 shrink-0 flex-col gap-2 rounded-xl border border-border bg-black/25 p-2">
-              <div className="flex items-center gap-1.5 px-1">
-                <span className="size-2 rounded-full bg-destructive" />
-                <p className="text-xs font-semibold text-foreground">Negado</p>
-                <span className="ml-auto text-[11px] text-muted-foreground">{negadas.length}</span>
+            <div className="hc-dentro flex w-40 shrink-0 flex-col gap-2 p-2">
+              <div className="flex items-center gap-2 px-1 pt-0.5">
+                <span className="size-2 shrink-0 rounded-full bg-destructive" />
+                <p className="truncate text-[12.5px] font-semibold text-foreground">Negado</p>
+                <span className="hc-selo ml-auto shrink-0 tabular-nums">{negadas.length}</span>
               </div>
               {negadas.map((c) => (
                 <CardCaptacao
@@ -451,7 +451,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-white/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
                   <th className="py-2 pr-3">Organização</th>
                   <th className="py-2 pr-3">Tipo</th>
                   <th className="py-2 pr-3">Líder</th>
@@ -463,10 +463,10 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
               </thead>
               <tbody>
                 {filtradas.map((c) => (
-                  <tr key={c.id} className="border-b border-border/50 last:border-0">
+                  <tr key={c.id} className="border-b border-white/[0.06] transition-colors last:border-0 hover:bg-white/[0.03]">
                     <td className="py-2 pr-3 font-semibold text-foreground">{c.organizacao}</td>
                     <td className="py-2 pr-3">
-                      <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", TIPO_CORES[c.tipo])}>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", TIPO_CORES[c.tipo])}>
                         {TIPO_LABELS[c.tipo]}
                       </span>
                     </td>
@@ -479,7 +479,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                         onChange={(e) =>
                           mover.mutate({ id: c.id, status: e.target.value as CaptacaoStatus })
                         }
-                        className="rounded-md border border-border bg-black/25 px-1.5 py-1 text-[11px] text-foreground"
+                        className="rounded-full border border-input bg-transparent px-2.5 py-1 text-[11px] text-foreground"
                       >
                         {(Object.keys(STATUS_LABELS) as CaptacaoStatus[]).map((s) => (
                           <option key={s} value={s}>
@@ -492,7 +492,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
                       <button
                         type="button"
                         onClick={() => setEditando(c)}
-                        className="text-muted-foreground hover:text-foreground"
+                        className="hc-seta !size-7 ml-auto"
                       >
                         <Pencil className="size-3.5" />
                       </button>
@@ -502,7 +502,7 @@ export function CaptacoesPipeline({ prefill, onPrefillConsumed, novaAberta, onNo
               </tbody>
             </table>
             {filtradas.length === 0 && (
-              <p className="py-6 text-center text-xs text-muted-foreground">
+              <p className="mt-3 rounded-[14px] border border-dashed border-white/[0.1] px-4 py-6 text-center text-xs text-muted-foreground">
                 Nenhuma captação encontrada.
               </p>
             )}
@@ -555,31 +555,31 @@ function CardCaptacao({
     <div
       {...dragProps}
       className={cn(
-        "cursor-grab rounded-xl glass p-2.5 active:cursor-grabbing",
+        "hc-dentro cursor-grab p-2.5 transition-colors hover:!border-foreground/15 active:cursor-grabbing",
         c.status === "negado" && "opacity-70",
       )}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-semibold", TIPO_CORES[c.tipo])}>
+        <span className={cn("rounded-full px-2 py-0.5 text-[9.5px] font-semibold", TIPO_CORES[c.tipo])}>
           {TIPO_LABELS[c.tipo]}
         </span>
         <div className="relative">
           <button
             type="button"
             onClick={() => setMenu((m) => !m)}
-            className="text-muted-foreground hover:text-foreground"
+            className="hc-seta !size-6"
           >
             <MoreHorizontal className="size-3.5" />
           </button>
           {menu && (
-            <div className="absolute right-0 top-5 z-20 w-36 rounded-lg border border-border bg-popover p-1 shadow-lg">
+            <div className="glass-modal absolute right-0 top-7 z-20 w-36 rounded-[14px] p-1.5">
               <button
                 type="button"
                 onClick={() => {
                   setMenu(false);
                   onEdit();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-foreground hover:bg-muted"
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-foreground hover:bg-muted"
               >
                 <Pencil className="size-3" /> Editar
               </button>
@@ -589,7 +589,7 @@ function CardCaptacao({
                   setMenu(false);
                   onReuniao();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-foreground hover:bg-muted"
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-foreground hover:bg-muted"
               >
                 <CalendarDays className="size-3" /> Agendar reunião
               </button>
@@ -599,7 +599,7 @@ function CardCaptacao({
                   setMenu(false);
                   onDelete();
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-destructive hover:bg-destructive/10"
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="size-3" /> Remover
               </button>
@@ -630,15 +630,18 @@ function CardCaptacao({
             </button>
           )}
           {c.local && (
-            <p className="mt-1.5 truncate rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
-              📍 {c.local}
+            <p className="mt-1.5 flex min-w-0 items-center gap-1 rounded-lg bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">{c.local}</span>
             </p>
           )}
           {c.onlineEsperado && (
-            <p className="mt-1 text-[10px] text-muted-foreground">👥 {c.onlineEsperado}</p>
+            <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Users className="size-3 shrink-0" /> {c.onlineEsperado}
+            </p>
           )}
           {c.observacao && (
-            <p className="mt-1.5 line-clamp-2 border-l-2 border-orange-400/60 pl-2 text-[10px] italic text-muted-foreground">
+            <p className="mt-1.5 line-clamp-2 border-l-2 border-foreground/15 pl-2 text-[10px] italic text-muted-foreground">
               {c.observacao}
             </p>
           )}
@@ -646,7 +649,7 @@ function CardCaptacao({
             <span className="text-[10px] text-muted-foreground">
               {c.captador && (
                 <span className="flex items-center gap-1">
-                  <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[8px] font-semibold text-primary-foreground">
+                  <span className="flex size-4 items-center justify-center rounded-full bg-foreground/15 text-[8px] font-semibold text-foreground">
                     {c.captador.slice(0, 1).toUpperCase()}
                   </span>
                   {c.captador}
@@ -705,14 +708,14 @@ function ReuniaoDialog({
   });
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+    "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "hc-sobre mb-1.5 block";
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Agendar reunião</DialogTitle>
+          <DialogTitle className="hc-titulo">Agendar reunião</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div>
@@ -769,7 +772,7 @@ function ReuniaoDialog({
             type="button"
             disabled={!dataHora || salvar.isPending}
             onClick={() => salvar.mutate()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvar.isPending && <Loader2 className="size-4 animate-spin" />}
             Agendar

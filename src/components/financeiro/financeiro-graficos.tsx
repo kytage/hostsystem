@@ -34,12 +34,12 @@ interface ComparativoProps {
 /** Comparação mês a mês: entradas, despesas e linha de saldo. */
 export function FinanceiroComparativo({ data }: ComparativoProps) {
   return (
-    <div className="rounded-xl glass p-4">
+    <div className="glass hc p-5">
       <div className="mb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="hc-sobre">
           Comparativo
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-foreground font-display">Entradas x Despesas</h2>
+        <h2 className="hc-titulo mt-1.5">Entradas x Despesas</h2>
       </div>
       <div className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -92,15 +92,15 @@ export function FinanceiroDistribuicao({ titulo, data }: DistribuicaoProps) {
   const total = data.reduce((s, d) => s + d.valor, 0);
 
   return (
-    <div className="rounded-xl glass p-4">
+    <div className="glass hc p-5">
       <div className="mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="hc-sobre">
           Distribuição
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-foreground font-display">{titulo}</h2>
+        <h2 className="hc-titulo mt-1.5">{titulo}</h2>
       </div>
       {total === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">
+        <p className="mt-4 rounded-[14px] border border-dashed border-white/[0.1] px-4 py-14 text-center text-sm text-muted-foreground">
           Nenhuma despesa registrada neste mês.
         </p>
       ) : (

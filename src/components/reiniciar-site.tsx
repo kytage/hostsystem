@@ -93,7 +93,7 @@ export function OuvinteReinicio() {
       aria-live="assertive"
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
     >
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black p-6 text-center shadow-2xl">
+      <div className="hc w-full max-w-sm p-6 text-center shadow-2xl">
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border border-primary/40">
           <RotateCw className="size-5 text-primary" />
         </div>
@@ -141,15 +141,15 @@ export function BotaoReiniciarSite() {
     <>
       <button
         onClick={() => setAberto(true)}
-        className="flex items-center gap-2 rounded-full glass px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/50"
+        className="pilula rounded-full"
         title="Recarregar o site para todos os usuários logados"
       >
-        <RotateCw className="size-3.5 text-primary" /> Reiniciar site
+        <RotateCw className="size-4 text-primary" /> Reiniciar site
       </button>
       <AlertDialog open={aberto} onOpenChange={(v) => !enviando && setAberto(v)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-[22px] sm:rounded-[22px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reiniciar o site para todos?</AlertDialogTitle>
+            <AlertDialogTitle className="hc-titulo">Reiniciar o site para todos?</AlertDialogTitle>
             <AlertDialogDescription>
               Todos os usuários logados vão ver um aviso e a página deles recarrega sozinha em{" "}
               {SEGUNDOS_REINICIO} segundos. A sua também.

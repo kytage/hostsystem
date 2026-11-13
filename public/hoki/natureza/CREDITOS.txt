@@ -1,0 +1,4 @@
+natureza.glb
+Modelos: "Ultimate Stylized Nature" (maio de 2022), por Quaternius - https://quaternius.com
+Licença: CC0 1.0 (domínio público). Uso livre, inclusive comercial, sem necessidade de crédito.
+O arquivo junta 49 modelos do pacote num único .glb, com as texturas reduzidas.

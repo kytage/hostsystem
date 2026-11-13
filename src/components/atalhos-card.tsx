@@ -33,18 +33,18 @@ function Atalho({
   return (
     <Link
       to={rota}
-      className="glass-inset group flex min-h-[54px] items-center gap-3 rounded-2xl border p-2.5"
+      className="hc-dentro group flex min-h-[60px] items-center gap-3 p-2.5 pr-3"
       data-som-passar
       {...prefetch}
     >
-      <span className="icone-quadro size-9 text-foreground/90">
-        <Icone className="size-4" strokeWidth={1.6} />
+      <span className="hc-icone !size-9">
+        <Icone className="size-4" strokeWidth={1.75} />
       </span>
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate text-[13px] font-medium">{titulo}</span>
-        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{texto}</span>
+        <span className="block truncate text-[13px] font-medium text-foreground">{titulo}</span>
+        <span className="mt-1 block truncate text-[11.5px] text-muted-foreground">{texto}</span>
       </span>
-      <span className="grid size-7 shrink-0 place-items-center rounded-[10px] border border-white/[0.08] bg-white/[0.04] text-muted-foreground transition-colors duration-200 group-hover:border-white/25 group-hover:bg-white group-hover:text-black">
+      <span className="hc-seta !size-7" aria-hidden>
         <ArrowRight
           className="size-3.5 transition-transform duration-200 group-hover:translate-x-px"
           strokeWidth={1.8}
@@ -54,7 +54,10 @@ function Atalho({
   );
 }
 
-/** Atalhos da tela inicial: só as telas que o usuário pode abrir, em linhas com ícone, nome e seta. */
+/**
+ * Atalhos da tela inicial: só as telas que o usuário pode abrir, em quadros com ícone, nome e
+ * seta. Fica no pé da grade, ocupando a largura toda (três por linha em tela larga).
+ */
 export function AtalhosCard({ className }: { className?: string }) {
   const { todos } = useMenu();
   const itens = ATALHOS.flatMap((a) => {
@@ -63,18 +66,12 @@ export function AtalhosCard({ className }: { className?: string }) {
   }).slice(0, 6);
 
   return (
-    <section
-      className={cn(
-        "glass relative flex min-h-[300px] flex-col overflow-hidden rounded-[24px] p-4",
-        className,
-      )}
-    >
-      <span aria-hidden className="pontilhado opacity-50" />
-      <div className="relative">
-        <h2 className="text-[13.5px] font-medium text-foreground/90">Atalhos</h2>
-        <p className="text-[11px] text-ink-3">As telas que você mais usa, a um clique</p>
+    <section className={cn("glass hc p-5", className)}>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <h2 className="hc-titulo">Atalhos</h2>
+        <p className="hc-nota">As telas que você mais usa, a um clique</p>
       </div>
-      <div className="relative mt-3 grid flex-1 auto-rows-fr gap-2 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
         {itens.map((a) => (
           <Atalho key={a.titulo} rota={a.rota} titulo={a.titulo} texto={a.texto} icone={a.icone} />
         ))}

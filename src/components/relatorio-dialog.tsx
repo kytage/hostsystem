@@ -40,7 +40,7 @@ const PRESETS = [
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <p className="hc-sobre">
         {label}
       </p>
       {children}
@@ -52,11 +52,30 @@ function Chips({
   opcoes,
   selecionados,
   onToggle,
+  unico,
 }: {
   opcoes: { key: string; label: string }[];
   selecionados: string[];
   onToggle: (key: string) => void;
+  /** Escolha de uma opção só: aparece como segmentos. O texto é o nome do grupo para o leitor de tela. */
+  unico?: string;
 }) {
+  if (unico) {
+    return (
+      <div className="segmentos" role="group" aria-label={unico}>
+        {opcoes.map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            aria-pressed={selecionados.includes(o.key)}
+            onClick={() => onToggle(o.key)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap gap-1.5">
       {opcoes.map((o) => {
@@ -65,13 +84,9 @@ function Chips({
           <button
             key={o.key}
             type="button"
+            aria-pressed={ativo}
             onClick={() => onToggle(o.key)}
-            className={cn(
-              "rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-              ativo
-                ? "border-white/15 bg-white/[0.09] text-foreground"
-                : "glass text-muted-foreground hover:border-primary/40 hover:text-foreground"
-            )}
+            className={cn("pilula !h-8 !px-3 !text-xs", ativo && "pilula-ativa")}
           >
             {o.label}
           </button>
@@ -97,17 +112,17 @@ function Toggle({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-        checked ? "border-primary/50 bg-primary/5" : "glass hover:border-primary/30"
+        "hc-dentro flex w-full items-start gap-3 p-3 text-left transition-colors",
+        checked && "!border-foreground/25"
       )}
     >
       <span
         className={cn(
           "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-          checked ? "border-primary bg-primary" : "border-border"
+          checked ? "border-foreground bg-foreground" : "border-foreground/25"
         )}
       >
-        {checked ? <span className="size-1.5 rounded-sm bg-primary-foreground" /> : null}
+        {checked ? <span className="size-1.5 rounded-sm bg-background" /> : null}
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-foreground">{label}</span>
@@ -177,14 +192,14 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-2xl glass-modal">
-        <div className="flex items-start justify-between gap-4 border-b border-border p-6">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[22px] glass-modal">
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+            <p className="hc-sobre">
               Registros
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-foreground font-display">Gerar relatório em PDF</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h2 className="hc-titulo mt-1.5">Gerar relatório em PDF</h2>
+            <p className="hc-nota mt-1">
               Escolha os filtros e as seções que devem aparecer no documento.
             </p>
           </div>
@@ -192,7 +207,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -204,12 +219,13 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
               <input
                 value={cfg.titulo}
                 onChange={(e) => set("titulo", e.target.value)}
-                className="w-full rounded-xl border border-border bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary/60"
+                className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-white/25"
               />
             </Campo>
 
             <Campo label="Tipo de registro">
               <Chips
+                unico="Tipo de registro"
                 opcoes={[
                   { key: "ambos", label: "Denúncias + VAR" },
                   { key: "denuncia", label: "Denúncias" },
@@ -234,7 +250,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
                     key={p.label}
                     type="button"
                     onClick={() => setCfg((c) => ({ ...c, de: diasAtras(p.dias), ate: hoje() }))}
-                    className="rounded-lg glass px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                    className="hc-pilula"
                   >
                     {p.label}
                   </button>
@@ -242,7 +258,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
                 <button
                   type="button"
                   onClick={() => setCfg((c) => ({ ...c, de: "", ate: "" }))}
-                  className="rounded-lg glass px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                  className="hc-pilula"
                 >
                   Histórico completo
                 </button>
@@ -252,13 +268,13 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
                   type="date"
                   value={cfg.de}
                   onChange={(e) => set("de", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-white/25"
                 />
                 <input
                   type="date"
                   value={cfg.ate}
                   onChange={(e) => set("ate", e.target.value)}
-                  className="w-full rounded-xl border border-border bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-white/25"
                 />
               </div>
             </Campo>
@@ -302,7 +318,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
                 value={cfg.jogador}
                 onChange={(e) => set("jogador", e.target.value)}
                 placeholder="Opcional"
-                className="w-full rounded-xl border border-border bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/60"
+                className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-white/25"
               />
             </Campo>
 
@@ -312,7 +328,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
                 onChange={(e) => set("observacao", e.target.value)}
                 rows={3}
                 placeholder="Contexto, destinatário do relatório, conclusões..."
-                className="w-full resize-y rounded-xl border border-border bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary/60"
+                className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-sm text-foreground outline-none focus:border-white/25"
               />
             </Campo>
           </div>
@@ -361,6 +377,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
 
             <Campo label="Layout">
               <Chips
+                unico="Layout"
                 opcoes={[
                   { key: "landscape", label: "Paisagem" },
                   { key: "portrait", label: "Retrato" },
@@ -372,6 +389,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
 
             <Campo label="Ordenação">
               <Chips
+                unico="Ordenação"
                 opcoes={[
                   { key: "recentes", label: "Mais recentes" },
                   { key: "antigos", label: "Mais antigos" },
@@ -383,6 +401,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
 
             <Campo label="Limite de registros">
               <Chips
+                unico="Limite de registros"
                 opcoes={[
                   { key: "0", label: "Todos" },
                   { key: "25", label: "25" },
@@ -394,23 +413,25 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
               />
             </Campo>
 
-            <div className="rounded-xl border border-border bg-muted/40 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="hc-dentro p-4">
+              <p className="hc-sobre">
                 Prévia
               </p>
-              <p className="mt-2 text-3xl font-semibold leading-none text-foreground font-display">{previa}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-2 font-display text-[30px] font-medium leading-none tracking-[-0.04em] tabular-nums text-foreground">
+                {previa}
+              </p>
+              <p className="hc-nota mt-1">
                 registro(s) serão incluídos no PDF
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border p-6">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-white/[0.06] p-6">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
@@ -418,7 +439,7 @@ export function RelatorioDialog({ rows, autor, onClose }: RelatorioDialogProps) 
             type="button"
             onClick={() => void gerar()}
             disabled={gerando}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
           >
             {gerando ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4" />}
             Gerar PDF

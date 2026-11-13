@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/areas/$area")({
 const PRIORIDADES = [
   { id: "alta", label: "Alta", dot: "bg-primary", on: "border-primary/50 bg-primary/15 text-red-200" },
   { id: "media", label: "Média", dot: "bg-amber-400", on: "border-amber-500/40 bg-amber-500/10 text-amber-200" },
-  { id: "baixa", label: "Baixa", dot: "bg-white/40", on: "border-white/20 bg-white/[0.08] text-foreground" },
+  { id: "baixa", label: "Baixa", dot: "bg-ink-3", on: "border-white/20 bg-white/[0.08] text-foreground" },
 ];
 const prioridade = (id: string) => PRIORIDADES.find((p) => p.id === id) ?? PRIORIDADES[1]!;
 
@@ -76,7 +76,7 @@ function AreaPage() {
     return (
       <div className="pagina">
         {voltar}
-        <p className="glass-inset mt-6 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="mt-6 rounded-[22px] border border-dashed border-white/[0.1] px-4 py-14 text-center text-sm text-muted-foreground">
           Esta área não tem uma tela própria.
         </p>
       </div>
@@ -110,45 +110,48 @@ function AreaPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-6 md:px-8 md:py-8">
+    <div className="pagina">
       {voltar}
-      <header className="animate-rise mt-4 flex flex-wrap items-center gap-4">
-        <span className="glass grid size-14 place-items-center rounded-2xl text-3xl">{v.def.emoji}</span>
-        <div className="min-w-0 flex-1">
-          <p className="eyebrow">{grupo ?? "Área"}</p>
-          <h1 className="truncate font-display text-3xl font-semibold tracking-tight">{v.def.label}</h1>
+      <header className="pagina-topo animate-rise mt-3 !items-center">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="hc-icone !size-14 !rounded-[16px] text-[28px] leading-none">{v.def.emoji}</span>
+          <div className="min-w-0">
+            <p className="hc-sobre">{grupo ?? "Área"}</p>
+            <h1 className="pagina-titulo truncate !mt-2">{v.def.label}</h1>
+          </div>
         </div>
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="hc-estado">
           <span className={cn("size-2 rounded-full", saude.dot)} /> {saude.label}
         </span>
       </header>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="mt-5 grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0">
           {podeAdicionar ? (
             <NovaPendencia area={area} eu={eu} />
           ) : (
-            <p className="glass-inset rounded-2xl px-4 py-3 text-xs text-muted-foreground">
+            <p className="hc-dentro px-4 py-3 text-xs text-muted-foreground">
               Só quem faz parte desta área pode adicionar pendências.
             </p>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-1">
-            {abas.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setAba(a.id)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs transition-colors",
-                  aba === a.id ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {a.label} <span className="text-ink-3">{listas[a.id].length}</span>
-              </button>
-            ))}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <div className="segmentos" role="tablist" aria-label="Pendências da área">
+              {abas.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={aba === a.id}
+                  onClick={() => setAba(a.id)}
+                >
+                  {a.label} <span className="tabular-nums opacity-60">{listas[a.id].length}</span>
+                </button>
+              ))}
+            </div>
             {coord && (
-              <Link to="/area-manager" className="ml-auto flex items-center gap-1.5 px-2 text-xs text-muted-foreground transition-colors hover:text-foreground">
-                Aprovar no Área Manager <ExternalLink className="size-3" />
+              <Link to="/area-manager" className="hc-pilula ml-auto">
+                Aprovar no Área Manager <ExternalLink className="size-3.5" />
               </Link>
             )}
           </div>
@@ -163,22 +166,22 @@ function AreaPage() {
               />
             ))}
             {listas[aba].length === 0 && (
-              <li className="glass-inset rounded-2xl px-4 py-12 text-center text-sm text-ink-3">Nada por aqui.</li>
+              <li className="rounded-[22px] border border-dashed border-white/[0.1] px-4 py-12 text-center text-sm text-muted-foreground">Nada por aqui.</li>
             )}
           </ul>
         </main>
 
-        <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
-          <section>
-            <h2 className="mb-2 font-display text-sm font-semibold">Em resumo</h2>
+        <aside className="space-y-3.5 lg:sticky lg:top-6 lg:self-start">
+          <section className="glass hc p-5">
+            <h2 className="hc-titulo mb-2.5">Em resumo</h2>
             <ul className="space-y-1.5 text-[13px] leading-snug text-muted-foreground">
               {resumo.map((r) => (
                 <li key={r}>{r}</li>
               ))}
             </ul>
           </section>
-          <section>
-            <h2 className="mb-2 font-display text-sm font-semibold">Liderança</h2>
+          <section className="glass hc p-5">
+            <h2 className="hc-titulo mb-2.5">Liderança</h2>
             <div className="space-y-1">
               {v.lideres.map((u) => (
                 <Pessoa key={u.id} u={u} lider />
@@ -186,9 +189,10 @@ function AreaPage() {
               {v.lideres.length === 0 && <p className="text-xs text-ink-3">Sem líder definido.</p>}
             </div>
           </section>
-          <section>
-            <h2 className="mb-2 font-display text-sm font-semibold">
-              Equipe <span className="font-normal text-ink-3">{v.membros.length}</span>
+          <section className="glass hc p-5">
+            <h2 className="mb-2.5 flex items-center gap-2.5">
+              <span className="hc-titulo">Equipe</span>
+              <span className="hc-selo tabular-nums">{v.membros.length}</span>
             </h2>
             <div className="space-y-1">
               {v.membros
@@ -210,11 +214,11 @@ function Pessoa({ u, lider }: { u: EquipeUser; lider?: boolean }) {
     <div className="flex items-center gap-2.5 rounded-xl py-1">
       <span className="relative shrink-0">
         <img src={u.avatar_url || DEFAULT_AVATAR_URL} alt="" className="size-8 rounded-lg border border-white/10 object-cover" />
-        <span className={cn("absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-black", isOnline(u) ? "bg-emerald-500" : "bg-white/25")} />
+        <span className={cn("absolute -bottom-0.5 -right-0.5 size-2 rounded-full ring-2 ring-background", isOnline(u) ? "bg-emerald-500" : "bg-foreground/25")} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1 truncate text-[13px] font-medium">
-          {lider && <Crown className="size-3 text-primary" />}
+          {lider && <Crown className="size-3 text-amber-300" />}
           {u.username}
         </span>
         <span className="block truncate text-[11px] text-ink-3">{ROLE_LABELS[u.role]}</span>
@@ -256,7 +260,7 @@ function NovaPendencia({ area, eu }: { area: string; eu: string }) {
 
   return (
     <div
-      className="glass rounded-[20px] p-2"
+      className="glass hc p-2"
       onFocus={() => setFoco(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setFoco(false);
@@ -284,27 +288,27 @@ function NovaPendencia({ area, eu }: { area: string; eu: string }) {
               rows={2}
               placeholder="Detalhes (opcional)"
               aria-label="Detalhes da pendência"
-              className="w-full resize-none rounded-xl border border-white/[0.07] bg-black/30 px-3 py-2 text-sm outline-none placeholder:text-ink-3 focus:border-white/20"
+              className="hc-dentro w-full resize-none px-3 py-2 text-sm outline-none placeholder:text-ink-3"
             />
-            <div className="flex items-center gap-1.5">
-              {PRIORIDADES.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setPrio(p.id)}
-                  className={cn(
-                    "rounded-lg border px-2.5 py-1 text-xs transition-colors",
-                    prio === p.id ? p.on : "border-white/[0.08] text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="segmentos" role="group" aria-label="Prioridade">
+                {PRIORIDADES.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={prio === p.id}
+                    onClick={() => setPrio(p.id)}
+                  >
+                    <span className={cn("size-1.5 rounded-full", p.dot)} aria-hidden />
+                    {p.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={enviar}
                 disabled={!titulo.trim() || criar.isPending}
-                className="ml-auto rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-white transition-opacity disabled:opacity-40"
+                className="ml-auto flex h-9 items-center rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
               >
                 Adicionar
               </button>
@@ -340,7 +344,7 @@ function PendenciaItem({
   });
 
   return (
-    <li className="glass animate-rise rounded-2xl">
+    <li className="glass hc animate-rise">
       <button onClick={() => setAberto((a) => !a)} aria-expanded={aberto} className="flex w-full items-center gap-3 px-4 py-3 text-left">
         <span className={cn("size-2 shrink-0 rounded-full", pr.dot)} title={`Prioridade ${pr.label.toLowerCase()}`} />
         <span className="min-w-0 flex-1">
@@ -349,7 +353,7 @@ function PendenciaItem({
             {p.criadoPor || "—"} · {haQuanto(p.createdAt)}
           </span>
         </span>
-        {temObs && <MessageSquare className="size-3.5 shrink-0 text-amber-300" aria-label="Coordenação pediu informações" />}
+        {temObs && <MessageSquare className="size-3.5 shrink-0 text-primary" aria-label="Coordenação pediu informações" />}
         <ChevronDown className={cn("size-4 shrink-0 text-ink-3 transition-transform duration-200", aberto && "rotate-180")} />
       </button>
       <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", aberto ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
@@ -361,7 +365,7 @@ function PendenciaItem({
               <p className="text-xs text-ink-3">Sem detalhes.</p>
             )}
             {temObs && (
-              <p className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-200">
+              <p className="hc-dentro px-3 py-2 text-xs text-foreground">
                 <b>{p.obsPor || "Coordenação"}:</b> {p.obsCoordenacao}
               </p>
             )}
@@ -379,7 +383,7 @@ function PendenciaItem({
                     if (window.confirm(`Excluir “${p.titulo}”?`)) excluir.mutate();
                   }}
                   disabled={excluir.isPending}
-                  className="flex items-center gap-1.5 text-xs text-ink-3 transition-colors hover:text-destructive"
+                  className="hc-pilula hover:!bg-destructive/15 hover:!text-destructive disabled:opacity-50"
                 >
                   <Trash2 className="size-3.5" /> Excluir
                 </button>

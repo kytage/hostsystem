@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   BarChart3,
+  Clock,
   Crown,
   Download,
   FileText,
@@ -59,6 +60,7 @@ import {
 } from "@/lib/relatorio-online";
 import { supabase } from "@/integrations/supabase/client";
 import { MinimalSelect } from "@/components/ui/minimal-select";
+import { Indice, Indices } from "@/components/indice";
 import { cn } from "@/lib/utils";
 
 /** Cores fixas por categoria (mesma ordem de ONLINE_CATEGORIAS). */
@@ -74,26 +76,27 @@ const CORES: Record<string, string> = {
 };
 
 
+// cores dos gráficos: as mesmas variáveis dos gráficos da tela inicial
 const TOOLTIP_STYLE = {
-  backgroundColor: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "0.75rem",
+  backgroundColor: "var(--card)",
+  border: "1px solid var(--border)",
+  borderRadius: "10px",
   fontSize: "12px",
-  color: "hsl(var(--foreground))",
+  color: "var(--foreground)",
 } as const;
 
 const TOOLTIP_LABEL_STYLE = {
-  color: "hsl(var(--foreground))",
+  color: "var(--foreground)",
   fontWeight: 700,
 } as const;
 
 const TICK_STYLE = {
   fontSize: 11,
-  fill: "hsl(var(--muted-foreground))",
+  fill: "var(--muted-foreground)",
 } as const;
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/60";
+  "w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-white/30";
 
 function fmtQuando(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", {
@@ -164,19 +167,19 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl glass p-6">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[22px] glass-modal p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-foreground font-display">
+            <h2 className="hc-titulo">
               Relatório de Online
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="hc-nota mt-1">
               {previa.length} de {ranking.length} setagem(ns) no recorte atual
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -184,7 +187,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
 
         <div className="mt-5 space-y-3">
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1.5 block">
               Título
             </span>
             <input
@@ -196,7 +199,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Período
               </span>
               <MinimalSelect
@@ -206,7 +209,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Categoria / produto
               </span>
               <MinimalSelect
@@ -224,7 +227,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Organização / setagem
               </span>
               <MinimalSelect
@@ -237,7 +240,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Faixa horária
               </span>
               <MinimalSelect
@@ -247,7 +250,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Ordenar por
               </span>
               <MinimalSelect
@@ -257,7 +260,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Pico mínimo
               </span>
               <input
@@ -269,7 +272,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Limite de linhas (0 = todas)
               </span>
               <input
@@ -281,7 +284,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1.5 block">
                 Orientação
               </span>
               <MinimalSelect
@@ -295,7 +298,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-xl glass-inset p-3">
+          <div className="hc-dentro flex flex-wrap gap-x-4 gap-y-2 p-3">
             {(
               [
                 ["incluirMedia", "Média"],
@@ -322,7 +325,7 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1.5 block">
               Observação
             </span>
             <textarea
@@ -340,14 +343,14 @@ function RelatorioOnlineModal({ ranking, base, onClose }: RelatorioModalProps) {
           <button
             onClick={() => exportarRankingCsv(previa)}
             disabled={previa.length === 0}
-            className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+            className="pilula rounded-full disabled:opacity-40"
           >
             <Download className="size-4" /> CSV
           </button>
           <button
             onClick={gerar}
             disabled={gerando || previa.length === 0}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
           >
             {gerando ? (
               <Loader2 className="size-4 animate-spin" />
@@ -445,27 +448,23 @@ export function IlegalOnline() {
 
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="mt-6 space-y-3.5">
       {/* Filtro de período */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Activity className="size-4 text-primary" />
-          Histórico de Online — Facções
-          <span className="text-xs font-medium text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <Activity className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          <h2 className="hc-titulo">Histórico de Online — Facções</h2>
+          <span className="hc-nota">
             (média por hora no período)
           </span>
         </div>
-        <div className="flex items-center gap-1 rounded-full glass-modal p-1">
+        <div className="segmentos" role="group" aria-label="Período">
           {ONLINE_PERIODOS.map((p) => (
             <button
               key={p.id}
+              type="button"
+              aria-pressed={periodo === p.id}
               onClick={() => setPeriodo(p.id)}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                periodo === p.id
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
-              )}
             >
               {p.label}
             </button>
@@ -473,10 +472,10 @@ export function IlegalOnline() {
         </div>
       </div>
 
-      {/* Filtros avançados */}
-      <div className="grid grid-cols-1 gap-3 rounded-2xl glass p-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Filtros avançados (sem overflow escondido: as listas de escolha precisam sair do cartão) */}
+      <div className="glass grid grid-cols-1 gap-3 rounded-[22px] p-5 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="hc-sobre mb-1.5 block">
             Categoria
           </span>
           <MinimalSelect
@@ -489,7 +488,7 @@ export function IlegalOnline() {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="hc-sobre mb-1.5 block">
             Faixa horária
           </span>
           <MinimalSelect
@@ -499,13 +498,12 @@ export function IlegalOnline() {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="hc-sobre mb-1.5 block">
             Buscar setagem
           </span>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <div className="campo-busca">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
-              className={cn(inputCls, "pl-9")}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Ex.: Armas01"
@@ -513,7 +511,7 @@ export function IlegalOnline() {
           </div>
         </label>
         <label className="block">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="hc-sobre mb-1.5 block">
             Pico mínimo
           </span>
           <input
@@ -527,27 +525,29 @@ export function IlegalOnline() {
       </div>
 
       {/* TOP RANKING ONLINE */}
-      <section className="rounded-2xl glass p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Trophy className="size-4 text-primary" />
-            Top Ranking Online
-            <span className="text-xs font-medium text-muted-foreground">
+      <section className="glass hc p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="hc-icone">
+            <Trophy className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <h3 className="hc-titulo">Top Ranking Online</h3>
+            <span className="hc-nota">
               (maior pico por setagem)
             </span>
-          </h3>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => exportarRankingCsv(ranking)}
               disabled={ranking.length === 0}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-white/[0.08] disabled:opacity-40"
+              className="hc-pilula disabled:opacity-40"
             >
               <Download className="size-3.5" /> CSV
             </button>
             <button
               onClick={() => setRelatorio(true)}
               disabled={ranking.length === 0}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+              className="flex h-[30px] items-center gap-1.5 rounded-full bg-primary px-3.5 text-[11.5px] font-semibold text-primary-foreground disabled:opacity-40"
             >
               <FileText className="size-3.5" /> Gerar relatório
             </button>
@@ -559,7 +559,7 @@ export function IlegalOnline() {
             <Loader2 className="size-5 animate-spin" />
           </div>
         ) : ranking.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
+          <p className="rounded-[14px] border border-dashed border-white/[0.1] py-10 text-center text-sm text-muted-foreground">
             Nenhum registro no recorte selecionado.
           </p>
         ) : (
@@ -568,8 +568,8 @@ export function IlegalOnline() {
               <div
                 key={r.setName}
                 className={cn(
-                  "flex flex-wrap items-center gap-3 rounded-xl glass-inset px-3 py-2",
-                  i === 0 && "border-primary/40 bg-primary/5"
+                  "hc-dentro flex flex-wrap items-center gap-3 px-3 py-2",
+                  i === 0 && "!border-[var(--gf-linha-2)] !bg-[var(--gf-3)]"
                 )}
               >
                 <span
@@ -587,12 +587,12 @@ export function IlegalOnline() {
                   className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                   style={{
                     backgroundColor: `${CORES[r.category] ?? "#888"}22`,
-                    color: CORES[r.category] ?? "hsl(var(--muted-foreground))",
+                    color: CORES[r.category] ?? "var(--muted-foreground)",
                   }}
                 >
                   {r.category}
                 </span>
-                <span className="text-sm font-semibold text-primary">
+                <span className="text-sm font-semibold tabular-nums text-foreground">
                   {r.pico} Online
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -613,20 +613,24 @@ export function IlegalOnline() {
       </section>
 
       {/* Maiores organizações (pico de online) */}
-      <section className="rounded-2xl glass p-5">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <BarChart3 className="size-4 text-primary" />
-          Maiores organizações
-          <span className="text-xs font-medium text-muted-foreground">
-            (pico de online no recorte)
+      <section className="glass hc p-5">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="hc-icone">
+            <BarChart3 className="size-4" strokeWidth={1.75} />
           </span>
-        </h3>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <h3 className="hc-titulo">Maiores organizações</h3>
+            <span className="hc-nota">
+              (pico de online no recorte)
+            </span>
+          </div>
+        </div>
         {isLoading ? (
           <div className="flex h-72 items-center justify-center text-muted-foreground">
             <Loader2 className="size-5 animate-spin" />
           </div>
         ) : topOrgs.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
+          <p className="rounded-[14px] border border-dashed border-white/[0.1] py-10 text-center text-sm text-muted-foreground">
             Nenhum registro no recorte selecionado.
           </p>
         ) : (
@@ -638,7 +642,7 @@ export function IlegalOnline() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--border)"
                 horizontal={false}
               />
               <XAxis
@@ -657,10 +661,10 @@ export function IlegalOnline() {
                 tickLine={false}
               />
               <Tooltip
-                cursor={{ fill: "hsl(var(--accent))", opacity: 0.3 }}
+                cursor={{ fill: "var(--accent)", opacity: 0.3 }}
                 contentStyle={TOOLTIP_STYLE}
                 labelStyle={TOOLTIP_LABEL_STYLE}
-                itemStyle={{ color: "hsl(var(--foreground))" }}
+                itemStyle={{ color: "var(--foreground)" }}
                 formatter={(v: number) => [`${v} online`, "Pico"]}
               />
               <Bar dataKey="pico" name="Pico" radius={[0, 6, 6, 0]} barSize={16}>
@@ -674,20 +678,22 @@ export function IlegalOnline() {
       </section>
 
       {/* Gráfico — máximo de online no horário de pico, por dia */}
-      <section className="rounded-2xl glass p-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Activity className="size-4 text-primary" />
-            Máximo online no horário de pico
-            <span className="text-xs font-medium text-muted-foreground">
+      <section className="glass hc p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="hc-icone">
+            <Activity className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <h3 className="hc-titulo">Máximo online no horário de pico</h3>
+            <span className="hc-nota">
               ({rotuloFaixa} · por dia)
             </span>
-          </h3>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full glass-inset px-3 py-1 text-[11px] font-semibold text-muted-foreground">
+            <span className="hc-selo tabular-nums">
               Média diária <span className="text-foreground">{mediaPeriodo}</span>
             </span>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+            <span className="hc-selo tabular-nums !text-foreground">
               Recorde {picoMaximo.pico}
               {picoMaximo.picoHora !== null
                 ? ` · ${String(picoMaximo.picoHora).padStart(2, "0")}h ${picoMaximo.label}`
@@ -700,7 +706,7 @@ export function IlegalOnline() {
             <Loader2 className="size-5 animate-spin" />
           </div>
         ) : seriePico.length === 0 ? (
-          <div className="flex h-72 flex-col items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/[0.1] text-muted-foreground">
             <Activity className="size-6" />
             <p className="text-sm">Nenhum registro no horário de pico neste recorte.</p>
           </div>
@@ -718,7 +724,7 @@ export function IlegalOnline() {
               </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--border)"
                 vertical={false}
               />
               <XAxis
@@ -737,7 +743,7 @@ export function IlegalOnline() {
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 labelStyle={TOOLTIP_LABEL_STYLE}
-                itemStyle={{ color: "hsl(var(--foreground))" }}
+                itemStyle={{ color: "var(--foreground)" }}
                 formatter={(v: number, n: string) => [`${v} online`, n]}
               />
               <Area
@@ -754,7 +760,7 @@ export function IlegalOnline() {
                 type="monotone"
                 dataKey="media"
                 name="Média do dia"
-                stroke="hsl(var(--muted-foreground))"
+                stroke="var(--muted-foreground)"
                 strokeWidth={1.5}
                 strokeDasharray="4 4"
                 dot={false}
@@ -766,39 +772,37 @@ export function IlegalOnline() {
       </section>
 
       {/* Resumo — total online atual por categoria */}
-      <section className="rounded-2xl glass p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Users className="size-4 text-primary" />
+      <section className="glass hc p-5">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="hc-icone">
+            <Users className="size-4" strokeWidth={1.75} />
+          </span>
+          <h3 className="hc-titulo min-w-0 flex-1">
             Online agora por categoria
           </h3>
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+          <span className="hc-selo tabular-nums">
             Total ilegal online: {totalGeral}
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {/* até 4 por linha, com as linhas equilibradas (8 viram 4 + 4; 6 viram 3 + 3) */}
+        <Indices colunas={resumo.length > 4 ? Math.ceil(resumo.length / 2) : resumo.length || 1}>
           {resumo.map((r) => (
-            <div
+            <Indice
               key={r.categoria}
-              className="rounded-xl glass-inset p-3 text-center"
-            >
-              <div
-                className="mx-auto mb-2 h-1 w-8 rounded-full"
-                style={{ backgroundColor: CORES[r.categoria] }}
-              />
-              <p className="text-xs font-semibold text-muted-foreground">{r.categoria}</p>
-              <p className="mt-0.5 text-xl font-semibold text-foreground font-display">{r.total}</p>
-              {r.capturedAt && (
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  {new Date(r.capturedAt).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              )}
-            </div>
+              valor={r.total}
+              titulo={r.categoria}
+              cor={CORES[r.categoria]}
+              nota={
+                r.capturedAt
+                  ? new Date(r.capturedAt).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : undefined
+              }
+            />
           ))}
-        </div>
+        </Indices>
       </section>
 
       {relatorio && (
@@ -838,17 +842,13 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
 
   const filtros = (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap items-center gap-1 rounded-full glass-inset p-1">
+      <div className="segmentos" role="group" aria-label="Período">
         {ONLINE_PERIODOS.map((p) => (
           <button
             key={p.id}
+            type="button"
+            aria-pressed={periodo === p.id}
             onClick={() => setPeriodo(p.id)}
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors",
-              periodo === p.id
-                ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
-            )}
           >
             {p.label}
           </button>
@@ -885,65 +885,51 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
       {filtros}
 
       {rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/[0.1] py-16 text-muted-foreground">
           <Activity className="size-6" />
           <p className="text-sm">Nenhum registro de online neste recorte.</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl glass-inset p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Média
-              </p>
-              <p className="mt-1 text-xl font-semibold text-foreground font-display">{resumo.media}</p>
-            </div>
-            <div className="rounded-xl glass-inset p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Maior pico
-              </p>
-              <p className="mt-1 text-xl font-semibold text-primary font-display">{resumo.pico}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {resumo.picoHora !== null
+          <Indices>
+            <Indice valor={resumo.media} titulo="Média" icone={Activity} />
+            <Indice
+              valor={resumo.pico}
+              titulo="Maior pico"
+              icone={Trophy}
+              nota={
+                resumo.picoHora !== null
                   ? `${String(resumo.picoHora).padStart(2, "0")}h · ${new Date(
                       resumo.picoAt ?? ""
                     ).toLocaleDateString("pt-BR")}`
-                  : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl glass-inset p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Último
-              </p>
-              <p className="mt-1 text-xl font-semibold text-foreground font-display">
-                {resumo.ultimo ?? "—"}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {resumo.ultimoAt
+                  : "—"
+              }
+            />
+            <Indice
+              valor={resumo.ultimo ?? "—"}
+              titulo="Último"
+              icone={Clock}
+              nota={
+                resumo.ultimoAt
                   ? new Date(resumo.ultimoAt).toLocaleString("pt-BR", {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",
                       minute: "2-digit",
                     })
-                  : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl glass-inset p-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Capturas
-              </p>
-              <p className="mt-1 text-xl font-semibold text-foreground font-display">{rows.length}</p>
-            </div>
-          </div>
+                  : "—"
+              }
+            />
+            <Indice valor={rows.length} titulo="Capturas" icone={BarChart3} />
+          </Indices>
 
-          <section className="rounded-xl glass-inset p-4">
+          <section className="hc-dentro p-4">
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={serie} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
                   minTickGap={32}
@@ -952,7 +938,7 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   labelStyle={TOOLTIP_LABEL_STYLE}
-                  itemStyle={{ color: "hsl(var(--foreground))" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Line
                   type="monotone"
@@ -967,16 +953,16 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
             </ResponsiveContainer>
           </section>
 
-          <section className="rounded-xl glass-inset p-4">
-            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <section className="hc-dentro p-4">
+            <p className="hc-sobre mb-2 flex items-center gap-1.5">
               <BarChart3 className="size-3.5" /> Pico por hora
             </p>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={horas} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -984,7 +970,7 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   labelStyle={TOOLTIP_LABEL_STYLE}
-                  itemStyle={{ color: "hsl(var(--foreground))" }}
+                  itemStyle={{ color: "var(--foreground)" }}
                 />
                 <Bar dataKey="pico" name="Pico" fill="#ce0e0e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="media" name="Média" fill="#a8a8a8" radius={[4, 4, 0, 0]} />
@@ -992,15 +978,15 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
             </ResponsiveContainer>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-border">
-            <div className="border-b border-border bg-white/[0.035] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <section className="hc-dentro overflow-hidden">
+            <div className="hc-sobre border-b border-white/[0.06] px-4 py-2.5">
               Últimos registros
             </div>
             <div className="max-h-56 overflow-y-auto">
               {ultimos.map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between border-b border-border/50 px-4 py-2 text-xs last:border-0"
+                  className="flex items-center justify-between border-b border-white/[0.06] px-4 py-2 text-xs last:border-0"
                 >
                   <span className="text-muted-foreground">
                     {new Date(r.captured_at).toLocaleString("pt-BR", {
@@ -1010,7 +996,7 @@ export function SetHistoricoOnline({ setName, limpoEm }: SetHistoricoOnlineProps
                       minute: "2-digit",
                     })}
                   </span>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-semibold text-primary">
+                  <span className="hc-selo tabular-nums !text-foreground">
                     {r.amount} online
                   </span>
                 </div>

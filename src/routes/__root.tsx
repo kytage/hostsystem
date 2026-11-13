@@ -66,13 +66,13 @@ function ErrorComponent({ error, reset }: import("@tanstack/react-router").Error
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
           >
             Tentar novamente
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="pilula justify-center rounded-full"
           >
             Início
           </a>
@@ -216,6 +216,8 @@ function RootComponent() {
       <div className="moldura relative z-10 flex h-screen w-full overflow-hidden">
         {!visita && <AppSidebar />}
         <main key={pathname} className="page-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          {/* a luz de fundo do topo, a mesma em todas as páginas (src/styles.css, .pagina-luz) */}
+          <div aria-hidden className="pagina-luz" />
           <Outlet />
         </main>
       </div>

@@ -79,7 +79,7 @@ function SeletorNivel({
 }) {
   const opcoes: (Nivel | "padrao")[] = comPadrao ? ["padrao", ...NIVEIS] : NIVEIS;
   return (
-    <div className="segmentos shrink-0" role="radiogroup">
+    <div className="segmentos shrink-0" role="radiogroup" aria-label="Nível de acesso">
       {opcoes.map((n) => (
         <button
           key={n}
@@ -270,19 +270,22 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl glass-modal">
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[22px] glass-modal">
         {/* Cabeçalho */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <ShieldCheck className="size-5 text-primary" /> Central de permissões
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Aba por aba, escolha quem pode ver ou editar: por cargo, por área ou por pessoa.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-6 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="hc-icone">
+              <ShieldCheck className="size-4" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="hc-titulo">Central de permissões</h2>
+              <p className="hc-nota mt-0.5">
+                Aba por aba, escolha quem pode ver ou editar: por cargo, por área ou por pessoa.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="segmentos" role="tablist">
+            <div className="segmentos" role="tablist" aria-label="Permissões por">
               {(["cargos", "areas", "usuarios"] as const).map((t) => (
                 <button
                   key={t}
@@ -295,30 +298,24 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fechar"
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-            >
-              <X className="size-4" />
+            <button type="button" onClick={onClose} aria-label="Fechar" className="hc-seta">
+              <X className="size-3.5" />
             </button>
           </div>
         </div>
 
         <div className="grid min-h-0 flex-1 md:grid-cols-[260px_1fr]">
           {/* Coluna de alvos */}
-          <div className="flex min-h-0 flex-col border-b border-border md:border-b-0 md:border-r">
+          <div className="flex min-h-0 flex-col border-b border-white/[0.06] md:border-b-0 md:border-r">
             {aba === "usuarios" && (
-              <div className="border-b border-border p-3">
-                <label className="flex h-9 items-center gap-2 rounded-full border border-border bg-black/25 px-3">
-                  <Search className="size-3.5 text-muted-foreground" />
+              <div className="border-b border-white/[0.06] p-3">
+                <label className="campo-busca w-full">
+                  <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
                   <input
                     value={buscaPessoa}
                     onChange={(e) => setBuscaPessoa(e.target.value)}
                     placeholder="Buscar pessoa"
                     aria-label="Buscar pessoa"
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </label>
               </div>
@@ -333,8 +330,8 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                     className={cn(
                       "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
                       role === r
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground hover:bg-white/[0.08]",
+                        ? "bg-white/[0.09] text-foreground"
+                        : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
                     )}
                   >
                     <span className={cn("size-2.5 rounded-full", ROLE_DOT[r])} />
@@ -351,7 +348,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                     key={a.key}
                     className={cn(
                       "group flex items-center gap-1 rounded-xl pr-1 transition-colors",
-                      areaAtual === a.key ? "bg-primary/10" : "hover:bg-white/[0.08]",
+                      areaAtual === a.key ? "bg-white/[0.09]" : "hover:bg-white/[0.05]",
                     )}
                   >
                     <button
@@ -359,7 +356,9 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                       onClick={() => setArea(a.key)}
                       className={cn(
                         "flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm font-semibold",
-                        areaAtual === a.key ? "text-primary" : "text-foreground",
+                        areaAtual === a.key
+                          ? "text-foreground"
+                          : "text-muted-foreground group-hover:text-foreground",
                       )}
                     >
                       <span>{a.emoji}</span>
@@ -406,8 +405,8 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                         className={cn(
                           "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
                           ativo
-                            ? "bg-primary/10 text-primary"
-                            : "text-foreground hover:bg-white/[0.08]",
+                            ? "bg-white/[0.09] text-foreground"
+                            : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
                         )}
                       >
                         <span className={cn("size-2.5 shrink-0 rounded-full", ROLE_DOT[u.role])} />
@@ -427,7 +426,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
             </div>
 
             {aba === "areas" && (
-              <div className="border-t border-border p-3">
+              <div className="border-t border-white/[0.06] p-3">
                 {novaAreaOpen ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">
@@ -435,7 +434,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                         value={novoEmoji}
                         onChange={(e) => setNovoEmoji(e.target.value)}
                         placeholder="🏷️"
-                        className="w-14 rounded-lg border border-border bg-black/25 px-2 py-2 text-center text-sm outline-none focus:border-primary/60"
+                        className="w-14 rounded-xl border border-white/[0.08] bg-white/[0.04] px-2 py-2 text-center text-sm outline-none focus:border-white/30"
                       />
                       <input
                         value={novaLabel}
@@ -451,20 +450,20 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                             );
                         }}
                         placeholder="Nome da área"
-                        className="min-w-0 flex-1 rounded-lg border border-border bg-black/25 px-3 py-2 text-sm outline-none focus:border-primary/60"
+                        className="min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm outline-none focus:border-white/30"
                       />
                     </div>
                     <input
                       value={novaKey}
                       onChange={(e) => setNovaKey(e.target.value)}
                       placeholder="chave_interna"
-                      className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 font-mono text-xs outline-none focus:border-primary/60"
+                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-xs outline-none focus:border-white/30"
                     />
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setNovaAreaOpen(false)}
-                        className="flex-1 rounded-full border border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-white/[0.08]"
+                        className="hc-pilula flex-1 justify-center"
                       >
                         Cancelar
                       </button>
@@ -476,7 +475,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                           novaKey.trim().length < 2
                         }
                         onClick={() => mutCriarArea.mutate()}
-                        className="flex-1 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                        className="flex h-[30px] flex-1 items-center justify-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                       >
                         {mutCriarArea.isPending ? "Salvando..." : "Salvar área"}
                       </button>
@@ -486,7 +485,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                   <button
                     type="button"
                     onClick={() => setNovaAreaOpen(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-white/[0.12] px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground"
                   >
                     <Plus className="size-3.5" /> Nova área
                   </button>
@@ -512,7 +511,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                   type="button"
                   disabled={salvando || travado}
                   onClick={() => todasEm("ver")}
-                  className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground disabled:opacity-50"
+                  className="hc-pilula disabled:opacity-50"
                 >
                   <Eye className="size-3.5" /> Ver tudo
                 </button>
@@ -521,7 +520,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                     type="button"
                     disabled={salvando}
                     onClick={() => todasEm("editar")}
-                    className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground disabled:opacity-50"
+                    className="hc-pilula disabled:opacity-50"
                   >
                     <Pencil className="size-3.5" /> Editar tudo
                   </button>
@@ -530,7 +529,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                     type="button"
                     disabled={salvando || travado}
                     onClick={() => todasEm("padrao")}
-                    className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-white/30 hover:text-foreground disabled:opacity-50"
+                    className="hc-pilula disabled:opacity-50"
                   >
                     <RotateCcw className="size-3.5" /> Tudo no padrão
                   </button>
@@ -539,7 +538,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                   type="button"
                   disabled={salvando || travado}
                   onClick={() => todasEm("nenhum")}
-                  className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                  className="hc-pilula hover:!border-destructive/50 hover:!bg-destructive/10 hover:!text-destructive disabled:opacity-50"
                 >
                   <Ban className="size-3.5" /> Bloquear tudo
                 </button>
@@ -547,7 +546,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
             </div>
 
             {aba === "usuarios" && pessoaFounder ? (
-              <p className="rounded-xl border border-border bg-white/[0.035] px-4 py-10 text-center text-sm text-muted-foreground">
+              <p className="hc-dentro px-4 py-10 text-center text-sm text-muted-foreground">
                 <strong className="text-foreground">{pessoa?.username}</strong> é FOUNDER e sempre
                 tem acesso total a todas as abas.
               </p>
@@ -569,8 +568,8 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                       className={cn(
                         "rounded-xl border p-3 transition-colors",
                         liberada
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-border bg-white/[0.035]",
+                          ? "border-white/[0.14] bg-white/[0.05]"
+                          : "border-white/[0.06] bg-white/[0.02]",
                       )}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -579,8 +578,8 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                             className={cn(
                               "flex size-5 shrink-0 items-center justify-center rounded-md border",
                               liberada
-                                ? "border-white/15 bg-white/[0.09] text-foreground"
-                                : "border-border",
+                                ? "border-transparent bg-foreground text-background"
+                                : "border-white/[0.15]",
                             )}
                           >
                             {liberada ? <Check className="size-3" /> : null}
@@ -627,10 +626,10 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
                                 title={action.hint}
                                 onClick={() => toggleAction(cat.key, action.key)}
                                 className={cn(
-                                  "flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-60",
+                                  "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-60",
                                   on
                                     ? "border-white/15 bg-white/[0.07] text-foreground"
-                                    : "border-border bg-black/25 text-muted-foreground hover:text-foreground",
+                                    : "border-white/[0.08] bg-white/[0.02] text-muted-foreground hover:text-foreground",
                                 )}
                               >
                                 <Icon className="size-3.5" />
@@ -648,7 +647,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border px-6 py-3">
+        <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] px-6 py-3">
           <p className="text-[11px] text-muted-foreground">
             As áreas somam com o cargo. A permissão de uma pessoa vale no lugar das duas. O FOUNDER
             sempre tem acesso total.
@@ -656,7 +655,7 @@ export function PermissoesModal({ onClose, inicial }: PermissoesModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="flex h-9 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
           >
             Concluir
           </button>

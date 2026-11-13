@@ -216,9 +216,9 @@ function CopyInput({
     <div className="relative">
       <input
         className={cn(
-          "w-full rounded-lg border border-border bg-white/[0.05] px-3 py-2 pr-10 text-sm text-foreground outline-none transition-colors focus:border-primary/60",
+          "w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 pr-10 text-sm text-foreground outline-none transition-colors focus:border-foreground/30",
           mono && "font-mono text-xs",
-          readOnly && "cursor-default text-muted-foreground focus:border-border"
+          readOnly && "cursor-default text-muted-foreground focus:border-input"
         )}
         value={value}
         placeholder={placeholder}
@@ -233,7 +233,7 @@ function CopyInput({
         onClick={copy}
         title="Copiar"
         disabled={!value}
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground disabled:opacity-30"
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-foreground/[0.08] hover:text-foreground disabled:opacity-30"
       >
         {copied ? (
           <Check className="size-3.5 text-success" />
@@ -262,23 +262,24 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/60";
+    "w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl glass p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground font-display">
+      <div className="w-full max-w-lg rounded-[22px] glass-modal p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="hc-titulo">
               {isNew ? "Nova organização" : `Editar ${org.setagem || org.local}`}
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="hc-nota mt-1">
               {isNew ? "Preencha os dados da setagem. Deixe a organização vazia se estiver livre." : `${categoriaNome} · ${org.local}`}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            aria-label="Fechar"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -286,7 +287,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
 
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Setagem (painel)
             </span>
             <input
@@ -297,7 +298,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
           </label>
           {categorias.length > 0 && (
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <span className="hc-sobre mb-1 block">
                 Categoria
               </span>
               <MinimalSelect
@@ -308,7 +309,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             </label>
           )}
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Localização (nome)
             </span>
             <input
@@ -318,7 +319,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Grupo
             </span>
             <input
@@ -328,7 +329,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Nome da organização
             </span>
             <input
@@ -339,7 +340,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Coordenadas (CDS)
             </span>
             <input
@@ -349,7 +350,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Status
             </span>
             <MinimalSelect
@@ -359,7 +360,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Situação
             </span>
             <MinimalSelect
@@ -372,7 +373,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             />
           </label>
           <label className="block sm:col-span-2">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            <span className="hc-sobre mb-1 block">
               Observação
             </span>
             <textarea
@@ -387,14 +388,14 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-white/[0.08]"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
           <button
             onClick={() => onSave(form)}
             disabled={saving}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
             Salvar alterações
@@ -450,7 +451,7 @@ function DetalhesModal({
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/60";
+    "w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30";
 
   const [vipOpen, setVipOpen] = useState(false);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
@@ -487,7 +488,7 @@ function DetalhesModal({
     opts?: { placeholder?: string }
   ) => (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+      <span className="hc-sobre mb-1 block">
         {label}
       </span>
       <CopyInput
@@ -533,7 +534,7 @@ function DetalhesModal({
     opts?: { mono?: boolean; span?: boolean; placeholder?: string }
   ) => (
     <label className={opts?.span ? "block md:col-span-3" : "block"}>
-      <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+      <span className="hc-sobre mb-1 block">
         {label}
       </span>
       <CopyInput
@@ -548,7 +549,7 @@ function DetalhesModal({
 
   const telField = (label: string, key: keyof IlegalDetalhes) => (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+      <span className="hc-sobre mb-1 block">
         {label}
       </span>
       <CopyInput
@@ -566,13 +567,13 @@ function DetalhesModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl glass p-6">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[22px] glass-modal p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground font-display">
+          <div className="min-w-0">
+            <h2 className="hc-titulo">
               {org.organizacao || org.setagem}
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="hc-nota mt-1">
               {categoriaNome} · {org.local} · {org.grupo}
             </p>
             {org.limpoEm && (
@@ -586,7 +587,7 @@ function DetalhesModal({
             <button
               onClick={() => setRelatorioOpen(true)}
               title="Gerar relatório desta organização"
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+              className="hc-pilula"
             >
               <FileText className="size-3.5" /> Relatório
             </button>
@@ -594,28 +595,35 @@ function DetalhesModal({
               <button
                 onClick={() => setTransferirOpen(true)}
                 title="Transferir facção para outro set (mantém histórico)"
-                className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                className="hc-pilula"
               >
                 <ArrowRightLeft className="size-3.5" /> Transferir
               </button>
             )}
+            {/* limpar e excluir apagam dados: ficam em vermelho */}
             {canEdit && (
               <button
                 onClick={() => setLimparOpen(true)}
                 title="Limpar facção (libera a setagem e zera o painel)"
-                className="flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                className="flex h-[30px] items-center gap-1.5 rounded-full border border-primary/50 bg-primary/10 px-3 text-[11.5px] font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
               >
                 <Eraser className="size-3.5" /> Limpar Fac
               </button>
             )}
             {canEdit && (
-              <Button variant="destructive" size="sm" onClick={() => setExcluirOpen(true)}>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-[30px] gap-1.5 rounded-full px-3 text-[11.5px] [&_svg]:size-3.5"
+                onClick={() => setExcluirOpen(true)}
+              >
                 <Trash2 className="size-3.5" /> Excluir setagem
               </Button>
             )}
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+              aria-label="Fechar"
+              className="hc-seta"
             >
               <X className="size-4" />
             </button>
@@ -623,7 +631,7 @@ function DetalhesModal({
         </div>
 
         {/* Abas do modal: Detalhes / Histórico / Denúncias / Punições (júri) */}
-        <div className="mt-4 flex items-center gap-1 rounded-full glass-inset p-1">
+        <div className="segmentos mt-4" role="tablist" aria-label="Seções da organização">
           {(
             [
               { id: "detalhes", label: "Detalhes" },
@@ -634,13 +642,10 @@ function DetalhesModal({
           ).map((t) => (
             <button
               key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={abaModal === t.id}
               onClick={() => setAbaModal(t.id)}
-              className={cn(
-                "flex-1 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-                abaModal === t.id
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
-              )}
             >
               {t.label}
             </button>
@@ -695,11 +700,11 @@ function DetalhesModal({
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Logo 1x1 */}
               <div className="md:col-span-3">
-                <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                <span className="hc-sobre mb-1 block">
                   Logo (foto 1x1)
                 </span>
                 <div className="flex items-center gap-3">
-                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-white/[0.05]">
+                  <div className="hc-dentro flex size-16 items-center justify-center overflow-hidden">
                     {form.logo ? (
                       <img
                         src={form.logo}
@@ -712,7 +717,7 @@ function DetalhesModal({
                   </div>
                   {canEdit && (
                     <>
-                      <label className="cursor-pointer rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground">
+                      <label className="pilula cursor-pointer rounded-full">
                         {form.logo ? "Trocar logo" : "Enviar logo"}
                         <input
                           type="file"
@@ -724,7 +729,7 @@ function DetalhesModal({
                       {form.logo && (
                         <button
                           onClick={() => set("logo", "")}
-                          className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                          className="pilula rounded-full"
                         >
                           Remover
                         </button>
@@ -737,7 +742,7 @@ function DetalhesModal({
 
               {/* Contato 01 */}
               <div className="md:col-span-3">
-                <span className="mb-1 block text-xs font-semibold text-primary">
+                <span className="hc-titulo block">
                   Contato 01
                 </span>
               </div>
@@ -746,7 +751,7 @@ function DetalhesModal({
 
               {/* Contato 02 */}
               <div className="md:col-span-3">
-                <span className="mb-1 block text-xs font-semibold text-primary">
+                <span className="hc-titulo block">
                   Contato 02
                 </span>
               </div>
@@ -755,7 +760,7 @@ function DetalhesModal({
 
               {/* Contato 03 */}
               <div className="md:col-span-3">
-                <span className="mb-1 block text-xs font-semibold text-primary">
+                <span className="hc-titulo block">
                   Contato 03
                 </span>
               </div>
@@ -771,7 +776,7 @@ function DetalhesModal({
               {field("Garagem Spawn", "garagemSpawn", { mono: true })}
 
               <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                <span className="hc-sobre mb-1 block">
                   Uniforme
                 </span>
                 {canEdit ? (
@@ -809,32 +814,36 @@ function DetalhesModal({
             </div>
 
             {/* VIP FAC */}
-            <div className="mt-5 overflow-hidden rounded-xl border border-warning/40 bg-warning/5">
+            <div className="hc-dentro mt-5 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setVipOpen((v) => !v)}
-                className="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-warning/10"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-foreground/[0.03]"
               >
-                <Crown className="size-4 text-warning" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-warning">
+                <span className="hc-icone">
+                  <Crown className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">
                   VIP FAC
                 </span>
-                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold text-warning">
+                <span className="hc-selo tabular-nums">
                   {form.vips.length}
                 </span>
-                <ChevronDown
-                  className={cn(
-                    "ml-auto size-4 text-warning transition-transform",
-                    vipOpen && "rotate-180"
-                  )}
-                />
+                <span className="hc-seta ml-auto" aria-hidden>
+                  <ChevronDown
+                    className={cn(
+                      "size-4 transition-transform",
+                      vipOpen && "rotate-180"
+                    )}
+                  />
+                </span>
               </button>
 
               {vipOpen && (
-                <div className="space-y-5 border-t border-warning/30 px-4 py-4">
+                <div className="space-y-5 border-t border-white/[0.06] px-4 py-4">
                   {/* Locais */}
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warning/80">
+                    <p className="mb-2 text-[13px] font-semibold text-foreground">
                       Locais
                     </p>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -846,7 +855,7 @@ function DetalhesModal({
 
                   {/* Garagem carro comum */}
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warning/80">
+                    <p className="mb-2 text-[13px] font-semibold text-foreground">
                       Garagem carro comum · todos os níveis
                     </p>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -860,7 +869,7 @@ function DetalhesModal({
 
                   {/* Garagem caminhão */}
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warning/80">
+                    <p className="mb-2 text-[13px] font-semibold text-foreground">
                       Garagem caminhão · apenas nível 1
                     </p>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -874,7 +883,7 @@ function DetalhesModal({
 
                   {/* Rádio, baú e salário */}
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warning/80">
+                    <p className="mb-2 text-[13px] font-semibold text-foreground">
                       Rádio privada · baú · salário
                     </p>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -887,12 +896,12 @@ function DetalhesModal({
 
                   {/* Itens VIP extras */}
                   <div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-warning/80">
+                    <p className="mb-2 text-[13px] font-semibold text-foreground">
                       Itens VIP adicionais
                     </p>
                     <div className="space-y-3">
                       {form.vips.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="rounded-[14px] border border-dashed border-white/[0.1] px-4 py-4 text-center text-xs text-muted-foreground">
                           Nenhum item VIP extra cadastrado (garagem com veículo próprio,
                           Pounder, etc.).
                         </p>
@@ -903,7 +912,7 @@ function DetalhesModal({
                           className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1.4fr_auto] md:items-end"
                         >
                           <label className="block">
-                            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                            <span className="hc-sobre mb-1 block">
                               Item VIP
                             </span>
                             <CopyInput
@@ -914,7 +923,7 @@ function DetalhesModal({
                             />
                           </label>
                           <label className="block">
-                            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                            <span className="hc-sobre mb-1 block">
                               Coordenada
                             </span>
                             <CopyInput
@@ -929,7 +938,7 @@ function DetalhesModal({
                               type="button"
                               onClick={() => removeVip(i)}
                               title="Remover item VIP"
-                              className="mb-1 rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                              className="hc-seta !size-9 mb-px hover:!bg-destructive hover:!text-destructive-foreground"
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -940,7 +949,7 @@ function DetalhesModal({
                         <button
                           type="button"
                           onClick={addVip}
-                          className="rounded-full border border-warning/50 px-4 py-2 text-xs font-semibold text-warning transition-colors hover:bg-warning hover:text-background"
+                          className="hc-pilula"
                         >
                           + Adicionar item VIP
                         </button>
@@ -950,7 +959,7 @@ function DetalhesModal({
 
                   {/* Texto extra */}
                   <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    <span className="hc-sobre mb-1 block">
                       Texto extra para o DEV
                     </span>
                     <textarea
@@ -958,7 +967,7 @@ function DetalhesModal({
                         inputCls,
                         "min-h-20 resize-y",
                         !canEdit &&
-                          "cursor-default text-muted-foreground focus:border-border"
+                          "cursor-default text-muted-foreground focus:border-input"
                       )}
                       value={form.vipConfig.textoExtra}
                       readOnly={!canEdit}
@@ -968,7 +977,7 @@ function DetalhesModal({
                   </label>
 
                   {/* Enviar pra DEV */}
-                  <div className="flex flex-col gap-2 border-t border-warning/30 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-2 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-[11px] text-muted-foreground">
                       Gera uma pendência na categoria <strong>Ilegal</strong> com o texto
                       pronto para o DEV ativar o VIP FAC.
@@ -977,7 +986,7 @@ function DetalhesModal({
                       type="button"
                       disabled={!canEdit || enviarDevMutation.isPending}
                       onClick={() => enviarDevMutation.mutate()}
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-warning px-4 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+                      className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
                     >
                       {enviarDevMutation.isPending ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -994,14 +1003,14 @@ function DetalhesModal({
 
             {/* ANOTAÇÕES SOBRE */}
             <div className="mt-5">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="hc-sobre mb-1 block">
                 Anotações sobre
               </span>
               <textarea
                 className={cn(
                   inputCls,
                   "min-h-28 resize-y",
-                  !canEdit && "cursor-default text-muted-foreground focus:border-border"
+                  !canEdit && "cursor-default text-muted-foreground focus:border-input"
                 )}
                 value={form.anotacoesSobre}
                 readOnly={!canEdit}
@@ -1016,7 +1025,7 @@ function DetalhesModal({
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-white/[0.08]"
+            className="pilula rounded-full"
           >
             Fechar
           </button>
@@ -1024,7 +1033,7 @@ function DetalhesModal({
             <button
               onClick={() => saveMutation.mutate(form)}
               disabled={isLoading || saveMutation.isPending}
-              className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
               Salvar detalhes
@@ -1224,13 +1233,13 @@ function IlegalDashboard() {
         actions={
           <>
             {view === "orgs" && (
-              <label className="relative block">
-                <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <label className="campo-busca w-56">
+                <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
                 <input
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar org, local, grupo..."
-                  className="pilula w-56 rounded-full !pl-8 !pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
+                  aria-label="Buscar organização"
                 />
               </label>
             )}
@@ -1239,7 +1248,7 @@ function IlegalDashboard() {
               onClick={() => setView("solicitacoes")}
               className={cn(
                 "pilula flex items-center gap-1.5 rounded-full",
-                view === "solicitacoes" ? "pilula-ativa" : "!border-primary/40 !text-red-300",
+                view === "solicitacoes" && "pilula-ativa",
               )}
             >
               <ClipboardList className="size-3.5" /> Solicitações
@@ -1248,30 +1257,37 @@ function IlegalDashboard() {
         }
       />
 
-      {/* abas da área (cada uma com a sua cor) e ações */}
+      {/* abas da área e ações */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="segmentos">
-          {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon, cor }) => (
-            <button key={id} onClick={() => setView(id)} data-ativo={view === id}>
-              <Icon className={cn("size-3.5", cor)} strokeWidth={1.8} /> {label}
+        <div className="segmentos" role="tablist" aria-label="Seções do Ilegal">
+          {ILEGAL_VIEWS.filter((v) => v.id !== "paineis" || canEdit).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={view === id}
+              onClick={() => setView(id)}
+              data-ativo={view === id}
+            >
+              <Icon className="size-3.5" strokeWidth={1.8} /> {label}
             </button>
           ))}
         </div>
         {view === "orgs" && (
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <button
               onClick={() => setRelMulti(true)}
               title="Gerar relatório de várias setagens"
-              className="pilula flex !h-[30px] items-center gap-1.5 rounded-full !text-[11.5px]"
+              className="pilula flex items-center gap-1.5 rounded-full"
             >
-              <FileText className="size-3.5 text-sky-300" /> Relatório por setagens
+              <FileText className="size-3.5" /> Relatório por setagens
             </button>
             <button
               onClick={() => setRelGeral(true)}
               title="Relatório geral de todas as setagens (online, picos, punições)"
-              className="pilula flex !h-[30px] items-center gap-1.5 rounded-full !text-[11.5px]"
+              className="pilula flex items-center gap-1.5 rounded-full"
             >
-              <FileText className="size-3.5 text-violet-300" /> Relatório geral
+              <FileText className="size-3.5" /> Relatório geral
             </button>
             {canEdit && (
               <button
@@ -1282,9 +1298,9 @@ function IlegalDashboard() {
                       categorias[0]!,
                   )
                 }
-                className="flex h-[30px] items-center gap-1 rounded-full bg-white px-3 text-[11.5px] font-semibold text-black transition-opacity hover:opacity-90"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
               >
-                <Plus className="size-3.5" /> Nova organização
+                <Plus className="size-4" /> Nova organização
               </button>
             )}
           </div>
@@ -1321,10 +1337,11 @@ function IlegalDashboard() {
           />
 
           {filtroStat === "assumidas" && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <div className="segmentos mt-3.5" role="group" aria-label="Série das assumidas">
               {(
                 [
-                  { id: "todas", label: "Todas as assumidas", cor: "#ffffff" },
+                  // "todas" usa a cor do texto, para o ponto aparecer também no botão escolhido (branco)
+                  { id: "todas", label: "Todas as assumidas", cor: "currentColor" },
                   { id: "A", label: "Série A · 10+", cor: HEX_SERIE.A },
                   { id: "B", label: "Série B · 5–9", cor: HEX_SERIE.B },
                   { id: "C", label: "Série C · 0–4", cor: HEX_SERIE.C },
@@ -1332,17 +1349,13 @@ function IlegalDashboard() {
               ).map((f) => (
                 <button
                   key={f.id}
+                  type="button"
+                  aria-pressed={filtroSerie === f.id}
                   onClick={() => setFiltroSerie(f.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-2 text-[10.5px] font-medium leading-[20px] transition-colors",
-                    filtroSerie === f.id
-                      ? "border-white/25 bg-white/[0.09] text-white"
-                      : "border-white/[0.07] text-zinc-400 hover:text-white",
-                  )}
                 >
                   <span className="size-1.5 rounded-full" style={{ background: f.cor }} />
                   {f.label}
-                  <span className="tabular-nums text-muted-foreground">{assumidasPorSerie[f.id]}</span>
+                  <span className="tabular-nums opacity-60">{assumidasPorSerie[f.id]}</span>
                 </button>
               ))}
             </div>
@@ -1355,7 +1368,7 @@ function IlegalDashboard() {
           ) : (
             <>
               {visiveis.length === 0 ? (
-                <div className="glass mt-2 rounded-[24px] p-8 text-center text-xs text-muted-foreground">
+                <div className="mt-3.5 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                   {busca.trim() || filtroStat !== "todas" ? "Nenhum resultado para a busca." : canEdit ? "Nenhuma organização cadastrada ainda. Use “Nova organização” para criar." : "Nenhuma organização cadastrada ainda."}
                 </div>
               ) : (

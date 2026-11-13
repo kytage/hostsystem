@@ -14,7 +14,8 @@ import { chave, estadoDoCanteiro, type Ilha } from "@/lib/fazenda/regras";
 import { criarMascote } from "../mascote";
 import { modeloLeve, type Modelo } from "../modelo";
 import { montarLuzes, prepararDesenho, acabamento } from "../luz";
-import { Blocos, ceu, criarNuvens, sorteador, arvore } from "../voxel";
+import { Blocos, ceu, criarNuvens, sorteador } from "../voxel";
+import { Natureza } from "../natureza";
 
 const ESCALA_HOKI = 0.62;
 const LADO_ILHA = 36;
@@ -145,6 +146,7 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
   const base = new Blocos(r);
   const encosta = new Blocos(r);
   const enfeite = new Blocos(r);
+  const mato = new Natureza(); // árvores em volta da fazenda (modelos 3D)
   for (let x = -MEIA + 0.5; x < MEIA; x++)
     for (let z = -MEIA + 0.5; z < MEIA; z++) {
       const borda = Math.min(x + MEIA, MEIA - x, z + MEIA, MEIA - z);
@@ -189,7 +191,7 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
     [-16.2, 2, "copinha"],
     [16.2, -2, "copinha"],
   ] as const)
-    arvore(enfeite, x, z, { tipo, ...(tipo === "copa" ? { cor: "amarelo" as const } : {}) });
+    mato.arvore(x, z, { tipo, ...(tipo === "copa" ? { cor: "amarelo" as const } : {}) });
   const mBase = base.construir(THREE, {
     sombra: false,
     acabamento: { chanfro: 0.035, junta: 0.07, pe: 0, grao: 0.05 },
@@ -205,6 +207,9 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
     cena.add(m.malha);
     lixo.push({ dispose: m.descartar });
   }
+  const natureza = mato.construir(THREE);
+  cena.add(natureza.grupo);
+  lixo.push({ dispose: natureza.descartar });
   const nuvens = criarNuvens(
     THREE,
     [

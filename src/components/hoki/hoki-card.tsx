@@ -1,42 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Backpack,
-  Bath,
-  Check,
-  Dices,
-  Droplet,
-  Drumstick,
-  GlassWater,
-  Hand,
-  Heart,
-  Loader2,
-  Moon,
-  Pencil,
-  Store,
-  Trophy,
-  X,
-  Zap,
-} from "lucide-react";
+import { Check, Dices, Loader2, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { meuLugar } from "@/lib/hoki-presenca";
 import {
   aoVivo,
-  BARRAS,
   CUIDADOS,
   ENERGIA_POR_JOGO,
   ENTREGADOR_DE_COINS,
-  fala,
   humor,
   meuPet,
   NOME_MAX,
   nomeValido,
   rankingPorNivel,
   salvarPet,
-  SUJO_ABAIXO_DE,
   sugerirNome,
-  type Barra,
   type Cuidado,
   type HokiPet,
 } from "@/lib/hoki";
@@ -44,66 +23,29 @@ import { corDoSelo, progressoDoNivel } from "@/lib/fazenda/catalogo";
 import { useMeuNivel } from "@/lib/fazenda/selos";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
-import { PainelCoins, Saldo } from "./guarda-roupa";
+import { PainelCoins } from "./guarda-roupa";
 import { Loja } from "./loja";
+import { CORPOS, INTERACOES_BONECO } from "./boneco";
+import { EscolhaDeGenero } from "./escolha-genero";
+import { HudDoJogador } from "./hud-jogador";
+import { Cosmeticos } from "./cosmeticos";
 import { Hoki2D } from "./hoki-2d";
-import { Hoki3D, type Reacao } from "./hoki-3d";
+import type { Reacao } from "./hoki-3d";
 import { HokiJogos, type Resultado } from "./minigames";
 import { Praca } from "./praca";
 import { PerfilHoki } from "./perfil";
-import { Mochila } from "./mochila";
+import { arrumarMochila, Mochila } from "./mochila";
 import { type Item } from "@/lib/hoki-itens";
 
 const KEY = ["hoki-meu"];
-const ICONES: Record<Cuidado["id"], typeof Hand> = {
-  comida: Drumstick,
-  bebida: GlassWater,
-  carinho: Hand,
-  soneca: Moon,
-};
-const ICONE_BARRA: Record<Barra, typeof Hand> = {
-  fome: Drumstick,
-  sede: Droplet,
-  energia: Zap,
-  carinho: Heart,
-  higiene: Bath,
-};
-const COR_BARRA: Record<Barra, string> = {
-  fome: "#f59e0b",
-  sede: "#2dd4bf",
-  energia: "#facc15",
-  carinho: "#fb5c7c",
-  higiene: "#e9a8ff",
-};
-const ROTULO: Record<Barra, string> = {
-  fome: "Fome",
-  sede: "Sede",
-  energia: "Energia",
-  carinho: "Carinho",
-  higiene: "Higiene",
-};
 const REACAO: Record<Cuidado["id"], Reacao> = {
   comida: "comer",
   bebida: "beber",
   carinho: "carinho",
   soneca: "dormir",
 };
-const TRUQUES: { id: Reacao; nome: string }[] = [
-  { id: "acenar", nome: "Acenar" },
-  { id: "dancinha", nome: "Dancinha" },
-  { id: "rebolar", nome: "Rebolar" },
-  { id: "disco", nome: "Discoteca" },
-  { id: "onda", nome: "Onda" },
-  { id: "robo", nome: "Robô" },
-  { id: "dancar", nome: "Dançar" },
-  { id: "pulinhos", nome: "Pulinhos" },
-  { id: "girar", nome: "Girar" },
-  { id: "correr", nome: "Correr" },
-  { id: "rolar", nome: "Estrelinha" },
-  { id: "mortal", nome: "Mortal" },
-  { id: "cumprimentar", nome: "Reverência" },
-  { id: "festa", nome: "Festa" },
-];
+/** Menu de interações: as animações do boneco (braços cruzados, telefone, golpes, trabalho…). */
+const TRUQUES: { id: Reacao; nome: string }[] = INTERACOES_BONECO;
 
 /**
  * Painel do HOKI, em formato panorâmico: mascote e cuidados à esquerda,
@@ -130,6 +72,8 @@ export function HokiCard() {
   const [editando, setEditando] = useState(false);
   const [nome, setNome] = useState("");
   const [lojaAberta, setLojaAberta] = useState(false);
+  const [corpoAberto, setCorpoAberto] = useState(false);
+  const [cosmeticosAberto, setCosmeticosAberto] = useState(false);
   /** Mochila aberta (e em qual aba: tudo, comidas ou bebidas). */
   const [mochila, setMochila] = useState<"tudo" | "comida" | "bebida" | null>(null);
   const [perfil, setPerfil] = useState<HokiPet | null>(null);
@@ -159,6 +103,24 @@ export function HokiCard() {
     return () => clearInterval(id);
   }, []);
 
+  // teclas 1 a 5 (acordado na praça): usam o item que estiver nesse atalho da mochila
+  const atalho = useRef<((k: number) => void) | null>(null);
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (!/^Digit[1-5]$/.test(e.code) || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const a = document.activeElement;
+      if (
+        a &&
+        (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || (a as HTMLElement).isContentEditable)
+      )
+        return;
+      if (document.querySelector('[role="dialog"]')) return;
+      atalho.current?.(Number(e.code.slice(5)) - 1);
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
+
   const salvar = useMutation({
     mutationFn: ({ pet, patch }: { pet: HokiPet; patch: Parameters<typeof salvarPet>[1] }) =>
       salvarPet(pet, patch),
@@ -186,16 +148,16 @@ export function HokiCard() {
   const reagir = (tipo: Reacao) => setReacao((r) => ({ tipo, n: (r?.n ?? 0) + 1 }));
 
   /** Tira uma unidade do item da mochila (some da lista quando acaba). */
-  const semUm = (it: Item) => {
-    const resto = (pet.inventario[it.id] ?? 0) - 1;
+  const semUm = (it: Item, n = 1) => {
+    const resto = (pet.inventario[it.id] ?? 0) - n;
     if (resto < 0) return null;
     const inventario = { ...pet.inventario, [it.id]: resto };
     if (resto === 0) delete inventario[it.id];
     return inventario;
   };
-  /** Come ou bebe um item da mochila: gasta uma unidade e enche as barras. */
-  const usarItem = (it: Item) => {
-    const inventario = semUm(it);
+  /** Come ou bebe um item da mochila: gasta `n` unidades e enche as barras. */
+  const usarItem = (it: Item, n = 1) => {
+    const inventario = semUm(it, n);
     if (salvar.isPending || !inventario) return;
     const barra = it.tipo === "comida" ? pet.fome : it.tipo === "bebida" ? pet.sede : pet.carinho;
     if (barra >= 95) {
@@ -214,15 +176,24 @@ export function HokiCard() {
       pet: salvo,
       patch: {
         inventario,
-        fome: Math.min(100, pet.fome + (it.fome ?? 0)),
-        sede: Math.min(100, pet.sede + (it.sede ?? 0)),
-        energia: Math.min(100, pet.energia + (it.energia ?? 0)),
-        carinho: Math.min(100, pet.carinho + (it.carinho ?? 0)),
+        fome: Math.min(100, pet.fome + (it.fome ?? 0) * n),
+        sede: Math.min(100, pet.sede + (it.sede ?? 0) * n),
+        energia: Math.min(100, pet.energia + (it.energia ?? 0) * n),
+        carinho: Math.min(100, pet.carinho + (it.carinho ?? 0) * n),
       },
     });
   };
-  const jogarFora = (it: Item) => {
-    const inventario = semUm(it);
+  atalho.current = (k) => {
+    if (!naPraca) return;
+    const it = arrumarMochila(pet.inventario)[k];
+    if (!it) {
+      toast.info(`O atalho ${k + 1} está vazio. Arraste um item para ele na mochila.`);
+      return;
+    }
+    usarItem(it, 1);
+  };
+  const jogarFora = (it: Item, n = 1) => {
+    const inventario = semUm(it, n);
     if (salvar.isPending || !inventario) return;
     playSfx("remove");
     salvar.mutate({ pet: salvo, patch: { inventario } });
@@ -297,11 +268,6 @@ export function HokiCard() {
     if (n !== pet.nome) salvar.mutate({ pet: salvo, patch: { nome: n } });
   };
 
-  const acao =
-    "grid h-9 place-items-center rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-90";
-  const quadrado =
-    "grid size-9 place-items-center rounded-xl border border-white/10 bg-black/85 text-white/85 shadow-[0_6px_16px_rgba(0,0,0,0.45)] backdrop-blur-md transition-[transform,color,border-color] duration-200 hover:-translate-y-0.5 hover:border-white/25 hover:text-white active:scale-95";
-
   return (
     <section
       className={cn(
@@ -310,198 +276,16 @@ export function HokiCard() {
           : "animate-rise mt-4",
       )}
     >
-      <div
-        className={cn(
-          "grid gap-3 lg:grid-cols-[264px_minmax(0,1fr)]",
-          telaCheia ? "min-h-full lg:h-full" : "lg:h-[420px]",
-        )}
-      >
-        {/* ---------- cartão do HOKI: cenário 3D com pódio, nível e nome ---------- */}
-        <div className="relative z-10 mx-auto h-[420px] w-full max-w-[320px] lg:h-auto lg:max-w-none">
-          <div className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#6fb8f7]">
-            <Hoki3D
-              humor={estado}
-              reacao={reacao}
-              visual={pet.visual}
-              placa={{ nome: pet.nome, nivel: prog.nivel }}
-              margemBase={138}
-              sujo={pet.higiene < SUJO_ABAIXO_DE}
-              className="absolute inset-0"
-            />
-            {estado !== "feliz" && (
-              <p
-                className="absolute left-3 top-3 max-w-[70%] rounded-2xl rounded-bl-sm bg-white px-3 py-1.5 text-[11px] font-medium text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
-                aria-live="polite"
-              >
-                {fala(pet)}
-              </p>
-            )}
-
-            {/* controles por cima da cena */}
-            <div className="absolute inset-x-2 bottom-2 rounded-[20px] border border-white/10 bg-black/65 p-2.5 text-white backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-2">
-                <p
-                  className="flex min-w-0 items-center gap-1.5 truncate text-[10.5px] font-medium uppercase tracking-[0.16em] text-white/70"
-                  title="O nível do HOKI é o nível do HOST FAZENDAS"
-                >
-                  <span
-                    className="rounded-full px-1.5 text-[10px] font-extrabold leading-[16px] tracking-normal"
-                    style={{ background: selo.fundo, color: selo.texto }}
-                  >
-                    {prog.nivel}
-                  </span>
-                  <span className="truncate">
-                    {prog.maximo
-                      ? "Nível máximo"
-                      : `${prog.noNivel.toLocaleString("pt-BR")}/${prog.paraSubir.toLocaleString("pt-BR")} XP`}
-                  </span>
-                </p>
-                <Saldo coins={pet.coins} />
-              </div>
-              <div
-                className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10"
-                role="progressbar"
-                aria-label="Experiência"
-                aria-valuenow={Math.round(prog.pct)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out"
-                  style={{ width: `${prog.pct}%` }}
-                />
-              </div>
-              <div className="mt-2 grid grid-cols-5 gap-1.5">
-                {BARRAS.map((b) => {
-                  const Icone = ICONE_BARRA[b];
-                  return (
-                    <div key={b} title={`${ROTULO[b]}: ${pet[b]}%`}>
-                      <div
-                        className={cn(
-                          "flex items-center justify-center gap-1 text-[11px] tabular-nums text-white/75",
-                          pet[b] < 30 && "animate-pulse",
-                        )}
-                      >
-                        <Icone
-                          className="size-3.5"
-                          strokeWidth={2}
-                          aria-hidden
-                          style={{ color: COR_BARRA[b] }}
-                        />
-                        {pet[b]}
-                      </div>
-                      <div
-                        className="mt-1 h-1 overflow-hidden rounded-full bg-white/10"
-                        role="progressbar"
-                        aria-label={ROTULO[b]}
-                        aria-valuenow={pet[b]}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                      >
-                        <div
-                          className="h-full rounded-full transition-[width] duration-700 ease-out"
-                          style={{ width: `${pet[b]}%`, background: COR_BARRA[b] }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {CUIDADOS.map((c) => {
-                  const Icone = ICONES[c.id];
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => cuidar(c)}
-                      aria-label={c.label}
-                      title={c.label}
-                      className={cn(
-                        acao,
-                        "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white",
-                      )}
-                    >
-                      <Icone className="size-4" strokeWidth={1.7} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* botões flutuantes: mudar o nome e abrir a loja (comprar e usar) */}
-          <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5 lg:-right-[18px] lg:top-4">
-            <button
-              onClick={() => {
-                setNome(pet.nome.slice(0, NOME_MAX));
-                setEditando((v) => !v);
-              }}
-              aria-label="Mudar o nome do HOKI"
-              aria-expanded={editando}
-              title="Mudar o nome (até 6 letras)"
-              className={quadrado}
-            >
-              <Pencil className="size-4" strokeWidth={1.7} />
-            </button>
-            <button
-              onClick={() => setMochila("tudo")}
-              aria-label="Mochila: comidas e bebidas"
-              title="Mochila (até 50 kg)"
-              className={quadrado}
-            >
-              <Backpack className="size-4" strokeWidth={1.7} />
-            </button>
-            <button
-              onClick={() => setLojaAberta(true)}
-              aria-label="Loja: comprar e usar roupas"
-              title="Loja (comprar e usar)"
-              className={quadrado}
-            >
-              <Store className="size-4" strokeWidth={1.7} />
-            </button>
-            {/* acordado na praça: o botão de dormir fica aqui, só o ícone */}
-            {naPraca && (
-              <button
-                onClick={alternarPraca}
-                aria-label="Dormir (voltar para o berço)"
-                title="Dormir"
-                className={quadrado}
-              >
-                <Moon className="size-4" strokeWidth={1.7} />
-              </button>
-            )}
-            {editando && (
-              <div className="pf-pop absolute right-[44px] top-0 flex w-[214px] items-center gap-1.5 rounded-2xl border border-white/15 bg-black/90 p-2 backdrop-blur-xl lg:left-[44px] lg:right-auto">
-                <input
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && salvarNome()}
-                  maxLength={NOME_MAX}
-                  autoFocus
-                  aria-label="Nome do seu HOKI, até 6 letras"
-                  placeholder="6 letras"
-                  className="h-9 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-2.5 font-display text-sm font-semibold uppercase text-white outline-none focus:border-white/40"
-                />
-                <button
-                  onClick={() => setNome(sugerirNome())}
-                  aria-label="Sortear um nome"
-                  title="Sortear um nome"
-                  className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/10 text-white/80 hover:text-white"
-                >
-                  <Dices className="size-4" />
-                </button>
-                <button
-                  onClick={salvarNome}
-                  aria-label="Salvar nome"
-                  className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-white"
-                >
-                  <Check className="size-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
+      {/* primeiro acesso depois da atualização: escolher o gênero do personagem */}
+      {!salvo.visual.corpo && (
+        <EscolhaDeGenero
+          salvando={salvar.isPending}
+          onEscolher={(corpo) =>
+            salvar.mutate({ pet: salvo, patch: { visual: { ...salvo.visual, corpo } } })
+          }
+        />
+      )}
+      <div className={cn("grid gap-3", telaCheia ? "min-h-full lg:h-full" : "lg:h-[420px]")}>
         {/* ---------- praça em 3D, com o ranking abrindo por cima ---------- */}
         <div className="relative h-[420px] overflow-hidden rounded-[28px] border border-white/[0.08] lg:h-auto">
           <Praca
@@ -536,6 +320,64 @@ export function HokiCard() {
                 : undefined
             }
           />
+          <HudDoJogador
+            dentro={naPraca}
+            compacto={!telaCheia}
+            nome={pet.nome}
+            nivel={prog.nivel}
+            corNivel={selo}
+            coins={pet.coins}
+            fome={pet.fome}
+            sede={pet.sede}
+            energia={pet.energia}
+            higiene={pet.higiene}
+            onComer={() => cuidar(CUIDADOS.find((c) => c.id === "comida")!)}
+            onBeber={() => cuidar(CUIDADOS.find((c) => c.id === "bebida")!)}
+            onDescansar={() => cuidar(CUIDADOS.find((c) => c.id === "soneca")!)}
+            onMochila={() => setMochila("tudo")}
+            onCorpo={() => {
+              setCosmeticosAberto(false);
+              setCorpoAberto((v) => !v);
+            }}
+            onCosmeticos={() => {
+              setCorpoAberto(false);
+              setCosmeticosAberto((v) => !v);
+            }}
+            onNome={() => {
+              setNome(pet.nome.slice(0, NOME_MAX));
+              setEditando((v) => !v);
+            }}
+            onDormir={naPraca ? alternarPraca : undefined}
+          />
+          {editando && (
+            <div className="pf-pop absolute left-3 top-14 z-30 flex w-[214px] items-center gap-1.5 rounded-2xl border border-white/15 bg-black/90 p-2 backdrop-blur-xl">
+              <input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && salvarNome()}
+                maxLength={NOME_MAX}
+                autoFocus
+                aria-label="Nome do seu HOKI, até 6 letras"
+                placeholder="6 letras"
+                className="h-9 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-2.5 font-display text-sm font-semibold uppercase text-white outline-none focus:border-white/40"
+              />
+              <button
+                onClick={() => setNome(sugerirNome())}
+                aria-label="Sortear um nome"
+                title="Sortear um nome"
+                className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/10 text-white/80 hover:text-white"
+              >
+                <Dices className="size-4" />
+              </button>
+              <button
+                onClick={salvarNome}
+                aria-label="Salvar nome"
+                className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-white"
+              >
+                <Check className="size-4" />
+              </button>
+            </div>
+          )}
           {rankingAberto && (
             <aside className="pf-pop absolute bottom-[68px] right-14 top-3 z-20 flex w-[232px] max-w-[calc(100%-4.5rem)] flex-col rounded-2xl border border-white/15 bg-black/55 p-3 text-white backdrop-blur-xl">
               <button
@@ -598,6 +440,56 @@ export function HokiCard() {
                 )}
               </ol>
             </aside>
+          )}
+          {cosmeticosAberto && (
+            <Cosmeticos
+              pet={pet}
+              salvando={salvar.isPending}
+              onUsar={(visual) => salvar.mutate({ pet: salvo, patch: { visual } })}
+              onComprado={() => void qc.invalidateQueries({ queryKey: KEY })}
+              onClose={() => setCosmeticosAberto(false)}
+            />
+          )}
+          {corpoAberto && (
+            <div
+              role="menu"
+              aria-label="Corpo do boneco"
+              className="pf-pop absolute left-3 top-14 z-30 w-[200px] max-w-[calc(100%-1.5rem)] rounded-2xl border border-white/15 bg-black/80 p-2 text-white backdrop-blur-xl"
+            >
+              <p className="px-1.5 pb-1.5 pt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                Corpo
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CORPOS.map((c) => {
+                  const ativo = (pet.visual.corpo ?? "padrao") === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      role="menuitemradio"
+                      aria-checked={ativo}
+                      disabled={salvar.isPending}
+                      onClick={() => {
+                        setCorpoAberto(false);
+                        if (ativo) return;
+                        playSfx("click");
+                        salvar.mutate({
+                          pet: salvo,
+                          patch: { visual: { ...pet.visual, corpo: c.id } },
+                        });
+                      }}
+                      className={cn(
+                        "h-9 rounded-xl border text-[12.5px] font-medium transition-colors",
+                        ativo
+                          ? "border-[#CE0E0E] bg-[#CE0E0E]/25 text-white"
+                          : "border-white/10 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white",
+                      )}
+                    >
+                      {c.nome}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
           {coinsAberto && entregador && (
             <div className="pf-pop absolute right-14 top-[100px] z-20 w-[232px] max-w-[calc(100%-4.5rem)] rounded-2xl border border-white/15 bg-black/60 p-3 text-white backdrop-blur-xl">

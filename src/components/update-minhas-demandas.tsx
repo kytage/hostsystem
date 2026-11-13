@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Inbox } from "lucide-react";
+import { ClipboardList, Inbox } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthUserData } from "@/lib/auth-cache";
 import type { ColumnId, DevTask } from "@/lib/dev-tasks";
@@ -53,21 +53,24 @@ export function MinhasDemandas({ projetos, onOpen }: MinhasDemandasProps) {
   const pendentes = demandas.filter((d) => d.status !== "done").length;
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card/40 p-4 backdrop-blur-xl">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Minhas demandas</h2>
-        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">{pendentes}</span>
+    <section className="glass hc p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="hc-icone">
+          <ClipboardList className="size-4" strokeWidth={1.75} />
+        </span>
+        <h2 className="hc-titulo min-w-0 flex-1 truncate">Minhas demandas</h2>
+        <span className="hc-selo tabular-nums">{pendentes}</span>
       </div>
       {demandas.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-6 text-xs text-muted-foreground">
-          <Inbox className="size-5" /> Nenhuma demanda direcionada a você
+        <div className="hc-dentro flex flex-col items-center justify-center gap-2 px-4 py-6 text-center text-xs text-muted-foreground">
+          <Inbox className="size-5 text-ink-3" strokeWidth={1.5} /> Nenhuma demanda direcionada a você
         </div>
       ) : (
         <ul className="max-h-[60vh] space-y-1.5 overflow-y-auto pr-1">
           {demandas.map((d) => (
             <li key={d.id}>
               <button type="button" onClick={() => onOpen(d.projeto)}
-                className={cn("w-full rounded-xl border border-border/40 bg-background/30 px-3 py-2 text-left transition-colors hover:border-primary/40", d.status === "done" && "opacity-60")}>
+                className={cn("hc-dentro w-full px-3 py-2 text-left", d.status === "done" && "opacity-60")}>
                 <div className="truncate text-[13px] font-semibold text-foreground">{d.titulo || "Sem título"}</div>
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="truncate text-[11px] text-muted-foreground">{d.grupo}</span>

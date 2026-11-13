@@ -146,14 +146,14 @@ export function CaptacaoDialog({ open, onClose, captacao, prefill }: Props) {
   });
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+    "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "hc-sobre mb-1.5 block";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editando ? "Editar captação" : "Nova captação"}</DialogTitle>
+          <DialogTitle className="hc-titulo">{editando ? "Editar captação" : "Nova captação"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3">
@@ -187,18 +187,14 @@ export function CaptacaoDialog({ open, onClose, captacao, prefill }: Props) {
 
           <div className="col-span-2">
             <label className={labelCls}>Tipo</label>
-            <div className="flex gap-1.5">
+            <div className="segmentos w-full" role="group" aria-label="Tipo">
               {(Object.keys(TIPO_LABELS) as CaptacaoTipo[]).map((t) => (
                 <button
                   key={t}
                   type="button"
+                  aria-pressed={tipo === t}
                   onClick={() => setTipo(t)}
-                  className={cn(
-                    "flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors",
-                    tipo === t
-                      ? "border-white/15 bg-white/[0.09] text-foreground"
-                      : "border-border bg-black/25 text-muted-foreground hover:text-foreground",
-                  )}
+                  className="flex-1 justify-center"
                 >
                   {TIPO_LABELS[t]}
                 </button>
@@ -296,7 +292,7 @@ export function CaptacaoDialog({ open, onClose, captacao, prefill }: Props) {
           type="button"
           disabled={!organizacao.trim() || salvar.isPending}
           onClick={() => salvar.mutate()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
         >
           {salvar.isPending && <Loader2 className="size-4 animate-spin" />}
           {editando ? "Salvar alterações" : "Criar captação"}

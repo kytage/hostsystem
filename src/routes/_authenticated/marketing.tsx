@@ -16,7 +16,11 @@ import {
   Send,
   Trash2,
   UserSearch,
+  CheckCheck,
+  Eye,
+  Lightbulb,
 } from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -118,7 +122,7 @@ function MarketingPage() {
     return (
       <div className="pagina">
         <PageHeader kicker="REDES SOCIAIS" title="Marketing" />
-        <p className="glass-inset mt-6 flex items-center justify-center gap-2 rounded-2xl px-4 py-14 text-sm text-muted-foreground">
+        <p className="mt-6 flex items-center justify-center gap-2 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-sm text-muted-foreground">
           <Lock className="size-4" /> Área restrita a Coordinator+ e à equipe de Marketing.
         </p>
       </div>
@@ -152,8 +156,13 @@ function Painel() {
     .sort((a, b) => a.data_publicacao!.localeCompare(b.data_publicacao!));
 
   const kpis = [
-    { k: "Próximas gravações", v: proximas.length },
-    { k: "Publicações na fila", v: fila.length },
+    {
+      k: "Próximas gravações",
+      v: proximas.length,
+      icone: Camera,
+      nota: "marcadas daqui pra frente",
+    },
+    { k: "Publicações na fila", v: fila.length, icone: Send, nota: "esperando a data" },
     {
       k: "Publicados no mês",
       v: lista.filter(
@@ -162,18 +171,25 @@ function Painel() {
           c.data_publicacao &&
           chaveDia(new Date(c.data_publicacao)).slice(0, 7) === mesAtual,
       ).length,
+      icone: CheckCheck,
+      nota: "neste mês",
     },
-    { k: "Ideias", v: lista.filter((c) => c.status === "ideia").length },
-    { k: "Views publicadas", v: lista.reduce((s, c) => s + c.views, 0).toLocaleString("pt-BR") },
+    {
+      k: "Ideias",
+      v: lista.filter((c) => c.status === "ideia").length,
+      icone: Lightbulb,
+      nota: "para produzir",
+    },
+    {
+      k: "Views publicadas",
+      v: lista.reduce((s, c) => s + c.views, 0).toLocaleString("pt-BR"),
+      icone: Eye,
+      nota: "somando os publicados",
+    },
   ];
-  const seg = (on: boolean) =>
-    cn(
-      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
-      on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-    );
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
+    <div className="pagina">
       <PageHeader
         kicker="REDES SOCIAIS"
         title="Marketing"
@@ -185,46 +201,67 @@ function Painel() {
         }
       />
 
-      <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+      <Indices className="mt-5">
         {kpis.map((c) => (
-          <div key={c.k} className="border-l border-white/[0.08] pl-4">
-            <p className="font-display text-2xl font-semibold tabular-nums">
-              {isLoading ? "—" : c.v}
-            </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{c.k}</p>
-          </div>
+          <Indice
+            key={c.k}
+            valor={isLoading ? "—" : c.v}
+            titulo={c.k}
+            nota={c.nota}
+            icone={c.icone}
+          />
         ))}
-      </div>
+      </Indices>
 
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <div
-          className={cn(
-            "glass-inset inline-flex gap-1 rounded-full p-1",
-            visao === "leads" && "invisible",
-          )}
+          className={cn("segmentos", visao === "leads" && "invisible")}
           aria-hidden={visao === "leads"}
+          role="group"
+          aria-label="Plataforma"
         >
-          <button className={seg(filtro === "todas")} onClick={() => setFiltro("todas")}>
+          <button
+            type="button"
+            aria-pressed={filtro === "todas"}
+            onClick={() => setFiltro("todas")}
+          >
             Todas
           </button>
           {PLATAFORMAS.map((p) => (
-            <button key={p.id} className={seg(filtro === p.id)} onClick={() => setFiltro(p.id)}>
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={filtro === p.id}
+              onClick={() => setFiltro(p.id)}
+            >
               {p.label}
             </button>
           ))}
         </div>
-        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
-          <button className={seg(visao === "calendario")} onClick={() => setVisao("calendario")}>
+        <div className="segmentos" role="group" aria-label="Visão">
+          <button
+            type="button"
+            aria-pressed={visao === "calendario"}
+            onClick={() => setVisao("calendario")}
+          >
             <CalendarDays className="size-3.5" /> Cronograma
           </button>
-          <button className={seg(visao === "pipeline")} onClick={() => setVisao("pipeline")}>
+          <button
+            type="button"
+            aria-pressed={visao === "pipeline"}
+            onClick={() => setVisao("pipeline")}
+          >
             <Columns3 className="size-3.5" /> Produção
           </button>
-          <button className={seg(visao === "rascunhos")} onClick={() => setVisao("rascunhos")}>
+          <button
+            type="button"
+            aria-pressed={visao === "rascunhos"}
+            onClick={() => setVisao("rascunhos")}
+          >
             <FilePenLine className="size-3.5" /> Rascunhos{" "}
-            <span className="text-ink-3">{rascunhos.length}</span>
+            <span className="tabular-nums opacity-60">{rascunhos.length}</span>
           </button>
-          <button className={seg(visao === "leads")} onClick={() => setVisao("leads")}>
+          <button type="button" aria-pressed={visao === "leads"} onClick={() => setVisao("leads")}>
             <UserSearch className="size-3.5" /> Leads
           </button>
         </div>
@@ -237,9 +274,9 @@ function Painel() {
           <Loader2 className="size-4 animate-spin" /> Carregando conteúdos…
         </div>
       ) : visao === "calendario" ? (
-        <div className="mt-5 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="mt-4 grid grid-cols-1 gap-3.5 xl:grid-cols-[minmax(0,1fr)_300px]">
           <Calendario lista={lista} onAbrir={setRascunho} />
-          <aside className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+          <aside className="space-y-3.5 xl:sticky xl:top-6 xl:self-start">
             <Proximos
               titulo="Próximas gravações"
               icon={Camera}
@@ -280,7 +317,10 @@ function Siglas({ c }: { c: Conteudo }) {
         <span
           key={p.id}
           title={p.label}
-          className={cn("rounded border px-1 text-[9px] font-semibold leading-[14px]", p.cls)}
+          className={cn(
+            "rounded-full border px-1.5 text-[9px] font-semibold leading-[14px]",
+            p.cls,
+          )}
         >
           {p.sigla}
         </span>
@@ -363,7 +403,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
 
   return (
     <section className="mx-auto mt-5 max-w-3xl">
-      <div className="glass flex items-center gap-2 rounded-[20px] p-2">
+      <div className="glass hc flex items-center gap-2 p-2">
         <Plus className="ml-2.5 size-4 shrink-0 text-ink-3" />
         <input
           value={titulo}
@@ -378,7 +418,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
 
       <ul className="mt-3 space-y-2">
         {itens.map((c) => (
-          <li key={c.id} className="glass animate-rise rounded-2xl">
+          <li key={c.id} className="glass hc animate-rise">
             <div className="flex items-center gap-3 px-4 py-3">
               <button onClick={() => onAbrir(c)} className="min-w-0 flex-1 text-left">
                 <span className="block truncate text-sm font-medium">{c.titulo}</span>
@@ -395,7 +435,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
               <button
                 onClick={() => setConvertendo((v) => (v === c.id ? null : c.id))}
                 aria-expanded={convertendo === c.id}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="hc-pilula shrink-0"
               >
                 Converter <ArrowRight className="size-3" />
               </button>
@@ -407,7 +447,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
               )}
             >
               <div className="overflow-hidden">
-                <div className="flex flex-wrap items-center gap-1.5 border-t border-white/[0.05] px-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-white/[0.06] px-4 py-2.5">
                   <span className="mr-1 text-[11px] text-ink-3">Enviar para</span>
                   {STATUS_CONTEUDO.map((s) => (
                     <button
@@ -419,7 +459,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
                         patch.mutate({ id: c.id, patch: { status: s.id } });
                         toast.success(`“${c.titulo}” foi para ${s.label}.`);
                       }}
-                      className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-white/20 hover:text-foreground"
+                      className="hc-pilula"
                     >
                       <span className={cn("size-1.5 rounded-full", s.dot)} /> {s.label}
                     </button>
@@ -430,7 +470,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
           </li>
         ))}
         {itens.length === 0 && (
-          <li className="glass-inset rounded-2xl px-4 py-12 text-center text-sm text-ink-3">
+          <li className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
             Nenhum rascunho por aqui.
           </li>
         )}
@@ -453,27 +493,28 @@ function Proximos({
   onAbrir: (c: Conteudo) => void;
 }) {
   return (
-    <section>
-      <h2 className="mb-2 flex items-center gap-1.5 font-display text-sm font-semibold">
-        <Icon className="size-3.5 text-ink-3" /> {titulo}
-        {itens.length > 0 && (
-          <span className="font-sans text-[11px] font-normal tabular-nums text-ink-3">
-            {itens.length}
-          </span>
-        )}
+    <section className="glass hc p-4">
+      <h2 className="mb-3 flex items-center gap-3">
+        <span className="hc-icone !size-8">
+          <Icon className="size-[15px]" strokeWidth={1.75} />
+        </span>
+        <span className="hc-titulo min-w-0 flex-1 truncate">{titulo}</span>
+        {itens.length > 0 && <span className="hc-selo tabular-nums">{itens.length}</span>}
       </h2>
       {itens.length === 0 ? (
-        <p className="text-xs text-ink-3">Nada agendado.</p>
+        <p className="rounded-[14px] border border-dashed border-white/[0.1] px-4 py-4 text-center text-xs text-ink-3">
+          Nada agendado.
+        </p>
       ) : (
         // todos os itens aparecem; se a lista ficar comprida, ela rola dentro da coluna
-        <ul className="-mr-1 max-h-[46vh] space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+        <ul className="-mr-1 max-h-[46vh] space-y-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
           {itens.map((c) => {
             const d = new Date(c[campo]!);
             return (
               <li key={c.id}>
                 <button
                   onClick={() => onAbrir(c)}
-                  className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
+                  className="hc-dentro flex w-full items-center gap-3 px-2.5 py-2 text-left"
                 >
                   <span className="w-9 shrink-0 text-center">
                     <span className="block font-display text-base font-semibold leading-none tabular-nums">
@@ -564,9 +605,9 @@ function Calendario({
   const mudarMes = (n: number) => setRef((r) => new Date(r.getFullYear(), r.getMonth() + n, 1));
 
   return (
-    <section className="glass min-w-0 rounded-[20px] p-3 sm:p-4">
-      <div className="flex items-center gap-1">
-        <h2 className="flex-1 font-display text-base font-semibold capitalize">
+    <section className="glass hc min-w-0 p-3 sm:p-5">
+      <div className="flex items-center gap-1.5">
+        <h2 className="min-w-0 flex-1 truncate font-display text-[15px] font-semibold capitalize tracking-[-0.015em] sm:text-[17px]">
           {ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
         </h2>
         <span className="mr-2 hidden items-center gap-3 text-[11px] text-ink-3 sm:flex">
@@ -577,24 +618,16 @@ function Calendario({
             <Send className="size-3 text-sky-300" /> Publicação
           </span>
         </span>
-        <button
-          onClick={() => mudarMes(-1)}
-          aria-label="Mês anterior"
-          className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
-        >
+        <button onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="hc-seta">
           <ChevronLeft className="size-4" />
         </button>
-        <button
-          onClick={() => mudarMes(1)}
-          aria-label="Próximo mês"
-          className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
-        >
+        <button onClick={() => mudarMes(1)} aria-label="Próximo mês" className="hc-seta">
           <ChevronRight className="size-4" />
         </button>
       </div>
-      <div className="mt-3 overflow-x-auto">
+      <div className="mt-4 overflow-x-auto">
         <div className="min-w-[640px]">
-          <div className="grid grid-cols-7 pb-1.5 text-center text-[10.5px] uppercase tracking-wider text-ink-3">
+          <div className="grid grid-cols-7 pb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-3">
             {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
               <span key={d}>{d}</span>
             ))}
@@ -625,8 +658,9 @@ function Calendario({
                     <span
                       className={cn(
                         "grid size-5 place-items-center rounded-full text-[11px] tabular-nums",
+                        // hoje ganha um fio vermelho, como no calendário da tela inicial
                         k === hoje
-                          ? "bg-primary font-semibold text-white"
+                          ? "font-semibold text-foreground shadow-[inset_0_0_0_1px_rgba(206,14,14,0.8)]"
                           : "text-muted-foreground",
                       )}
                     >
@@ -644,7 +678,7 @@ function Calendario({
                         })
                       }
                       aria-label={`Novo conteúdo em ${d.toLocaleDateString("pt-BR")}`}
-                      className="grid size-5 place-items-center rounded text-ink-3 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                      className="grid size-5 place-items-center rounded-full text-ink-3 opacity-0 transition-opacity hover:bg-white/[0.07] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
                     >
                       <Plus className="size-3" />
                     </button>
@@ -692,7 +726,7 @@ function Pipeline({ lista, onAbrir }: { lista: Conteudo[]; onAbrir: (c: Conteudo
   const patch = usePatch();
   const [sobre, setSobre] = useState<StatusConteudo | null>(null);
   return (
-    <div className="mt-5 flex gap-3 overflow-x-auto pb-3">
+    <div className="mt-5 flex gap-3.5 overflow-x-auto pb-3">
       {STATUS_CONTEUDO.map((s) => {
         const cards = lista.filter((c) => c.status === s.id);
         return (
@@ -713,15 +747,15 @@ function Pipeline({ lista, onAbrir }: { lista: Conteudo[]; onAbrir: (c: Conteudo
               patch.mutate({ id, patch: { status: s.id } });
             }}
             className={cn(
-              "flex min-h-64 w-[230px] shrink-0 flex-col rounded-2xl border p-2 transition-colors",
-              sobre === s.id
-                ? "border-primary/40 bg-primary/5"
-                : "border-white/[0.05] bg-white/[0.012]",
+              "flex min-h-64 w-[230px] shrink-0 flex-col rounded-[22px] border p-2 transition-colors",
+              // a coluna é um cartão; ao arrastar um conteúdo por cima, ela acende
+              sobre === s.id ? "border-primary/40 bg-primary/5" : "glass",
             )}
           >
-            <header className="flex items-center gap-2 px-1.5 pb-2 pt-1 text-xs font-medium">
-              <span className={cn("size-1.5 rounded-full", s.dot)} /> {s.label}
-              <span className="ml-auto text-ink-3">{cards.length}</span>
+            <header className="flex items-center gap-2 px-1.5 pb-2.5 pt-1.5">
+              <span className={cn("size-1.5 shrink-0 rounded-full", s.dot)} />
+              <span className="hc-titulo min-w-0 truncate">{s.label}</span>
+              <span className="hc-selo ml-auto tabular-nums">{cards.length}</span>
             </header>
             <div className="space-y-1.5">
               {cards.map((c) => (
@@ -730,7 +764,7 @@ function Pipeline({ lista, onAbrir }: { lista: Conteudo[]; onAbrir: (c: Conteudo
                   draggable
                   onDragStart={(e) => e.dataTransfer.setData("text/plain", c.id)}
                   onClick={() => onAbrir(c)}
-                  className="glass surface-hover block w-full cursor-grab rounded-xl p-2.5 text-left active:cursor-grabbing"
+                  className="hc-dentro block w-full cursor-grab p-2.5 text-left active:cursor-grabbing"
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-[10px] text-ink-3">
@@ -841,16 +875,11 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
     onError: () => toast.error("Não foi possível excluir o conteúdo."),
   });
 
-  const label = "mb-1.5 block text-xs text-muted-foreground";
+  const label = "hc-sobre mb-1.5 block";
   const campo =
     "h-10 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm outline-none [color-scheme:dark] placeholder:text-ink-3 focus:border-white/20";
-  const chip = (on: boolean) =>
-    cn(
-      "rounded-lg border px-3 py-1.5 text-xs transition-colors",
-      on
-        ? "border-white/20 bg-white/[0.1] text-foreground"
-        : "border-white/[0.08] text-muted-foreground hover:text-foreground",
-    );
+  // escolhas em pílula, como nas outras janelas: a escolhida vira uma tecla branca
+  const chip = (on: boolean) => cn("pilula !h-8 !px-3 !text-xs", on && "pilula-ativa");
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -858,20 +887,19 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
         aria-describedby={undefined}
         className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0"
       >
-        <header className="border-b border-white/[0.07] px-6 pb-4 pt-6 pr-14">
-          <div className="flex flex-wrap gap-1">
+        <header className="border-b border-white/[0.06] px-6 pb-4 pt-6 pr-14">
+          <div className="flex flex-wrap gap-1.5">
             {[
               { id: "rascunho" as StatusConteudo, label: "Rascunho", dot: "bg-white/20" },
               ...STATUS_CONTEUDO,
             ].map((s) => (
               <button
                 key={s.id}
+                aria-pressed={f.status === s.id}
                 onClick={() => set("status", s.id)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] transition-colors",
-                  f.status === s.id
-                    ? "bg-white/[0.12] text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+                  "pilula !h-7 !gap-1.5 !px-2.5 !text-[11px]",
+                  f.status === s.id && "pilula-ativa",
                 )}
               >
                 <span className={cn("size-1.5 rounded-full", s.dot)} /> {s.label}
@@ -894,7 +922,7 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <span className={label}>Redes</span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {PLATAFORMAS.map((p) => {
                   const on = f.plataformas.includes(p.id);
                   return (
@@ -906,12 +934,8 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
                           on ? f.plataformas.filter((x) => x !== p.id) : [...f.plataformas, p.id],
                         )
                       }
-                      className={cn(
-                        "rounded-lg border px-3 py-1.5 text-xs transition-colors",
-                        on
-                          ? p.cls
-                          : "border-white/[0.08] text-muted-foreground hover:text-foreground",
-                      )}
+                      aria-pressed={on}
+                      className={chip(on)}
                     >
                       {p.label}
                     </button>
@@ -925,6 +949,7 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
                 {FORMATOS.map((x) => (
                   <button
                     key={x.id}
+                    aria-pressed={f.formato === x.id}
                     onClick={() => set("formato", x.id)}
                     className={chip(f.formato === x.id)}
                   >
@@ -937,12 +962,13 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
 
           <div>
             <span className={label}>Tipo de postagem</span>
-            <div className="flex gap-2">
+            <div className="segmentos" role="group" aria-label="Tipo de postagem">
               {TIPOS_POSTAGEM.map((t) => (
                 <button
                   key={t.id}
+                  type="button"
+                  aria-pressed={f.tipo_postagem === t.id}
                   onClick={() => set("tipo_postagem", t.id)}
-                  className={chip(f.tipo_postagem === t.id)}
                 >
                   {t.label}
                 </button>
@@ -1073,7 +1099,7 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
           )}
         </div>
 
-        <footer className="flex items-center justify-between border-t border-white/[0.07] px-6 py-3">
+        <footer className="flex items-center justify-between border-t border-white/[0.06] px-6 py-3">
           {inicial.id ? (
             <button
               onClick={() => {

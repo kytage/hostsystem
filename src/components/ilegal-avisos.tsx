@@ -116,13 +116,16 @@ export function IlegalAvisos() {
   ).length;
 
   return (
-    <section className="rounded-2xl glass p-5">
+    <section className="glass hc p-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Megaphone className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Avisos Ilegal</h2>
+        <div className="flex items-center gap-3">
+          <span className="hc-icone">
+            <Megaphone className="size-4" strokeWidth={1.75} />
+          </span>
+          <h2 className="hc-titulo">Avisos Ilegal</h2>
           {naoConfirmados > 0 && (
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            <span className="hc-estado tabular-nums">
+              <i aria-hidden />
               {naoConfirmados} a confirmar
             </span>
           )}
@@ -130,7 +133,7 @@ export function IlegalAvisos() {
         {podeCriar && (
           <button
             onClick={() => setAberto((v) => !v)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
           >
             {aberto ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
             {aberto ? "Cancelar" : "Novo aviso"}
@@ -139,26 +142,26 @@ export function IlegalAvisos() {
       </header>
 
       {podeCriar && aberto && (
-        <div className="mt-4 rounded-xl glass-inset p-4">
+        <div className="hc-dentro mt-4 p-4">
           <input
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             placeholder="Título do aviso"
             maxLength={120}
-            className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
           />
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Descrição do aviso..."
             rows={3}
-            className="mt-2.5 w-full resize-y rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+            className="mt-2.5 w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
           />
           <div className="mt-2.5 flex justify-end">
             <button
               onClick={() => criar.mutate()}
               disabled={!titulo.trim() || criar.isPending}
-              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
             >
               {criar.isPending && <Loader2 className="size-3.5 animate-spin" />}
               Publicar
@@ -174,7 +177,7 @@ export function IlegalAvisos() {
           </p>
         )}
         {!isLoading && avisos.length === 0 && (
-          <p className="py-4 text-center text-xs text-muted-foreground">
+          <p className="rounded-[14px] border border-dashed border-white/[0.1] px-4 py-4 text-center text-xs text-muted-foreground">
             Nenhum aviso publicado para a área Ilegal.
           </p>
         )}
@@ -184,16 +187,14 @@ export function IlegalAvisos() {
             <article
               key={a.id}
               className={cn(
-                "rounded-xl border p-4 transition-colors",
-                confirmado
-                  ? "border-border bg-white/[0.035]"
-                  : "border-primary/40 bg-primary/5"
+                "hc-dentro p-4 transition-colors",
+                !confirmado && "!border-primary/40 !bg-primary/5"
               )}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h3 className="text-sm font-semibold text-foreground">{a.titulo}</h3>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                  <p className="mt-0.5 text-[11px] text-ink-3">
                     {a.criadoPor || "—"} · {fmtDataHora(a.createdAt)}
                   </p>
                 </div>
@@ -206,15 +207,15 @@ export function IlegalAvisos() {
                     }
                      disabled={!me?.id || confirmar.isPending || desconfirmar.isPending}
                     className={cn(
-                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                       "disabled:cursor-not-allowed disabled:opacity-50",
                       confirmado
-                        ? "bg-success/15 text-success hover:bg-success/25"
-                        : "bg-primary text-primary-foreground hover:opacity-90"
+                        ? "hc-pilula"
+                        : "flex h-[30px] items-center gap-1.5 rounded-full bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground"
                     )}
                   >
                     {confirmado ? (
                       <>
-                        <CheckCheck className="size-3.5" /> Confirmado
+                        <CheckCheck className="size-3.5 text-success" /> Confirmado
                       </>
                     ) : (
                       <>
@@ -226,7 +227,7 @@ export function IlegalAvisos() {
                     <button
                       onClick={() => excluir.mutate(a.id)}
                       title="Remover aviso"
-                      className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                      className="hc-seta hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -239,7 +240,7 @@ export function IlegalAvisos() {
                 </p>
               )}
               {a.confirmacoes.length > 0 && (
-                <p className="mt-2.5 text-[11px] text-muted-foreground/70">
+                <p className="mt-2.5 text-[11px] text-ink-3">
                   Confirmaram ({a.confirmacoes.length}):{" "}
                   {a.confirmacoes.map((c) => c.username || "—").join(", ")}
                 </p>

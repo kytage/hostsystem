@@ -4,6 +4,7 @@
  * e trajes, roupas e acessórios são montados seguindo as mesmas medidas,
  * então acompanham os movimentos sem flutuar nem atravessar o corpo.
  */
+import { criarBoneco, type Boneco } from "./boneco";
 import type * as TH from "three";
 import { coresDe, peca as pecaPorId, trajeDe, type Humor, type Visual } from "@/lib/hoki";
 import {
@@ -37,7 +38,39 @@ export type Reacao =
   | "robo"
   | "onda"
   | "pulinhos"
-  | "disco";
+  | "disco"
+  // as do boneco novo (menu de interações)
+  | "bracos"
+  | "telefone"
+  | "sim"
+  | "nao"
+  | "chamar"
+  | "apoiar"
+  | "lanterna"
+  | "zumbi"
+  | "arranhar"
+  | "arremessar"
+  | "gancho"
+  | "espada"
+  | "combo"
+  | "escudo"
+  | "bloquear"
+  | "plantar"
+  | "regar"
+  | "colher"
+  | "cortar"
+  | "bau"
+  | "tombo"
+  | "levantar"
+  | "poseT"
+  | "soco"
+  // do pacote 1
+  | "conversar"
+  | "agachar"
+  | "cambalhota"
+  | "cair"
+  | "magia"
+  | "consertar";
 
 export interface Quadro {
   t: number;
@@ -49,6 +82,14 @@ export interface Quadro {
   calmo: boolean;
   /** Na praça: está caminhando (balança pernas e braços). */
   andando?: boolean;
+  /** Na praça: está correndo (passada mais rápida e o corpo mais inclinado). */
+  correndo?: boolean;
+  /** Na praça: está no ar, num pulo (braços para cima e pernas encolhidas). */
+  noAr?: boolean;
+  /** Velocidade no chão, em metros por segundo do boneco (para o ritmo das pernas). */
+  velocidade?: number;
+  /** Acabou de pousar de um pulo. */
+  pousando?: boolean;
   /** Na praça: está sentado num banco. */
   sentado?: boolean;
   /** No berço: está deitado (quem gira o corpo é o mundo; aqui só relaxa as pernas e a cabeça). */
@@ -82,7 +123,21 @@ export interface OpcoesMascote {
   mundo?: boolean;
 }
 
-export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMascote = {}) {
+/**
+ * O personagem de cada jogador. Desde novembro de 2026 é o boneco com esqueleto e
+ * animações (boneco.ts), nos corpos Padrão ou Feminino; as roupas e trajes ficam
+ * guardados, mas não aparecem (um menu de peles e cosméticos vem depois).
+ * O HOKI desenhado à mão continua aqui embaixo (criarHokiAntigo), sem uso.
+ */
+export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMascote = {}): Boneco {
+  return criarBoneco(THREE, visual.corpo === "feminino" ? "feminino" : "padrao", !!opcoes.mundo, {
+    chapeu: visual.chapeu,
+    costas: visual.costas,
+    traje: visual.traje,
+  });
+}
+
+export function criarHokiAntigo(THREE: typeof TH, visual: Visual, opcoes: OpcoesMascote = {}) {
   const { modelo, mundo = false } = opcoes;
   const lixo: { dispose: () => void }[] = [];
   const mat = (cor: TH.ColorRepresentation, o: TH.MeshStandardMaterialParameters = {}) => {
@@ -1026,19 +1081,28 @@ export function criarMascote(THREE: typeof TH, visual: Visual, opcoes: OpcoesMas
     }
 
     // na praça: caminhar balança pernas e braços; o modelo inteiriço balança o corpo
-    if (q.andando) {
-      const passada = t * 11;
-      pE = Math.sin(passada) * 0.8;
+    if (q.andando && !q.noAr) {
+      // correndo: passada mais rápida e mais larga, e o corpo vai mais para a frente
+      const passada = t * (q.correndo ? 16 : 11);
+      pE = Math.sin(passada) * (q.correndo ? 1 : 0.8);
       pD = -pE;
       bE.x = -pE * 0.8;
       bD.x = pE * 0.8;
-      salto += Math.abs(Math.sin(passada)) * 0.035;
-      inclina = Math.max(inclina, 0.1);
+      salto += Math.abs(Math.sin(passada)) * (q.correndo ? 0.06 : 0.035);
+      inclina = Math.max(inclina, q.correndo ? 0.22 : 0.1);
       if (usaModelo) rolar += Math.sin(passada) * 0.05;
       // ao andar a cintura torce contra as pernas e a cabeça fica firme, olhando para onde vai
       trY = Math.sin(passada) * 0.18;
       cabY = -trY * 0.7;
       cabX = 0.04 + Math.abs(Math.sin(passada)) * 0.03;
+    }
+    // no pulo: braços abertos para cima e pernas encolhidas
+    if (q.noAr) {
+      bE.z = -1.7;
+      bD.z = 1.7;
+      pE = pD = -0.45;
+      cabX = -0.08;
+      inclina = Math.max(inclina, 0.12);
     }
     if (q.sentado) alvoSentado = 1;
 

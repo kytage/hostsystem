@@ -42,13 +42,14 @@ const TIPO_ICON: Record<CronoTipo, typeof Target> = {
 const TIPO_STYLE: Record<CronoTipo, string> = {
   roleplay: "bg-info/15 text-info",
   missao: "bg-warning/15 text-warning",
-  entrega: "bg-primary/15 text-primary",
+  entrega: "bg-violet-500/15 text-violet-400",
 };
 
+/** Cor do pontinho ao lado do nome de cada coluna. */
 const COLUNA_STYLE: Record<CronoColuna, string> = {
-  pendente: "bg-white/[0.035]",
-  andamento: "bg-info/5",
-  concluido: "bg-success/10",
+  pendente: "bg-white/25",
+  andamento: "bg-info",
+  concluido: "bg-success",
 };
 
 const inputCls =
@@ -153,16 +154,16 @@ export function IlegalCronograma() {
   return (
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Cronograma de RP</h2>
-          <span className="text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-1">
+          <CalendarClock className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          <h2 className="hc-titulo">Cronograma de RP</h2>
+          <span className="hc-nota">
             Arraste os cards conforme o andamento
           </span>
         </div>
         <button
           onClick={() => setModal({ item: null })}
-          className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
         >
           <Plus className="size-3.5" /> Novo item
         </button>
@@ -173,7 +174,7 @@ export function IlegalCronograma() {
           <Loader2 className="size-4 animate-spin" /> Carregando cronograma...
         </p>
       ) : (
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3.5 lg:grid-cols-3">
           {CRONO_COLUNAS.map((col) => {
             const lista = porColuna[col.id];
             return (
@@ -181,23 +182,21 @@ export function IlegalCronograma() {
                 key={col.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, col.id)}
-                className={cn(
-                  "flex min-h-52 flex-col rounded-2xl border border-border p-3",
-                  COLUNA_STYLE[col.id]
-                )}
+                className="glass hc flex min-h-52 flex-col p-4"
               >
-                <header className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <header className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="hc-sobre flex items-center gap-2">
+                    <span className={cn("size-1.5 rounded-full", COLUNA_STYLE[col.id])} />
                     {col.label}
                   </h3>
-                  <span className="rounded-full bg-background/60 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  <span className="hc-selo tabular-nums">
                     {lista.length}
                   </span>
                 </header>
 
                 <div className="flex flex-1 flex-col gap-2.5">
                   {lista.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-border py-8 text-center text-[11px] text-muted-foreground">
+                    <p className="rounded-[14px] border border-dashed border-white/[0.1] py-8 text-center text-[11px] text-muted-foreground">
                       Nada aqui
                     </p>
                   )}
@@ -213,7 +212,7 @@ export function IlegalCronograma() {
                         }}
                         onDragEnd={() => setDragId(null)}
                         className={cn(
-                          "group cursor-grab rounded-xl glass p-3 transition-shadow hover:shadow-md active:cursor-grabbing",
+                          "hc-dentro group cursor-grab p-3 transition-colors hover:!border-white/[0.14] active:cursor-grabbing",
                           dragId === item.id && "opacity-50"
                         )}
                       >
@@ -225,14 +224,14 @@ export function IlegalCronograma() {
                             <button
                               onClick={() => setModal({ item })}
                               title="Editar"
-                              className="rounded-md p-1 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+                              className="hc-seta !size-6"
                             >
                               <Pencil className="size-3" />
                             </button>
                             <button
                               onClick={() => excluir.mutate(item.id)}
                               title="Remover"
-                              className="rounded-md p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                              className="hc-seta !size-6 hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive"
                             >
                               <Trash2 className="size-3" />
                             </button>
@@ -262,7 +261,7 @@ export function IlegalCronograma() {
                           </p>
                         )}
 
-                        <p className="mt-2 text-[10px] text-muted-foreground/70">
+                        <p className="mt-2 text-[10px] text-ink-3">
                           {fmtQuando(item.dataHora)}
                           {item.responsavel && ` · ${item.responsavel}`}
                         </p>
@@ -341,14 +340,14 @@ function CronoModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl glass p-5">
+      <div className="w-full max-w-lg rounded-[22px] glass-modal p-5">
         <header className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="hc-titulo">
             {item ? "Editar item" : "Novo item do cronograma"}
           </h3>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -365,7 +364,7 @@ function CronoModal({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="hc-sobre mb-1.5 block">
                 Tipo
               </label>
               <MinimalSelect
@@ -377,7 +376,7 @@ function CronoModal({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="hc-sobre mb-1.5 block">
                 Data e hora
               </label>
               <input
@@ -390,7 +389,7 @@ function CronoModal({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <label className="hc-sobre mb-1.5 block">
               Setagem da organização
             </label>
             <MinimalSelect
@@ -413,14 +412,14 @@ function CronoModal({
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
           <button
             onClick={() => salvar.mutate()}
             disabled={!form.titulo.trim() || salvar.isPending}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvar.isPending && <Loader2 className="size-3.5 animate-spin" />}
             {item ? "Salvar" : "Adicionar"}

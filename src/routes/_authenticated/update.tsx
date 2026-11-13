@@ -103,7 +103,7 @@ function HostUpdate() {
   };
 
   return (
-    <div className="host-update-theme mx-auto max-w-screen-2xl px-4 py-6 md:px-8 md:py-8">
+    <div className="host-update-theme pagina">
       <PageHeader
         kicker="UPDATE"
         title="HOST UPDATE 3.0"
@@ -131,20 +131,13 @@ function HostUpdate() {
         />
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
+      <div className="mt-5 flex items-center gap-3">
+        <div className="segmentos" role="group" aria-label="Visão">
           {([
             { id: "pendencias", label: "Pendências", icon: ListChecks },
             { id: "quadro", label: "Quadro", icon: Columns3 },
           ] as const).map((v) => (
-            <button
-              key={v.id}
-              onClick={() => trocarVisao(v.id)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs transition-colors",
-                visao === v.id ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
+            <button key={v.id} type="button" aria-pressed={visao === v.id} onClick={() => trocarVisao(v.id)}>
               <v.icon className="size-3.5" /> {v.label}
             </button>
           ))}
@@ -160,8 +153,8 @@ function HostUpdate() {
           <PendenciasPanel projetos={projetos} />
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-6 2xl:grid-cols-[1fr_320px]">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-3.5 2xl:grid-cols-[1fr_320px]">
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4">
           {COLUNAS.map((col) => {
             const cards = projetos.filter((p) => p.column === col.id);
             return (
@@ -177,16 +170,18 @@ function HostUpdate() {
                   qc.setQueryData<DevTask[]>(["host-update"], (old) => old?.map((x) => (x.id === id ? { ...x, column: col.id } : x)));
                   mover.mutate({ id, coluna: col.id });
                 }}
-                className={cn("flex min-h-40 min-w-0 flex-col rounded-md border-t border-border pt-3 transition-colors", over === col.id && "bg-primary/5 ring-1 ring-primary/30")}
+                className={cn(
+                  "flex min-h-40 min-w-0 flex-col rounded-[22px] border p-3 transition-colors",
+                  // ao arrastar um cartão por cima, a coluna acende (o vidro sai para o realce aparecer)
+                  over === col.id ? "border-primary/40 bg-primary/5" : "glass",
+                )}
               >
-                <div className="flex items-center gap-2 px-1 pb-3">
+                <div className="flex items-center gap-2 px-1.5 pb-3 pt-1">
                   <span className={cn("size-2 rounded-full", col.dot)} />
-                  <h2 className="text-[13px] font-semibold text-foreground">
+                  <h2 className="font-display text-[14px] font-semibold text-foreground">
                     {col.label}
                   </h2>
-                  <span className="ml-auto rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                    {cards.length}
-                  </span>
+                  <span className="hc-selo ml-auto tabular-nums">{cards.length}</span>
                 </div>
                 <div className="space-y-2">
                   {cards.map((p) => (
@@ -199,7 +194,7 @@ function HostUpdate() {
                     />
                   ))}
                   {cards.length === 0 && (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
+                    <p className="rounded-[14px] border border-dashed border-white/[0.1] py-6 text-center text-xs text-muted-foreground">
                       Nenhum projeto
                     </p>
                   )}
@@ -208,7 +203,7 @@ function HostUpdate() {
             );
           })}
         </div>
-        <aside className="space-y-4 2xl:sticky 2xl:top-6 2xl:self-start">
+        <aside className="space-y-3.5 2xl:sticky 2xl:top-6 2xl:self-start">
           <UpdateOverview projetos={projetos} />
           <MinhasDemandas projetos={projetos} onOpen={(p) => setSelected({ projeto: p, editing: false })} />
         </aside>
@@ -243,19 +238,19 @@ function ProjetoCard({
   const pill = STATUS_PILL[projeto.column];
   return (
     <article draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", projeto.id); e.dataTransfer.effectAllowed = "move"; }}
-      className="group cursor-grab rounded-2xl border border-border/50 bg-card/40 p-3.5 backdrop-blur-xl transition-colors hover:border-primary/40 active:cursor-grabbing">
+      className="hc-dentro group cursor-grab p-3.5 transition-colors hover:!border-[color:var(--gf-linha-2)] active:cursor-grabbing">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{projeto.tag}</span>
+          <span className="hc-sobre">{projeto.tag}</span>
           <button type="button" onClick={() => onOpen(false)} className="mt-1 block text-left text-sm font-semibold leading-snug text-foreground hover:text-primary">{projeto.title}</button>
         </div>
         <div className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-          <Button variant="ghost" size="icon" className="size-7 text-muted-foreground" aria-label={`Editar ${projeto.title}`} onClick={() => onOpen(true)}><Pencil className="size-3.5" /></Button>
-          <Button variant="ghost" size="icon" onClick={onRemover} aria-label="Remover projeto" className="size-7 text-muted-foreground hover:text-destructive"><Trash2 className="size-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="size-7 rounded-full text-muted-foreground" aria-label={`Editar ${projeto.title}`} onClick={() => onOpen(true)}><Pencil className="size-3.5" /></Button>
+          <Button variant="ghost" size="icon" onClick={onRemover} aria-label="Remover projeto" className="size-7 rounded-full text-muted-foreground hover:text-destructive"><Trash2 className="size-3.5" /></Button>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-1.5 text-xs text-primary" onClick={() => onOpen(false)}>
+        <Button variant="ghost" size="sm" className="hc-pilula" onClick={() => onOpen(false)}>
           <Maximize2 className="size-3.5" /> Abrir
           {projeto.attachments.length > 0 && <span className="flex items-center gap-0.5 text-muted-foreground"><Paperclip className="size-3" />{projeto.attachments.length}</span>}
         </Button>

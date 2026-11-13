@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
   onReset: () => void;
 }
-const inputClass = "w-full rounded-md border border-input bg-black/25 px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+const inputClass = "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 const fields = [
   ["titulo", "Título do nível"], ["faixa", "Faixa de online"],
   ["liderancaQtd", "Quantidade de pessoas — Liderança"], ["lideranca", "VIPs e benefícios — Liderança"],
@@ -24,38 +24,38 @@ const fields = [
 export function ProposalBenefitsEditor({ model, pix, onModel, onPix, onClose, onReset }: Props) {
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-      <DialogHeader><DialogTitle>Benefícios da proposta — {model.titulo}</DialogTitle></DialogHeader>
+      <DialogHeader><DialogTitle className="hc-titulo">Benefícios da proposta — {model.titulo}</DialogTitle></DialogHeader>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {fields.map(([key, label]) => <label key={key} className="space-y-1 text-xs font-medium text-muted-foreground">
-          <span>{label}</span>
+        {fields.map(([key, label]) => <label key={key} className="space-y-1.5 text-xs font-medium text-muted-foreground">
+          <span className="hc-sobre block">{label}</span>
           <textarea rows={2} maxLength={2000} className={cn(inputClass, "resize-y")} value={model[key] ?? (key === "vipFacTitulo" ? "VIP FAC ULTIMATE" : key === "vipFacDuracao" ? "até o WIPE" : "")}
             onChange={event => onModel({ ...model, [key]: event.target.value })} />
         </label>)}
-        <label className="space-y-1 text-xs font-medium text-muted-foreground sm:col-span-2">
-          <span>Benefícios VIP FAC (um por linha)</span>
+        <label className="space-y-1.5 text-xs font-medium text-muted-foreground sm:col-span-2">
+          <span className="hc-sobre block">Benefícios VIP FAC (um por linha)</span>
           <textarea rows={6} maxLength={10000} className={inputClass} value={model.vipFac.join("\n")}
             onChange={event => onModel({ ...model, vipFac: event.target.value.split("\n") })} />
         </label>
         <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
-          <input type="checkbox" checked={model.pix} onChange={event => onModel({ ...model, pix: event.target.checked })} /> Incluir remuneração via Pix
+          <input type="checkbox" className="size-4 accent-foreground" checked={model.pix} onChange={event => onModel({ ...model, pix: event.target.checked })} /> Incluir remuneração via Pix
         </label>
       </div>
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-semibold">Faixas de remuneração via Pix</legend>
+        <legend className="hc-titulo mb-2">Faixas de remuneração via Pix</legend>
         {pix.map((row, index) => <div key={`faixa-${index}`} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-          <label className="space-y-1 text-xs text-muted-foreground">Online
+          <label className="space-y-1.5 text-xs text-muted-foreground"><span className="hc-sobre block">Online</span>
             <input aria-label={`Online faixa ${index + 1}`} type="number" min={0} max={100000} step={1} className={inputClass} value={row.online}
               onChange={event => onPix(pix.map((value, i) => i === index ? { ...value, online: Number(event.target.value) } : value))} />
           </label>
-          <label className="space-y-1 text-xs text-muted-foreground">Valor (R$)
+          <label className="space-y-1.5 text-xs text-muted-foreground"><span className="hc-sobre block">Valor (R$)</span>
             <input aria-label={`Valor faixa ${index + 1}`} type="number" min={0} max={100000000} step="0.01" className={inputClass} value={row.valor}
               onChange={event => onPix(pix.map((value, i) => i === index ? { ...value, valor: Number(event.target.value) } : value))} />
           </label>
-          <Button variant="ghost" size="icon" aria-label={`Remover faixa ${index + 1}`} title="Remover faixa" onClick={() => onPix(pix.filter((_, i) => i !== index))}><Trash2 /></Button>
+          <Button variant="ghost" size="icon" aria-label={`Remover faixa ${index + 1}`} title="Remover faixa" className="hc-seta !size-9 hover:!border-destructive/40 hover:!bg-destructive/15 hover:!text-destructive" onClick={() => onPix(pix.filter((_, i) => i !== index))}><Trash2 /></Button>
         </div>)}
-        <Button variant="outline" size="sm" disabled={pix.length >= 30} onClick={() => onPix([...pix, { online: Math.max(0, ...pix.map(row => row.online)) + 5, valor: 0 }])}><Plus /> Adicionar faixa</Button>
+        <Button variant="outline" size="sm" className="rounded-full" disabled={pix.length >= 30} onClick={() => onPix([...pix, { online: Math.max(0, ...pix.map(row => row.online)) + 5, valor: 0 }])}><Plus /> Adicionar faixa</Button>
       </fieldset>
-      <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-3">
+      <div className="flex flex-wrap justify-between gap-2 border-t border-white/[0.06] pt-4">
         <Button variant="outline" onClick={onReset}>Restaurar padrão do nível</Button>
         <Button onClick={onClose}>Concluir ajustes</Button>
       </div>

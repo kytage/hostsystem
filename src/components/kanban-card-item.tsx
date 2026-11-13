@@ -54,7 +54,7 @@ export const KanbanCardItem = memo(function KanbanCardItem({
       onClick={handleClick}
       style={{ contain: "layout paint" }}
       className={cn(
-        "group cursor-grab rounded-xl glass p-3 transition-[border-color,opacity,transform] duration-150 hover:border-primary/30 active:cursor-grabbing",
+        "hc-dentro group cursor-grab p-3 transition-[border-color,opacity,transform] duration-150 hover:!border-[color:var(--gf-linha-2)] active:cursor-grabbing",
         dragging && "scale-[0.98] opacity-40",
       )}
     >
@@ -95,7 +95,7 @@ export const KanbanCardItem = memo(function KanbanCardItem({
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="truncate text-[10px] text-muted-foreground/70">{card.criadoPor}</span>
         {card.responsavel && (
-          <span className="shrink-0 rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-foreground">
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground">
             {card.responsavel}
           </span>
         )}

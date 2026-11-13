@@ -7,18 +7,23 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Gauge,
   KeyRound,
   Loader2,
+  MousePointerClick,
+  PanelsTopLeft,
   Pencil,
   Plus,
   Power,
   RefreshCw,
   Send,
   Trash2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Indice, Indices } from "@/components/indice";
 import { copiarTexto } from "@/lib/copiar";
 import type { IlegalOrg } from "@/lib/ilegal-data";
 import { getCurrentUsername } from "@/lib/kanban";
@@ -38,7 +43,7 @@ import { playSfx } from "@/lib/sfx";
 const KEY = ["org-paineis"];
 
 const campo =
-  "h-10 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm outline-none transition-colors placeholder:text-ink-3 focus:border-white/25";
+  "h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-sm outline-none transition-colors placeholder:text-ink-3 focus:border-white/25";
 
 /** Mensagem pronta para mandar ao líder, com o link direto e o código. */
 function textoConvite(nome: string, codigo: string): string {
@@ -99,26 +104,23 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
   const pessoas = paineis.reduce((s, p) => s + p.membros.length, 0);
   const visitas = paineis.reduce((s, p) => s + p.membros.reduce((t, m) => t + m.visitas, 0), 0);
   const kpis = [
-    { k: "Painéis ativos", v: ativos.length },
-    { k: "Pessoas cadastradas", v: pessoas },
-    { k: "Média por organização", v: paineis.length ? Math.round(pessoas / paineis.length) : 0 },
-    { k: "Visitas nos links", v: visitas },
+    { k: "Painéis ativos", v: ativos.length, icone: PanelsTopLeft },
+    { k: "Pessoas cadastradas", v: pessoas, icone: Users },
+    { k: "Média por organização", v: paineis.length ? Math.round(pessoas / paineis.length) : 0, icone: Gauge },
+    { k: "Visitas nos links", v: visitas, icone: MousePointerClick },
   ];
 
   return (
     <section className="mt-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+      <div className="flex flex-wrap items-end justify-between gap-3.5">
+        <Indices className="min-w-[min(100%,36rem)] flex-1">
           {kpis.map((c) => (
-            <div key={c.k} className="border-l border-white/[0.08] pl-4">
-              <p className="font-display text-2xl font-semibold tabular-nums">{isLoading ? "—" : c.v.toLocaleString("pt-BR")}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{c.k}</p>
-            </div>
+            <Indice key={c.k} valor={isLoading ? "—" : c.v.toLocaleString("pt-BR")} titulo={c.k} icone={c.icone} />
           ))}
-        </div>
+        </Indices>
         <button
           onClick={() => setForm({ painel: null })}
-          className="flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+          className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
         >
           <Plus className="size-4" /> Novo painel de líder
         </button>
@@ -129,27 +131,27 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
       </p>
 
       {isError ? (
-        <p className="glass-inset mt-5 rounded-2xl px-4 py-12 text-center text-sm text-muted-foreground">Não foi possível carregar os painéis. Você precisa ser Coordinator+ ou da área Ilegal.</p>
+        <p className="mt-5 rounded-[22px] border border-dashed border-white/[0.1] px-4 py-12 text-center text-sm text-muted-foreground">Não foi possível carregar os painéis. Você precisa ser Coordinator+ ou da área Ilegal.</p>
       ) : isLoading ? (
         <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Carregando painéis…
         </div>
       ) : paineis.length === 0 ? (
-        <p className="glass-inset mt-5 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="mt-5 rounded-[22px] border border-dashed border-white/[0.1] px-4 py-14 text-center text-sm text-muted-foreground">
           Nenhum painel criado ainda. Crie o primeiro e envie o código ao líder da organização.
         </p>
       ) : (
-        <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-3.5 xl:grid-cols-2">
           {paineis.map((p) => {
             const total = p.membros.length;
             const { atual } = patente(total);
             const mostrando = revelados.includes(p.id);
             const acesso = quando(p.ultimo_acesso);
             return (
-              <article key={p.id} className={cn("glass animate-rise rounded-[22px] p-4", !p.ativo && "opacity-60")}>
+              <article key={p.id} className={cn("glass hc animate-rise p-5", !p.ativo && "opacity-60")}>
                 <header className="flex flex-wrap items-center gap-2">
-                  <h3 className="min-w-0 truncate font-display text-base font-semibold">{p.nome}</h3>
-                  {p.setagem && <span className="rounded-full border border-white/[0.08] px-2 py-0.5 text-[10.5px] text-muted-foreground">{p.setagem}</span>}
+                  <h3 className="hc-titulo min-w-0 truncate">{p.nome}</h3>
+                  {p.setagem && <span className="hc-selo">{p.setagem}</span>}
                   <span className={cn("ml-auto flex items-center gap-1.5 text-[11px]", p.ativo ? "text-emerald-300" : "text-ink-3")}>
                     <span className={cn("size-1.5 rounded-full", p.ativo ? "bg-emerald-400" : "bg-white/30")} /> {p.ativo ? "Ativo" : "Desativado"}
                   </span>
@@ -160,7 +162,7 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
 
                 <div className="mt-4 flex items-center gap-3">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
-                    <div className="h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.min(100, total)}%` }} />
+                    <div className="h-full rounded-full bg-foreground/85 transition-[width] duration-700" style={{ width: `${Math.min(100, total)}%` }} />
                   </div>
                   <span className="shrink-0 text-xs tabular-nums">
                     {total}/{LIMITE_MEMBROS} <span className="text-ink-3">· {atual.nome}</span>
@@ -171,7 +173,7 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
                   {p.membros.reduce((s, m) => s + m.visitas, 0)} visitas
                 </p>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-white/[0.07] bg-black/30 py-1.5 pl-3 pr-1.5">
+                <div className="hc-dentro mt-4 flex flex-wrap items-center gap-2 py-1.5 pl-3 pr-1.5">
                   <KeyRound className="size-3.5 shrink-0 text-ink-3" />
                   <span className="min-w-0 flex-1 truncate font-mono text-[13px] tracking-[0.08em]">{mostrando ? p.codigo : "HOST-•••••-•••••"}</span>
                   <Icone
@@ -185,13 +187,13 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
                   </Icone>
                   <button
                     onClick={() => void copiar(textoConvite(p.nome, p.codigo), "Convite copiado. É só colar para o líder.")}
-                    className="flex h-8 items-center gap-1.5 rounded-lg bg-white/[0.07] px-3 text-xs text-foreground transition-colors hover:bg-white/[0.12]"
+                    className="hc-pilula"
                   >
                     <Send className="size-3.5" /> Copiar convite
                   </button>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-1">
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <Acao onClick={() => setAberto((a) => (a === p.id ? null : p.id))} ativo={aberto === p.id}>
                     <ChevronDown className={cn("size-3.5 transition-transform", aberto === p.id && "rotate-180")} /> Ver equipe
                   </Acao>
@@ -225,17 +227,17 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
                         <p className="py-6 text-center text-xs text-ink-3">O líder ainda não cadastrou ninguém.</p>
                       ) : (
                         <table className="w-full text-left text-xs">
-                          <thead className="text-[10.5px] text-ink-3">
+                          <thead className="text-[10.5px] uppercase tracking-[0.12em] text-ink-3">
                             <tr>
-                              <th className="py-1.5 font-normal">Nome</th>
-                              <th className="py-1.5 font-normal">Discord</th>
-                              <th className="py-1.5 font-normal">Cargo</th>
-                              <th className="py-1.5 text-right font-normal">Visitas</th>
+                              <th className="py-1.5 font-semibold">Nome</th>
+                              <th className="py-1.5 font-semibold">Discord</th>
+                              <th className="py-1.5 font-semibold">Cargo</th>
+                              <th className="py-1.5 text-right font-semibold">Visitas</th>
                             </tr>
                           </thead>
                           <tbody>
                             {p.membros.map((m) => (
-                              <tr key={m.id} className="border-t border-white/[0.04]">
+                              <tr key={m.id} className="border-t border-white/[0.06] hover:bg-white/[0.03]">
                                 <td className="max-w-40 truncate py-1.5 pr-2">
                                   {m.nome}
                                   {m.passaporte && <span className="ml-1 text-ink-3">#{m.passaporte}</span>}
@@ -281,7 +283,7 @@ export function IlegalPaineis({ orgs }: { orgs: IlegalOrg[] }) {
 
 function Icone({ rotulo, onClick, children }: { rotulo: string; onClick: () => void; children: ReactNode }) {
   return (
-    <button onClick={onClick} aria-label={rotulo} title={rotulo} className="grid size-8 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-white/[0.07] hover:text-foreground">
+    <button onClick={onClick} aria-label={rotulo} title={rotulo} className="hc-seta">
       {children}
     </button>
   );
@@ -292,9 +294,9 @@ function Acao({ onClick, children, perigo, ativo }: { onClick: () => void; child
     <button
       onClick={onClick}
       className={cn(
-        "flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs transition-colors hover:bg-white/[0.06]",
-        ativo ? "bg-white/[0.06] text-foreground" : "text-muted-foreground",
-        perigo ? "hover:text-red-300" : "hover:text-foreground",
+        "hc-pilula",
+        ativo && "!border-transparent !bg-[var(--gf-tx-1)] !text-[var(--gf-painel)]",
+        perigo && "hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive",
       )}
     >
       {children}
@@ -364,12 +366,12 @@ function PainelDialog({
     if (f.nome.trim().length < 2 || linkRuim || salvar.isPending) return;
     salvar.mutate();
   };
-  const rotulo = "mb-1.5 block text-xs text-muted-foreground";
+  const rotulo = "hc-sobre mb-1.5 block";
 
   return (
     <Dialog open onOpenChange={(o) => !o && !salvar.isPending && onClose()}>
       <DialogContent aria-describedby={undefined} className="w-[calc(100vw-1.5rem)] max-w-md">
-        <DialogTitle>{painel ? "Editar painel" : "Novo painel de líder"}</DialogTitle>
+        <DialogTitle className="hc-titulo">{painel ? "Editar painel" : "Novo painel de líder"}</DialogTitle>
         <form onSubmit={enviar} className="space-y-3">
           <label className="block">
             <span className={rotulo}>Organização</span>
@@ -418,7 +420,7 @@ function PainelDialog({
               {linkRuim ? "O link precisa começar com https://" : "Aparece na página de cada membro. É para onde vai quem clicar no convite dele."}
             </span>
           </label>
-          <button type="submit" disabled={f.nome.trim().length < 2 || linkRuim || salvar.isPending} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-40">
+          <button type="submit" disabled={f.nome.trim().length < 2 || linkRuim || salvar.isPending} className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-40">
             {salvar.isPending ? <Loader2 className="size-4 animate-spin" /> : !painel && <KeyRound className="size-4" />}
             {painel ? "Salvar" : "Criar e gerar código"}
           </button>
@@ -433,11 +435,11 @@ function CodigoDialog({ nome, codigo, novo, onClose }: { nome: string; codigo: s
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent aria-describedby={undefined} className="w-[calc(100vw-1.5rem)] max-w-md text-center">
-        <DialogTitle className="text-center">{novo ? "Painel criado" : "Código novo gerado"}</DialogTitle>
+        <DialogTitle className="hc-titulo text-center">{novo ? "Painel criado" : "Código novo gerado"}</DialogTitle>
         <p className="text-sm text-muted-foreground">
           Envie este código ao líder da <span className="text-foreground">{nome}</span>.{!novo && " O código antigo não funciona mais."}
         </p>
-        <p className="rounded-2xl border border-white/[0.09] bg-black/40 px-4 py-4 font-mono text-xl font-semibold tracking-[0.14em]">{codigo}</p>
+        <p className="hc-dentro px-4 py-4 font-mono text-xl font-semibold tracking-[0.14em]">{codigo}</p>
         <div className="grid gap-2">
           <button
             onClick={() => {
@@ -445,15 +447,15 @@ function CodigoDialog({ nome, codigo, novo, onClose }: { nome: string; codigo: s
               setCopiado(true);
               setTimeout(() => setCopiado(false), 1500);
             }}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground"
           >
             {copiado ? <Check className="size-4" /> : <Send className="size-4" />} Copiar convite com link e código
           </button>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => void copiar(codigo, "Código copiado.")} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] text-xs text-foreground transition-colors hover:bg-white/[0.08]">
+            <button onClick={() => void copiar(codigo, "Código copiado.")} className="pilula justify-center rounded-full">
               <Copy className="size-3.5" /> Só o código
             </button>
-            <a href="/lider" target="_blank" rel="noreferrer" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] text-xs text-foreground transition-colors hover:bg-white/[0.08]">
+            <a href="/lider" target="_blank" rel="noreferrer" className="pilula justify-center rounded-full">
               <ExternalLink className="size-3.5" /> Abrir a tela do líder
             </a>
           </div>

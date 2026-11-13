@@ -95,8 +95,8 @@ export function PuxarCommit() {
       </button>
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent aria-describedby={undefined} className="max-w-md gap-0 p-5">
-          <DialogTitle className="font-display text-lg font-semibold">Puxar commit</DialogTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <DialogTitle className="hc-titulo">Puxar commit</DialogTitle>
+          <p className="hc-nota mt-1.5">
             Digite o código do commit. O painel confere no GitHub, copia a mensagem pronta e abre o
             Lovable. Lá é só colar no chat e clicar em Publish.
           </p>
@@ -115,12 +115,12 @@ export function PuxarCommit() {
               autoCapitalize="none"
               spellCheck={false}
               aria-label="Código do commit"
-              className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.1] bg-black/40 px-3 font-mono text-sm outline-none focus:border-white/30"
+              className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 font-mono text-sm outline-none focus:border-white/30"
             />
             <button
               type="submit"
               disabled={buscando}
-              className="flex h-10 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-semibold text-black disabled:opacity-60"
+              className="flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
             >
               {buscando && <Loader2 className="size-4 animate-spin" />} Conferir
             </button>
@@ -135,7 +135,7 @@ export function PuxarCommit() {
           )}
           {achado && (
             <div className="mt-4 space-y-3">
-              <div className="glass-inset rounded-xl border p-3">
+              <div className="hc-dentro p-3">
                 <p className="flex items-center gap-1.5 text-xs text-emerald-300">
                   <Check className="size-3.5" /> Commit encontrado
                 </p>
@@ -152,11 +152,11 @@ export function PuxarCommit() {
                 rows={5}
                 onFocus={(e) => e.currentTarget.select()}
                 aria-label="Mensagem para colar no Lovable"
-                className="w-full resize-none rounded-xl border border-white/[0.1] bg-black/40 p-3 text-[11.5px] leading-relaxed text-foreground/85 outline-none"
+                className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.04] p-3 text-[11.5px] leading-relaxed text-foreground/85 outline-none"
               />
               <button
                 onClick={() => void copiarEAbrir()}
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white text-sm font-semibold text-black"
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground"
               >
                 {copiado ? <Check className="size-4" /> : <Copy className="size-4" />}
                 Copiar mensagem e abrir o Lovable <ExternalLink className="size-3.5" />

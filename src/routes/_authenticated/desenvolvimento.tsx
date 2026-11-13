@@ -302,7 +302,7 @@ function Desenvolvimento() {
 
 
   return (
-    <div className="flex h-full min-w-0 flex-col px-3 py-3 md:px-4">
+    <div className="pagina flex h-full min-w-0 flex-col !pb-4">
       <PageHeader
         title="Desenvolvimento"
         subtitle="Solicitações → Dev → Teste → Concluído — sincronizado em tempo real"
@@ -312,7 +312,7 @@ function Desenvolvimento() {
               onClick={() => setShowBusca(true)}
               title="Buscar solicitação (inclusive arquivadas)"
               aria-label="Buscar solicitação"
-              className="flex items-center justify-center rounded-full border border-border p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+              className="pilula !w-9 justify-center rounded-full !px-0"
             >
               <Search className="size-4" />
             </button>
@@ -320,21 +320,21 @@ function Desenvolvimento() {
               onClick={() => setShowHistorico(true)}
               title="Histórico — Patch Notes e arquivados"
               aria-label="Histórico — Patch Notes e arquivados"
-              className="flex items-center justify-center rounded-full border border-border p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+              className="pilula !w-9 justify-center rounded-full !px-0"
             >
               <Clock className="size-4" />
             </button>
 
             <button
               onClick={() => setShowNovoDev(true)}
-              className="flex items-center gap-2 rounded-full border border-border px-3.5 py-1.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-white/[0.08]"
+              className="pilula rounded-full"
             >
               <UserPlus className="size-4" /> Novo dev
             </button>
             <button
               onClick={() => setShowPatch(true)}
               disabled={aguardandoPatch.length === 0}
-              className="flex items-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-3.5 py-1.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              className="flex h-9 items-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-4 text-[13px] font-semibold text-[#ff8f85] transition-colors hover:bg-primary/20 disabled:opacity-50"
             >
               <Sparkles className="size-4" /> Patch Notes ({aguardandoPatch.length})
             </button>
@@ -343,17 +343,13 @@ function Desenvolvimento() {
       />
 
       {/* Filtro (esquerda) + stats — sem barra de arrastar */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* Filtro por categoria — à esquerda */}
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+        <div className="segmentos shrink-0 flex-wrap" role="group" aria-label="Categoria">
           <button
+            type="button"
+            aria-pressed={filtroCategoria === null}
             onClick={() => setFiltroCategoria(null)}
-            className={cn(
-              "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors",
-              filtroCategoria === null
-                ? "border-white/15 bg-white/[0.09] text-foreground"
-                : "border-border text-muted-foreground hover:text-foreground"
-            )}
           >
             Todas
           </button>
@@ -362,28 +358,24 @@ function Desenvolvimento() {
             return (
               <button
                 key={cat}
+                type="button"
+                aria-pressed={filtroCategoria === cat}
                 onClick={() => setFiltroCategoria(filtroCategoria === cat ? null : cat)}
-                className={cn(
-                  "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors",
-                  filtroCategoria === cat
-                    ? "border-white/15 bg-white/[0.09] text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                )}
               >
-                <Icon className="size-3" /> {CATEGORIA_LABEL[cat]}
+                <Icon className="size-3.5" /> {CATEGORIA_LABEL[cat]}
               </button>
             );
           })}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+        {/* números do quadro, no mesmo desenho dos quadros da tela inicial (em tamanho menor) */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
           {stats.map((s) => (
-            <div
-              key={s.label}
-              className="flex shrink-0 items-center gap-2 rounded-lg glass px-2.5 py-1.5"
-            >
-              <span className="text-lg font-semibold leading-none text-foreground font-display">{s.value}</span>
-              <span className="text-[10px] font-medium leading-tight text-muted-foreground">
+            <div key={s.label} className="hc-dentro flex shrink-0 items-center gap-2.5 px-3 py-2">
+              <span className="font-display text-[19px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-foreground">
+                {s.value}
+              </span>
+              <span className="max-w-[90px] text-[11px] font-medium leading-tight text-muted-foreground">
                 {s.label}
               </span>
             </div>
@@ -422,17 +414,17 @@ function Desenvolvimento() {
                     setOverColumn(null);
                   }}
                   className={cn(
-                    "flex h-full min-w-[260px] flex-1 flex-col rounded-2xl border transition-colors",
+                    "flex h-full min-w-[260px] flex-1 flex-col rounded-[22px] border transition-colors",
                     isConcluido
-                      ? "border-success/30 bg-success/10"
+                      ? "border-success/30 bg-success/[0.06]"
                       : overColumn === col.id
-                        ? "border-primary/50 bg-accent/40"
-                        : "border-border bg-card/50"
+                        ? "border-foreground/25 bg-foreground/[0.06]"
+                        : "glass"
                   )}
                 >
-                  <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
+                  <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
                     <div className="min-w-0">
-                      <h2 className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+                      <h2 className="flex items-center gap-2 font-display text-[14px] font-semibold text-foreground">
                         {col.id.startsWith("dev_") && (
                           <span className="shrink-0 rounded-full bg-info/15 px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-info">
                             Em andamento
@@ -447,15 +439,13 @@ function Desenvolvimento() {
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                      {items.length}
-                    </span>
+                    <span className="hc-selo shrink-0 tabular-nums">{items.length}</span>
                   </div>
 
                   {col.id === COL_SOLICITACOES && (
                     <button
                       onClick={() => setShowNew(true)}
-                      className="mx-2.5 mt-2.5 flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                      className="mx-3 mt-3 flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-3 text-[13px] font-semibold text-primary-foreground"
                     >
                       <Plus className="size-4" /> Nova solicitação
                     </button>
@@ -475,7 +465,7 @@ function Desenvolvimento() {
                     ))}
 
                     {items.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      <div className="rounded-[14px] border border-dashed border-white/[0.1] p-4 text-center text-xs text-muted-foreground">
                         Solte cards aqui
                       </div>
                     )}
@@ -495,9 +485,9 @@ function Desenvolvimento() {
       {/* Modal devs — adicionar e vincular a usuários reais */}
       {showNovoDev && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl glass p-6">
-            <h2 className="text-lg font-semibold text-foreground font-display">Desenvolvedores</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+          <div className="w-full max-w-lg rounded-[22px] glass-modal p-6">
+            <h2 className="hc-titulo">Desenvolvedores</h2>
+            <p className="hc-nota mt-1">
               Vincule cada coluna ao usuário real do sistema — assim o card do dev pertence de
               fato à conta dele.
             </p>
@@ -506,7 +496,7 @@ function Desenvolvimento() {
               {devs.map((d) => (
                 <div
                   key={d.id}
-                  className="flex items-center gap-2 rounded-xl border border-border bg-background/40 p-2.5"
+                  className="hc-dentro flex items-center gap-2 p-2.5"
                 >
                   <span className="min-w-20 flex-1 truncate text-sm font-semibold text-foreground">
                     {d.nome}
@@ -527,13 +517,13 @@ function Desenvolvimento() {
                 </div>
               ))}
               {devs.length === 0 && (
-                <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                <p className="rounded-[14px] border border-dashed border-white/[0.1] p-4 text-center text-xs text-muted-foreground">
                   Nenhum dev cadastrado
                 </p>
               )}
             </div>
 
-            <div className="mt-4 flex gap-2 border-t border-border pt-4">
+            <div className="mt-4 flex gap-2 border-t border-white/[0.06] pt-4">
               <input
                 value={novoDev}
                 onChange={(e) => setNovoDev(e.target.value)}
@@ -543,7 +533,7 @@ function Desenvolvimento() {
               <button
                 onClick={() => novoDev.trim() && addDevMutation.mutate(novoDev)}
                 disabled={addDevMutation.isPending || !novoDev.trim()}
-                className="shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
               >
                 {addDevMutation.isPending ? (
                   <Loader2 className="size-4 animate-spin" />

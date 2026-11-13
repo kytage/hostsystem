@@ -1,6 +1,25 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { Indice, Indices } from "@/components/indice";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FilePenLine, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Building2,
+  CircleHelp,
+  Clapperboard,
+  ExternalLink,
+  FilePenLine,
+  Gamepad2,
+  Handshake,
+  Loader2,
+  MessagesSquare,
+  Percent,
+  Plus,
+  Search,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -39,10 +58,8 @@ const KEY_REFS = ["marketing-referencias"];
 
 const campo =
   "h-10 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm outline-none transition-colors [color-scheme:dark] placeholder:text-ink-3 focus:border-white/25";
-const seletorLinha = "h-8 rounded-lg border border-white/[0.08] bg-black/30 px-2 text-xs outline-none [color-scheme:dark] focus:border-white/25";
-const rotuloCls = "mb-1.5 block text-xs text-muted-foreground";
-const seg = (on: boolean) =>
-  cn("rounded-full px-3 py-1.5 text-xs transition-colors", on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground");
+const seletorLinha = "h-8 rounded-full border border-white/[0.08] bg-black/30 px-2.5 text-xs outline-none [color-scheme:dark] focus:border-white/25";
+const rotuloCls = "hc-sobre mb-1.5 block";
 
 const numero = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".0", "")} mi` : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")} mil` : String(n));
 const hoje = () => new Date().toLocaleDateString("en-CA");
@@ -70,23 +87,27 @@ function Seletor({ titulo, value, onChange, lista }: { titulo: string; value: st
   );
 }
 
-function Kpis({ itens, carregando }: { itens: { k: string; v: ReactNode }[]; carregando: boolean }) {
+/** Números da aba Leads, nos mesmos quadros da tela inicial. */
+function Kpis({
+  itens,
+  carregando,
+}: {
+  itens: { k: string; v: ReactNode; icone?: LucideIcon }[];
+  carregando: boolean;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+    <Indices>
       {itens.map((c) => (
-        <div key={c.k} className="border-l border-white/[0.08] pl-4">
-          <p className="font-display text-2xl font-semibold tabular-nums">{carregando ? "—" : c.v}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{c.k}</p>
-        </div>
+        <Indice key={c.k} valor={carregando ? "—" : c.v} titulo={c.k} icone={c.icone} />
       ))}
-    </div>
+    </Indices>
   );
 }
 
 function CampoRapido({ placeholder, rotulo: nome, ocupado, onEnviar }: { placeholder: string; rotulo: string; ocupado: boolean; onEnviar: (texto: string) => void }) {
   const [texto, setTexto] = useState("");
   return (
-    <div className="glass flex items-center gap-2 rounded-[20px] p-2">
+    <div className="glass hc flex items-center gap-2 p-2">
       <Plus className="ml-2.5 size-4 shrink-0 text-ink-3" />
       <input
         value={texto}
@@ -108,9 +129,9 @@ function CampoRapido({ placeholder, rotulo: nome, ocupado, onEnviar }: { placeho
 
 function Busca({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <label className="glass-inset flex h-9 w-full items-center gap-2 rounded-full px-3 sm:w-56">
-      <Search className="size-3.5 shrink-0 text-ink-3" />
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Buscar" aria-label="Buscar" className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-ink-3" />
+    <label className="campo-busca w-full sm:w-56">
+      <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Buscar" aria-label="Buscar" />
     </label>
   );
 }
@@ -119,9 +140,9 @@ export function MarketingLeads() {
   const [aba, setAba] = useState<"clientes" | "videos">("clientes");
   return (
     <section className="mt-5">
-      <div className="glass-inset inline-flex gap-1 rounded-full p-1">
-        <button className={seg(aba === "clientes")} onClick={() => setAba("clientes")}>Possíveis clientes</button>
-        <button className={seg(aba === "videos")} onClick={() => setAba("videos")}>Tipos de vídeo</button>
+      <div className="segmentos" role="tablist" aria-label="Seção de leads">
+        <button type="button" role="tab" aria-selected={aba === "clientes"} onClick={() => setAba("clientes")}>Possíveis clientes</button>
+        <button type="button" role="tab" aria-selected={aba === "videos"} onClick={() => setAba("videos")}>Tipos de vídeo</button>
       </div>
       <div className="mt-5">{aba === "clientes" ? <Clientes /> : <Videos />}</div>
     </section>
@@ -178,11 +199,15 @@ function Clientes() {
   const conta = (s: string) => leads.filter((l) => l.status === s).length;
   const decididos = conta("fechado") + conta("perdido");
   const kpis = [
-    { k: "Leads", v: leads.length },
-    { k: "Novos", v: conta("novo") },
-    { k: "Em conversa", v: conta("conversa") },
-    { k: "Fechados", v: conta("fechado") },
-    { k: "Conversão", v: decididos ? `${Math.round((conta("fechado") / decididos) * 100)}%` : "—" },
+    { k: "Leads", v: leads.length, icone: Users },
+    { k: "Novos", v: conta("novo"), icone: UserPlus },
+    { k: "Em conversa", v: conta("conversa"), icone: MessagesSquare },
+    { k: "Fechados", v: conta("fechado"), icone: Handshake },
+    {
+      k: "Conversão",
+      v: decididos ? `${Math.round((conta("fechado") / decididos) * 100)}%` : "—",
+      icone: Percent,
+    },
   ];
 
   return (
@@ -193,11 +218,11 @@ function Clientes() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="glass-inset flex flex-wrap gap-1 rounded-full p-1">
-          <button className={seg(status === "todos")} onClick={() => setStatus("todos")}>Todos <span className="text-ink-3">{leads.length}</span></button>
+        <div className="segmentos" role="group" aria-label="Filtrar por status">
+          <button type="button" aria-pressed={status === "todos"} onClick={() => setStatus("todos")}>Todos <span className="tabular-nums opacity-60">{leads.length}</span></button>
           {LEAD_STATUS.map((s) => (
-            <button key={s.id} className={seg(status === s.id)} onClick={() => setStatus(s.id)}>
-              {s.label} <span className="text-ink-3">{conta(s.id)}</span>
+            <button key={s.id} type="button" aria-pressed={status === s.id} onClick={() => setStatus(s.id)}>
+              {s.label} <span className="tabular-nums opacity-60">{conta(s.id)}</span>
             </button>
           ))}
         </div>
@@ -209,15 +234,15 @@ function Clientes() {
       </div>
 
       {isError ? (
-        <p className="glass-inset mt-4 rounded-2xl px-4 py-12 text-center text-sm text-muted-foreground">Não foi possível carregar os leads.</p>
+        <p className="mt-4 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">Não foi possível carregar os leads.</p>
       ) : isLoading ? (
         <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Carregando leads…</div>
       ) : lista.length === 0 ? (
-        <p className="glass-inset mt-4 rounded-2xl px-4 py-12 text-center text-sm text-muted-foreground">
+        <p className="mt-4 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           {leads.length === 0 ? "Nenhum lead ainda. Cole o link de um perfil acima para começar." : "Nenhum lead com esses filtros."}
         </p>
       ) : (
-        <ul className="glass mt-4 divide-y divide-white/[0.05] rounded-[20px]">
+        <ul className="glass hc mt-4 divide-y divide-white/[0.06]">
           {lista.map((l) => {
             const st = LEAD_STATUS.find((s) => s.id === l.status);
             const atrasado = !!l.proximo_contato && l.proximo_contato < hoje() && l.status !== "fechado" && l.status !== "perdido";
@@ -235,16 +260,16 @@ function Clientes() {
                     {l.proximo_contato.split("-").reverse().slice(0, 2).join("/")}
                   </span>
                 )}
-                <span className="shrink-0 rounded-full border border-white/[0.08] px-2 py-0.5 text-[10.5px] text-muted-foreground">{rotulo(INTERESSES, l.interesse)}</span>
+                <span className="hc-selo shrink-0">{rotulo(INTERESSES, l.interesse)}</span>
                 <select value={l.status} onChange={(e) => mudar.mutate({ id: l.id, patch: { status: e.target.value } })} aria-label={`Status de ${l.nome}`} className={seletorLinha}>
                   <Opcoes lista={LEAD_STATUS} />
                 </select>
                 {ehLink(l.link) ? (
-                  <a href={l.link} target="_blank" rel="noopener noreferrer" aria-label={`Abrir perfil de ${l.nome}`} title="Abrir perfil" className="grid size-8 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-white/[0.07] hover:text-foreground">
-                    <ExternalLink className="size-4" />
+                  <a href={l.link} target="_blank" rel="noopener noreferrer" aria-label={`Abrir perfil de ${l.nome}`} title="Abrir perfil" className="hc-seta">
+                    <ExternalLink className="size-3.5" />
                   </a>
                 ) : (
-                  <span className="size-8 shrink-0" />
+                  <span className="size-[30px] shrink-0" />
                 )}
               </li>
             );
@@ -284,7 +309,7 @@ function LeadDialog({ lead, onClose, onMudou }: { lead: Lead; onClose: () => voi
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent aria-describedby={undefined} className="max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-xl overflow-y-auto">
-        <DialogTitle>Lead</DialogTitle>
+        <DialogTitle className="hc-titulo">Lead</DialogTitle>
         <div className="space-y-3">
           <label className="block">
             <span className={rotuloCls}>Nome</span>
@@ -342,7 +367,7 @@ function Rodape({ nome, salvando, podeSalvar, onSalvar, onExcluir }: { nome: str
       >
         <Trash2 className="size-3.5" /> Excluir
       </button>
-      <button type="button" onClick={onSalvar} disabled={!podeSalvar || salvando} className="flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-40">
+      <button type="button" onClick={onSalvar} disabled={!podeSalvar || salvando} className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40">
         {salvando && <Loader2 className="size-4 animate-spin" />} Salvar
       </button>
     </div>
@@ -427,16 +452,30 @@ function Videos() {
   const porCategoria = CATEGORIAS_VIDEO.map((c) => ({ ...c, n: refs.filter((r) => r.categoria === c.id).length }));
   const maisUsada = [...porCategoria].sort((a, b) => b.n - a.n)[0];
   const kpis = [
-    { k: "Referências", v: refs.length },
-    { k: "FiveM", v: refs.filter((r) => r.nicho === "fivem").length },
-    { k: "Cidade RP", v: refs.filter((r) => r.nicho === "rp").length },
-    { k: "Sem tipo definido", v: refs.filter((r) => r.categoria === "outro").length },
-    { k: "Tipo mais salvo", v: maisUsada && maisUsada.n > 0 ? maisUsada.label : "—" },
+    { k: "Referências", v: refs.length, icone: Clapperboard },
+    { k: "FiveM", v: refs.filter((r) => r.nicho === "fivem").length, icone: Gamepad2 },
+    { k: "Cidade RP", v: refs.filter((r) => r.nicho === "rp").length, icone: Building2 },
+    {
+      k: "Sem tipo definido",
+      v: refs.filter((r) => r.categoria === "outro").length,
+      icone: CircleHelp,
+    },
+    {
+      k: "Tipo mais salvo",
+      v: maisUsada && maisUsada.n > 0 ? maisUsada.label : "—",
+      icone: Trophy,
+    },
   ];
 
   return (
     <div>
-      <Kpis itens={kpis.map((c) => ({ k: c.k, v: typeof c.v === "string" ? <span className="text-base">{c.v}</span> : c.v }))} carregando={isLoading} />
+      <Kpis
+        itens={kpis.map((c) => ({
+          ...c,
+          v: typeof c.v === "string" ? <span className="text-base">{c.v}</span> : c.v,
+        }))}
+        carregando={isLoading}
+      />
       <div className="mt-5">
         <CampoRapido placeholder="Cole o link do vídeo ou escreva a ideia e aperte Enter" rotulo="Nova referência de vídeo" ocupado={criar.isPending} onEnviar={(t) => eu && criar.mutate(t)} />
       </div>
@@ -459,15 +498,15 @@ function Videos() {
       </div>
 
       {isError ? (
-        <p className="glass-inset mt-4 rounded-2xl px-4 py-12 text-center text-sm text-muted-foreground">Não foi possível carregar as referências.</p>
+        <p className="mt-4 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">Não foi possível carregar as referências.</p>
       ) : isLoading ? (
         <div className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Carregando referências…</div>
       ) : lista.length === 0 ? (
-        <p className="glass-inset mt-4 rounded-2xl px-4 py-12 text-center text-sm text-muted-foreground">
+        <p className="mt-4 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           {refs.length === 0 ? "Nenhuma referência ainda. Cole o link de um vídeo acima para começar." : "Nenhuma referência com esses filtros."}
         </p>
       ) : (
-        <ul className="glass mt-4 divide-y divide-white/[0.05] rounded-[20px]">
+        <ul className="glass hc mt-4 divide-y divide-white/[0.06]">
           {lista.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
               <button onClick={() => setEditando(r)} className="min-w-0 flex-1 basis-48 text-left">
@@ -481,16 +520,16 @@ function Videos() {
               </select>
               <button
                 onClick={() => eu && !rascunho.isPending && rascunho.mutate(r)}
-                className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="hc-pilula shrink-0"
               >
                 <FilePenLine className="size-3.5" /> Virar rascunho
               </button>
               {ehLink(r.link) ? (
-                <a href={r.link} target="_blank" rel="noopener noreferrer" aria-label={`Abrir vídeo ${r.titulo}`} title="Abrir vídeo" className="grid size-8 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-white/[0.07] hover:text-foreground">
-                  <ExternalLink className="size-4" />
+                <a href={r.link} target="_blank" rel="noopener noreferrer" aria-label={`Abrir vídeo ${r.titulo}`} title="Abrir vídeo" className="hc-seta">
+                  <ExternalLink className="size-3.5" />
                 </a>
               ) : (
-                <span className="size-8 shrink-0" />
+                <span className="size-[30px] shrink-0" />
               )}
             </li>
           ))}
@@ -529,7 +568,7 @@ function ReferenciaDialog({ referencia, onClose, onMudou }: { referencia: Refere
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent aria-describedby={undefined} className="max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-xl overflow-y-auto">
-        <DialogTitle>Referência de vídeo</DialogTitle>
+        <DialogTitle className="hc-titulo">Referência de vídeo</DialogTitle>
         <div className="space-y-3">
           <label className="block">
             <span className={rotuloCls}>Título</span>

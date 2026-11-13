@@ -85,26 +85,31 @@ export function IlegalLimparFacModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-primary/40 glass p-6">
+      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[22px] border border-primary/40 glass-modal p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-              <Eraser className="size-5 text-primary" /> Limpar Fac
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {org.setagem} · {categoriaNome}
-              {org.organizacao ? ` · ${org.organizacao}` : ""}
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            {/* ação destrutiva: o ícone fica vermelho */}
+            <span className="hc-icone">
+              <Eraser className="size-4 text-primary" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="hc-titulo">Limpar Fac</h2>
+              <p className="hc-nota mt-1">
+                {org.setagem} · {categoriaNome}
+                {org.organizacao ? ` · ${org.organizacao}` : ""}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            aria-label="Fechar"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="mt-4 flex gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3">
+        <div className="hc-dentro mt-4 flex gap-2 p-3">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
           <p className="text-xs text-foreground">
             A limpeza libera a setagem e reinicia o painel desta facção. Os registros de{" "}
@@ -119,27 +124,26 @@ export function IlegalLimparFacModal({
             return (
               <button
                 key={o.key}
+                aria-pressed={ativo}
                 onClick={() => setOpcoes((p) => ({ ...p, [o.key]: !p[o.key] }))}
                 className={cn(
-                  "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-                  ativo
-                    ? "border-white/15 bg-white/[0.07]"
-                    : "border-border bg-white/[0.035] hover:bg-accent/50"
+                  "hc-dentro flex w-full items-start gap-3 p-3 text-left transition-colors",
+                  ativo && "!border-foreground/30 !bg-foreground/[0.07]"
                 )}
               >
                 <span
                   className={cn(
                     "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
-                    ativo ? "border-primary bg-primary" : "border-border"
+                    ativo ? "border-foreground bg-foreground" : "border-foreground/25"
                   )}
                 >
-                  {ativo && <span className="size-1.5 rounded-sm bg-primary-foreground" />}
+                  {ativo && <span className="size-1.5 rounded-sm bg-background" />}
                 </span>
                 <span>
                   <span
                     className={cn(
                       "block text-xs font-semibold",
-                      ativo ? "text-primary" : "text-foreground"
+                      ativo ? "text-foreground" : "text-muted-foreground"
                     )}
                   >
                     {o.label}
@@ -161,7 +165,7 @@ export function IlegalLimparFacModal({
             Digite <b className="text-foreground">{org.setagem}</b> para confirmar
           </span>
           <input
-            className="w-full rounded-lg border border-border bg-white/[0.05] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary/60"
+            className="w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
             placeholder={org.setagem}
@@ -173,14 +177,15 @@ export function IlegalLimparFacModal({
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-white/[0.08]"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
+          {/* confirmação destrutiva: fica vermelha */}
           <button
             onClick={() => mutation.mutate()}
             disabled={!confirmado || !algumaOpcao || mutation.isPending}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="flex h-9 items-center gap-2 rounded-full bg-destructive px-4 text-[13px] font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {mutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />

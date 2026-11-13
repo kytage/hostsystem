@@ -91,6 +91,8 @@ export interface Visual {
   /** Pódio onde o HOKI fica em exposição. */
   podio: string;
   cores: Partial<Cores>;
+  /** Corpo do boneco: "padrao" (masculino) ou "feminino". Sem nada: ainda não escolheu (pergunta no primeiro acesso). */
+  corpo?: "padrao" | "feminino";
 }
 export const VISUAL_PADRAO: Visual = {
   traje: "traje:hoshi",
@@ -209,6 +211,34 @@ const fantasia = (
  * as que já existiam mantêm o id de antes, para ninguém perder o que comprou.
  */
 export const PECAS: Peca[] = [
+  // cosméticos do boneco (novembro de 2026): aparecem no personagem novo, na loja de cosméticos da HUD
+  {
+    id: "chapeu:coroa-glitter",
+    grupo: "chapeu",
+    nome: "Coroa de glitter",
+    preco: 1000,
+    nivel: 0,
+    cor: "#f2c230",
+    raridade: "lendario",
+  },
+  {
+    id: "traje:vip-black",
+    grupo: "traje",
+    nome: "VIP BLACK",
+    preco: 2500,
+    nivel: 0,
+    cor: "#060607",
+    raridade: "lendario",
+  },
+  {
+    id: "costas:capa-glitter",
+    grupo: "costas",
+    nome: "Capa preta de glitter",
+    preco: 500,
+    nivel: 0,
+    cor: "#141416",
+    raridade: "epico",
+  },
   {
     id: "traje:hoshi",
     grupo: "traje",
@@ -253,35 +283,6 @@ export const PECAS: Peca[] = [
     "luvas",
   ]),
   fantasia("traje:cyber", "Cyber", 200, 0, "#1f1f23", ["roupa", "calca", "calcado", "luvas"]),
-  // conjunto exclusivo do henrique: tudo preto, com boné, óculos de neve espelhados, jaqueta de zíper e calça cargo
-  {
-    ...fantasia("traje:sombra", "Sombra", 0, 0, "#141416", [
-      "roupa",
-      "calca",
-      "calcado",
-      "luvas",
-      "chapeu",
-      "oculos",
-    ]),
-    raridade: "lendario",
-    exclusivo: "henrique",
-  },
-  // ped exclusivo do henrique: o corpo inteiro é outro modelo (encapuzado, de capa); só as asas combinam com ele
-  {
-    ...fantasia("traje:bonne", "Bonne", 0, 0, "#0c0c0e", [
-      "roupa",
-      "calca",
-      "calcado",
-      "luvas",
-      "chapeu",
-      "oculos",
-      "efeito",
-    ]),
-    recolore: [],
-    raridade: "lendario",
-    exclusivo: "henrique",
-    ped: "bonne",
-  },
   fantasia("traje:coelho", "Doce Candy", 0, 10, "#f7a8c8", [
     "roupa",
     "calca",
@@ -952,6 +953,11 @@ export function lerVisual(bruto: unknown): Visual {
       bruto && typeof bruto === "object" ? (bruto as Record<string, unknown>)["podio"] : "";
     return {
       ...VISUAL_PADRAO,
+      ...(bruto &&
+      typeof bruto === "object" &&
+      ["feminino", "padrao"].includes(String((bruto as Record<string, unknown>)["corpo"]))
+        ? { corpo: (bruto as Record<string, unknown>)["corpo"] as "feminino" | "padrao" }
+        : {}),
       podio:
         typeof podio === "string" && PECAS.some((p) => p.id === podio)
           ? podio
@@ -987,6 +993,7 @@ export function lerVisual(bruto: unknown): Visual {
     if (pelo) cores = { principal: pelo, capuz: pelo };
   }
   const out: Visual = { ...VISUAL_PADRAO, cores: {} };
+  if (o["corpo"] === "feminino" || o["corpo"] === "padrao") out.corpo = o["corpo"];
   for (const g of ESPACOS) {
     const p = peca(origem[g]);
     if (p && p.grupo === g) out[g] = p.id;

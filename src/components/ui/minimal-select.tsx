@@ -60,8 +60,8 @@ export function MinimalSelect({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-black/25 px-3 py-2 text-left text-sm transition-colors focus:border-primary focus:outline-none disabled:opacity-50",
-          open && "border-primary",
+          "flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-left text-[13px] transition-colors hover:border-white/[0.15] focus:border-white/30 focus:outline-none disabled:opacity-50",
+          open && "border-white/30",
           selected ? "text-foreground" : "text-muted-foreground/70",
           className
         )}

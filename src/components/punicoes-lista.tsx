@@ -22,17 +22,18 @@ export function PunicoesLista({
 }: PunicoesListaProps) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+      <div className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
         Nenhum registro por aqui ainda.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl glass">
+    // o "!" mantém a rolagem para o lado em telas estreitas (o .hc esconde o que passa da borda)
+    <div className="glass hc !overflow-x-auto">
       <table className="w-full min-w-[860px] text-sm">
         <thead>
-          <tr className="border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground">
+          <tr className="border-b border-white/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
             <th className="px-4 py-3 text-left font-semibold">Ticket</th>
             <th className="px-4 py-3 text-left font-semibold">Denunciado</th>
             <th className="px-4 py-3 text-left font-semibold">Userset</th>
@@ -46,7 +47,10 @@ export function PunicoesLista({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
+            <tr
+              key={row.id}
+              className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.03]"
+            >
               <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
                 {row.ticket_id || "—"}
               </td>
@@ -85,14 +89,14 @@ export function PunicoesLista({
                 {fmtDataHora(row.data_punicao)}
               </td>
               <td className="px-4 py-3">
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-1.5">
                   {row.provas ? (
                     <a
                       href={row.provas}
                       target="_blank"
                       rel="noreferrer"
                       title="Abrir provas"
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="hc-seta"
                     >
                       <ExternalLink className="size-3.5" />
                     </a>
@@ -102,7 +106,7 @@ export function PunicoesLista({
                       type="button"
                       title="Editar"
                       onClick={() => onEdit(row)}
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="hc-seta"
                     >
                       <Pencil className="size-3.5" />
                     </button>
@@ -112,7 +116,7 @@ export function PunicoesLista({
                       type="button"
                       title="Excluir"
                       onClick={() => onDelete(row)}
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                      className="hc-seta hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

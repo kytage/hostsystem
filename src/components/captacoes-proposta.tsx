@@ -6,6 +6,7 @@ import {
   Crown,
   Eye,
   FileDown,
+  FileText,
   ImageDown,
   Loader2,
   Lock,
@@ -13,6 +14,7 @@ import {
   Shield,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -193,14 +195,19 @@ export function CaptacoesProposta() {
   }
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+    "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "hc-sobre mb-1.5 block";
 
   return (
-    <div className="grid flex-1 gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+    <div className="grid flex-1 gap-3.5 xl:grid-cols-[380px_minmax(0,1fr)]">
       {/* -------- Formulário -------- */}
-      <div className="flex flex-col gap-4 rounded-2xl glass p-4">
-        <h2 className="text-sm font-semibold text-foreground">Dados da proposta</h2>
+      <div className="glass hc flex flex-col gap-4 p-5">
+        <div className="flex items-center gap-3">
+          <span className="hc-icone">
+            <FileText className="size-4" strokeWidth={1.75} />
+          </span>
+          <h2 className="hc-titulo">Dados da proposta</h2>
+        </div>
 
         <div>
           <label className={labelCls}>Vincular a uma captação</label>
@@ -276,13 +283,13 @@ export function CaptacoesProposta() {
                   type="button"
                   onClick={() => setNivel(k)}
                   className={cn(
-                    "relative rounded-xl border p-2.5 text-left transition-colors",
-                    nivel === k ? "border-white/15 bg-white/[0.07]" : "border-border bg-black/25",
+                    "hc-dentro relative p-2.5 text-left transition-colors",
+                    nivel === k && "!border-foreground/30 !bg-foreground/[0.07]",
                   )}
                 >
                   {nivel === k && (
-                    <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-primary">
-                      <Check className="size-2.5 text-primary-foreground" />
+                    <span className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-foreground">
+                      <Check className="size-2.5 text-background" />
                     </span>
                   )}
                   <p className="text-[11px] font-semibold text-foreground">{m?.titulo || k}</p>
@@ -300,11 +307,11 @@ export function CaptacoesProposta() {
         </div>
 
         <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className={labelCls + " mb-0"}>Conteúdo</label>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <label className="hc-sobre">Conteúdo</label>
             <span className="text-[10px] text-muted-foreground">Modelo do {modelo.titulo}</span>
           </div>
-          <div className="divide-y divide-border rounded-xl border border-border">
+          <div className="hc-dentro divide-y divide-white/[0.06]">
             {(
               [
                 ["lideranca", `Até: ${modelo.liderancaQtd} — ${modelo.lideranca}`],
@@ -322,13 +329,13 @@ export function CaptacoesProposta() {
                   onClick={() => setSecoes((s) => ({ ...s, [key]: !s[key] }))}
                   className={cn(
                     "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-                    secoes[key] ? "bg-primary" : "bg-muted",
+                    secoes[key] ? "bg-foreground" : "bg-muted",
                   )}
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 size-4 rounded-full bg-white transition-all",
-                      secoes[key] ? "left-4.5 left-[18px]" : "left-0.5",
+                      "absolute top-0.5 size-4 rounded-full transition-all",
+                      secoes[key] ? "left-4.5 left-[18px] bg-background" : "left-0.5 bg-white",
                     )}
                   />
                 </button>
@@ -371,7 +378,7 @@ export function CaptacoesProposta() {
             type="button"
             disabled={salvarNaCaptacao.isPending}
             onClick={() => salvarNaCaptacao.mutate()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvarNaCaptacao.isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             Salvar na captação
@@ -382,9 +389,10 @@ export function CaptacoesProposta() {
       {/* -------- Pré-visualização -------- */}
       <div className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Eye className="size-3.5 text-primary" />
-            <span className="font-semibold text-foreground">Pré-visualização</span> — atualiza enquanto você edita
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 px-1">
+            <Eye className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+            <span className="hc-titulo">Pré-visualização</span>
+            <span className="hc-nota">— atualiza enquanto você edita</span>
           </p>
           <div className="ml-auto flex gap-2">
             <button
@@ -394,7 +402,7 @@ export function CaptacoesProposta() {
                 void navigator.clipboard.writeText(textoDiscord());
                 toast.success("Copiado para o Discord");
               }}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+              className="hc-pilula"
             >
               <Copy className="size-3.5" /> Copiar p/ Discord
             </button>
@@ -402,7 +410,7 @@ export function CaptacoesProposta() {
               type="button"
               onClick={() => void baixarPng()}
               disabled={exportando !== null}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+              className="hc-pilula disabled:opacity-50"
             >
               {exportando === "png" ? <Loader2 className="size-3.5 animate-spin" /> : <ImageDown className="size-3.5" />}
               PNG
@@ -411,7 +419,7 @@ export function CaptacoesProposta() {
               type="button"
               onClick={() => void baixarPdf()}
               disabled={exportando !== null}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+              className="hc-pilula disabled:opacity-50"
             >
               {exportando === "pdf" ? <Loader2 className="size-3.5 animate-spin" /> : <FileDown className="size-3.5" />}
               PDF
@@ -602,8 +610,8 @@ function ModelosDialog({
     setForms((prev) => ({ ...prev, [tab]: { ...prev[tab as NivelKey], ...patch } }));
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-  const labelCls = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+    "w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  const labelCls = "hc-sobre mb-1.5 block";
 
   async function salvar() {
     setSalvando(true);
@@ -625,21 +633,22 @@ function ModelosDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Pencil className="size-4" /> Modelos de proposta
+          <DialogTitle className="hc-titulo flex items-center gap-3">
+            <span className="hc-icone">
+              <Pencil className="size-4" strokeWidth={1.75} />
+            </span>
+            Modelos de proposta
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex gap-1.5">
+        <div className="segmentos justify-self-start" role="tablist" aria-label="Modelos de proposta">
           {(["nivel_1", "nivel_2", "nivel_3", "pix"] as const).map((t) => (
             <button
               key={t}
               type="button"
+              role="tab"
+              aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-semibold",
-                tab === t ? "bg-white/[0.09] text-foreground ring-1 ring-white/10" : "bg-muted text-muted-foreground",
-              )}
             >
               {t === "pix" ? "Pix" : niveis[t].titulo || t}
             </button>
@@ -693,7 +702,7 @@ function ModelosDialog({
                 type="checkbox"
                 checked={f.pix}
                 onChange={(e) => setF({ pix: e.target.checked })}
-                className="size-4 accent-primary"
+                className="size-4 accent-foreground"
               />
               Incluir remuneração via Pix neste nível
             </label>
@@ -723,17 +732,18 @@ function ModelosDialog({
                 />
                 <button
                   type="button"
+                  aria-label="Remover faixa"
                   onClick={() => setPixForm((p) => p.filter((_, j) => j !== i))}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="hc-seta !size-9 hover:!border-destructive/40 hover:!bg-destructive/15 hover:!text-destructive"
                 >
-                  ✕
+                  <X className="size-4" />
                 </button>
               </div>
             ))}
             <button
               type="button"
               onClick={() => setPixForm((p) => [...p, { online: 40, valor: 0 }])}
-              className="self-start text-xs font-semibold text-primary hover:underline"
+              className="hc-pilula self-start"
             >
               + Adicionar faixa
             </button>
@@ -744,7 +754,7 @@ function ModelosDialog({
           type="button"
           disabled={salvando}
           onClick={() => void salvar()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
         >
           {salvando && <Loader2 className="size-4 animate-spin" />} Salvar modelos
         </button>

@@ -38,14 +38,14 @@ export function PedDialog({ ped, categoria, onClose }: PedDialogProps) {
   function change(key: keyof PedInput, value: string) { setInput((old) => ({ ...old, [key]: value })); }
   return <Dialog open onOpenChange={(open) => { if (!open && !mutation.isPending) onClose(); }}>
     <DialogContent className="max-h-[90svh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto">
-      <DialogHeader><DialogTitle>{ped ? "Editar Ped" : "Novo Ped"}</DialogTitle><DialogDescription>HOST · Controle Peds</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle className="hc-titulo">{ped ? "Editar Ped" : "Novo Ped"}</DialogTitle><DialogDescription className="hc-nota">HOST · Controle Peds</DialogDescription></DialogHeader>
       <form onSubmit={submit} className="space-y-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2"><Label htmlFor="ped-categoria">Categoria</Label><Select value={input.categoria} onValueChange={(v) => change("categoria", v)}><SelectTrigger id="ped-categoria"><SelectValue /></SelectTrigger><SelectContent>{PED_CATEGORIES.map((v) => <SelectItem key={v} value={v}>{PED_CATEGORY_LABELS[v]}</SelectItem>)}</SelectContent></Select></div>
-          <div className="space-y-2"><Label htmlFor="ped-grupo">Grupo / Status</Label><Select value={input.grupo} onValueChange={(v) => change("grupo", v)}><SelectTrigger id="ped-grupo"><SelectValue /></SelectTrigger><SelectContent>{PED_GROUPS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-          {PED_FIELDS.map(([key, label]) => <div key={key} className="space-y-2"><Label htmlFor={`ped-${key}`}>{label}</Label><Input id={`ped-${key}`} value={input[key]} onChange={(e) => change(key, e.target.value)} required={key === "responsavel" || key === "arquivo"} maxLength={2000} /></div>)}
+          <div className="space-y-2"><Label htmlFor="ped-categoria" className="hc-sobre">Categoria</Label><Select value={input.categoria} onValueChange={(v) => change("categoria", v)}><SelectTrigger id="ped-categoria" className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{PED_CATEGORIES.map((v) => <SelectItem key={v} value={v}>{PED_CATEGORY_LABELS[v]}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-2"><Label htmlFor="ped-grupo" className="hc-sobre">Grupo / Status</Label><Select value={input.grupo} onValueChange={(v) => change("grupo", v)}><SelectTrigger id="ped-grupo" className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{PED_GROUPS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
+          {PED_FIELDS.map(([key, label]) => <div key={key} className="space-y-2"><Label htmlFor={`ped-${key}`} className="hc-sobre">{label}</Label><Input id={`ped-${key}`} value={input[key]} onChange={(e) => change(key, e.target.value)} required={key === "responsavel" || key === "arquivo"} maxLength={2000} /></div>)}
         </div>
-        <div className="space-y-2"><Label htmlFor="ped-observacao">Observação</Label><Textarea id="ped-observacao" value={input.observacao} onChange={(e) => change("observacao", e.target.value)} rows={4} maxLength={10000} /></div>
+        <div className="space-y-2"><Label htmlFor="ped-observacao" className="hc-sobre">Observação</Label><Textarea id="ped-observacao" className="rounded-xl" value={input.observacao} onChange={(e) => change("observacao", e.target.value)} rows={4} maxLength={10000} /></div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>Cancelar</Button><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Salvar</Button></div>
       </form>

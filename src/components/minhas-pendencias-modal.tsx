@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { X, ListChecks, BarChart3, Trophy, Activity } from "lucide-react";
+import { X, ListChecks, BarChart3, Trophy, Activity, Clock, CalendarDays, PackageCheck, Loader2 } from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import {
   COL_CONCLUIDO,
   COL_SOLICITACOES,
@@ -73,17 +74,6 @@ function devStats(cards: KanbanCard[], dev: KanbanDev) {
   const dentro = (ms: number) =>
     meus.filter((c) => agora - new Date(c.concluidoAt!).getTime() <= ms).length;
   return { h24: dentro(H24), d7: dentro(D7), total: meus.length };
-}
-
-function StatBox({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl glass-inset p-3 text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold text-foreground font-display">{value}</p>
-    </div>
-  );
 }
 
 /**
@@ -167,52 +157,51 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
-      <div className="my-8 w-full max-w-3xl rounded-2xl glass-modal">
-        <header className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
+      <div className="my-8 w-full max-w-3xl rounded-[22px] glass-modal">
+        <header className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 className="hc-titulo">
               Status das pendências
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="hc-nota mt-0.5">
               Acompanhe suas solicitações no desenvolvimento
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
         </header>
 
-        <nav className="flex flex-wrap gap-1.5 border-b border-border px-5 py-3">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                activeTab === t.key
-                  ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                  : "border border-border text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              <t.icon className="size-3.5" /> {t.label}
-            </button>
-          ))}
+        <nav className="border-b border-white/[0.06] px-5 py-3">
+          <div className="segmentos" role="tablist" aria-label="Seções">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === t.key}
+                onClick={() => setTab(t.key)}
+              >
+                <t.icon className="size-3.5" /> {t.label}
+              </button>
+            ))}
+          </div>
         </nav>
 
         <div className="p-5">
           {loading && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Carregando…
+            <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Carregando…
             </p>
           )}
 
           {!loading && activeTab === "minhas" && (
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="segmentos" role="group" aria-label="Filtrar por status">
                 {FILTROS.map((f) => {
                   const count =
                     f.key === "todas"
@@ -221,25 +210,12 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                   return (
                     <button
                       key={f.key}
+                      type="button"
+                      aria-pressed={filtro === f.key}
                       onClick={() => setFiltro(f.key)}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                        filtro === f.key
-                          ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                          : "border border-border text-muted-foreground hover:bg-secondary",
-                      )}
                     >
                       {f.label}
-                      <span
-                        className={cn(
-                          "rounded-full px-1.5 py-0.5 text-[10px]",
-                          filtro === f.key
-                            ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-white/[0.05] text-muted-foreground",
-                        )}
-                      >
-                        {count}
-                      </span>
+                      <span className="tabular-nums opacity-60">{count}</span>
                     </button>
                   );
                 })}
@@ -247,7 +223,7 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
 
               <div className="space-y-2.5">
                 {minhasFiltradas.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                  <p className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                     {minhas.length === 0
                       ? "Você ainda não criou nenhuma pendência."
                       : "Nenhuma pendência neste filtro."}
@@ -256,7 +232,7 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                 {minhasFiltradas.map((c) => (
                   <article
                     key={c.id}
-                    className="rounded-xl glass-inset p-4"
+                    className="hc-dentro p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -268,7 +244,7 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                             {c.descricao}
                           </p>
                         )}
-                        <p className="mt-2 text-[11px] text-muted-foreground/70">
+                        <p className="mt-2 text-[11px] text-ink-3">
                           Criada em {fmtDataHora(c.createdAt)}
                           {c.concluidoAt && ` · Concluída em ${fmtDataHora(c.concluidoAt)}`}
                         </p>
@@ -297,28 +273,28 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
 
           {!loading && activeTab === "meus-feitos" && meuDev && (
             <div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="hc-titulo">
                 Entregas de {meuDev.nome}
               </p>
-              <div className="mt-3 grid grid-cols-3 gap-3">
-                {(() => {
-                  const s = devStats(todos, meuDev);
-                  return (
-                    <>
-                      <StatBox label="Últimas 24h" value={s.h24} />
-                      <StatBox label="Últimos 7 dias" value={s.d7} />
-                      <StatBox label="Total" value={s.total} />
-                    </>
-                  );
-                })()}
-              </div>
+              {(() => {
+                const s = devStats(todos, meuDev);
+                return (
+                  <Indices className="mt-3" colunas={3}>
+                    <Indice valor={s.h24} titulo="Últimas 24h" icone={Clock} />
+                    <Indice valor={s.d7} titulo="Últimos 7 dias" icone={CalendarDays} />
+                    <Indice valor={s.total} titulo="Total" icone={PackageCheck} />
+                  </Indices>
+                );
+              })()}
             </div>
           )}
 
           {!loading && activeTab === "analise" && (
             <div className="space-y-4">
               {devs.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhum dev cadastrado.</p>
+                <p className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
+                  Nenhum dev cadastrado.
+                </p>
               )}
               {devs.map((d) => {
                 const s = devStats(todos, d);
@@ -329,7 +305,7 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                 return (
                   <div
                     key={d.id}
-                    className="rounded-xl glass-inset p-4"
+                    className="hc-dentro p-4"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">{d.nome}</p>
@@ -337,24 +313,24 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                         {s.total} entregas no total
                       </p>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
+                    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-full bg-foreground/85"
                         style={{ width: `${(s.total / max) * 100}%` }}
                       />
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                       <div>
                         <p className="text-muted-foreground">24h</p>
-                        <p className="font-semibold text-foreground">{s.h24}</p>
+                        <p className="font-semibold tabular-nums text-foreground">{s.h24}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">7 dias</p>
-                        <p className="font-semibold text-foreground">{s.d7}</p>
+                        <p className="font-semibold tabular-nums text-foreground">{s.d7}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Total</p>
-                        <p className="font-semibold text-foreground">{s.total}</p>
+                        <p className="font-semibold tabular-nums text-foreground">{s.total}</p>
                       </div>
                     </div>
                   </div>
@@ -366,24 +342,26 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
           {!loading && activeTab === "ranking" && (
             <ol className="space-y-2">
               {ranking.length === 0 && (
-                <p className="text-sm text-muted-foreground">Sem solicitações ainda.</p>
+                <p className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
+                  Sem solicitações ainda.
+                </p>
               )}
               {ranking.map((r, i) => (
                 <li
                   key={r.autor}
                   className={cn(
-                    "flex items-center justify-between rounded-xl glass-inset px-4 py-2.5",
+                    "hc-dentro flex items-center justify-between px-4 py-2.5",
                     r.autor.toLowerCase() === username.toLowerCase() &&
-                      "border-primary/50",
+                      "!border-primary/50",
                   )}
                 >
                   <span className="flex items-center gap-3 text-sm text-foreground">
-                    <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground">
+                    <span className="w-6 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
                       {i + 1}º
                     </span>
                     <span className="font-semibold">{r.autor}</span>
                   </span>
-                  <span className="text-xs font-semibold text-primary">
+                  <span className="hc-selo tabular-nums">
                     {r.total} solicitaç{r.total === 1 ? "ão" : "ões"}
                   </span>
                 </li>

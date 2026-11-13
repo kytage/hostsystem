@@ -78,9 +78,9 @@ export function PersonNode({
       type="button"
       onClick={onClick}
       className={cn(
-        "glass surface-hover group flex w-[200px] flex-col gap-2.5 rounded-2xl p-3 text-left hover:-translate-y-0.5",
-        selected && "border-white/25 bg-white/[0.08]",
-        lider && "border-primary/40",
+        "glass hc group flex w-[200px] flex-col gap-2.5 p-3 text-left",
+        selected && "!border-white/30 !bg-white/[0.08]",
+        lider && "!border-amber-300/30",
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -100,7 +100,7 @@ export function PersonNode({
         </div>
         <div className="min-w-0">
           <p className="flex items-center gap-1 truncate text-[13px] font-semibold">
-            {lider && <Crown className="size-3 shrink-0 text-primary" />}
+            {lider && <Crown className="size-3 shrink-0 text-amber-300" />}
             {user.username}
           </p>
           <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
@@ -125,7 +125,7 @@ export function PersonNode({
                     className={cn(
                       "flex items-center gap-1 rounded-full border px-1.5 py-px text-[10.5px]",
                       isLider
-                        ? "border-primary/35 bg-primary/10 text-foreground"
+                        ? "border-amber-300/25 bg-amber-300/[0.06] text-foreground"
                         : "border-white/[0.08] bg-white/[0.04] text-muted-foreground",
                     )}
                   >
@@ -181,11 +181,11 @@ export function TeamOrgChart({
     <OrgCanvas>
       <div className="flex min-w-max flex-col items-center px-10 pb-16">
         {/* raiz */}
-        <div className="glass-elevated flex items-center gap-3 rounded-2xl px-5 py-3.5">
+        <div className="glass hc flex items-center gap-3 px-5 py-3.5">
           <Logo className="h-6" />
           <div>
-            <p className="font-display text-sm font-semibold">HOST</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="hc-titulo">HOST</p>
+            <p className="hc-nota mt-0.5">
               {users.length} membro{users.length === 1 ? "" : "s"} · {levels.length} níve
               {levels.length === 1 ? "l" : "is"}
             </p>
@@ -195,10 +195,10 @@ export function TeamOrgChart({
         {levels.map((level) => (
           <Fragment key={level.role}>
             <Stem h="h-8" />
-            <div className="glass-inset flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="hc-selo uppercase tracking-[0.16em]">
               <span className={cn("size-1.5 rounded-full", ROLE_DOT[level.role])} />
               {ROLE_LABELS[level.role]}
-              <span className="text-ink-3">· {level.people.length}</span>
+              <span className="tabular-nums text-ink-3">· {level.people.length}</span>
             </div>
             {chunk(level.people, PER_ROW).map((row, i) => (
               <div key={i} className={cn(i > 0 && "mt-3")}>
@@ -260,14 +260,10 @@ export function PersonDrawer({
   ];
   return (
     <aside className="glass-modal animate-rise fixed bottom-4 right-4 top-4 z-40 flex w-[340px] max-w-[calc(100vw-2rem)] flex-col rounded-[22px] p-5">
-      <div className="flex items-start justify-between">
-        <p className="eyebrow">Membro</p>
-        <button
-          onClick={onClose}
-          aria-label="Fechar"
-          className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
-        >
-          <X className="size-4" />
+      <div className="flex items-center justify-between">
+        <p className="hc-sobre">Membro</p>
+        <button onClick={onClose} aria-label="Fechar" className="hc-seta">
+          <X className="size-3.5" />
         </button>
       </div>
       <div className="mt-3 flex items-center gap-3">
@@ -294,22 +290,20 @@ export function PersonDrawer({
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2">
-        <div className="glass-inset rounded-xl p-3">
-          <p className="text-[10.5px] uppercase tracking-wider text-ink-3">ID Host</p>
-          <p className="mt-1 truncate font-mono text-sm">{user.host_id || "—"}</p>
+        <div className="hc-dentro p-3">
+          <p className="hc-sobre">ID Host</p>
+          <p className="mt-1.5 truncate font-mono text-sm">{user.host_id || "—"}</p>
         </div>
-        <div className="glass-inset rounded-xl p-3">
-          <p className="text-[10.5px] uppercase tracking-wider text-ink-3">Discord</p>
-          <p className="mt-1 truncate font-mono text-sm">{user.discord_id || "—"}</p>
+        <div className="hc-dentro p-3">
+          <p className="hc-sobre">Discord</p>
+          <p className="mt-1.5 truncate font-mono text-sm">{user.discord_id || "—"}</p>
         </div>
       </div>
 
-      <p className="mt-5 text-xs font-medium text-muted-foreground">Áreas</p>
+      <p className="hc-sobre mt-5">Áreas</p>
       <div className="mt-2 flex flex-col gap-1.5">
         {user.areas.length === 0 ? (
-          <p className="glass-inset rounded-xl px-3 py-3 text-xs text-ink-3">
-            Nenhuma área atribuída.
-          </p>
+          <p className="hc-dentro px-3 py-3 text-xs text-ink-3">Nenhuma área atribuída.</p>
         ) : (
           user.areas.map((a) => {
             const info = areaMap.get(a);
@@ -317,7 +311,7 @@ export function PersonDrawer({
             return (
               <div
                 key={a}
-                className="glass-inset flex items-center justify-between rounded-xl px-3 py-2 text-sm"
+                className="hc-dentro flex items-center justify-between px-3 py-2 text-sm"
               >
                 <span>
                   {info?.emoji ?? "•"} {info?.label ?? a}
@@ -325,7 +319,7 @@ export function PersonDrawer({
                 <span
                   className={cn(
                     "flex items-center gap-1 text-[11px]",
-                    lider ? "text-primary" : "text-ink-3",
+                    lider ? "text-amber-300" : "text-ink-3",
                   )}
                 >
                   {lider && <Crown className="size-3" />}
@@ -347,19 +341,20 @@ export function PersonDrawer({
           {onPermissoes && user.role !== "founder" && (
             <button
               onClick={onPermissoes}
-              className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.08]"
+              className="hc-dentro group flex w-full items-center gap-3 p-2.5 pr-3 text-left"
             >
-              <ShieldCheck
-                className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
-                strokeWidth={1.7}
-              />
+              <span className="hc-icone !size-9">
+                <ShieldCheck className="size-4" strokeWidth={1.75} />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.5px] font-medium text-foreground">Permissões</span>
                 <span className="block truncate text-[11px] text-muted-foreground">
                   O que {user.username} pode ver ou editar, aba por aba
                 </span>
               </span>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              <span className="hc-seta !size-7" aria-hidden>
+                <ChevronRight className="size-3.5" />
+              </span>
             </button>
           )}
           {podeEditar && (
@@ -368,7 +363,7 @@ export function PersonDrawer({
                 <button
                   key={a.label}
                   onClick={a.onClick}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.04] py-2.5 text-[11px] text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                  className="hc-dentro flex flex-col items-center gap-1.5 py-2.5 text-[11px] text-muted-foreground hover:text-foreground"
                 >
                   <a.icon className="size-4" strokeWidth={1.7} />
                   {a.label}
@@ -379,7 +374,7 @@ export function PersonDrawer({
           {podeExcluir && user.role !== "founder" && (
             <button
               onClick={onDelete}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.07] py-2 text-xs text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+              className="hc-dentro flex w-full items-center justify-center gap-2 py-2 text-xs text-muted-foreground hover:!border-destructive/40 hover:!bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="size-3.5" /> Excluir usuário
             </button>

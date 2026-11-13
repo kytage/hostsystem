@@ -55,7 +55,7 @@ function DescricaoComImagens({ texto }: { texto: string }) {
               key={i}
               src={src}
               alt="Print anexado à tarefa"
-              className="h-16 rounded-lg border border-border object-cover"
+              className="h-16 rounded-lg border border-white/[0.08] object-cover"
             />
           ))}
         </div>
@@ -149,22 +149,22 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
-      <div className="my-6 w-full max-w-3xl rounded-2xl glass-modal p-6">
+      <div className="my-6 w-full max-w-3xl rounded-[22px] glass-modal p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="hc-sobre">
               Tarefa particular
             </p>
             <input
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-transparent bg-transparent text-xl font-semibold text-foreground outline-none focus:border-border focus:bg-background focus:px-3 focus:py-1.5 font-display"
+              className="mt-1.5 w-full rounded-xl border border-transparent bg-transparent text-xl font-semibold text-foreground outline-none focus:border-white/30 focus:bg-background focus:px-3 focus:py-1.5 font-display"
             />
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -172,7 +172,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="sm:col-span-1">
-            <label className="text-xs font-semibold text-muted-foreground">Tipo</label>
+            <label className="hc-sobre">Tipo</label>
             <MinimalSelect
               value={tipo}
               onChange={(v) => setTipo(v as TipoTarefa)}
@@ -185,14 +185,14 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
           </div>
           {tipo === "reuniao" && (
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-muted-foreground">
+              <label className="hc-sobre">
                 Data e hora
               </label>
               <input
                 type="datetime-local"
                 value={quando}
                 onChange={(e) => setQuando(e.target.value)}
-                className="mt-1 h-9 w-full rounded-xl border border-border bg-black/25 px-3 text-sm text-foreground outline-none focus:border-primary/60"
+                className="mt-1 h-9 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-foreground outline-none focus:border-white/30"
               />
             </div>
           )}
@@ -200,8 +200,8 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
 
         <div className="mt-4">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-xs font-semibold text-muted-foreground">Descrição</label>
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground">
+            <label className="hc-sobre">Descrição</label>
+            <label className="hc-pilula cursor-pointer hover:!bg-[var(--gf-3)]">
               <ImagePlus className="size-3.5" /> Anexar print
               <input
                 type="file"
@@ -225,7 +225,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
             onChange={setTexto}
             onPaste={(e) => pasteImageFromEvent(e, (url) => setImagens((p) => [...p, url]))}
             placeholder="Descrição — Ctrl+V cola print ou use “Anexar print”"
-            inputClassName="min-h-64 w-full resize-y rounded-xl border border-border bg-black/25 p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+            inputClassName="min-h-64 w-full resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
           />
         </div>
 
@@ -237,7 +237,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
                   src={src}
                   alt={`Print ${i + 1} da tarefa`}
                   onClick={() => setLightbox(src)}
-                  className="h-28 cursor-zoom-in rounded-lg border border-border object-cover"
+                  className="h-28 cursor-zoom-in rounded-lg border border-white/[0.08] object-cover"
                 />
                 <button
                   onClick={() => setImagens((p) => p.filter((_, j) => j !== i))}
@@ -251,11 +251,11 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
           </div>
         )}
 
-        <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center">
+        <div className="mt-5 flex flex-col gap-2 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center">
           <button
             onClick={() => salvar.mutate()}
             disabled={salvar.isPending}
-            className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {salvar.isPending ? (
               <Loader2 className="size-4 animate-spin" />
@@ -269,7 +269,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
             <MinimalSelect
               value={prioridade}
               onChange={(v) => setPrioridade(v as Prioridade)}
-              className="h-10 min-w-40"
+              className="h-9 min-w-40"
               options={[
                 { value: "baixa", label: "Prioridade baixa" },
                 { value: "media", label: "Prioridade média" },
@@ -279,7 +279,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
             <button
               onClick={() => transformar.mutate()}
               disabled={transformar.isPending}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-primary/50 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+              className="pilula justify-center rounded-full disabled:opacity-50"
             >
               {transformar.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -305,7 +305,7 @@ function TarefaModal({ tarefa, onClose }: TarefaModalProps) {
               setLightbox(null);
             }}
             aria-label="Fechar imagem"
-            className="absolute right-4 top-4 rounded-lg bg-background/80 p-2 text-foreground"
+            className="hc-seta absolute right-4 top-4 !size-9 !bg-background/80 !text-foreground"
           >
             <X className="size-5" />
           </button>
@@ -399,12 +399,13 @@ export function TarefasParticulares() {
   };
 
   return (
-    <section className="rounded-2xl glass p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <NotebookPen className="size-4 text-primary" /> Tarefas particulares
-        </h2>
-        <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
+    <section className="glass rounded-[22px] p-5">
+      <div className="flex items-center gap-3">
+        <span className="hc-icone">
+          <NotebookPen className="size-4" strokeWidth={1.75} />
+        </span>
+        <h2 className="hc-titulo min-w-0 flex-1 truncate">Tarefas particulares</h2>
+        <span className="hc-selo">
           somente você vê
         </span>
       </div>
@@ -416,7 +417,7 @@ export function TarefasParticulares() {
           onChange={(e) => setTitulo(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="Título da tarefa..."
-          className="h-9 flex-1 rounded-xl border border-border bg-black/25 px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+          className="h-9 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
         />
         <input
           value={descricao}
@@ -426,16 +427,15 @@ export function TarefasParticulares() {
             pasteImageFromEvent(e, (dataUrl) => setPrints((p) => [...p, dataUrl]))
           }
           placeholder="Descrição (opcional) — Ctrl+V cola print"
-          className="h-9 flex-1 rounded-xl border border-border bg-black/25 px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+          className="h-9 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
         />
         <button
           onClick={() => setDesignar((d) => !d)}
           title="Designar tarefa para outro staff"
+          aria-pressed={designar}
           className={cn(
-            "flex h-9 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition-colors",
-            designar
-              ? "border-white/15 bg-white/[0.07] text-foreground"
-              : "border-border text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+            "pilula justify-center rounded-full",
+            designar && "!border-[color:var(--gf-linha-2)] !bg-[var(--gf-3)] !text-foreground"
           )}
         >
           <UserPlus className="size-4" />
@@ -444,7 +444,7 @@ export function TarefasParticulares() {
         <button
           onClick={() => void submit()}
           disabled={!titulo.trim() || (designar && !destinatarioId) || addMutation.isPending}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="flex h-9 items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
         >
           {addMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -475,7 +475,7 @@ export function TarefasParticulares() {
               <img
                 src={src}
                 alt="Print a anexar"
-                className="h-14 rounded-lg border border-border object-cover"
+                className="h-14 rounded-lg border border-white/[0.08] object-cover"
               />
               <button
                 onClick={() => setPrints((p) => p.filter((_, j) => j !== i))}
@@ -509,25 +509,25 @@ export function TarefasParticulares() {
                 setDragOver(null);
               }}
               className={cn(
-                "min-h-32 rounded-xl border-dashed glass-inset p-2.5 transition-colors",
-                dragOver === col.key && "border-primary/60 bg-primary/5"
+                "hc-dentro min-h-32 p-2.5 transition-colors",
+                dragOver === col.key && "!border-[color:var(--gf-linha-2)] !bg-[var(--gf-3)]"
               )}
             >
-              <div className="flex items-center justify-between px-1 pb-2">
-                <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="flex items-center justify-between px-1 pb-2.5">
+                <span className="hc-sobre flex items-center gap-1.5">
                   <span className={cn("size-2 rounded-full", col.dot)} />
                   {col.label}
                 </span>
-                <span className="text-xs text-muted-foreground/70">{items.length}</span>
+                <span className="hc-selo tabular-nums">{items.length}</span>
               </div>
               <div className="space-y-2">
                 {isLoading && (
-                  <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/[0.1] p-4 text-xs text-muted-foreground">
                     <Loader2 className="size-3.5 animate-spin" /> Carregando...
                   </div>
                 )}
                 {!isLoading && items.length === 0 && (
-                  <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground/60">
+                  <p className="rounded-[14px] border border-dashed border-white/[0.1] p-4 text-center text-xs text-ink-3">
                     Arraste uma tarefa aqui
                   </p>
                 )}
@@ -536,38 +536,38 @@ export function TarefasParticulares() {
                     key={t.id}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("text/tarefa-id", t.id)}
-                    className="group cursor-grab rounded-xl glass p-3 transition-colors hover:bg-accent/40 active:cursor-grabbing"
+                    className="hc-dentro group cursor-grab p-3 transition-colors hover:!border-[color:var(--gf-linha-2)] active:cursor-grabbing"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3
                         onClick={() => setAberta(t)}
                         title="Abrir tarefa"
                         className={cn(
-                          "cursor-pointer text-sm font-semibold text-foreground hover:text-primary",
+                          "cursor-pointer text-sm font-semibold text-foreground underline-offset-2 hover:underline",
                           t.coluna === "concluido" && "line-through opacity-60"
                         )}
                       >
                         {t.titulo}
                       </h3>
-                      <div className="flex shrink-0 items-center gap-0.5">
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => setAberta(t)}
                           aria-label="Visualizar e editar tarefa"
-                          className="rounded-lg p-1 text-muted-foreground/50 opacity-0 transition-all hover:bg-white/[0.08] hover:text-foreground group-hover:opacity-100"
+                          className="hc-seta !size-6 opacity-0 group-hover:opacity-100"
                         >
-                          <Maximize2 className="size-3.5" />
+                          <Maximize2 className="size-3" />
                         </button>
                         <button
                           onClick={() => deleteMutation.mutate(t.id)}
                           aria-label="Excluir tarefa"
-                          className="rounded-lg p-1 text-muted-foreground/50 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                          className="hc-seta !size-6 opacity-0 hover:!bg-destructive/15 hover:!text-destructive group-hover:opacity-100"
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3" />
                         </button>
                       </div>
                     </div>
                     {t.tipo === "reuniao" && t.reuniaoAt && (
-                      <p className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      <p className="hc-selo mt-1.5">
                         Reunião •{" "}
                         {new Date(t.reuniaoAt).toLocaleString("pt-BR", {
                           day: "2-digit",
@@ -580,16 +580,16 @@ export function TarefasParticulares() {
                     )}
                     {t.descricao && <DescricaoComImagens texto={t.descricao} />}
                     {t.designadaPor && (
-                      <p className="mt-1.5 text-[10px] font-semibold text-primary/80">
+                      <p className="mt-1.5 text-[10.5px] font-semibold text-muted-foreground">
                         Designada por {t.designadaPor}
                       </p>
                     )}
-                    <div className="mt-2 flex gap-1">
+                    <div className="mt-2.5 flex flex-wrap gap-1">
                       {COLUNAS_TAREFA.filter((c) => c.key !== t.coluna).map((c) => (
                         <button
                           key={c.key}
                           onClick={() => moveMutation.mutate({ id: t.id, coluna: c.key })}
-                          className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                          className="hc-pilula !h-6 !gap-1 !px-2.5 !text-[10.5px]"
                         >
                           {c.key === "concluido" && <Check className="size-2.5" />}
                           {c.label}
@@ -653,11 +653,12 @@ export function Anotacoes() {
   };
 
   return (
-    <section className="flex flex-col rounded-2xl glass p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <StickyNote className="size-4 text-warning" /> Anotações
-        </h2>
+    <section className="glass hc flex flex-col p-5">
+      <div className="flex items-center gap-3">
+        <span className="hc-icone">
+          <StickyNote className="size-4" strokeWidth={1.75} />
+        </span>
+        <h2 className="hc-titulo min-w-0 flex-1 truncate">Anotações</h2>
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           {saveMutation.isPending && (
             <>
@@ -677,12 +678,12 @@ export function Anotacoes() {
         onChange={onChange}
         disabled={isLoading}
         placeholder="Escreva suas anotações aqui... salvamento automático."
-        inputClassName="min-h-48 w-full flex-1 resize-y rounded-xl border border-border bg-black/25 p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60"
+        inputClassName="min-h-48 w-full flex-1 resize-y rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
       />
       <button
         onClick={saveNow}
         disabled={saveMutation.isPending || isLoading}
-        className="mt-2 inline-flex h-7 items-center justify-center gap-1.5 self-start rounded-lg border border-border px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground disabled:opacity-50"
+        className="hc-pilula mt-2.5 self-start disabled:opacity-50"
       >
         {saveMutation.isPending ? (
           <Loader2 className="size-3 animate-spin" />
@@ -705,17 +706,18 @@ export function TarefasPreview() {
     queryFn: fetchAnotacao,
   });
 
+  const abertas = tarefas.filter((t) => t.coluna !== "concluido").slice(0, 3);
+
+  // cartão da tela inicial (classes `hc-*`, em src/styles.css): o cartão inteiro leva a Perfil & Agenda
   return (
-    <Link
-      to="/perfil"
-      className="group block rounded-2xl glass p-5 transition-colors hover:border-primary/50 hover:bg-accent/30"
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <NotebookPen className="size-4 text-primary" /> Tarefas particulares
-        </h2>
-        <span className="flex items-center gap-1 text-xs font-semibold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-          Abrir <ArrowUpRight className="size-3.5" />
+    <Link to="/perfil" className="glass hc flex h-full flex-col p-5">
+      <div className="flex items-center gap-3">
+        <span className="hc-icone">
+          <NotebookPen className="size-4" strokeWidth={1.75} />
+        </span>
+        <h2 className="hc-titulo min-w-0 flex-1 truncate">Tarefas particulares</h2>
+        <span className="hc-seta" aria-hidden>
+          <ArrowUpRight className="size-3.5" />
         </span>
       </div>
 
@@ -723,36 +725,40 @@ export function TarefasPreview() {
         {COLUNAS_TAREFA.map((col) => {
           const count = tarefas.filter((t) => t.coluna === col.key).length;
           return (
-            <div
-              key={col.key}
-              className="rounded-xl glass-inset p-3 text-center"
-            >
-              <span className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <span className={cn("size-1.5 rounded-full", col.dot)} />
+            <div key={col.key} className="hc-dentro flex flex-col items-center px-1.5 pb-2.5 pt-3 text-center">
+              <p className="font-display text-[24px] font-medium leading-none tracking-[-0.03em] tabular-nums text-foreground">
+                {count}
+              </p>
+              <span className="mt-2 text-[11px] font-medium leading-tight text-muted-foreground">
                 {col.label}
               </span>
-              <p className="mt-1 text-xl font-semibold text-foreground font-display">{count}</p>
+              {/* a cor da coluna, num traço curto (cabe até no celular, onde o nome quebra em duas linhas) */}
+              <span className={cn("mt-auto h-[2px] w-4 translate-y-1 rounded-full", col.dot)} />
             </div>
           );
         })}
       </div>
 
-      {tarefas.filter((t) => t.coluna !== "concluido").slice(0, 3).map((t) => (
-        <p
-          key={t.id}
-          className="mt-2 truncate text-xs text-muted-foreground first:mt-3"
-        >
-          • {t.titulo}
-        </p>
-      ))}
+      {abertas.length > 0 && (
+        <ul className="mt-3.5 space-y-2">
+          {abertas.map((t) => (
+            <li key={t.id} className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+              <span className="size-1 shrink-0 rounded-full bg-white/35" />
+              <span className="truncate">{t.titulo}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <div className="mt-4 border-t border-border pt-3">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-          <StickyNote className="size-3 text-warning" /> Anotações
-        </p>
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/80">
-          {anotacao.trim() || "Nenhuma anotação ainda."}
-        </p>
+      <div className="mt-auto pt-4">
+        <div className="border-t border-white/[0.07] pt-3.5">
+          <p className="hc-sobre flex items-center gap-1.5">
+            <StickyNote className="size-3" /> Anotações
+          </p>
+          <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-muted-foreground">
+            {anotacao.trim() || "Nenhuma anotação ainda."}
+          </p>
+        </div>
       </div>
     </Link>
   );

@@ -1,5 +1,16 @@
 import { useMemo, useState } from "react";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  CircleCheck,
+  Clock,
+  Pencil,
+  Plus,
+  Receipt,
+  Search,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import { cn } from "@/lib/utils";
 import {
   STATUS_CLASSES,
@@ -48,11 +59,11 @@ function dentroDoPeriodo(mesRegistro: string, mes: string, periodo: PeriodoKey):
 }
 
 const selectClasses =
-  "rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60";
+  "h-9 rounded-full border border-input bg-white/[0.03] px-3.5 text-[13px] text-foreground outline-none focus:border-foreground/30";
 
 function FiltroBarra({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-xl glass p-4">
+    <div className="glass hc flex flex-wrap items-end gap-3 p-5">
       {children}
     </div>
   );
@@ -61,7 +72,7 @@ function FiltroBarra({ children }: { children: React.ReactNode }) {
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      <span className="hc-sobre">
         {label}
       </span>
       {children}
@@ -69,16 +80,10 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Total({ label, valor, tom }: { label: string; valor: string; tom: string }) {
-  return (
-    <div className="rounded-xl glass px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </p>
-      <p className={cn("mt-1 text-xl font-semibold tracking-tight font-display", tom)}>{valor}</p>
-    </div>
-  );
-}
+/* botões redondos de editar e excluir (o de excluir fica vermelho ao passar o mouse) */
+const botaoEditar = "hc-seta";
+const botaoExcluir =
+  "hc-seta hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive";
 
 const dataBr = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR");
 
@@ -114,7 +119,7 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
   const total = lista.reduce((s, e) => s + e.valor, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <FiltroBarra>
         <Campo label="Período">
           <select
@@ -130,34 +135,40 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
           </select>
         </Campo>
         <Campo label="Buscar">
-          <span className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <span className="campo-busca w-64">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Nome ou observação"
-              className={cn(selectClasses, "w-64 pl-8")}
             />
           </span>
         </Campo>
         <button
           type="button"
           onClick={onNova}
-          className="ml-auto flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className="ml-auto flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
         >
-          <Plus className="size-3.5" /> Nova entrada
+          <Plus className="size-4" /> Nova entrada
         </button>
       </FiltroBarra>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Total label="Total do período" valor={moeda(total)} tom="text-emerald-400" />
-        <Total label="Lançamentos" valor={String(lista.length)} tom="text-foreground" />
-      </div>
+      <Indices>
+        <Indice
+          valor={moeda(total)}
+          titulo="Total do período"
+          icone={TrendingUp}
+          cor="#4ade80"
+          compacto
+        />
+        <Indice valor={String(lista.length)} titulo="Lançamentos" icone={Receipt} compacto />
+      </Indices>
 
-      <div className="overflow-hidden rounded-xl glass">
+      {/* o "!" deixa a tabela rolar para o lado em telas estreitas (o .hc esconde o que passa da borda) */}
+      <div className="glass hc !overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
               <th className="px-4 py-3">Mês</th>
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Observação</th>
@@ -174,7 +185,10 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
               </tr>
             ) : (
               lista.map((e) => (
-                <tr key={e.id} className="border-b border-border/60 last:border-0 hover:bg-accent/40">
+                <tr
+                  key={e.id}
+                  className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.03]"
+                >
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
                     {mesLabel(e.mes)}
                   </td>
@@ -189,7 +203,7 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
                         type="button"
                         onClick={() => onEditar(e)}
                         aria-label="Editar entrada"
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                        className={botaoEditar}
                       >
                         <Pencil className="size-3.5" />
                       </button>
@@ -197,7 +211,7 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
                         type="button"
                         onClick={() => onExcluir(e)}
                         aria-label="Excluir entrada"
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className={botaoExcluir}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -280,7 +294,7 @@ export function SaidasView({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <FiltroBarra>
         <Campo label="Período (competência)">
           <select
@@ -354,45 +368,41 @@ export function SaidasView({
           </select>
         </Campo>
         <Campo label="Buscar">
-          <span className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <span className="campo-busca w-56">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Título ou observação"
-              className={cn(selectClasses, "w-56 pl-8")}
             />
           </span>
         </Campo>
         <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={limpar}
-            className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-          >
+          <button type="button" onClick={limpar} className="pilula rounded-full">
             Limpar filtros
           </button>
           <button
             type="button"
             onClick={onNova}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
           >
-            <Plus className="size-3.5" /> Nova saída
+            <Plus className="size-4" /> Nova saída
           </button>
         </div>
       </FiltroBarra>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Total label="Total do período" valor={moeda(total)} tom="text-foreground" />
-        <Total label="Pagas" valor={moeda(pagas)} tom="text-emerald-400" />
-        <Total label="Em aberto" valor={moeda(abertas)} tom="text-amber-400" />
-        <Total label="Lançamentos" valor={String(lista.length)} tom="text-foreground" />
-      </div>
+      <Indices>
+        <Indice valor={moeda(total)} titulo="Total do período" icone={TrendingDown} compacto />
+        <Indice valor={moeda(pagas)} titulo="Pagas" icone={CircleCheck} cor="#4ade80" compacto />
+        <Indice valor={moeda(abertas)} titulo="Em aberto" icone={Clock} cor="#fbbf24" compacto />
+        <Indice valor={String(lista.length)} titulo="Lançamentos" icone={Receipt} compacto />
+      </Indices>
 
-      <div className="overflow-hidden rounded-xl glass">
+      {/* o "!" deixa a tabela rolar para o lado em telas estreitas (o .hc esconde o que passa da borda) */}
+      <div className="glass hc !overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
               <th className="px-4 py-3">Pagamento</th>
               <th className="px-4 py-3">Título</th>
               <th className="px-4 py-3">Tipo</th>
@@ -412,7 +422,10 @@ export function SaidasView({
               </tr>
             ) : (
               lista.map((s) => (
-                <tr key={s.id} className="border-b border-border/60 last:border-0 hover:bg-accent/40">
+                <tr
+                  key={s.id}
+                  className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.03]"
+                >
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
                     {s.dataPagamento ? dataBr(s.dataPagamento) : "—"}
                     <span className="block text-[10px]">{mesLabel(s.mes)}</span>
@@ -426,7 +439,7 @@ export function SaidasView({
                   <td className="px-4 py-3">
                     <span
                       className={cn(
-                        "rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase",
+                        "inline-flex h-6 items-center whitespace-nowrap rounded-full border px-2.5 text-[11px] font-medium",
                         TIPO_CLASSES[s.tipo]
                       )}
                     >
@@ -443,7 +456,7 @@ export function SaidasView({
                       <button
                         type="button"
                         onClick={() => onComprovante(s.comprovante)}
-                        className="text-xs font-semibold text-primary hover:underline"
+                        className="hc-pilula"
                       >
                         Ver
                       </button>
@@ -452,7 +465,7 @@ export function SaidasView({
                         href={s.comprovante}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs font-semibold text-primary hover:underline"
+                        className="hc-pilula"
                       >
                         Abrir
                       </a>
@@ -466,12 +479,12 @@ export function SaidasView({
                       value={s.status}
                       onChange={(e) => onStatus(s, e.target.value as SaidaStatus)}
                       className={cn(
-                        "rounded-md border px-2 py-1 text-[11px] font-semibold uppercase outline-none",
+                        "h-7 rounded-full border px-2.5 text-[11px] font-semibold uppercase outline-none",
                         STATUS_CLASSES[s.status]
                       )}
                     >
                       {(Object.keys(STATUS_LABELS) as SaidaStatus[]).map((st) => (
-                        <option key={st} value={st} className="glass text-foreground">
+                        <option key={st} value={st} className="bg-popover text-popover-foreground">
                           {STATUS_LABELS[st]}
                         </option>
                       ))}
@@ -483,7 +496,7 @@ export function SaidasView({
                         type="button"
                         onClick={() => onEditar(s)}
                         aria-label="Editar saída"
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                        className={botaoEditar}
                       >
                         <Pencil className="size-3.5" />
                       </button>
@@ -491,7 +504,7 @@ export function SaidasView({
                         type="button"
                         onClick={() => onExcluir(s)}
                         aria-label="Excluir saída"
-                        className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className={botaoExcluir}
                       >
                         <Trash2 className="size-3.5" />
                       </button>

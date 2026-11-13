@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Check, ListChecks, Maximize2, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  Flame,
+  Gauge,
+  LayoutList,
+  ListChecks,
+  Maximize2,
+  Plus,
+  Trash2,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -17,7 +31,7 @@ export const STATUS: { id: ColumnId; label: string; on: string; dot: string }[] 
 const STATUS_MAP = Object.fromEntries(STATUS.map((s) => [s.id, s])) as Record<ColumnId, (typeof STATUS)[number]>;
 
 const PRIORIDADES: { id: Priority; label: string; on: string; dot: string }[] = [
-  { id: "alta", label: "Alta", on: "border-primary/50 bg-primary/15 text-red-200", dot: "bg-primary" },
+  { id: "alta", label: "Alta", on: "border-primary/50 bg-primary/15 text-red-200", dot: "bg-destructive" },
   { id: "media", label: "Média", on: "border-amber-500/40 bg-amber-500/10 text-amber-200", dot: "bg-amber-400" },
   { id: "baixa", label: "Baixa", on: "border-white/20 bg-white/[0.08] text-foreground", dot: "bg-white/40" },
 ];
@@ -116,38 +130,37 @@ export function PendenciasPanel({ projetos }: { projetos: DevTask[] }) {
   return (
     <section className="space-y-5">
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Indices>
         {[
-          { k: "Tópicos", v: projetos.length, s: `${concluidos} concluído${concluidos === 1 ? "" : "s"}` },
-          { k: "Itens do checklist", v: `${feitos}/${itens.length}`, s: "marcados" },
-          { k: "Progresso geral", v: `${itens.length ? Math.round((feitos / itens.length) * 100) : 0}%`, s: "dos itens" },
-          { k: "Prioridade alta", v: projetos.filter((p) => p.priority === "alta" && p.column !== "done").length, s: "em aberto" },
+          { k: "Tópicos", v: projetos.length, s: `${concluidos} concluído${concluidos === 1 ? "" : "s"}`, i: LayoutList },
+          { k: "Itens do checklist", v: `${feitos}/${itens.length}`, s: "marcados", i: ListChecks },
+          { k: "Progresso geral", v: `${itens.length ? Math.round((feitos / itens.length) * 100) : 0}%`, s: "dos itens", i: Gauge },
+          {
+            k: "Prioridade alta",
+            v: projetos.filter((p) => p.priority === "alta" && p.column !== "done").length,
+            s: "em aberto",
+            i: Flame,
+          },
         ].map((c) => (
-          <div key={c.k} className="glass rounded-2xl p-4">
-            <p className="eyebrow">{c.k}</p>
-            <p className="mt-2 font-display text-2xl font-semibold tabular-nums">{c.v}</p>
-            <p className="text-[11px] text-ink-3">{c.s}</p>
-          </div>
+          <Indice key={c.k} valor={c.v} titulo={c.k} nota={c.s} icone={c.i} />
         ))}
-      </div>
+      </Indices>
       <Progresso feitos={feitos} total={itens.length} className="h-1" />
 
       {/* filtros */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="glass-inset flex flex-wrap gap-1 rounded-full p-1">
+        <div className="segmentos flex-wrap" role="group" aria-label="Filtrar por estado">
           {filtros.map((f) => (
             <button
               key={f.id}
+              type="button"
+              aria-pressed={filtro === f.id}
               onClick={() => {
                 playSfx("click");
                 setFiltro(f.id);
               }}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs transition-colors",
-                filtro === f.id ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
             >
-              {f.label} <span className="text-ink-3">{f.n}</span>
+              {f.label} <span className="tabular-nums opacity-60">{f.n}</span>
             </button>
           ))}
         </div>
@@ -160,16 +173,16 @@ export function PendenciasPanel({ projetos }: { projetos: DevTask[] }) {
           }}
           title={mudo ? "Ativar sons" : "Silenciar sons"}
           aria-label={mudo ? "Ativar sons" : "Silenciar sons"}
-          className="glass-inset ml-auto grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+          className="hc-seta ml-auto !size-9"
         >
           {mudo ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </button>
       </div>
 
       {lista.length === 0 ? (
-        <p className="glass-inset rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">Nenhuma pendência neste filtro.</p>
+        <p className="rounded-[22px] border border-dashed border-white/[0.1] px-4 py-14 text-center text-sm text-muted-foreground">Nenhuma pendência neste filtro.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
           {lista.map((t, i) => (
             <TopicoCard
               key={t.id}
@@ -219,7 +232,7 @@ function TopicoCard({
   };
   return (
     <article
-      className={cn("glass animate-rise flex flex-col rounded-[20px] p-4 transition-colors hover:border-white/15", t.column === "done" && "opacity-70")}
+      className={cn("glass hc animate-rise flex flex-col p-5", t.column === "done" && "opacity-70")}
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
     >
       <header className="flex items-start gap-3">
@@ -231,13 +244,13 @@ function TopicoCard({
             <span className="flex items-center gap-1 rounded-full border border-white/[0.08] px-2 py-0.5 text-[10.5px] text-muted-foreground">
               <span className={cn("size-1.5 rounded-full", pr.dot)} /> {pr.label}
             </span>
-            {t.tag && <span className="text-[10.5px] uppercase tracking-[0.14em] text-ink-3">{t.tag}</span>}
+            {t.tag && <span className="hc-sobre">{t.tag}</span>}
           </div>
           <button onClick={onOpen} className="mt-2 block text-left font-display text-[15px] font-semibold leading-snug hover:text-primary">
             {t.title}
           </button>
         </div>
-        <button onClick={onOpen} aria-label={`Abrir ${t.title}`} className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground">
+        <button onClick={onOpen} aria-label={`Abrir ${t.title}`} className="hc-seta">
           <Maximize2 className="size-3.5" />
         </button>
       </header>
@@ -270,7 +283,7 @@ function TopicoCard({
           className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.07] bg-black/30 px-2.5 text-xs outline-none placeholder:text-ink-3 focus:border-white/20"
         />
         {t.prazo && (
-          <span className={cn("flex shrink-0 items-center gap-1 text-[11px]", atrasado(t) ? "text-primary" : "text-muted-foreground")}>
+          <span className={cn("flex shrink-0 items-center gap-1 text-[11px]", atrasado(t) ? "text-destructive" : "text-muted-foreground")}>
             <CalendarDays className="size-3" /> {fmtPrazo(t.prazo)}
           </span>
         )}
@@ -311,24 +324,26 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
     novoRef.current?.focus();
   };
 
-  const label = "mb-2 block text-xs text-muted-foreground";
-  const chip = "rounded-lg border px-3 py-1.5 text-xs transition-colors";
+  const label = "hc-sobre mb-2 block";
 
   return (
     <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent aria-describedby={undefined} className="flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0">
-        <header className="border-b border-white/[0.07] px-6 pb-5 pt-6 pr-14">
-          <div className="glass-inset inline-flex flex-wrap gap-1 rounded-xl p-1">
+      <DialogContent aria-describedby={undefined} className="host-update-theme flex max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <header className="border-b border-white/[0.06] px-6 pb-5 pt-6 pr-14">
+          <div className="segmentos flex-wrap" role="group" aria-label="Estado do tópico">
             {STATUS.map((s) => (
               <button
                 key={s.id}
+                type="button"
+                aria-pressed={t.column === s.id}
                 onClick={() => {
                   if (s.id === t.column) return;
                   playSfx(s.id === "done" ? "complete" : "click");
                   set({ column: s.id });
                 }}
-                className={cn("rounded-lg px-3 py-1.5 text-xs transition-colors", t.column === s.id ? s.on : "text-muted-foreground hover:text-foreground")}
               >
+                {/* a cor do estado fica num ponto pequeno */}
+                <span aria-hidden className={cn("size-1.5 rounded-full", s.dot)} />
                 {s.label}
               </button>
             ))}
@@ -348,16 +363,18 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <span className={label}>Prioridade</span>
-              <div className="flex gap-2">
+              <div className="segmentos" role="group" aria-label="Prioridade">
                 {PRIORIDADES.map((p) => (
                   <button
                     key={p.id}
+                    type="button"
+                    aria-pressed={t.priority === p.id}
                     onClick={() => {
                       playSfx("click");
                       set({ priority: p.id });
                     }}
-                    className={cn(chip, t.priority === p.id ? p.on : "border-white/[0.08] text-muted-foreground hover:text-foreground")}
                   >
+                    <span aria-hidden className={cn("size-1.5 rounded-full", p.dot)} />
                     {p.label}
                   </button>
                 ))}
@@ -370,10 +387,10 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
                   type="date"
                   value={t.prazo ?? ""}
                   onChange={(e) => set({ prazo: e.target.value || null })}
-                  className="h-9 rounded-lg border border-white/[0.08] bg-black/30 px-3 text-sm outline-none [color-scheme:dark] focus:border-white/20"
+                  className="h-9 rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm outline-none [color-scheme:dark] focus:border-white/20"
                 />
                 {t.prazo && (
-                  <button onClick={() => set({ prazo: null })} aria-label="Limpar prazo" className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground">
+                  <button onClick={() => set({ prazo: null })} aria-label="Limpar prazo" className="hc-seta">
                     <X className="size-4" />
                   </button>
                 )}
@@ -383,15 +400,16 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
 
           <div>
             <span className={label}>Etiqueta</span>
-            <div className="flex flex-wrap gap-2">
+            <div className="segmentos flex-wrap" role="group" aria-label="Etiqueta">
               {ETIQUETAS.map((e) => (
                 <button
                   key={e}
+                  type="button"
+                  aria-pressed={t.tag === e}
                   onClick={() => {
                     playSfx("click");
                     set({ tag: e });
                   }}
-                  className={cn(chip, t.tag === e ? "border-white/20 bg-white/[0.1] text-foreground" : "border-dashed border-white/[0.1] text-muted-foreground hover:text-foreground")}
                 >
                   {e}
                 </button>
@@ -413,7 +431,7 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="hc-sobre flex items-center gap-1.5">
                 <ListChecks className="size-3.5" /> Checklist
               </span>
               <span className="text-xs tabular-nums text-muted-foreground">
@@ -441,7 +459,7 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
                       set({ checklist: t.checklist.filter((x) => x.id !== i.id) });
                     }}
                     aria-label={`Remover ${i.text}`}
-                    className="grid size-7 place-items-center rounded-full text-ink-3 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100 focus:opacity-100"
+                    className="grid size-7 place-items-center rounded-full text-ink-3 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 focus:opacity-100"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -457,7 +475,7 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
                 placeholder="Adicionar item e Enter"
                 className="h-10 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/30 px-3.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/20"
               />
-              <button onClick={add} disabled={!novo.trim()} className="flex h-10 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50">
+              <button onClick={add} disabled={!novo.trim()} className="pilula !h-10 rounded-full disabled:opacity-50">
                 <Plus className="size-4" /> Adicionar
               </button>
             </div>
@@ -465,7 +483,7 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
 
           <PlanningAttachments files={t.attachments} onChange={(attachments) => set({ attachments })} onBusy={setBusy} />
 
-          <div className="flex justify-end border-t border-white/[0.07] pt-4">
+          <div className="flex justify-end border-t border-white/[0.06] pt-4">
             <button
               onClick={() => window.confirm(`Excluir o tópico “${t.title}”?`) && remover.mutate()}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"

@@ -71,7 +71,7 @@ export function OrgCanvas({ children, className, height = "min(72vh, 760px)" }: 
     <div
       ref={viewport}
       style={{ height }}
-      className={cn("glass-inset relative overflow-hidden rounded-[20px] select-none", dragging ? "cursor-grabbing" : "cursor-grab", className)}
+      className={cn("hc-dentro relative overflow-hidden select-none", dragging ? "cursor-grabbing" : "cursor-grab", className)}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest("button, a, input, [data-no-pan]")) return;
         drag.current = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y };

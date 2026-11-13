@@ -58,7 +58,7 @@ export function LiderGeralBloco({
 
   return (
     <>
-      <div className="lider-geral relative w-[300px] overflow-hidden rounded-2xl border border-amber-300/25 bg-gradient-to-b from-amber-300/[0.09] to-black/60 px-3.5 py-2.5">
+      <div className="lider-geral relative w-[300px] overflow-hidden rounded-[22px] border border-amber-300/25 bg-gradient-to-b from-amber-300/[0.09] to-black/60 px-3.5 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200">
             <Crown className="coroa-brilho size-3.5 text-amber-300" strokeWidth={2} fill="currentColor" fillOpacity={0.25} />
@@ -69,7 +69,7 @@ export function LiderGeralBloco({
               type="button"
               onClick={() => setEditando(true)}
               title={`Editar líderes gerais de ${rotulo}`}
-              className="grid size-6 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-muted-foreground transition-colors hover:border-amber-300/40 hover:text-amber-200"
+              className="hc-seta !size-6"
             >
               <Pencil className="size-3" />
             </button>
@@ -166,22 +166,22 @@ function EditorLideres({
             <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200">
               <Crown className="coroa-brilho size-3.5 text-amber-300" fill="currentColor" fillOpacity={0.25} /> Líder geral
             </p>
-            <h3 className="mt-1 font-display text-lg font-semibold">{rotulo}</h3>
-            <p className="text-xs text-muted-foreground">Marque uma ou mais pessoas.</p>
+            <h3 className="hc-titulo mt-1.5">{rotulo}</h3>
+            <p className="hc-nota mt-0.5">Marque uma ou mais pessoas.</p>
           </div>
-          <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">
-            <X className="size-4" />
+          <button type="button" onClick={onClose} aria-label="Fechar" className="hc-seta">
+            <X className="size-3.5" />
           </button>
         </header>
         <div className="px-5 pt-4">
-          <label className="glass-inset flex items-center gap-2 rounded-xl px-3 py-2">
-            <Search className="size-3.5 text-ink-3" />
+          <label className="campo-busca w-full">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
               autoFocus
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar pessoa…"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-ink-3"
+              aria-label="Buscar pessoa"
             />
           </label>
         </div>
@@ -225,7 +225,7 @@ function EditorLideres({
             type="button"
             disabled={salvar.isPending}
             onClick={() => salvar.mutate()}
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-opacity disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
           >
             {salvar.isPending && <Loader2 className="size-3.5 animate-spin" />} Salvar
           </button>

@@ -10,12 +10,12 @@ import { fetchEstrutura, progressoEstrutura, saveEstrutura, type EstruturaGrupo,
 import { cn } from "@/lib/utils";
 
 const STATUS: { id: ColumnId; label: string; dot: string; chip: string }[] = [
-  { id: "backlog", label: "Planejado", dot: "bg-muted-foreground", chip: "bg-muted text-foreground border-border" },
+  { id: "backlog", label: "Planejado", dot: "bg-muted-foreground", chip: "bg-muted text-foreground border-white/[0.08]" },
   { id: "doing", label: "Em andamento", dot: "bg-warning", chip: "bg-warning/25 text-warning border-warning/60" },
   { id: "review", label: "Em teste", dot: "bg-info", chip: "bg-info/25 text-info border-info/60" },
   { id: "done", label: "Concluído", dot: "bg-success", chip: "bg-success/25 text-success border-success/60" },
 ];
-const field = "w-full rounded-md border border-input bg-black/25 px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring";
+const field = "w-full rounded-xl border border-input bg-black/25 px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring";
 
 export function UpdateEstrutura({ projetoId }: { projetoId: string }) {
   const qc = useQueryClient();
@@ -53,8 +53,8 @@ export function UpdateEstrutura({ projetoId }: { projetoId: string }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold">Estrutura do projeto</h3>
-        {total > 0 && <span className="text-xs text-muted-foreground">{feitos}/{total} concluídos</span>}
+        <h3 className="hc-titulo">Estrutura do projeto</h3>
+        {total > 0 && <span className="hc-selo tabular-nums">{feitos}/{total} concluídos</span>}
         {saving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
       </div>
       {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : grupos.map((g) => (
@@ -89,23 +89,23 @@ function GrupoBloco({ grupo, usuarios, onRename, onRemove, onClone, onItens }: {
   const [novo, setNovo] = useState<EstruturaItem | null>(null);
   const feitos = grupo.itens.filter((i) => i.status === "done").length;
   return (
-    <div className="rounded-lg border border-border">
-      <div className="group flex items-center gap-2 border-b border-border px-4 py-2.5">
+    <div className="hc-dentro">
+      <div className="group flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
         {editando ? <>
           <input autoFocus className={field} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-          <Button size="icon" variant="ghost" className="size-7" aria-label="Salvar" onClick={() => { if (titulo.trim()) { onRename(titulo.trim()); setEditando(false); } }}><Check className="size-3.5" /></Button>
-          <Button size="icon" variant="ghost" className="size-7" aria-label="Cancelar" onClick={() => { setTitulo(grupo.titulo); setEditando(false); }}><X className="size-3.5" /></Button>
+          <Button size="icon" variant="ghost" className="size-7 rounded-full" aria-label="Salvar" onClick={() => { if (titulo.trim()) { onRename(titulo.trim()); setEditando(false); } }}><Check className="size-3.5" /></Button>
+          <Button size="icon" variant="ghost" className="size-7 rounded-full" aria-label="Cancelar" onClick={() => { setTitulo(grupo.titulo); setEditando(false); }}><X className="size-3.5" /></Button>
         </> : <>
-          <h4 className="text-sm font-semibold uppercase tracking-wide text-primary">{grupo.titulo}</h4>
-          <span className="text-[11px] text-muted-foreground">{feitos}/{grupo.itens.length}</span>
+          <h4 className="text-sm font-semibold uppercase tracking-wide text-foreground">{grupo.titulo}</h4>
+          <span className="hc-selo tabular-nums">{feitos}/{grupo.itens.length}</span>
           <div className="ml-auto flex opacity-60 transition-opacity group-hover:opacity-100">
-            <Button size="icon" variant="ghost" className="size-7" aria-label="Editar subtítulo" onClick={() => setEditando(true)}><Pencil className="size-3.5" /></Button>
-            <Button size="icon" variant="ghost" className="size-7" aria-label="Clonar subtítulo" onClick={onClone}><Copy className="size-3.5" /></Button>
-            <Button size="icon" variant="ghost" className="size-7 hover:text-destructive" aria-label="Excluir subtítulo" onClick={onRemove}><Trash2 className="size-3.5" /></Button>
+            <Button size="icon" variant="ghost" className="size-7 rounded-full" aria-label="Editar subtítulo" onClick={() => setEditando(true)}><Pencil className="size-3.5" /></Button>
+            <Button size="icon" variant="ghost" className="size-7 rounded-full" aria-label="Clonar subtítulo" onClick={onClone}><Copy className="size-3.5" /></Button>
+            <Button size="icon" variant="ghost" className="size-7 rounded-full hover:text-destructive" aria-label="Excluir subtítulo" onClick={onRemove}><Trash2 className="size-3.5" /></Button>
           </div>
         </>}
       </div>
-      <ul className="divide-y divide-border">
+      <ul className="divide-y divide-white/[0.06]">
          {grupo.itens.map((it) => (
           <ItemLinha key={it.id} item={it} usuarios={usuarios}
             onSave={(n) => onItens(grupo.itens.map((x) => (x.id === it.id ? n : x)))}
@@ -135,12 +135,12 @@ function ItemLinha({ item, usuarios, onSave, onRemove }: { item: EstruturaItem; 
         {item.descricao && <p className="mt-0.5 whitespace-pre-line break-words text-xs text-muted-foreground">{item.descricao}</p>}
       </div>
       <div className="w-44 shrink-0">
-        <MinimalSelect className={cn("rounded-md px-2 py-1 text-xs font-semibold", st.chip)} value={item.status}
+        <MinimalSelect className={cn("rounded-full px-3 py-1 text-xs font-semibold", st.chip)} value={item.status}
           onChange={(v) => onSave({ ...item, status: v as ColumnId })} options={STATUS.map((s) => ({ value: s.id, label: s.label }))} />
       </div>
       <div className="flex opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-        <Button size="icon" variant="ghost" className="size-7" aria-label="Editar item" onClick={() => setEditando(true)}><Pencil className="size-3.5" /></Button>
-        <Button size="icon" variant="ghost" className="size-7 hover:text-destructive" aria-label="Excluir item" onClick={onRemove}><Trash2 className="size-3.5" /></Button>
+        <Button size="icon" variant="ghost" className="size-7 rounded-full" aria-label="Editar item" onClick={() => setEditando(true)}><Pencil className="size-3.5" /></Button>
+        <Button size="icon" variant="ghost" className="size-7 rounded-full hover:text-destructive" aria-label="Excluir item" onClick={onRemove}><Trash2 className="size-3.5" /></Button>
       </div>
     </li>
   );
@@ -157,8 +157,8 @@ function ItemForm({ item, usuarios, onSave, onCancel }: { item: EstruturaItem; u
       </div>
       <textarea rows={2} className={cn(field, "resize-y")} placeholder="Descrição (opcional)" value={d.descricao} onChange={(e) => setD({ ...d, descricao: e.target.value })} />
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button size="sm" disabled={!d.titulo.trim()} onClick={() => onSave({ ...d, titulo: d.titulo.trim(), descricao: d.descricao.trim() })}>Salvar</Button>
+        <Button variant="ghost" size="sm" className="rounded-full" onClick={onCancel}>Cancelar</Button>
+        <Button size="sm" className="rounded-full" disabled={!d.titulo.trim()} onClick={() => onSave({ ...d, titulo: d.titulo.trim(), descricao: d.descricao.trim() })}>Salvar</Button>
       </div>
     </div>
   );
@@ -168,9 +168,9 @@ function ItemForm({ item, usuarios, onSave, onCancel }: { item: EstruturaItem; u
 function ResponsaveisPicker({ value, usuarios, onChange }: { value: string[]; usuarios: string[]; onChange: (v: string[]) => void }) {
   const disponiveis = usuarios.filter((u) => !value.includes(u));
   return (
-    <div className="flex min-h-[34px] flex-wrap items-center gap-1.5 rounded-md border border-input bg-black/25 px-2 py-1">
+    <div className="flex min-h-[34px] flex-wrap items-center gap-1.5 rounded-xl border border-input bg-white/[0.04] px-2 py-1">
       {value.map((r) => (
-        <span key={r} className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
+        <span key={r} className="hc-selo !text-foreground">
           {r}
           <button type="button" aria-label={`Remover ${r}`} className="transition-colors hover:text-destructive" onClick={() => onChange(value.filter((x) => x !== r))}>
             <X className="size-3" />

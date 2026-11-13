@@ -173,17 +173,17 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl glass">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[22px] glass-modal">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              <span className="hc-selo tabular-nums">
                 #{card.numero}
               </span>
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  "inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-semibold",
                   CATEGORIA_STYLE[categoria]
                 )}
               >
@@ -191,13 +191,13 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
               </span>
               <span
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
+                  "inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-semibold capitalize",
                   PRIORIDADE_STYLE[prioridade]
                 )}
               >
                 {prioridade}
               </span>
-              <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="hc-selo">
                 {card.status}
               </span>
             </div>
@@ -223,34 +223,33 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="shrink-0 text-muted-foreground hover:text-foreground"
+            className="hc-seta"
           >
-            <X className="size-5" />
+            <X className="size-4" />
           </button>
         </div>
 
         {/* Abas */}
-        <div className="flex gap-1 border-b border-border px-5 pt-3">
-          {(
-            [
-              ["detalhes", "Detalhes", FileText],
-              ["comentarios", `Comentários (${comentarios.length})`, MessageSquare],
-              ["historico", `Histórico (${historico.length})`, History],
-            ] as const
-          ).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              onClick={() => setAba(key)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors",
-                aba === key
-                  ? "bg-white/[0.05] text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="size-3.5" /> {label}
-            </button>
-          ))}
+        <div className="border-b border-white/[0.06] px-5 py-3">
+          <div className="segmentos" role="tablist" aria-label="Seções do card">
+            {(
+              [
+                ["detalhes", "Detalhes", FileText],
+                ["comentarios", `Comentários (${comentarios.length})`, MessageSquare],
+                ["historico", `Histórico (${historico.length})`, History],
+              ] as const
+            ).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={aba === key}
+                onClick={() => setAba(key)}
+              >
+                <Icon className="size-3.5" /> {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Conteúdo */}
@@ -259,7 +258,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
             <div className="grid gap-4 md:grid-cols-2">
               {/* Coluna esquerda: Descrição total */}
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                <label className="hc-sobre mb-1.5 block">
                   Descrição
                 </label>
                 <RichTextarea
@@ -274,7 +273,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    <label className="hc-sobre mb-1.5 block">
                       Categoria
                     </label>
                     <MinimalSelect
@@ -287,7 +286,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    <label className="hc-sobre mb-1.5 block">
                       Prioridade
                     </label>
                     <MinimalSelect
@@ -305,28 +304,30 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
 
                 {emTeste && (
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    <label className="hc-sobre mb-1.5 block">
                       Situação do teste
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="segmentos flex-wrap" role="group" aria-label="Situação do teste">
                       {TESTE_OPCOES.map((op) => (
                         <button
                           key={op}
+                          type="button"
+                          aria-pressed={testeStatus === op}
                           onClick={() => {
                             setTesteStatus(op);
                             salvar.mutate({ teste_status: op });
                           }}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                            testeStatus === op
-                              ? op === "Aprovado"
-                                ? "border-success bg-success/15 text-success"
-                                : op === "Reprovado"
-                                  ? "border-destructive bg-destructive/15 text-destructive"
-                                  : "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-border text-muted-foreground hover:text-foreground"
-                          )}
                         >
+                          {/* a cor de aprovado e reprovado continua num ponto pequeno */}
+                          {(op === "Aprovado" || op === "Reprovado") && (
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                op === "Aprovado" ? "bg-success" : "bg-destructive"
+                              )}
+                            />
+                          )}
                           {op}
                         </button>
                       ))}
@@ -335,7 +336,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 )}
 
                 <div>
-                  <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <label className="hc-sobre mb-1.5 flex items-center gap-1.5">
                     <StickyNote className="size-3.5" /> Observações do desenvolvedor (interno)
                   </label>
                   <textarea
@@ -349,7 +350,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 </div>
 
                 <div>
-                  <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <label className="hc-sobre mb-1.5 flex items-center gap-1.5">
                     <FileText className="size-3.5" /> Texto para Patch Note
                   </label>
                   <div className="relative">
@@ -370,8 +371,8 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 </div>
 
                 {/* Checklist */}
-                <div className="rounded-xl border border-border p-3.5">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <div className="hc-dentro p-3.5">
+                  <p className="hc-sobre flex items-center gap-1.5">
                     <ListChecks className="size-3.5" /> Checklist
                   </p>
                   <div className="mt-2 space-y-1.5">
@@ -389,7 +390,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                             "flex size-4 shrink-0 items-center justify-center rounded border",
                             item.feito
                               ? "border-success bg-success text-success-foreground"
-                              : "border-border"
+                              : "border-muted-foreground/40"
                           )}
                           aria-label={item.feito ? "Desmarcar" : "Marcar"}
                         >
@@ -442,7 +443,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                         ]);
                         setNovoItem("");
                       }}
-                      className="rounded-lg bg-white/[0.05] px-2.5 text-foreground hover:bg-white/[0.08]"
+                      className="hc-seta"
                       aria-label="Adicionar item"
                     >
                       <Plus className="size-3.5" />
@@ -451,7 +452,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 </div>
 
                 {/* Datas do fluxo */}
-                <div className="rounded-xl border border-border p-3.5 text-xs text-muted-foreground">
+                <div className="hc-dentro p-3.5 text-xs text-muted-foreground">
                   <p>Entrou em desenvolvimento: {fmtDataHora(card.entrouDevAt)}</p>
                   <p className="mt-1">
                     Concluído: {fmtDataHora(card.concluidoAt)}
@@ -460,8 +461,8 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 </div>
 
                 {/* Anexos / Imagens com previews grandes */}
-                <div className="rounded-xl border border-border p-3.5">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <div className="hc-dentro p-3.5">
+                  <p className="hc-sobre flex items-center gap-1.5">
                     <Paperclip className="size-3.5" /> Anexos / Imagens ({anexos.length})
                   </p>
                   {anexos.length > 0 && (
@@ -473,7 +474,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                         return (
                           <div
                             key={i}
-                            className="group relative overflow-hidden rounded-lg border border-border bg-black/25"
+                            className="hc-dentro group relative overflow-hidden"
                           >
                             {isImg ? (
                               <button
@@ -497,12 +498,12 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                                 className="flex h-40 flex-col items-center justify-center gap-2 p-3 text-center"
                               >
                                 <Paperclip className="size-8 text-muted-foreground" />
-                                <span className="line-clamp-2 text-xs text-primary hover:underline">
+                                <span className="line-clamp-2 text-xs text-foreground underline-offset-2 hover:underline">
                                   {a.nome}
                                 </span>
                               </a>
                             )}
-                            <div className="flex items-center justify-between gap-1 border-t border-border bg-card/80 px-2 py-1.5">
+                            <div className="flex items-center justify-between gap-1 border-t border-white/[0.06] bg-card/80 px-2 py-1.5">
                               <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
                                 {a.nome}
                               </span>
@@ -545,7 +546,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                         salvarAnexos([...anexos, { nome, url }]);
                         setNovoAnexo("");
                       }}
-                      className="rounded-lg bg-white/[0.05] px-2.5 text-foreground hover:bg-white/[0.08]"
+                      className="hc-seta"
                       aria-label="Adicionar anexo"
                     >
                       <Plus className="size-3.5" />
@@ -565,12 +566,12 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
           {aba === "comentarios" && (
             <div className="space-y-3">
               {comentarios.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">
+                <p className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                   Nenhum comentário ainda.
                 </p>
               )}
               {comentarios.map((c) => (
-                <div key={c.id} className="rounded-xl border border-border p-3">
+                <div key={c.id} className="hc-dentro p-3">
                   <p className="text-xs font-semibold text-foreground">
                     {c.autor}{" "}
                     <span className="font-normal text-muted-foreground">
@@ -581,7 +582,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                     <img
                       src={c.texto}
                       alt="Imagem enviada no comentário"
-                      className="mt-2 max-h-64 rounded-lg border border-border"
+                      className="mt-2 max-h-64 rounded-xl border border-white/[0.08]"
                     />
                   ) : (
                     <RichText value={c.texto} className="mt-1" />
@@ -605,7 +606,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 <button
                   onClick={() => novoComentario.trim() && comentar.mutate(novoComentario.trim())}
                   disabled={comentar.isPending}
-                  className="shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                  className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
                 >
                   {comentar.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -620,14 +621,14 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
           {aba === "historico" && (
             <div className="space-y-2">
               {historico.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">
+                <p className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                   Nenhuma movimentação registrada.
                 </p>
               )}
               {historico.map((h) => (
                 <div
                   key={h.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-border px-3.5 py-2.5 text-sm"
+                  className="hc-dentro flex items-center justify-between gap-4 px-3.5 py-2.5 text-sm"
                 >
                   <span className="text-muted-foreground">
                     <span className="font-semibold text-foreground">{h.autor}</span> moveu de{" "}
@@ -645,7 +646,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
 
         {/* Barra de ações: salvar ou descartar alterações */}
         {temAlteracoes && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-white/[0.035] px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] bg-white/[0.035] px-5 py-3">
             <p className="text-xs font-semibold text-muted-foreground">
               Você tem alterações não salvas nesta pendência.
             </p>
@@ -654,7 +655,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 type="button"
                 onClick={descartarAlteracoes}
                 disabled={salvar.isPending}
-                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                className="pilula rounded-full disabled:opacity-50"
               >
                 <RotateCcw className="size-3.5" /> Descartar
               </button>
@@ -662,7 +663,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 type="button"
                 onClick={salvarAlteracoes}
                 disabled={salvar.isPending}
-                className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {salvar.isPending ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -689,9 +690,9 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
             type="button"
             onClick={() => setAnexoAberto(null)}
             aria-label="Fechar imagem"
-            className="absolute right-4 top-4 rounded-full glass-modal p-2 text-foreground transition-colors hover:bg-white/[0.08]"
+            className="hc-seta !size-9 absolute right-4 top-4"
           >
-            <X className="size-5" />
+            <X className="size-4" />
           </button>
           <img
             src={anexoAberto.url}

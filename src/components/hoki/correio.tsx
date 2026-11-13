@@ -385,7 +385,7 @@ function Escrever({
             <select
               value={para}
               onChange={(e) => setPara(e.target.value)}
-              className={cn(campo, "mt-1 h-10")}
+              className={cn(campo, "mt-1 h-10 [color-scheme:dark] [&>option]:bg-[#141416] [&>option]:text-white")}
             >
               <option value="">Escolha uma pessoa</option>
               {perfis.map((p) => (

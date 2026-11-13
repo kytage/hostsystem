@@ -67,22 +67,16 @@ export function CartaoAndamento({
 
   return (
     <section
-      className={cn(
-        "glass brilho relative flex min-h-[300px] flex-col overflow-hidden rounded-[24px] p-4",
-        className,
-      )}
+      className={cn("glass hc flex min-h-[300px] flex-col p-5", className)}
       onPointerEnter={() => setParado(true)}
       onPointerLeave={() => setParado(false)}
     >
-      <span aria-hidden className="pontilhado opacity-60" />
+      {/* luz localizada: um facho que desce do alto, sobre o número em destaque */}
+      <span aria-hidden className="hc-facho" />
       <div className="relative flex items-center justify-between gap-2">
-        <h2 className="text-[13.5px] font-medium text-foreground/90">Desenvolvimento</h2>
-        <button
-          type="button"
-          onClick={onAbrir}
-          className="pilula !h-7 !gap-1 !px-2.5 !text-[11.5px]"
-        >
-          Abrir <ArrowUpRight className="size-3" strokeWidth={1.8} />
+        <h2 className="hc-titulo">Desenvolvimento</h2>
+        <button type="button" onClick={onAbrir} className="hc-pilula">
+          Abrir <ArrowUpRight className="size-3" strokeWidth={2} />
         </button>
       </div>
 
@@ -287,7 +281,8 @@ export function CartaoMovimento({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-3">
+      {/* (a classe mov-topo só serve à tela inicial, que deixa os botões descerem no celular) */}
+      <div className="mov-topo flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[13.5px] font-medium text-foreground/90">
             {titulo}{" "}

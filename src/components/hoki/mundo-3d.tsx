@@ -8,7 +8,28 @@ import { criarShows, type PoseShow } from "./mundo-show";
 import type { Show } from "@/lib/hoki-shows";
 import type { Dupla, Par } from "@/lib/hoki-presenca";
 import { criarMascote, type Reacao } from "./mascote";
+import { ALTURA_BONECO, DURACAO_REACAO } from "./boneco";
+/** O boneco de cada pessoa na praça (o HOKI com a roupa dela). */
+type Boneco = ReturnType<typeof criarMascote>;
 import { modeloLeve, type Modelo } from "./modelo";
+import {
+  corpoParado,
+  criarCorpo,
+  MOV,
+  passo,
+  type CorpoHoki,
+  type EntradaMovimento,
+  type MapaMovimento,
+} from "@/lib/hoki-movimento";
+import {
+  deveEnviar,
+  FLUXO,
+  intervaloMinimo,
+  prever,
+  type AmostraMovimento,
+  type TipoAmostra,
+  type UltimoEnvio,
+} from "@/lib/hoki-fluxo";
 import { ASSENTO, criarMundo } from "./mundo-cena";
 import {
   ajustar,
@@ -22,6 +43,7 @@ import {
   CHEGADA,
   CHUVEIRO,
   CENTRO_DO_COMERCIO,
+  COMERCIO_NA_PRACA,
   CORREIO,
   AGUA_DA_PISCINA,
   MERGULHO,
@@ -29,6 +51,7 @@ import {
   alturaDoChao,
   ILHA_FAZENDAS,
   frenteDoBanco,
+  livre,
   planejar,
   beiraDaFonte,
   naFonte,
@@ -37,12 +60,7 @@ import {
   vagaDoBerco,
   type Ponto,
 } from "./mundo-mapa";
-import {
-  ALTURA_ARCO,
-  LARGURA_ARCO,
-  PROFUNDIDADE_ARCO,
-  type QuadroRanking,
-} from "./ranking-arco";
+import { ALTURA_ARCO, LARGURA_ARCO, PROFUNDIDADE_ARCO, type QuadroRanking } from "./ranking-arco";
 import {
   anoitecerLuzes,
   COR_NEVOA,
@@ -55,6 +73,7 @@ import {
 } from "./luz";
 import { ceu } from "./voxel";
 import { mundoPausado } from "./mundo-pausa";
+import { playSfx } from "@/lib/sfx";
 
 /** Uma pessoa na praça. (x, z) é para onde ela está indo; `banco` é o banco onde vai sentar. */
 export interface PessoaMundo {
@@ -90,6 +109,14 @@ export interface Mundo3DRef {
   iniciarShow(show: Show, atrasoMs: number): void;
   /** Há um evento rodando agora? */
   showRodando(): boolean;
+  /** Joystick da tela de toque: -1 a 1 para o lado e para a frente; `correr` com o dedo todo para fora. */
+  joystick(lado: number, frente: number, correr: boolean): void;
+  /** Botão de pular da tela de toque. */
+  pular(): void;
+  /** Soco (botão direito ou botão de soco no celular). Ainda sem dano. */
+  socar(): void;
+  /** Uma amostra do movimento contínuo de outra pessoa (andar com o teclado, correr, pular). */
+  movimento(id: string, amostra: AmostraMovimento): void;
 }
 interface Eventos {
   onChao(p: Ponto): void;
@@ -109,6 +136,14 @@ interface Eventos {
   onBalanco?(): void;
   /** Recado curto de um evento da praça (quem explodiu, quem venceu, "espere acabar"…). */
   onAviso?(texto: string): void;
+  /** O meu HOKI começou a andar pelo teclado ou joystick (larga o banco, a dança, a dupla…). */
+  onMover?(p: Ponto): void;
+  /** Uma amostra do meu movimento para mandar aos outros. */
+  onFluxo?(amostra: AmostraMovimento): void;
+  /** Dei um soco (para mostrar aos outros). */
+  onSoco?(): void;
+  /** Quantos outros estão com a praça aberta (para escolher o ritmo do envio). */
+  olhando?(): number;
 }
 
 const ESCALA = 0.62; // tamanho do HOKI no mundo (1 = um bloco do chão)
@@ -130,9 +165,37 @@ const DURACAO: Partial<Record<Reacao, number>> = {
   cumprimentar: 1.7,
   festa: 1.6,
 };
-const VELOCIDADE = 3.4; // blocos por segundo
+/**
+ * Proporção do andar: o boneco tem 1,83 m e, na praça, ALTURA_BONECO × ESCALA blocos.
+ * Assim ele anda, corre e pula exatamente como na aba TESTE (onde 1 unidade = 1 m).
+ */
+const PROPORCAO = (ALTURA_BONECO * ESCALA) / 1.83;
+const VELOCIDADE = MOV.ANDAR * PROPORCAO; // blocos por segundo (o mesmo trote do teclado)
 /** Abertura da câmera na vista do RANKING (mais aberta, para caber o arco inteiro de perto). */
 const FOV_RANKING = 50;
+/** Abertura da câmera de perto, em terceira pessoa (de longe fica a FOV, que mostra a ilha inteira). */
+const FOV_PERTO = 70;
+/** Quanto a câmera abre a mais quando o HOKI corre (sensação de velocidade). */
+const FOV_CORRENDO = 8;
+/** Inclinação inicial da câmera de perto (radianos): um pouco acima do ombro. */
+const ALTURA_PERTO = 0.3;
+/** Quanto a câmera de perto sai para a direita do boneco (por cima do ombro). */
+const OMBRO = 0.55;
+/** Arredonda como a rede (2 casas), para o destino que volta da praça bater com o do motor. */
+const arredonda = (v: number) => Math.round(v * 100) / 100;
+/** O mapa da praça para o controle direto (livre para andar e altura do chão). */
+const MAPA_MOV: MapaMovimento = { livre, chao: alturaDoChao };
+/** Teclas de andar (pela posição física da tecla, vale em qualquer teclado): [frente, lado]. */
+const DIRECOES: Record<string, readonly [number, number]> = {
+  KeyW: [1, 0],
+  ArrowUp: [1, 0],
+  KeyS: [-1, 0],
+  ArrowDown: [-1, 0],
+  KeyA: [0, -1],
+  ArrowLeft: [0, -1],
+  KeyD: [0, 1],
+  ArrowRight: [0, 1],
+};
 /** Altura (px, a partir de baixo) dos botões que aparecem na vista do RANKING. */
 const BOTOES_DA_VISTA = 96;
 // classes dos rótulos (ficam aqui, por extenso, para o Tailwind gerar o CSS)
@@ -149,7 +212,8 @@ interface Avatar {
   /** Com fome ou sede: anda devagar. */
   lento: boolean;
   grupo: TH.Group;
-  mascote: ReturnType<typeof criarMascote>;
+  /** O boneco: o HOKI (mascote) ou a figura exclusiva (GLB). */
+  mascote: Boneco;
   sombra: TH.Mesh;
   chave: string;
   /** Onde ele está na caminhada. */
@@ -174,6 +238,17 @@ interface Avatar {
   mosquitos: ReturnType<typeof criarMosquitos> | null;
   rumo: number;
   truque: { tipo: Reacao; inicio: number } | null;
+  /** Só o meu: controle direto (teclado/joystick). null quando anda pelo clique. */
+  corpo: CorpoHoki | null;
+  /** Os outros: última amostra do movimento contínuo e quando chegou (relógio local). */
+  fluxo: { a: AmostraMovimento; quando: number } | null;
+  /** Para a animação: correndo e no ar (pulo). */
+  correndo: boolean;
+  noAr: boolean;
+  /** Estava no ar no quadro anterior (para o pouso dos outros). */
+  noArAntes: boolean;
+  /** Segundos que ainda faltam da animação de pouso. */
+  pouso: number;
   rotulo: HTMLDivElement;
   nome: HTMLSpanElement;
   /** Plaquinha: [nível] nick [CARGO], e o status embaixo. */
@@ -193,7 +268,10 @@ function criarMotor(
   eventos: Eventos,
 ) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio));
+  // resolução que se ajusta sozinha ao FPS (começa em até 1,5x e vai até 1,75x se sobrar desempenho)
+  const PR_MAXIMO = Math.min(1.75, window.devicePixelRatio || 1);
+  let pixelRatio = Math.min(1.5, PR_MAXIMO);
+  renderer.setPixelRatio(pixelRatio);
   prepararDesenho(THREE, renderer);
   el.appendChild(renderer.domElement);
   renderer.domElement.style.cssText = "width:100%;height:100%;display:block";
@@ -203,7 +281,7 @@ function criarMotor(
   cena.background = texCeu;
   cena.fog = new THREE.Fog(COR_NEVOA, 70, 190);
   const FOV = 40;
-  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 260);
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 260);
 
   const luzes = montarLuzes(THREE, cena, {
     alvo: { x: 8, y: 1, z: 0 },
@@ -215,6 +293,7 @@ function criarMotor(
 
   const mundo = criarMundo(THREE);
   cena.add(mundo.grupo);
+  let espia: number[] | null = null;
 
   // ---------------- noite: de tempos em tempos escurece, com estrelas e uma lua grande e clara ----------------
   // (o relógio da noite é o do mundo real e fica em luz.ts, para as duas telas do HOKI andarem juntas)
@@ -627,11 +706,14 @@ function criarMotor(
   camada.appendChild(blipComercio);
   const comercioTela = { x: 0, y: 0, visivel: false };
   const noComercio = (px: number, py: number) =>
-    comercioTela.visivel && Math.hypot(comercioTela.x - px, comercioTela.y - 12 - py) < 22;
+    COMERCIO_NA_PRACA &&
+    comercioTela.visivel &&
+    Math.hypot(comercioTela.x - px, comercioTela.y - 12 - py) < 22;
 
   const avatares = new Map<string, Avatar>();
   let dentro = false;
-  let zoomUsuario = 0.52;
+  // de perto, em terceira pessoa (a roda do mouse afasta até a ilha inteira)
+  let zoomUsuario = 0.27;
   let zoom = 1;
   // vista do RANKING: em primeira pessoa, de frente para o arco (0 = normal, 1 = no arco)
   let vistaRanking = false;
@@ -644,7 +726,156 @@ function criarMotor(
   // câmera: ângulo em volta do HOKI (arrastando o mouse) e altura do olhar
   const ALTURA_PADRAO = 0.512;
   let giroCam = 0;
-  let alturaCam = ALTURA_PADRAO;
+  let alturaCam = ALTURA_PERTO;
+  // a câmera de verdade persegue o giro e a altura pedidos (dá um peso leve, sem atraso grande)
+  let giroSuave = 0;
+  let alturaSuave = ALTURA_PERTO;
+  let correrSuave = 0;
+
+  // ---------------- controle direto: teclado (WASD/setas, Shift, Espaço) e joystick da tela ----------------
+  const teclas = new Set<string>();
+  let pedidoPulo = false;
+  const joy = { lado: 0, frente: 0, correr: false };
+  const entrada: EntradaMovimento = { frente: 0, lado: 0, correr: false, pular: false };
+  const digitando = (alvo: EventTarget | null) =>
+    alvo instanceof HTMLElement &&
+    !!alvo.closest("input, textarea, select, [contenteditable='true']");
+  /** Teclas valem: dentro da praça, fora da vista do ranking, sem janela aberta e com a praça na tela. */
+  const podeTeclar = () =>
+    dentro && !vistaRanking && !mundoPausado() && !document.querySelector("[role='dialog']");
+  const soltarTudo = () => {
+    teclas.clear();
+    pedidoPulo = false;
+  };
+  const aoApertar = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || digitando(e.target)) return;
+    if (e.code === "F3") {
+      // F3 mostra ou esconde o contador de FPS
+      e.preventDefault();
+      alternarFps();
+      return;
+    }
+    const dir = DIRECOES[e.code];
+    const shift = e.code === "ShiftLeft" || e.code === "ShiftRight";
+    const espaco = e.code === "Space";
+    if ((!dir && !shift && !espaco) || !podeTeclar()) return;
+    // o Espaço não "clica" o último botão apertado e as setas não rolam a página
+    if (dir || espaco) e.preventDefault();
+    if (espaco && !e.repeat) pedidoPulo = true;
+    teclas.add(e.code);
+  };
+  const aoLargarTecla = (e: KeyboardEvent) => {
+    teclas.delete(e.code);
+    if (e.code === "Space" && podeTeclar() && !digitando(e.target)) e.preventDefault();
+  };
+  window.addEventListener("keydown", aoApertar);
+  window.addEventListener("keyup", aoLargarTecla);
+  // perdeu o foco (Alt+Tab, outra janela): solta tudo, senão a tecla fica "presa"
+  window.addEventListener("blur", soltarTudo);
+  /** Junta teclado e joystick na entrada deste quadro (o pulo vale uma vez só). */
+  const lerEntrada = () => {
+    let f = joy.frente;
+    let l = joy.lado;
+    for (const c of teclas) {
+      const d = DIRECOES[c];
+      if (d) {
+        f += d[0];
+        l += d[1];
+      }
+    }
+    entrada.frente = Math.max(-1, Math.min(1, f));
+    entrada.lado = Math.max(-1, Math.min(1, l));
+    entrada.correr = teclas.has("ShiftLeft") || teclas.has("ShiftRight") || joy.correr;
+    entrada.pular = pedidoPulo;
+    pedidoPulo = false;
+    return entrada;
+  };
+
+  // ---------------- movimento contínuo pela rede ----------------
+  let ultimoEnvio: UltimoEnvio | null = null;
+  let sequencia = 0;
+  // quantos estão olhando a praça: lido a cada 2 s (ler a presença a cada quadro custa à toa)
+  let olhandoAgora = 0;
+  let olhandoLido = -Infinity;
+  const quantosOlham = (agoraMs: number) => {
+    if (agoraMs - olhandoLido > 2000) {
+      olhandoAgora = eventos.olhando?.() ?? 0;
+      olhandoLido = agoraMs;
+    }
+    return olhandoAgora;
+  };
+  /** Manda uma amostra do meu movimento quando vale a pena (começou, virou, pulou, parou ou passou 1 s). */
+  const enviarMovimento = (a: Avatar, k: TipoAmostra, forcar: boolean) => {
+    if (!eventos.onFluxo) return;
+    const vx = a.corpo?.vx ?? 0;
+    const vz = a.corpo?.vz ?? 0;
+    const agoraMs = performance.now();
+    if (
+      !forcar &&
+      !deveEnviar(ultimoEnvio, { vx, vz, k }, agoraMs, intervaloMinimo(quantosOlham(agoraMs)))
+    )
+      return;
+    sequencia += 1;
+    eventos.onFluxo({
+      x: a.pos.x,
+      z: a.pos.z,
+      y: a.mostra.y,
+      r: a.rumo,
+      vx: k === "para" ? 0 : vx,
+      vz: k === "para" ? 0 : vz,
+      vy: k === "pula" ? (a.corpo?.vy ?? 0) : 0,
+      k,
+      s: sequencia,
+    });
+    ultimoEnvio = { quando: agoraMs, vx, vz, k };
+  };
+
+  // ---------------- contador de FPS (F3) e resolução que se ajusta ----------------
+  let mostrarFps = (() => {
+    try {
+      return localStorage.getItem("hoki-fps") === "1";
+    } catch {
+      return false;
+    }
+  })();
+  const fpsEl = document.createElement("div");
+  fpsEl.className =
+    "pointer-events-none absolute left-2 top-2 z-10 rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-white";
+  fpsEl.hidden = !mostrarFps;
+  camada.appendChild(fpsEl);
+  function alternarFps() {
+    mostrarFps = !mostrarFps;
+    fpsEl.hidden = !mostrarFps;
+    try {
+      localStorage.setItem("hoki-fps", mostrarFps ? "1" : "0");
+    } catch {
+      // sem armazenamento: vale só nesta tela
+    }
+  }
+  let quadrosContados = 0;
+  let inicioDaConta = performance.now();
+  let ultimoAjuste = 0;
+  /** Conta os quadros desenhados; a cada segundo mostra o FPS e ajusta a resolução se precisar. */
+  const contarQuadro = (agora: number) => {
+    quadrosContados += 1;
+    const passou = agora - inicioDaConta;
+    if (passou < 1000) return;
+    const fps = (quadrosContados * 1000) / passou;
+    quadrosContados = 0;
+    inicioDaConta = agora;
+    // a praça ficou pausada no meio da conta: não vale para decidir nada
+    if (passou > 2500) return;
+    if (mostrarFps) fpsEl.textContent = `${Math.round(fps)} FPS · ${pixelRatio.toFixed(2)}x`;
+    if (agora - ultimoAjuste < 4000) return;
+    if (fps < 48 && pixelRatio > 1) {
+      pixelRatio = Math.max(1, pixelRatio - 0.25);
+    } else if (fps > 58 && pixelRatio < PR_MAXIMO) {
+      pixelRatio = Math.min(PR_MAXIMO, pixelRatio + 0.25);
+    } else return;
+    ultimoAjuste = agora;
+    renderer.setPixelRatio(pixelRatio);
+    medir();
+  };
   // o centro da vista fica um pouco a leste, para a ilha e o escritório caberem juntos
   const CENTRO = new THREE.Vector3(0, 2.2, 1);
   const olhar = CENTRO.clone();
@@ -667,7 +898,10 @@ function criarMotor(
   let pedLeve: Modelo | undefined;
   let pedindoPed = false;
   let ultimaLista: PessoaMundo[] = [];
-  const montar = (visual: Visual) => {
+  /** Chave do boneco: muda quando a aparência muda. */
+  const chaveDe = (p: PessoaMundo) => JSON.stringify(p.visual);
+  const montar = (p: PessoaMundo): Boneco => {
+    const visual = p.visual;
     if (peca(visual.traje)?.ped && !pedLeve && !pedindoPed) {
       pedindoPed = true;
       void modeloLeve(THREE, "bonne").then((m) => {
@@ -698,7 +932,7 @@ function criarMotor(
   function criarAvatar(p: PessoaMundo): Avatar {
     const grupo = new THREE.Group();
     grupo.scale.setScalar(ESCALA);
-    const mascote = montar(p.visual);
+    const mascote = montar(p);
     grupo.add(mascote.raiz);
     cena.add(grupo);
     const sombra = new THREE.Mesh(gSombra, mSombra);
@@ -733,7 +967,7 @@ function criarMotor(
       grupo,
       mascote,
       sombra,
-      chave: JSON.stringify(p.visual),
+      chave: chaveDe(p),
       pos: s ? { x: s.x, z: s.z } : { x: p.x, z: p.z },
       mostra: v ? { ...v } : s ? { x: s.x, y: s.y, z: s.z } : { x: p.x, y: 0, z: p.z },
       rota: [],
@@ -749,6 +983,12 @@ function criarMotor(
       mosquitos: null,
       rumo: s ? s.ang : 0,
       truque: null,
+      corpo: null,
+      fluxo: null,
+      correndo: false,
+      noAr: false,
+      noArAntes: false,
+      pouso: 0,
       rotulo,
       nome,
       selo,
@@ -789,11 +1029,11 @@ function criarMotor(
           a.mostra = vagaDoBerco(vaga);
         }
       } else {
-        const chave = JSON.stringify(p.visual);
+        const chave = chaveDe(p);
         if (chave !== a.chave) {
           a.grupo.remove(a.mascote.raiz);
           a.mascote.descartar();
-          a.mascote = montar(p.visual);
+          a.mascote = montar(p);
           a.grupo.add(a.mascote.raiz);
           a.chave = chave;
         }
@@ -815,13 +1055,26 @@ function criarMotor(
           // dormindo ou descendo: só guarda para onde ir depois
           a.alvo = { x: p.x, z: p.z, banco: p.banco };
         } else if (a.alvo.x !== p.x || a.alvo.z !== p.z || a.alvo.banco !== p.banco) {
-          const banco = p.banco !== null ? BANCOS[p.banco] : undefined;
-          const destino = banco ? frenteDoBanco(banco) : { x: p.x, z: p.z };
-          a.pos = { x: a.mostra.x, z: a.mostra.z };
-          a.rota = planejar(a.pos, destino);
-          if (!a.rota.length) a.pos = destino; // sem caminho possível: aparece direto lá
-          a.sentado = false;
-          a.alvo = { x: p.x, z: p.z, banco: p.banco };
+          const fluxoAndando =
+            !a.souEu &&
+            !!a.fluxo &&
+            a.fluxo.a.k !== "para" &&
+            performance.now() - a.fluxo.quando < FLUXO.VALIDADE_MS;
+          if (fluxoAndando) {
+            // andando pelo movimento contínuo: o destino só fica guardado (o fluxo manda na posição)
+            a.alvo = { x: p.x, z: p.z, banco: p.banco };
+          } else {
+            // um clique no chão vale mais que o teclado: larga o controle direto e segue a rota
+            if (a.souEu) a.corpo = null;
+            a.fluxo = null;
+            const banco = p.banco !== null ? BANCOS[p.banco] : undefined;
+            const destino = banco ? frenteDoBanco(banco) : { x: p.x, z: p.z };
+            a.pos = { x: a.mostra.x, z: a.mostra.z };
+            a.rota = planejar(a.pos, destino);
+            if (!a.rota.length) a.pos = destino; // sem caminho possível: aparece direto lá
+            a.sentado = false;
+            a.alvo = { x: p.x, z: p.z, banco: p.banco };
+          }
         }
       }
       a.vaga = vaga;
@@ -883,6 +1136,24 @@ function criarMotor(
     ultimo = { x: e.clientX, y: e.clientY };
     el.setPointerCapture(e.pointerId);
   };
+  // soco: o meu boneco dá um gancho (sem dano por enquanto; a arena PvP vem depois)
+  let ultimoSoco = 0;
+  const socar = () => {
+    if (!dentro) return;
+    const agora = performance.now();
+    if (agora - ultimoSoco < 380) return;
+    for (const a of avatares.values()) {
+      if (!a.souEu || a.dorme || a.acorda !== null || a.sentado || a.par) continue;
+      ultimoSoco = agora;
+      a.truque = { tipo: "soco", inicio: agora };
+      playSfx("soco");
+      eventos.onSoco?.();
+    }
+  };
+  // botão direito também gira a câmera: sem o menu do navegador por cima
+  const semMenu = (e: MouseEvent) => {
+    if (dentro) e.preventDefault();
+  };
   // arrastar gira a câmera em volta do seu HOKI (e sobe/desce o olhar)
   const aoArrastar = (e: PointerEvent) => {
     if (!ultimo) {
@@ -908,6 +1179,13 @@ function criarMotor(
     const inicio = baixou;
     baixou = null;
     ultimo = null;
+    // botão direito: clique curto = soco (ainda sem dano); arrastando, continua girando a câmera
+    if (e.button === 2) {
+      if (inicio && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) <= 8) socar();
+      return;
+    }
+    // só o botão esquerdo (ou o dedo) clica
+    if (e.button !== 0) return;
     if (!inicio || Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8) return;
     // preso num evento (ou congelado na batata quente): não anda até acabar
     for (const a of avatares.values())
@@ -964,6 +1242,7 @@ function criarMotor(
     // o balcão da barraca do Comércio?
     vetor.set(CENTRO_DO_COMERCIO.x, 1.4, CENTRO_DO_COMERCIO.z).project(camera);
     if (
+      COMERCIO_NA_PRACA &&
       eventos.onComercio &&
       vetor.z < 1 &&
       Math.hypot((vetor.x * 0.5 + 0.5) * r.width - px, (-vetor.y * 0.5 + 0.5) * r.height - py) < 26
@@ -1007,6 +1286,7 @@ function criarMotor(
   el.addEventListener("pointermove", aoArrastar);
   el.addEventListener("pointerup", aoSoltar);
   el.addEventListener("wheel", aoRolar, { passive: false });
+  el.addEventListener("contextmenu", semMenu);
 
   let visivel = true;
   const olheiro = new IntersectionObserver((e) => (visivel = e[0]?.isIntersecting ?? true));
@@ -1307,6 +1587,86 @@ function criarMotor(
       }
       if (noShow.delete(a.id)) voltarDoShow(a);
       let andando = false;
+      let vel = 0;
+      // eu: controle direto pelo teclado ou joystick (manda enquanto há entrada ou o corpo ainda se mexe)
+      if (a.souEu) {
+        // em dupla (acompanhando alguém) quem manda é o parceiro
+        if (a.corpo && a.par) a.corpo = null;
+        const e = podeTeclar() ? lerEntrada() : null;
+        if (!e) {
+          soltarTudo();
+          entrada.frente = entrada.lado = 0;
+          entrada.pular = false;
+        }
+        const ent = e ?? entrada;
+        const temEntrada = ent.frente !== 0 || ent.lado !== 0 || ent.pular;
+        if (!a.corpo && temEntrada && !a.par) {
+          // começou a andar pelo teclado: larga a rota do clique, levanta do banco e avisa a praça
+          a.corpo = criarCorpo(a.pos.x, a.pos.z, a.mostra.y, a.rumo);
+          a.rota = [];
+          a.sentado = false;
+          marca.visible = false;
+          const p = { x: arredonda(a.pos.x), z: arredonda(a.pos.z) };
+          a.alvo = { x: p.x, z: p.z, banco: null };
+          eventos.onMover?.(p);
+        }
+        if (a.corpo) {
+          const r = passo(a.corpo, ent, giroSuave, dt, MAPA_MOV, a.lento, PROPORCAO);
+          vel = r.velocidade;
+          if (r.aterrissou) a.pouso = 0.28;
+          a.pos = { x: a.corpo.x, z: a.corpo.z };
+          a.rumo = a.corpo.rumo;
+          andando = r.andando;
+          a.correndo = r.correndo;
+          a.noAr = !a.corpo.noChao;
+          const k: TipoAmostra = a.noAr ? "pula" : "anda";
+          enviarMovimento(a, k, r.pulou || r.aterrissou);
+          if (r.pulou) playSfx("pulo");
+          else if (r.aterrissou) playSfx("pouso");
+          if (!temEntrada && corpoParado(a.corpo)) {
+            // parou: vira o destino de todo mundo (inclusive quem está com a versão antiga do site)
+            const p = { x: arredonda(a.corpo.x), z: arredonda(a.corpo.z) };
+            a.pos = p;
+            a.alvo = { x: p.x, z: p.z, banco: null };
+            a.corpo = null;
+            a.correndo = false;
+            a.noAr = false;
+            enviarMovimento(a, "para", true);
+            eventos.onParou(p);
+          }
+        }
+      } else if (a.fluxo) {
+        // os outros: o movimento contínuo prevê o caminho pela velocidade e corrige devagar
+        const idadeMs = agora - a.fluxo.quando;
+        const am = a.fluxo.a;
+        if (am.k !== "para" && idadeMs > FLUXO.VALIDADE_MS) {
+          // o fluxo parou de chegar no meio do caminho: volta ao jeito antigo (rota até o destino)
+          a.fluxo = null;
+          a.noAr = false;
+          a.correndo = false;
+          if (Math.hypot(a.alvo.x - a.pos.x, a.alvo.z - a.pos.z) > 0.3) {
+            a.rota = planejar(a.pos, { x: a.alvo.x, z: a.alvo.z });
+          }
+        } else {
+          const prev = prever(am, idadeMs / 1000, MOV.GRAVIDADE * PROPORCAO, alturaDoChao, livre);
+          const ex = prev.x - a.pos.x;
+          const ez = prev.z - a.pos.z;
+          if (Math.hypot(ex, ez) > FLUXO.TELEPORTE) a.pos = { x: prev.x, z: prev.z };
+          else {
+            const kf = 1 - Math.exp(-dt * 12);
+            a.pos = { x: a.pos.x + ex * kf, z: a.pos.z + ez * kf };
+          }
+          a.rota = [];
+          andando = prev.andando;
+          a.correndo = Math.hypot(am.vx, am.vz) > MOV.ANDAR * PROPORCAO * 1.2;
+          if (prev.andando) vel = Math.hypot(am.vx, am.vz);
+          a.noAr = prev.noAr;
+          if (prev.noAr) a.mostra.y = prev.y;
+          if (andando || prev.noAr) a.rumo = am.r;
+          // depois de parado um tempo, o fluxo acaba (a presença já tem o destino final)
+          if (am.k === "para" && idadeMs > 3000) a.fluxo = null;
+        }
+      }
       const proximo = a.rota[0];
       if (proximo) {
         const n = avancar(a.pos, proximo, VELOCIDADE * (a.lento ? 0.45 : 1) * dt);
@@ -1315,6 +1675,7 @@ function criarMotor(
         a.pos = { x: n.x, z: n.z };
         if (n.chegou) a.rota.shift();
         andando = true;
+        vel = VELOCIDADE * (a.lento ? 0.45 : 1);
         if (!a.rota.length && a.alvo.banco !== null) a.sentado = true;
         if (!a.rota.length && a.souEu) eventos.onParou(a.pos);
       }
@@ -1355,13 +1716,19 @@ function criarMotor(
         andando = a.par.tipo === "maos" && outro.andando;
       }
       a.andando = andando;
+      // pouso: os outros também (quando saem do ar)
+      if (a.noArAntes && !a.noAr && !a.souEu) a.pouso = 0.28;
+      a.noArAntes = a.noAr;
+      a.pouso = Math.max(0, a.pouso - dt);
       // sentado: sobe para o assento e vira para onde o banco olha; senão acompanha a caminhada
       const s = a.sentado && a.alvo.banco !== null ? assento(a.alvo.banco) : null;
       const k = 1 - Math.exp(-dt * 10);
       const cola = s || outro ? k : 1;
       a.mostra.x += ((s ? s.x : a.pos.x) - a.mostra.x) * cola;
       a.mostra.z += ((s ? s.z : a.pos.z) - a.mostra.z) * cola;
-      a.mostra.y += ((s ? s.y : chao) - a.mostra.y) * k;
+      // no controle direto a altura é a do corpo (pulo e queda de verdade); no ar, o remoto já veio da previsão
+      if (a.corpo) a.mostra.y = a.corpo.y;
+      else if (!a.noAr) a.mostra.y += ((s ? s.y : chao) - a.mostra.y) * k;
       // no balanço: depois de pular para o assento, fica colado nele (senão ficaria sempre um pouco atrás)
       if (s?.balanco) {
         if (a.noBalanco || Math.hypot(s.x - a.mostra.x, s.y - a.mostra.y, s.z - a.mostra.z) < 0.4) {
@@ -1382,7 +1749,11 @@ function criarMotor(
       a.grupo.position.set(a.mostra.x, a.mostra.y, a.mostra.z);
       a.grupo.scale.setScalar(ESCALA * shows.escala(a.id, agora));
       // animação: a avulsa acaba sozinha; a que está em repetição recomeça até a pessoa parar
-      if (a.truque && agora - a.truque.inicio > (DURACAO[a.truque.tipo] ?? 3) * 1000) {
+      if (
+        a.truque &&
+        agora - a.truque.inicio >
+          (DURACAO[a.truque.tipo] ?? DURACAO_REACAO[a.truque.tipo] ?? 3) * 1000
+      ) {
         if (a.anim && !andando && !s && !outro) a.truque.inicio = agora;
         else a.truque = null;
       }
@@ -1394,12 +1765,18 @@ function criarMotor(
         mouse: parado,
         calmo,
         andando,
+        correndo: andando && a.correndo,
+        noAr: a.noAr,
+        velocidade: vel / PROPORCAO,
+        pousando: a.pouso > 0,
         sentado: !!s,
         pose: s && a.alvo.banco !== null && BANCOS[a.alvo.banco]?.trabalho ? "trabalha" : pose,
       });
       a.sombra.visible = pose !== "montado";
-      const raio = 0.5 * (1 - Math.min(0.5, salto * 0.5));
-      a.sombra.position.set(a.mostra.x, a.mostra.y + 0.035, a.mostra.z);
+      // no pulo a sombra fica no chão e encolhe com a altura
+      const altura = a.noAr ? Math.max(0, a.mostra.y - chao) : 0;
+      const raio = (0.5 * (1 - Math.min(0.5, salto * 0.5))) / (1 + altura * 0.7);
+      a.sombra.position.set(a.mostra.x, (a.noAr ? chao : a.mostra.y) + 0.035, a.mostra.z);
       a.sombra.scale.set(raio, 1, raio);
     }
     // mosquitos de quem está sujo e a ducha (ligada se alguém está parado embaixo dela)
@@ -1450,16 +1827,18 @@ function criarMotor(
     );
     const centra =
       dentro && eu ? Math.pow(Math.max(0, (zoom - 0.8) / 0.2), 2) * (1 - longeDaIlha) : 1;
+    // acompanha a altura do chão do HOKI (escada, ilha alta); no pulo a câmera não balança junto
+    const alturaDoEu = eu ? (eu.noAr ? alturaDoChao(eu.mostra.x, eu.mostra.z) : eu.mostra.y) : 0;
     vetor.set(
       fx + (CENTRO.x - fx) * centra + (dentro ? 0 : Math.sin(t * 0.12) * 1.2),
       // bem de perto a câmera mira o rosto; de longe, o corpo inteiro
-      (zoom < 0.3 ? 0.8 + (1 - zoom / 0.3) * 0.32 : 0.8) +
-        (CENTRO.y - 0.8) * peso +
-        // acompanha a altura do HOKI (no escorregador, por exemplo)
-        (eu ? eu.mostra.y * (1 - peso) : 0),
+      (zoom < 0.3 ? 0.9 + (1 - zoom / 0.3) * 0.25 : 0.9) +
+        (CENTRO.y - 0.9) * peso +
+        alturaDoEu * (1 - peso),
       fz + (CENTRO.z - fz) * centra,
     );
-    olhar.lerp(vetor, 1 - Math.exp(-dt * 5));
+    // de perto a vista fica colada no HOKI (correndo não fica para trás); de longe ela desliza
+    olhar.lerp(vetor, 1 - Math.exp(-dt * (dentro && zoom < 0.6 ? 14 : 5)));
     // o sol (e a área das sombras) vai junto com a vista, em passos, para a fazenda e o escritório também terem sombra
     const solX = Math.round(olhar.x / 6) * 6;
     const solZ = Math.round(olhar.z / 6) * 6;
@@ -1484,18 +1863,38 @@ function criarMotor(
       giroCam += (Math.round(giroCam / (Math.PI * 2)) * Math.PI * 2 - giroCam) * kc;
       alturaCam += (ALTURA_PADRAO - alturaCam) * kc;
     }
-    const subida = ALTURA_PADRAO + (alturaCam - ALTURA_PADRAO) * (1 - peso);
+    // giro e altura da câmera perseguem o pedido (taxa 18/s: responde rápido, sem trancos)
+    const kg = 1 - Math.exp(-dt * 18);
+    giroSuave += (giroCam - giroSuave) * kg;
+    alturaSuave += (alturaCam - alturaSuave) * kg;
+    const subida = ALTURA_PADRAO + (alturaSuave - ALTURA_PADRAO) * (1 - peso);
     const plano = Math.cos(subida) * dist;
     camera.position.set(
-      olhar.x + Math.sin(giroCam) * plano,
+      olhar.x + Math.sin(giroSuave) * plano,
       olhar.y + Math.sin(subida) * dist,
-      olhar.z + Math.cos(giroCam) * plano,
+      olhar.z + Math.cos(giroSuave) * plano,
     );
+    // a câmera nunca entra no chão (escadaria, ilha alta, olhando de baixo)
+    const chaoDaCamera = alturaDoChao(camera.position.x, camera.position.z) + 0.45;
+    if (camera.position.y < chaoDaCamera) camera.position.y = chaoDaCamera;
     mira.copy(olhar);
+    // de perto, a câmera fica por cima do ombro direito (como nos jogos de tiro em terceira pessoa)
+    const ombro = OMBRO * (1 - peso) * (dentro && eu ? 1 : 0);
+    if (ombro > 0.001) {
+      const dx = Math.cos(giroSuave) * ombro;
+      const dz = -Math.sin(giroSuave) * ombro;
+      camera.position.x += dx;
+      camera.position.z += dz;
+      mira.x += dx;
+      mira.z += dz;
+    }
     // vista do RANKING: a câmera vai para a altura dos olhos, de frente para o arco, com o letreiro inteiro na tela
     vista += ((vistaRanking ? 1 : 0) - vista) * (1 - Math.exp(-dt * 3.4));
     if (Math.abs(vista - (vistaRanking ? 1 : 0)) < 0.001) vista = vistaRanking ? 1 : 0;
-    const fovAlvo = FOV + (FOV_RANKING - FOV) * vista;
+    // campo de visão: de perto abre (terceira pessoa) e correndo abre mais um pouco; de longe fica o da ilha
+    correrSuave += ((eu?.correndo && eu.corpo ? 1 : 0) - correrSuave) * (1 - Math.exp(-dt * 4));
+    const fovBase = FOV + (FOV_PERTO - FOV + FOV_CORRENDO * correrSuave) * (1 - peso);
+    const fovAlvo = fovBase + (FOV_RANKING - fovBase) * vista;
     if (Math.abs(fovAlvo - fovAtual) > 0.01) {
       fovAtual = fovAlvo;
       camera.fov = fovAtual;
@@ -1535,7 +1934,16 @@ function criarMotor(
       eu.grupo.visible = visivel;
       eu.sombra.visible = visivel;
     }
+    if (espia) {
+      // só para testes: câmera parada num ponto escolhido pelo console
+      const [ex = 0, ey = 0, ez = 0, ox = 0, oy = 0, oz = 0, fov = 50] = espia;
+      camera.position.set(ex, ey, ez);
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+      camera.lookAt(ox, oy, oz);
+    }
     renderer.render(cena, camera);
+    contarQuadro(agora);
 
     // rótulos (nome, status e balão) por cima de cada HOKI
     const w = el.clientWidth;
@@ -1565,7 +1973,7 @@ function criarMotor(
     comercioTela.visivel = vetor.z < 1 && Math.abs(vetor.x) < 1.05 && Math.abs(vetor.y) < 1.1;
     comercioTela.x = (vetor.x * 0.5 + 0.5) * w;
     comercioTela.y = (-vetor.y * 0.5 + 0.5) * h;
-    blipComercio.style.display = comercioTela.visivel ? "" : "none";
+    blipComercio.style.display = COMERCIO_NA_PRACA && comercioTela.visivel ? "" : "none";
     if (comercioTela.visivel)
       blipComercio.style.transform = `translate3d(${comercioTela.x.toFixed(1)}px, ${comercioTela.y.toFixed(1)}px, 0) translate(-50%, -100%)`;
     blip.style.display = blipTela.visivel && !semBlip ? "" : "none";
@@ -1594,6 +2002,10 @@ function criarMotor(
       zoom: +zoom.toFixed(2),
       dentro,
     }),
+    /** Só para testes: prende a câmera em [x, y, z, olhaX, olhaY, olhaZ, fov] (null solta). */
+    espiar: (v: number[] | null) => {
+      espia = v;
+    },
     /** Só para testes: onde um ponto do mundo aparece na página (em pixels). */
     tela: (x: number, y: number, z: number) => {
       const r = el.getBoundingClientRect();
@@ -1655,6 +2067,27 @@ function criarMotor(
       shows.iniciar(show, atrasoMs);
     },
     showRodando: () => shows.rodando(performance.now()),
+    joystick(lado: number, frente: number, correr: boolean) {
+      joy.lado = Math.max(-1, Math.min(1, lado));
+      joy.frente = Math.max(-1, Math.min(1, frente));
+      joy.correr = correr;
+    },
+    pular() {
+      if (podeTeclar()) pedidoPulo = true;
+    },
+    socar() {
+      socar();
+    },
+    /** Uma amostra do movimento contínuo de outra pessoa (descarta a atrasada e a de quem dorme). */
+    movimento(id: string, amostra: AmostraMovimento) {
+      const a = avatares.get(id);
+      if (!a || a.souEu || a.dorme || a.acorda !== null || a.par) return;
+      const agoraMs = performance.now();
+      if (a.fluxo && amostra.s <= a.fluxo.a.s && agoraMs - a.fluxo.quando < 5000) return;
+      a.fluxo = { a: amostra, quando: agoraMs };
+      a.rota = [];
+      a.sentado = false;
+    },
     descartar() {
       cancelAnimationFrame(raf);
       shows.descartar();
@@ -1664,6 +2097,11 @@ function criarMotor(
       el.removeEventListener("pointerup", aoSoltar);
       el.removeEventListener("pointermove", aoArrastar);
       el.removeEventListener("wheel", aoRolar);
+      el.removeEventListener("contextmenu", semMenu);
+      window.removeEventListener("keydown", aoApertar);
+      window.removeEventListener("keyup", aoLargarTecla);
+      window.removeEventListener("blur", soltarTudo);
+      fpsEl.remove();
       for (const a of [...avatares.values()]) removerAvatar(a);
       blip.remove();
       blipCarta.remove();
@@ -1756,6 +2194,9 @@ export const Mundo3D = forwardRef<
           onComercio: () => atual.current.onComercio?.(),
           onAviso: (texto) => atual.current.onAviso?.(texto),
           onBalanco: () => atual.current.onBalanco?.(),
+          onMover: (p) => atual.current.onMover?.(p),
+          onFluxo: (a) => atual.current.onFluxo?.(a),
+          olhando: () => atual.current.olhando?.() ?? 0,
         });
         motor.current = m;
         // em desenvolvimento, o motor fica à mão no console para testes
@@ -1797,6 +2238,10 @@ export const Mundo3D = forwardRef<
       zoom: (d) => motor.current?.zoom(d),
       iniciarShow: (show, atraso) => motor.current?.iniciarShow(show, atraso),
       showRodando: () => motor.current?.showRodando() ?? false,
+      joystick: (lado, frente, correr) => motor.current?.joystick(lado, frente, correr),
+      pular: () => motor.current?.pular(),
+      socar: () => motor.current?.socar(),
+      movimento: (id, amostra) => motor.current?.movimento(id, amostra),
     }),
     [],
   );

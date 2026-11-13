@@ -124,17 +124,20 @@ export function IlegalRelatorioMultiModal({ categorias, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl glass p-6">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[22px] glass-modal p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-              <FileStack className="size-5 text-primary" /> Relatório de várias setagens
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Denúncias e VAR são filtradas pela data registrada da punição dentro do período.
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="hc-icone">
+              <FileStack className="size-4" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="hc-titulo">Relatório de várias setagens</h2>
+              <p className="hc-nota mt-1">
+                Denúncias e VAR são filtradas pela data registrada da punição dentro do período.
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/[0.08]">
+          <button onClick={onClose} aria-label="Fechar" className="hc-seta">
             <X className="size-4" />
           </button>
         </div>
@@ -147,12 +150,12 @@ export function IlegalRelatorioMultiModal({ categorias, onClose }: Props) {
             onIntervalo={(v) => set("intervalo", v)}
           />
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">Faixa horária</span>
+            <span className="hc-sobre mb-1 block">Faixa horária</span>
             <MinimalSelect value={cfg.faixa} onChange={(v) => set("faixa", v as FaixaHoraria)}
               options={FAIXAS_HORARIAS.map((f) => ({ value: f.id, label: f.label }))} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-muted-foreground">Formato</span>
+            <span className="hc-sobre mb-1 block">Formato</span>
             <MinimalSelect value={modo} onChange={(v) => setModo(v as Modo)}
               options={[
                 { value: "juntos", label: "Um PDF com todas" },
@@ -165,35 +168,35 @@ export function IlegalRelatorioMultiModal({ categorias, onClose }: Props) {
           {toggles.map((t) => {
             const ativo = Boolean(cfg[t.key]);
             return (
-              <button key={t.key} onClick={() => set(t.key, !ativo as never)} title={t.hint}
-                className={cn("rounded-xl border p-2.5 text-left transition-colors",
-                  ativo ? "border-white/15 bg-white/[0.07]" : "border-border bg-white/[0.035] hover:bg-accent/50")}>
-                <p className={cn("text-xs font-semibold", ativo ? "text-primary" : "text-foreground")}>{t.label}</p>
+              <button key={t.key} aria-pressed={ativo} onClick={() => set(t.key, !ativo as never)} title={t.hint}
+                className={cn("hc-dentro p-2.5 text-left transition-colors",
+                  ativo && "!border-foreground/30 !bg-foreground/[0.07]")}>
+                <p className={cn("text-xs font-semibold", ativo ? "text-foreground" : "text-muted-foreground")}>{t.label}</p>
               </button>
             );
           })}
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <label className="campo-busca grow basis-56">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar setagem..."
-              className="w-full rounded-lg border border-border bg-white/[0.05] py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary/60" />
-          </div>
-          <button onClick={alternarVisiveis} className="rounded-full border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-white/[0.08]">
+              aria-label="Buscar setagem" />
+          </label>
+          <button onClick={alternarVisiveis} className="pilula rounded-full">
             {todasVisiveisMarcadas ? "Desmarcar todas" : "Marcar todas"}
           </button>
-          <span className="text-xs font-semibold text-muted-foreground">{selecionadas.size} selecionada(s)</span>
+          <span className="hc-selo tabular-nums">{selecionadas.size} selecionada(s)</span>
         </div>
 
         <div className="mt-3 grid max-h-64 grid-cols-1 gap-1.5 overflow-y-auto sm:grid-cols-3">
           {visiveis.map(({ org, categoriaNome }) => {
             const on = selecionadas.has(org.id);
             return (
-              <button key={org.id} onClick={() => alternar(org.id)}
-                className={cn("rounded-lg border px-3 py-2 text-left text-xs transition-colors",
-                  on ? "border-white/15 bg-white/[0.07]" : "border-border bg-white/[0.035] hover:bg-accent/50")}>
-                <span className={cn("font-semibold", on ? "text-primary" : "text-foreground")}>{org.setagem}</span>
+              <button key={org.id} aria-pressed={on} onClick={() => alternar(org.id)}
+                className={cn("hc-dentro px-3 py-2 text-left text-xs transition-colors",
+                  on && "!border-foreground/30 !bg-foreground/[0.07]")}>
+                <span className={cn("font-semibold", on ? "text-foreground" : "text-muted-foreground")}>{org.setagem}</span>
                 <span className="block truncate text-[10px] text-muted-foreground">
                   {categoriaNome}{org.organizacao ? ` · ${org.organizacao}` : ""}
                 </span>
@@ -206,11 +209,11 @@ export function IlegalRelatorioMultiModal({ categorias, onClose }: Props) {
 
         <div className="mt-5 flex items-center justify-end gap-2">
           {progresso && <span className="mr-auto text-xs text-muted-foreground">{progresso}</span>}
-          <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-white/[0.08]">
+          <button onClick={onClose} className="pilula rounded-full">
             Cancelar
           </button>
           <button onClick={() => void gerar()} disabled={Boolean(progresso)}
-            className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60">
             {progresso ? <Loader2 className="size-4 animate-spin" /> : <FileStack className="size-4" />}
             Gerar PDF
           </button>

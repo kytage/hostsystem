@@ -85,11 +85,12 @@ const ABAS: { key: Aba; label: string; icon: typeof Bug }[] = [
   { key: "admin", label: "Solicitações Administrativas", icon: Inbox },
 ];
 
+/** Cor do pontinho de cada status (o selo em si é neutro, como na tela inicial). */
 const statusStyle: Record<string, string> = {
-  pendente: "bg-warning/15 text-warning",
-  standby: "bg-chart-2/15 text-chart-2",
-  aprovada: "bg-success/15 text-success",
-  reprovada: "bg-destructive/15 text-destructive",
+  pendente: "bg-warning",
+  standby: "bg-chart-2",
+  aprovada: "bg-success",
+  reprovada: "bg-destructive",
 };
 
 const inputCls =
@@ -117,21 +118,20 @@ function AreaManagerPage() {
         subtitle="Crie solicitações da sua área. Coordinator+ aprova antes de ir para o Desenvolvimento."
       />
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {ABAS.map((a) => (
-          <button
-            key={a.key}
-            onClick={() => setAba(a.key)}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-              aba === a.key
-                ? "border-white/15 bg-white/[0.09] text-foreground"
-                : "glass text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <a.icon className="size-4" /> {a.label}
-          </button>
-        ))}
+      <div className="mt-5 max-w-full overflow-x-auto [scrollbar-width:none]">
+        <div className="segmentos" role="tablist" aria-label="Seções do Área Manager">
+          {ABAS.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.key}
+              onClick={() => setAba(a.key)}
+            >
+              <a.icon className="size-3.5" /> {a.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {aba === "standby" ? (
@@ -178,15 +178,15 @@ function EditarPendenciaDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl glass-modal p-5">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-base font-semibold text-foreground">Editar solicitação</h2>
+      <div className="w-full max-w-lg rounded-[22px] glass-modal p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="hc-titulo">Editar solicitação</h2>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg p-1 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
           >
-            <X className="size-4" />
+            <X className="size-3.5" />
           </button>
         </div>
 
@@ -212,7 +212,7 @@ function EditarPendenciaDialog({
           <button
             onClick={() => salvar.mutate()}
             disabled={salvar.isPending}
-            className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {salvar.isPending ? (
               <Loader2 className="size-4 animate-spin" />
@@ -279,21 +279,21 @@ function NovaPendenciaDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl glass">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[22px] glass-modal">
         {/* Header — igual ao modal de edição */}
-        <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] p-5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              <span className="hc-selo">
                 NOVO
               </span>
-              <span className="rounded-full bg-chart-2/15 px-2 py-0.5 text-[11px] font-semibold text-chart-2">
+              <span className="hc-selo">
                 {TIPO_LABEL[tipo].toUpperCase()}
               </span>
-              <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize bg-warning/15 text-warning">
+              <span className="hc-selo capitalize">
                 {prioridade === "media" ? "Média" : prioridade}
               </span>
-              <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="hc-selo">
                 aguardando aprovação
               </span>
             </div>
@@ -304,41 +304,41 @@ function NovaPendenciaDialog({
               placeholder="Título da solicitação"
               className="mt-2 w-full bg-transparent text-lg font-semibold text-foreground outline-none placeholder:font-bold placeholder:text-muted-foreground font-display"
             />
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+            <div className="hc-nota mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
               <span>Nova {TIPO_LABEL[tipo].toLowerCase()} — será enviada para aprovação da coordenação</span>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="shrink-0 text-muted-foreground hover:text-foreground"
+            className="hc-seta"
           >
-            <X className="size-5" />
+            <X className="size-3.5" />
           </button>
         </div>
 
-        {/* Abas — mesmas do modal de edição */}
-        <div className="flex gap-1 border-b border-border px-5 pt-3">
-          {(
-            [
-              ["detalhes", "Detalhes", FileText],
-              ["comentarios", "Comentários (0)", MessageSquare],
-              ["historico", "Histórico (0)", History],
-            ] as const
-          ).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              disabled={key !== "detalhes"}
-              className={cn(
-                "flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors",
-                key === "detalhes"
-                  ? "bg-white/[0.05] text-foreground"
-                  : "text-muted-foreground/50"
-              )}
-            >
-              <Icon className="size-3.5" /> {label}
-            </button>
-          ))}
+        {/* Abas — mesmas do modal de edição (só "Detalhes" funciona antes de criar) */}
+        <div className="shrink-0 px-5 pt-4">
+          <div className="segmentos" role="tablist" aria-label="Seções da solicitação">
+            {(
+              [
+                ["detalhes", "Detalhes", FileText],
+                ["comentarios", "Comentários (0)", MessageSquare],
+                ["historico", "Histórico (0)", History],
+              ] as const
+            ).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={key === "detalhes"}
+                disabled={key !== "detalhes"}
+                className="disabled:opacity-50"
+              >
+                <Icon className="size-3.5" /> {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Conteúdo */}
@@ -346,7 +346,7 @@ function NovaPendenciaDialog({
           <div className="grid gap-4 md:grid-cols-2">
             {/* Coluna esquerda: Descrição total */}
             <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+              <label className="hc-sobre mb-1.5 block">
                 Descrição
               </label>
               <RichTextarea
@@ -363,7 +363,7 @@ function NovaPendenciaDialog({
               <div className="grid grid-cols-2 gap-3">
                 {comArea && (
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    <label className="hc-sobre mb-1.5 block">
                       Área
                     </label>
                     <MinimalSelect
@@ -375,7 +375,7 @@ function NovaPendenciaDialog({
                   </div>
                 )}
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  <label className="hc-sobre mb-1.5 block">
                     Prioridade
                   </label>
                   <MinimalSelect
@@ -387,8 +387,8 @@ function NovaPendenciaDialog({
               </div>
 
               {/* Anexos / Imagens com previews grandes */}
-              <div className="rounded-xl border border-border p-3.5">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <div className="hc-dentro p-3.5">
+                <p className="hc-sobre flex items-center gap-1.5">
                   <Paperclip className="size-3.5" /> Anexos / Imagens ({anexos.length})
                 </p>
                 {anexos.length > 0 && (
@@ -400,21 +400,21 @@ function NovaPendenciaDialog({
                       return (
                         <div
                           key={i}
-                          className="group relative overflow-hidden rounded-lg border border-border bg-black/25"
+                          className="hc-dentro group relative overflow-hidden"
                         >
                           {isImg ? (
                             <img
                               src={a.url}
                               alt={a.nome}
-                              className="h-40 w-full bg-black/25 object-contain"
+                              className="h-40 w-full bg-black/[0.04] object-contain dark:bg-black/25"
                             />
                           ) : (
                             <div className="flex h-40 flex-col items-center justify-center gap-2 p-3 text-center">
                               <Paperclip className="size-8 text-muted-foreground" />
-                              <span className="line-clamp-2 text-xs text-primary">{a.nome}</span>
+                              <span className="line-clamp-2 text-xs text-foreground">{a.nome}</span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between gap-1 border-t border-border bg-card/80 px-2 py-1.5">
+                          <div className="flex items-center justify-between gap-1 border-t border-white/[0.06] bg-card/80 px-2 py-1.5">
                             <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
                               {a.nome}
                             </span>
@@ -445,7 +445,7 @@ function NovaPendenciaDialog({
                       )
                     }
                     placeholder="Cole URL ou Ctrl+V com print..."
-                    className="flex-1 rounded-lg border border-input bg-black/25 px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
+                    className="flex-1 rounded-xl border border-input bg-transparent px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
                   />
                   <button
                     type="button"
@@ -456,7 +456,7 @@ function NovaPendenciaDialog({
                       setAnexos((a) => [...a, { nome, url }]);
                       setAnexoUrl("");
                     }}
-                    className="rounded-lg bg-white/[0.05] px-2.5 text-foreground hover:bg-white/[0.08]"
+                    className="hc-seta"
                     aria-label="Adicionar anexo"
                   >
                     <Plus className="size-3.5" />
@@ -471,17 +471,17 @@ function NovaPendenciaDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-border p-5">
+        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] p-5">
           <button
             onClick={onClose}
-            className="h-10 rounded-xl border border-border px-4 text-sm font-semibold text-foreground hover:bg-white/[0.08]"
+            className="pilula rounded-full"
           >
             Cancelar
           </button>
           <button
             onClick={enviar}
             disabled={criar.isPending}
-            className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {criar.isPending ? (
               <Loader2 className="size-4 animate-spin" />
@@ -539,44 +539,40 @@ function PendCard({
   return (
     <article
       className={cn(
-        "rounded-2xl border p-4",
-        faltaInfo
-          ? "border-warning/60 bg-warning/5 ring-1 ring-warning/30"
-          : "glass"
+        // sem a classe "hc" e sem desfoque: as janelas de editar e de pedir informações abrem
+        // aqui dentro e precisam cobrir a tela inteira
+        "glass relative rounded-[22px] p-5 backdrop-filter-none",
+        faltaInfo && "!border-primary/40"
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{p.titulo}</h3>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
-            statusStyle[p.status]
-          )}
-        >
+        <h3 className="hc-titulo">{p.titulo}</h3>
+        <span className="hc-selo capitalize">
+          <i className={cn("size-1.5 rounded-full", statusStyle[p.status])} aria-hidden />
           {p.status === "standby" ? "Stand-by" : p.status}
         </span>
         {p.area && (
-          <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="hc-selo">
             {areaLabel(p.area)}
           </span>
         )}
-        <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-medium capitalize text-muted-foreground">
+        <span className="hc-selo capitalize">
           {p.prioridade}
         </span>
 
         {faltaInfo && (
-          <span className="flex items-center gap-1 rounded-full bg-warning/20 px-2 py-0.5 text-[11px] font-semibold text-warning">
-            🚨 Falta informação
+          <span className="hc-estado">
+            <i aria-hidden /> Falta informação
           </span>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1.5">
           {isCoordinatorPlus && (p.status === "pendente" || p.status === "standby") && (
             <button
               onClick={() => setComentando(true)}
               aria-label="Pedir mais informações"
               title="Comentar / pedir mais informações ao autor"
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-warning/10 hover:text-warning"
+              className="hc-seta"
             >
               <MessageSquare className="size-3.5" />
             </button>
@@ -586,7 +582,7 @@ function PendCard({
               onClick={() => setEditando(true)}
               aria-label="Editar solicitação"
               title="Editar solicitação"
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+              className="hc-seta"
             >
               <Pencil className="size-3.5" />
             </button>
@@ -599,7 +595,7 @@ function PendCard({
               disabled={excluindo}
               aria-label="Excluir solicitação"
               title={isCoordinatorPlus ? "Excluir solicitação" : "Excluir minha solicitação"}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              className="hc-seta hover:!bg-destructive/15 hover:!text-destructive disabled:opacity-50"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -609,7 +605,7 @@ function PendCard({
       {p.descricao && (
         <p
           className={cn(
-            "mt-1.5 whitespace-pre-line text-sm text-muted-foreground",
+            "mt-2 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground",
             compact && "line-clamp-2 text-xs"
           )}
         >
@@ -624,42 +620,42 @@ function PendCard({
               href={a.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-primary hover:underline"
+              className="hc-selo !text-foreground hover:!bg-white/[0.09]"
             >
               <Paperclip className="size-3" /> {a.nome}
             </a>
           ))}
         </div>
       )}
-      <p className="mt-2 text-xs text-muted-foreground/70">
-        Criado por <span className="font-semibold">{p.criadoPor || "—"}</span>
+      <p className="mt-2.5 text-xs text-ink-3">
+        Criado por <span className="font-medium text-muted-foreground">{p.criadoPor || "—"}</span>
         {p.aprovadoPor && (
           <>
             {" "}· {p.status === "reprovada" ? "Reprovado" : "Aprovado"} por{" "}
-            <span className="font-semibold">{p.aprovadoPor}</span>
+            <span className="font-medium text-muted-foreground">{p.aprovadoPor}</span>
           </>
         )}
         {" "}· {new Date(p.createdAt).toLocaleString("pt-BR")}
       </p>
       {faltaInfo && (
-        <div className="mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
-            <AlertTriangle className="size-3.5" /> Falta informação — @
+        <div className="hc-dentro mt-3 p-3.5">
+          <p className="hc-sobre flex items-center gap-1.5">
+            <AlertTriangle className="size-3.5 text-primary" /> Falta informação — @
             {p.criadoPor || "autor"}
           </p>
-          <p className="mt-1 whitespace-pre-line text-sm text-foreground">
+          <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-foreground">
             {p.obsCoordenacao}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            por <span className="font-semibold">{p.obsPor}</span>
+          <p className="mt-1.5 text-[11px] text-ink-3">
+            por <span className="font-medium text-muted-foreground">{p.obsPor}</span>
             {p.obsAt && <> · {new Date(p.obsAt).toLocaleString("pt-BR")}</>}
           </p>
           {(souAutor || isCoordinatorPlus) && (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {podeEditar && (
                 <button
                   onClick={() => setEditando(true)}
-                  className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                  className="flex h-[30px] items-center gap-1.5 rounded-full bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                 >
                   <Pencil className="size-3.5" /> Editar solicitação
                 </button>
@@ -675,7 +671,7 @@ function PendCard({
                     })
                     .catch((e: Error) => toast.error(e.message));
                 }}
-                className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                className="hc-pilula"
               >
                 <Check className="size-3.5" /> Marcar como resolvido
               </button>
@@ -689,14 +685,14 @@ function PendCard({
           <button
             onClick={() => onAprovar(p)}
             disabled={aprovando}
-            className="flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1.5 text-xs font-semibold text-success transition-colors hover:bg-success hover:text-success-foreground disabled:opacity-50"
+            className="flex h-[30px] items-center gap-1.5 rounded-full bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Check className="size-3.5" /> Aprovar → Desenvolvimento
           </button>
           <button
             onClick={() => onReprovar(p.id)}
             disabled={reprovando}
-            className="flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+            className="flex h-[30px] items-center gap-1.5 rounded-full bg-destructive/15 px-3 text-[11.5px] font-semibold text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
           >
             <X className="size-3.5" /> Reprovar
           </button>
@@ -705,7 +701,7 @@ function PendCard({
               onClick={() => onStandby(p.id)}
               disabled={movendo}
               title="Guardar para analisar/fazer futuramente"
-              className="flex items-center gap-1.5 rounded-full bg-chart-2/15 px-3 py-1.5 text-xs font-semibold text-chart-2 transition-opacity hover:opacity-80 disabled:opacity-50"
+              className="hc-pilula disabled:opacity-50"
             >
               <PauseCircle className="size-3.5" /> Stand-by
             </button>
@@ -714,7 +710,7 @@ function PendCard({
               onClick={() => onVoltar(p.id)}
               disabled={movendo}
               title="Voltar para a fila de pendentes"
-              className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+              className="hc-pilula disabled:opacity-50"
             >
               <Undo2 className="size-3.5" /> Voltar p/ pendentes
             </button>
@@ -754,15 +750,15 @@ function PedirInfoDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl glass-modal p-5">
-        <div className="flex items-start justify-between gap-2">
+      <div className="w-full max-w-lg rounded-[22px] glass-modal p-5">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 className="hc-titulo">
               Pedir mais informações
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="hc-nota mt-1">
               Mencionando{" "}
-              <span className="font-semibold text-primary">
+              <span className="font-semibold text-foreground">
                 @{p.criadoPor || "autor"}
               </span>{" "}
               — ele será notificado e a solicitação ficará em destaque.
@@ -771,9 +767,9 @@ function PedirInfoDialog({
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg p-1 text-muted-foreground hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-seta"
           >
-            <X className="size-4" />
+            <X className="size-3.5" />
           </button>
         </div>
 
@@ -789,7 +785,7 @@ function PedirInfoDialog({
         <button
           onClick={() => enviar.mutate()}
           disabled={enviar.isPending || !texto.trim()}
-          className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="mt-4 flex h-9 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {enviar.isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -894,22 +890,23 @@ function SecaoStandby({ isCoordinatorPlus }: { isCoordinatorPlus: boolean }) {
   const lista = pendencias.filter((p) => p.status === "standby");
 
   return (
-    <div className="mt-6">
-      <h2 className="text-base font-semibold text-foreground">
-        Stand-by ({lista.length})
+    <div className="mt-4">
+      <h2 className="flex items-center gap-2.5 px-1">
+        <span className="hc-titulo">Stand-by</span>
+        <span className="hc-selo tabular-nums">{lista.length}</span>
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="hc-nota mt-1.5 px-1">
         Solicitações guardadas por Coordinator+ para analisar ou fazer
         futuramente. Edite quando quiser e envie para o Desenvolvimento.
       </p>
-      <div className="mt-4 space-y-2.5">
+      <div className="mt-3 space-y-2.5">
         {isLoading && (
-          <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Carregando...
           </div>
         )}
         {!isLoading && lista.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
             Nada em Stand-by por aqui.
           </div>
         )}
@@ -954,15 +951,7 @@ function SecaoPendencias({
   );
 
   return (
-    <div className="mt-6 space-y-6">
-      <div className="flex justify-end">
-        <button
-          onClick={() => setCriando(true)}
-          className="flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          <Plus className="size-4" /> Nova {TIPO_LABEL[tipo]}
-        </button>
-      </div>
+    <div className="mt-4 space-y-4">
 
       {criando && (
         <NovaPendenciaDialog
@@ -972,39 +961,48 @@ function SecaoPendencias({
         />
       )}
 
-      {/* Filtro por área */}
-      {comArea && (
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Filtrar por área
-          </span>
-          <div className="w-56">
-            <MinimalSelect
-              value={filtroArea}
-              onChange={setFiltroArea}
-              options={[
-                { value: "todas", label: "Todas as áreas" },
-                ...AREAS.map((a) => ({ value: a.key, label: a.label })),
-              ]}
-            />
-          </div>
-        </div>
-      )}
+      {/* filtro por área (quando a aba tem área) e o botão de criar, na mesma linha */}
+      <div className="flex flex-wrap items-center gap-3 px-1">
+        {comArea && (
+          <>
+            <span className="hc-sobre">Filtrar por área</span>
+            <div className="w-56">
+              <MinimalSelect
+                className="rounded-full"
+                value={filtroArea}
+                onChange={setFiltroArea}
+                options={[
+                  { value: "todas", label: "Todas as áreas" },
+                  ...AREAS.map((a) => ({ value: a.key, label: a.label })),
+                ]}
+              />
+            </div>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => setCriando(true)}
+          className="ml-auto flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
+        >
+          <Plus className="size-4" /> Nova {TIPO_LABEL[tipo]}
+        </button>
+      </div>
 
       {/* Lista: pendentes + lateral de resolvidas */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
         <section className="lg:col-span-2">
-          <h2 className="text-base font-semibold text-foreground">
-            {TIPO_LABEL[tipo]}s pendentes ({pendentes.length})
+          <h2 className="flex items-center gap-2.5 px-1">
+            <span className="hc-titulo">{TIPO_LABEL[tipo]}s pendentes</span>
+            <span className="hc-selo tabular-nums">{pendentes.length}</span>
           </h2>
           <div className="mt-3 space-y-2.5">
             {isLoading && (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center gap-2 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Carregando...
               </div>
             )}
             {!isLoading && pendentes.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                 Nenhuma pendência aguardando aprovação.
               </div>
             )}
@@ -1015,12 +1013,13 @@ function SecaoPendencias({
         </section>
 
         <aside>
-          <h2 className="text-base font-semibold text-foreground">
-            Aprovadas / Reprovadas ({resolvidas.length})
+          <h2 className="flex items-center gap-2.5 px-1">
+            <span className="hc-titulo">Aprovadas / Reprovadas</span>
+            <span className="hc-selo tabular-nums">{resolvidas.length}</span>
           </h2>
           <div className="mt-3 max-h-[70vh] space-y-2.5 overflow-y-auto pr-1 scrollbar-thin">
             {resolvidas.length === 0 && !isLoading && (
-              <div className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+              <div className="rounded-[22px] border border-dashed border-white/[0.1] p-6 text-center text-xs text-muted-foreground">
                 Nada resolvido ainda.
               </div>
             )}
@@ -1078,7 +1077,7 @@ function SecaoAdmin() {
   });
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="mt-4 space-y-5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -1088,15 +1087,18 @@ function SecaoAdmin() {
           }
           criarMutation.mutate();
         }}
-        className="rounded-2xl glass p-5"
+        className="glass rounded-[22px] p-5"
       >
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Inbox className="size-4 text-primary" /> Nova Solicitação
-          Administrativa
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          De Manager para cargo Coordinator ou superior.
-        </p>
+        {/* sem a classe "hc": a lista de destinatários abre por cima e não pode ser cortada */}
+        <div className="flex items-center gap-3">
+          <span className="hc-icone">
+            <Inbox className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="hc-titulo">Nova Solicitação Administrativa</h2>
+            <p className="hc-nota mt-0.5">De Manager para cargo Coordinator ou superior.</p>
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={titulo}
@@ -1124,7 +1126,7 @@ function SecaoAdmin() {
         />
         {/* Anexos / imagens por URL */}
         <div className="mt-3">
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <input
               value={anexoUrl}
               onChange={(e) => setAnexoUrl(e.target.value)}
@@ -1147,7 +1149,7 @@ function SecaoAdmin() {
                 ]);
                 setAnexoUrl("");
               }}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-foreground hover:bg-white/[0.08]"
+              className="pilula shrink-0 rounded-full"
             >
               <Paperclip className="size-3.5" /> Anexar
             </button>
@@ -1157,7 +1159,7 @@ function SecaoAdmin() {
               {anexos.map((a, i) => (
                 <span
                   key={a.url}
-                  className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                  className="hc-selo"
                 >
                   <Paperclip className="size-3" /> {a.nome}
                   <button
@@ -1177,7 +1179,7 @@ function SecaoAdmin() {
         <button
           type="submit"
           disabled={criarMutation.isPending}
-          className="mt-4 flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="mt-4 flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {criarMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -1189,43 +1191,44 @@ function SecaoAdmin() {
       </form>
 
       <section>
-        <h2 className="text-base font-semibold text-foreground">
-          Solicitações enviadas ({enviadas.length})
+        <h2 className="flex items-center gap-2.5 px-1">
+          <span className="hc-titulo">Solicitações enviadas</span>
+          <span className="hc-selo tabular-nums">{enviadas.length}</span>
         </h2>
         <div className="mt-3 space-y-2.5">
           {isLoading && (
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Carregando...
             </div>
           )}
           {!isLoading && enviadas.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
               Nenhuma solicitação administrativa enviada.
             </div>
           )}
           {enviadas.map((s) => (
             <article
               key={s.id}
-              className="rounded-2xl glass p-4"
+              className="glass hc p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-foreground">{s.titulo}</h3>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
-                    s.status === "pendente"
-                      ? "bg-warning/15 text-warning"
-                      : "bg-success/15 text-success"
-                  )}
-                >
+                <h3 className="hc-titulo">{s.titulo}</h3>
+                <span className="hc-selo capitalize">
+                  <i
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      s.status === "pendente" ? "bg-warning" : "bg-success"
+                    )}
+                    aria-hidden
+                  />
                   {s.status}
                 </span>
-                <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="hc-selo">
                   Para: {s.destinatarioNome}
                 </span>
               </div>
               {s.descricao && (
-                <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground">
+                <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
                   {s.descricao}
                 </p>
               )}
@@ -1237,15 +1240,15 @@ function SecaoAdmin() {
                       href={a.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-primary hover:underline"
+                      className="hc-selo !text-foreground hover:!bg-white/[0.09]"
                     >
                       <Paperclip className="size-3" /> {a.nome}
                     </a>
                   ))}
                 </div>
               )}
-              <p className="mt-2 text-xs text-muted-foreground/70">
-                Criado por <span className="font-semibold">{s.criadoPor}</span> ·{" "}
+              <p className="mt-2.5 text-xs text-ink-3">
+                Criado por <span className="font-medium text-muted-foreground">{s.criadoPor}</span> ·{" "}
                 {new Date(s.createdAt).toLocaleString("pt-BR")}
               </p>
             </article>

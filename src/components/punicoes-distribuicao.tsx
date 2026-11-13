@@ -35,15 +35,15 @@ function Donut({
   const total = dados.reduce((acc, d) => acc + d.total, 0);
 
   return (
-    <div className="flex flex-col rounded-2xl glass p-5 transition-colors hover:border-primary/30">
+    <div className="glass hc flex flex-col p-5">
       <div className="flex items-baseline justify-between gap-2">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="hc-sobre">
             Distribuição
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground font-display">{titulo}</h2>
+          <h2 className="hc-titulo mt-1.5">{titulo}</h2>
         </div>
-        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-foreground">
+        <span className="hc-selo tabular-nums !text-foreground">
           {total}
         </span>
       </div>
@@ -91,8 +91,10 @@ function Donut({
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-semibold leading-none text-foreground font-display">{total}</span>
-              <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="font-display text-[30px] font-medium leading-none tracking-[-0.04em] tabular-nums text-foreground">
+                {total}
+              </span>
+              <span className="hc-sobre mt-1">
                 total
               </span>
             </div>
@@ -139,7 +141,7 @@ export function PunicoesDistribuicao({ rows }: PunicoesDistribuicaoProps) {
   const usersets = useMemo(() => contagemPor(rows, "userset"), [rows]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-3.5 lg:grid-cols-2">
       <Donut titulo="Motivos" dados={motivos} />
       <Donut titulo="Userset" dados={usersets} />
     </div>

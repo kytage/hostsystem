@@ -13,26 +13,19 @@ interface ModalBaseProps {
 export function ModalBase({ title, subtitle, onClose, children, footer }: ModalBaseProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
-      <div className="mt-8 w-full max-w-2xl rounded-2xl glass-modal">
-        <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+      <div className="mt-8 w-full max-w-2xl rounded-[22px] glass-modal">
+        <header className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-6 py-4">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-foreground font-display">{title}</h2>
-            {subtitle ? (
-              <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
-            ) : null}
+            <h2 className="hc-titulo">{title}</h2>
+            {subtitle ? <p className="hc-nota mt-1">{subtitle}</p> : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-          >
-            <X className="size-4" />
+          <button type="button" onClick={onClose} aria-label="Fechar" className="hc-seta">
+            <X className="size-3.5" />
           </button>
         </header>
         <div className="px-6 py-5">{children}</div>
         {footer ? (
-          <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-6 py-4">
+          <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-white/[0.06] px-6 py-4">
             {footer}
           </footer>
         ) : null}
@@ -42,10 +35,9 @@ export function ModalBase({ title, subtitle, onClose, children, footer }: ModalB
 }
 
 export const inputClasses =
-  "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary/60";
+  "w-full rounded-xl border border-input bg-white/[0.03] px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground/30";
 
-export const labelClasses =
-  "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground";
+export const labelClasses = "hc-sobre mb-1.5 block";
 
 export function PrimaryButton({
   children,
@@ -61,7 +53,7 @@ export function PrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+      className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
     >
       {children}
     </button>
@@ -76,11 +68,7 @@ export function GhostButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-    >
+    <button type="button" onClick={onClick} className="pilula rounded-full">
       {children}
     </button>
   );

@@ -446,7 +446,7 @@ export function GuardaRoupa({
                       value={filtro}
                       onChange={(e) => setFiltro(e.target.value as typeof filtro)}
                       aria-label="Filtrar por disponibilidade"
-                      className="ml-auto h-7 rounded-full border border-white/[0.09] bg-black/50 px-2 text-[11.5px] outline-none"
+                      className="ml-auto h-7 rounded-full border border-white/[0.09] bg-black/50 px-2 text-[11.5px] text-white outline-none [color-scheme:dark] [&>option]:bg-[#141416] [&>option]:text-white"
                     >
                       <option value="todos">Todos</option>
                       <option value="tenho">Adquiridos</option>
@@ -720,7 +720,7 @@ export function PainelCoins() {
         value={alvo}
         onChange={(e) => setAlvo(e.target.value)}
         aria-label="Staff que vai receber"
-        className="mt-1.5 h-8 w-full rounded-lg border border-white/[0.1] bg-black/50 px-2 text-[12px] outline-none focus:border-white/30"
+        className="mt-1.5 h-8 w-full rounded-lg border border-white/[0.1] bg-black/50 px-2 text-[12px] text-white outline-none [color-scheme:dark] focus:border-white/30 [&>option]:bg-[#141416] [&>option]:text-white"
       >
         <option value="">Escolha o staff…</option>
         {pets.map((p) => (

@@ -25,6 +25,7 @@ import {
   CENTRO_DO_COMERCIO,
   CHUVEIRO,
   COMERCIO,
+  COMERCIO_NA_PRACA,
   CORETO,
   CORREIO,
   DADOS_DO_MAGNATA,
@@ -81,17 +82,8 @@ import {
   type Escadaria,
   type Ponto,
 } from "./mundo-mapa";
-import {
-  arbusto,
-  arvore,
-  Blocos,
-  criarNuvens,
-  letrasDePedra,
-  pedregulho,
-  sorteador,
-  texturaAgua,
-  texturaQueda,
-} from "./voxel";
+import { Natureza } from "./natureza";
+import { Blocos, criarNuvens, letrasDePedra, sorteador, texturaAgua, texturaQueda } from "./voxel";
 
 /** Altura do assento dos bancos (onde o HOKI fica quando senta). */
 export const ASSENTO = 0.47;
@@ -204,7 +196,8 @@ export function criarMundo(THREE: typeof TH) {
   const encosta = new Blocos(r); // lateral das ilhas: terra e rocha
   const pedra = new Blocos(r); // fonte, coreto, pontes, muretas, prédios
   const madeira = new Blocos(r); // bancos, cercas, telhados, ferro dos postes
-  const folhas = new Blocos(r); // copas, arbustos, flores e trigo
+  const folhas = new Blocos(r); // cercas-vivas, canteiros e trigo (blocos)
+  const mato = new Natureza(); // árvores, arbustos, flores, capim e pedras (modelos 3D)
   const aceso = new Blocos(r); // lâmpadas e luzes (sem sombra, sempre acesas)
   const nuvem = new Blocos(r); // a nuvem do berço
   const sombras: Mancha[] = [];
@@ -305,8 +298,8 @@ export function criarMundo(THREE: typeof TH) {
         if (tipo === "grama" && !agua && r() < 0.16) {
           const fx = x + (r() - 0.5) * 0.7;
           const fz = z + (r() - 0.5) * 0.7;
-          if (r() < 0.55) folhas.base(fx, 0, fz, 0.13, 0.16, 0.13, escolhe(FLORES), 0.02);
-          else folhas.base(fx, 0, fz, 0.22, 0.18, 0.22, escolhe(GRAMA_ESCURA), 0.06);
+          if (r() < 0.55) mato.flor(fx, 0, fz);
+          else mato.capim(fx, 0, fz);
         }
       }
     // calçamento dos caminhos: pedrinhas de meio bloco
@@ -529,7 +522,7 @@ export function criarMundo(THREE: typeof TH) {
 
   // ---------------- árvores, arbustos e pedras ----------------
   for (const a of ARVORES) {
-    arvore(folhas, a.x, a.z, { tipo: a.tipo, ...(a.cor ? { cor: a.cor } : {}) }, madeira);
+    mato.arvore(a.x, a.z, { tipo: a.tipo, ...(a.cor ? { cor: a.cor } : {}) });
     const raio = a.tipo === "copinha" ? 1.0 : 1.35;
     sombras.push({ x: a.x, z: a.z, rx: raio, rz: raio });
   }
@@ -552,8 +545,8 @@ export function criarMundo(THREE: typeof TH) {
       for (const l of [-1, 1]) {
         const px = x * l;
         if (naAgua(px, z, 0.8) || piso(px, z) !== "grama") continue;
-        arbusto(folhas, px, z, 1, { flor });
-        arbusto(folhas, px + 0.7, z + 0.4, 0.75, { flor });
+        mato.arbusto(px, z, 1, { flor });
+        mato.arbusto(px + 0.7, z + 0.4, 0.75, { flor });
       }
     for (const [x, z] of [
       [-28.2, 1.2],
@@ -561,7 +554,7 @@ export function criarMundo(THREE: typeof TH) {
       [-25.6, 14.6],
       [-3.8, 21.2],
     ] as const)
-      for (const l of [-1, 1]) if (!naAgua(x * l, z, 1)) pedregulho(pedra, x * l, z, 0.9);
+      for (const l of [-1, 1]) if (!naAgua(x * l, z, 1)) mato.pedra(x * l, z, 0.9);
   }
 
   // =====================================================================
@@ -828,7 +821,7 @@ export function criarMundo(THREE: typeof TH) {
   }
   // Comércio HOST: barraca de feira com toldo listrado, balcão e caixotes de frutas e verduras.
   // Cores fixas e sem variação de tom (variar = 0): não mexe nos sorteios do resto do cenário.
-  {
+  if (COMERCIO_NA_PRACA) {
     const { x0, x1, z0, z1 } = COMERCIO;
     const cx = CENTRO_DO_COMERCIO.x;
     const larg = x1 - x0;
@@ -1055,15 +1048,13 @@ export function criarMundo(THREE: typeof TH) {
         chao.base(px, 0, zz, 1, 0.6 + k * 0.55, 1.4, escolhe(GRAMA), 0.05);
     }
     for (const l of [-1, 1]) {
-      arbusto(folhas, l * 4.6, T.z0 - 0.6, 1.2, { flor: 0xffd84a });
-      arbusto(folhas, l * 2.6, T.z0 - 1.4, 1.1, { flor: 0xffffff, y: 1.0 });
-      arvore(
-        folhas,
-        l * 6.8,
-        T.z0 - 1.2,
-        { tipo: "copinha", cor: l < 0 ? "amarelo" : "verde", y: 0.6 },
-        madeira,
-      );
+      mato.arbusto(l * 4.6, T.z0 - 0.6, 1.2, { flor: 0xffd84a });
+      mato.arbusto(l * 2.6, T.z0 - 1.4, 1.1, { flor: 0xffffff, y: 1.0 });
+      mato.arvore(l * 6.8, T.z0 - 1.2, {
+        tipo: "copinha",
+        cor: l < 0 ? "amarelo" : "verde",
+        y: 0.6,
+      });
     }
     // o arco do RANKING (modelo 3D) com os textos flutuando no vão; as colunas fazem sombra
     for (const l of [-1, 1]) sombras.push({ x: x + l * COLUNAS_ARCO.x, z, rx: 0.9, rz: 0.55 });
@@ -1207,7 +1198,7 @@ export function criarMundo(THREE: typeof TH) {
       [-53.0, 7.0, "copa"],
       [-41.6, -7.4, "copinha"],
     ] as const) {
-      arvore(folhas, x, z, { tipo }, madeira);
+      mato.arvore(x, z, { tipo });
       sombras.push({ x, z, rx: 1.2, rz: 1.2 });
     }
   }
@@ -1311,13 +1302,7 @@ export function criarMundo(THREE: typeof TH) {
       [41.4, 7.0, "copa"],
       [41.6, -7.4, "copinha"],
     ] as const) {
-      arvore(
-        folhas,
-        x,
-        z,
-        { tipo, ...(tipo === "copa" ? { cor: "amarelo" as const } : {}) },
-        madeira,
-      );
+      mato.arvore(x, z, { tipo, ...(tipo === "copa" ? { cor: "amarelo" as const } : {}) });
       sombras.push({ x, z, rx: 1.2, rz: 1.2 });
     }
   }
@@ -1449,11 +1434,11 @@ export function criarMundo(THREE: typeof TH) {
           pedra.base(x, H, zz, 1, 0.45, 0.4, escolhe(PEDRA), 0.04);
       for (let x = C.x0 + 0.7; x < C.x1 - 0.4; x += 1.4)
         for (let z = C.z0 + 1.0; z < C.z1 - 0.6; z += 1.4)
-          arbusto(folhas, x, z, 0.8, { y: H, flor: escolhe(FLORES) });
+          mato.arbusto(x, z, 0.8, { y: H, flor: escolhe(FLORES) });
     }
     for (const p of POSTES_EM_BREVE) poste(p.x, p.z, H, 2.3);
     for (const a of ARVORES_EM_BREVE) {
-      arvore(folhas, a.x, a.z, { tipo: a.tipo, y: H }, madeira);
+      mato.arvore(a.x, a.z, { tipo: a.tipo, y: H });
       sombras.push({ x: a.x, z: a.z, y: H + 0.03, rx: 1.15, rz: 1.15 });
     }
     sombras.push({ x: gx, z: gz, y: H + 0.03, rx: 6, rz: 3 });
@@ -1802,13 +1787,11 @@ export function criarMundo(THREE: typeof TH) {
       clarao.push({ x: p.x, z: p.z, y: H + 0.03, rx: 2.6, rz: 2.6 });
     }
     for (const a of ARVORES_FAZENDAS) {
-      arvore(
-        folhas,
-        a.x,
-        a.z,
-        { tipo: a.tipo, y: H, ...(a.tipo === "copinha" ? { cor: "amarelo" as const } : {}) },
-        madeira,
-      );
+      mato.arvore(a.x, a.z, {
+        tipo: a.tipo,
+        y: H,
+        ...(a.tipo === "copinha" ? { cor: "amarelo" as const } : {}),
+      });
       sombras.push({ x: a.x, z: a.z, y: H + 0.03, rx: 1.15, rz: 1.15 });
     }
   }
@@ -2020,6 +2003,8 @@ export function criarMundo(THREE: typeof TH) {
     grupo.add(c.malha);
     lixo.push({ dispose: c.descartar });
   }
+  // a natureza entra depois de tudo anotado (as ilhotas ao longe também põem árvores)
+  let natureza: ReturnType<Natureza["construir"]> | null = null;
   for (const p of placas) {
     const g = new THREE.PlaneGeometry(p.w, p.h);
     const m = new THREE.MeshBasicMaterial({
@@ -2388,13 +2373,13 @@ export function criarMundo(THREE: typeof TH) {
           );
         }
     }
-    arvore(longe, cx - 1, cz, {
+    mato.arvore(cx - 1, cz, {
       tipo: "copinha",
       u: 0.68,
       y: cy,
       cor: r() < 0.5 ? "verde" : "amarelo",
     });
-    arvore(longe, cx + 1.7, cz - 1, { tipo: "pinheiro", u: 0.62, y: cy });
+    mato.arvore(cx + 1.7, cz - 1, { tipo: "pinheiro", u: 0.62, y: cy });
   };
   ilhota(-46, 8, -28, 3.4);
   ilhota(46, 8, -28, 3.4);
@@ -2410,6 +2395,9 @@ export function criarMundo(THREE: typeof TH) {
   });
   grupo.add(mLonge.malha);
   lixo.push({ dispose: mLonge.descartar });
+  natureza = mato.construir(THREE);
+  grupo.add(natureza.grupo);
+  lixo.push({ dispose: natureza.descartar });
   const ceu = criarNuvens(
     THREE,
     [
@@ -2460,6 +2448,7 @@ export function criarMundo(THREE: typeof TH) {
     ranking: arcoDoRanking,
     atualizar(t: number) {
       arcoDoRanking.atualizar(t);
+      natureza?.atualizar(t);
       tAgua.offset.y = -t * 0.42;
       tQueda.offset.y = t * 0.9;
       tAguaCalha.offset.y = -t * 1.6;

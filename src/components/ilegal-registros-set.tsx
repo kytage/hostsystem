@@ -52,25 +52,27 @@ export function IlegalRegistrosSet({ setagem, tipo, desde }: IlegalRegistrosSetP
 
   return (
     <div className="mt-5 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
-          <Icon className="size-3.5" />
+      <div className="flex items-center gap-3">
+        <span className="hc-icone">
+          <Icon className="size-4" strokeWidth={1.75} />
+        </span>
+        <p className="hc-titulo min-w-0 flex-1">
           {tipo === "denuncia" ? "Denúncias" : "Punições · Júri"}
         </p>
-        <span className="text-[11px] font-semibold text-muted-foreground">
+        <span className="hc-selo tabular-nums">
           {filtrados.length} registro{filtrados.length === 1 ? "" : "s"}
         </span>
       </div>
 
       {filtrados.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-[14px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           {vazio}
         </div>
       ) : (
         filtrados.map((row) => {
           const banido = /ban/i.test(row.punicao ?? "");
           return (
-            <div key={row.id} className="rounded-xl border border-border bg-black/25 p-4">
+            <div key={row.id} className="hc-dentro p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-mono text-xs font-semibold text-foreground">
                   {row.ticket_id || "—"}
@@ -82,17 +84,15 @@ export function IlegalRegistrosSet({ setagem, tipo, desde }: IlegalRegistrosSetP
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {row.resultado ? (
-                  <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-foreground">
+                  <span className="hc-selo !text-foreground">
                     {row.resultado}
                   </span>
                 ) : null}
                 {row.punicao ? (
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                      banido
-                        ? "bg-primary/15 text-primary"
-                        : "bg-white/[0.05] text-muted-foreground"
+                      "hc-selo",
+                      banido && "!border-primary/30 !bg-primary/15 !text-primary"
                     )}
                   >
                     {row.punicao}

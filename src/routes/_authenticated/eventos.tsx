@@ -7,18 +7,24 @@ import {
   CalendarPlus,
   ChevronDown,
   Clock,
+  Flame,
   History,
   ImageOff,
   ImagePlus,
   Loader2,
   PartyPopper,
   Pencil,
+  Repeat,
   Search,
   Send,
   Trash2,
   Trophy,
   Users,
+  Activity,
+  CheckCheck,
+  Lightbulb,
 } from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
@@ -304,12 +310,7 @@ function EventosPage() {
     return (
       <article
         key={ev.id}
-        className={cn(
-          "overflow-hidden rounded-2xl glass transition-colors",
-          ehHoje
-            ? "border-primary/60 shadow-[0_0_24px_-6px] shadow-primary/40"
-            : "border-border hover:border-primary/40"
-        )}
+        className={cn("glass hc transition-colors", ehHoje && "!border-primary/60")}
       >
         <div className="p-4">
           <div className="flex items-start gap-3">
@@ -325,22 +326,22 @@ function EventosPage() {
                   alternarCard(ev.id, !aberto);
                 }
               }}
-              className="flex min-w-0 flex-1 cursor-pointer select-none items-start gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="flex min-w-0 flex-1 cursor-pointer select-none items-start gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
             >
               {ev.bannerUrl && (
                 <img
                   src={ev.bannerUrl}
                   alt={`Banner do evento ${ev.nome}`}
-                  className="aspect-[2190/1080] w-20 shrink-0 self-start rounded-lg border border-border object-cover sm:w-28"
+                  className="aspect-[2190/1080] w-20 shrink-0 self-start rounded-xl border border-white/[0.08] object-cover sm:w-28"
                   loading="lazy"
                 />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base font-semibold text-foreground">{ev.nome}</h2>
+                  <h2 className="hc-titulo">{ev.nome}</h2>
                   {ehHoje && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
-                      🔥 HOJE
+                    <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                      <Flame className="size-3" /> HOJE
                     </span>
                   )}
                   <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", eq.style)}>
@@ -365,8 +366,8 @@ function EventosPage() {
                     </span>
                   )}
                   {ev.frequencia === "semanal" && (
-                    <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                      🔁 Semanal
+                    <span className="hc-selo">
+                      <Repeat className="size-3" /> Semanal
                     </span>
                   )}
                 </div>
@@ -396,7 +397,7 @@ function EventosPage() {
                     {ev.adicoes.map((a) => (
                       <span
                         key={a}
-                        className="rounded-full glass-inset px-2 py-0.5 text-[11px] font-semibold text-foreground"
+                        className="hc-selo !text-foreground"
                       >
                         {ADICAO_MAP[a]?.emoji} {ADICAO_MAP[a]?.label ?? a}
                       </span>
@@ -416,10 +417,10 @@ function EventosPage() {
                   disabled={!editavel || publicar.isPending || despublicar.isPending}
                   title="Publicar no Cronograma do site"
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
+                    "hc-pilula disabled:opacity-40",
                     ev.publicadoCronograma
-                      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
-                      : "glass text-foreground hover:bg-white/[0.08]"
+                      ? "!border-emerald-500/30 !bg-emerald-500/15 !text-emerald-400"
+                      : "disabled:hover:!border-[color:var(--gf-linha)] disabled:hover:!bg-[var(--gf-2)] disabled:hover:!text-[var(--gf-tx-1)]"
                   )}
                 >
                   <CalendarCheck2 className="size-3.5" />
@@ -434,10 +435,10 @@ function EventosPage() {
                       : "Publicar no Discord"
                   }
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40",
+                    "hc-pilula disabled:opacity-40",
                     ev.publicadoDiscord
-                      ? "border-indigo-500/30 bg-indigo-500/15 text-indigo-400"
-                      : "glass text-foreground hover:bg-white/[0.08]"
+                      ? "!border-indigo-500/30 !bg-indigo-500/15 !text-indigo-400"
+                      : "disabled:hover:!border-[color:var(--gf-linha)] disabled:hover:!bg-[var(--gf-2)] disabled:hover:!text-[var(--gf-tx-1)]"
                   )}
                 >
                   {discord.isPending ? (
@@ -450,7 +451,7 @@ function EventosPage() {
                 <button
                   onClick={() => setModal({ evento: ev })}
                   disabled={!editavel}
-                  className="rounded-full glass p-2 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                  className="hc-seta disabled:pointer-events-none disabled:opacity-40"
                   aria-label="Editar evento"
                 >
                   <Pencil className="size-3.5" />
@@ -460,7 +461,7 @@ function EventosPage() {
                     if (window.confirm(`Excluir o evento "${ev.nome}"?`)) excluir.mutate(ev.id);
                   }}
                   disabled={!editavel}
-                  className="rounded-full glass p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                  className="hc-seta hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive disabled:pointer-events-none disabled:opacity-40"
                   aria-label="Excluir evento"
                 >
                   <Trash2 className="size-3.5" />
@@ -479,7 +480,7 @@ function EventosPage() {
 
           {/* Conteúdo expandido: texto completo, anexos e autoria */}
           {aberto && (
-            <div className="mt-4 space-y-3 border-t border-border pt-3">
+            <div className="mt-4 space-y-3 border-t border-white/[0.06] pt-3">
               {ev.informacoes && <RichText value={ev.informacoes} />}
 
               {ev.anexos.length > 0 && (
@@ -489,7 +490,7 @@ function EventosPage() {
                       <img
                         src={src}
                         alt={`Anexo ${i + 1} do evento ${ev.nome}`}
-                        className="size-20 rounded-lg border border-border object-cover"
+                        className="size-20 rounded-xl border border-white/[0.08] object-cover"
                         loading="lazy"
                       />
                     </a>
@@ -514,15 +515,15 @@ function EventosPage() {
         subtitle="Criação, organização e publicação dos eventos do servidor"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full glass px-3 py-2">
-              <Search className="size-3.5 text-muted-foreground" />
+            <label className="campo-busca w-56">
+              <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar evento..."
-                className="w-40 bg-transparent text-xs text-foreground outline-none"
+                aria-label="Buscar evento"
               />
-            </div>
+            </label>
             <div className="w-44">
               <MinimalSelect
                 value={fEquipe}
@@ -556,7 +557,7 @@ function EventosPage() {
             </div>
             <button
               onClick={() => setModal({ evento: null })}
-              className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
             >
               <CalendarPlus className="size-4" /> Novo evento
             </button>
@@ -564,29 +565,20 @@ function EventosPage() {
         }
       />
 
-      {/* KPIs */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total", valor: contagem.total, emoji: "🎯" },
-          { label: "Organizando", valor: contagem.organizando, emoji: "💡" },
-          { label: "Em andamento", valor: contagem.andamento, emoji: "⚙️" },
-          { label: "Concluídos", valor: contagem.concluido, emoji: "✅" },
-        ].map((k) => (
-          <div key={k.label} className="rounded-2xl glass p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {k.emoji} {k.label}
-            </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground font-display">{k.valor}</p>
-          </div>
-        ))}
-      </div>
+      {/* números do cronograma, no padrão da tela inicial */}
+      <Indices className="mt-5">
+        <Indice valor={contagem.total} titulo="Total" icone={CalendarDays} />
+        <Indice valor={contagem.organizando} titulo="Organizando" icone={Lightbulb} />
+        <Indice valor={contagem.andamento} titulo="Em andamento" icone={Activity} />
+        <Indice valor={contagem.concluido} titulo="Concluídos" icone={CheckCheck} />
+      </Indices>
 
       {/* Histórico de eventos passados (topo) */}
       {passados.length > 0 && (
         <div className="mt-6">
           <button
             onClick={() => setMostrarHistorico((v) => !v)}
-            className="flex items-center gap-2 rounded-full glass px-4 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            className="pilula rounded-full"
           >
             <History className="size-3.5" />
             Histórico ({passados.length} {passados.length === 1 ? "evento passado" : "eventos passados"})
@@ -595,32 +587,42 @@ function EventosPage() {
             />
           </button>
           {mostrarHistorico && (
-            <div className="mt-4 space-y-4 opacity-80">{passados.map(renderCard)}</div>
+            <div className="mt-3.5 space-y-3.5 opacity-80">{passados.map(renderCard)}</div>
           )}
         </div>
       )}
 
       {/* Fila de banners solicitados */}
       {aguardandoBanner.length > 0 && (
-        <section className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-amber-400">
-            <ImageOff className="size-4" /> AGUARDANDO BANNER ({aguardandoBanner.length})
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Clique em um evento para enviar o banner — ele passa para “Banner OK”.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <section className="glass hc mt-3.5 p-5">
+          <div className="flex items-center gap-3">
+            <span className="hc-icone">
+              <ImageOff className="size-4" strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="hc-titulo">AGUARDANDO BANNER</h2>
+              <p className="hc-nota mt-0.5">
+                Clique em um evento para enviar o banner — ele passa para “Banner OK”.
+              </p>
+            </div>
+            {/* pede ação: o ponto vermelho, como na tela inicial */}
+            <span className="hc-estado tabular-nums">
+              <i aria-hidden />
+              {aguardandoBanner.length}
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
             {aguardandoBanner.map((ev) => (
               <button
                 key={ev.id}
                 onClick={() => pedirBanner(ev.id)}
                 disabled={banner.isPending}
-                className="flex items-center gap-2 rounded-xl border border-amber-500/30 glass px-3 py-2 text-left text-xs font-semibold text-foreground transition-colors hover:border-amber-500/60 disabled:opacity-40"
+                className="hc-dentro flex items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-foreground disabled:opacity-40"
               >
                 {banner.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin text-amber-400" />
+                  <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
                 ) : (
-                  <ImagePlus className="size-3.5 text-amber-400" />
+                  <ImagePlus className="size-3.5 text-muted-foreground" />
                 )}
                 <span className="max-w-52 truncate">{ev.nome}</span>
                 <span className="text-[11px] font-medium text-muted-foreground">
@@ -641,35 +643,32 @@ function EventosPage() {
       />
 
       {/* Calendário + Próximos eventos */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-[auto_1fr]">
-        <div className="rounded-2xl glass p-3">
+      <div className="mt-3.5 grid gap-3.5 lg:grid-cols-[auto_1fr]">
+        <div className="glass hc calendario-hc p-3">
           <Calendar
             mode="single"
             selected={diaSel}
             onSelect={setDiaSel}
             locale={ptBR}
             modifiers={{ evento: diasComEvento }}
-            modifiersClassNames={{
-              evento: "font-semibold text-primary underline decoration-primary/60 underline-offset-4",
-            }}
+            modifiersClassNames={{ evento: "dia-com-evento" }}
           />
         </div>
-        <div className="rounded-2xl glass p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <CalendarDays className="size-4 text-primary" />
+        <div className="glass hc p-5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="hc-icone">
+              <CalendarDays className="size-4" strokeWidth={1.75} />
+            </span>
+            <p className="hc-titulo min-w-0 flex-1 truncate">
               {diaSelISO ? `Eventos de ${formatarData(diaSelISO)}` : "Próximos eventos"}
             </p>
             {diaSel && (
-              <button
-                onClick={() => setDiaSel(undefined)}
-                className="rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
+              <button type="button" onClick={() => setDiaSel(undefined)} className="hc-pilula">
                 Ver próximos
               </button>
             )}
           </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             {eventosPainel.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">
                 Nenhum evento {diaSelISO ? "neste dia" : "programado"}.
@@ -683,13 +682,11 @@ function EventosPage() {
                     key={ev.id}
                     onClick={() => setModal({ evento: ev })}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
-                      ehHoje
-                        ? "border-primary/60 bg-primary/10"
-                        : "border-border bg-white/[0.035] hover:bg-secondary/40"
+                      "hc-dentro flex w-full items-center gap-3 px-3 py-2.5 text-left",
+                      ehHoje && "!border-primary/60 !bg-primary/10",
                     )}
                   >
-                    <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-lg glass">
+                    <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-[11px] border border-white/[0.08] bg-white/[0.05]">
                       <span className="text-sm font-semibold leading-none text-foreground">
                         {parseISODate(ev.data).getDate()}
                       </span>
@@ -719,7 +716,7 @@ function EventosPage() {
           <Loader2 className="size-4 animate-spin" /> Carregando eventos...
         </div>
       ) : proximos.length === 0 && passados.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-border p-12 text-center">
+        <div className="mt-3.5 rounded-[22px] border border-dashed border-white/[0.1] p-12 text-center">
           <PartyPopper className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">
             Nenhum evento por aqui. Crie o primeiro em “Novo evento”.
@@ -727,7 +724,7 @@ function EventosPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 space-y-4">{proximos.map(renderCard)}</div>
+          <div className="mt-6 space-y-3.5">{proximos.map(renderCard)}</div>
         </>
       )}
 

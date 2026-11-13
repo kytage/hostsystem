@@ -3,12 +3,12 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gavel, Plus, Loader2, Search, Gauge, ShieldAlert, Siren, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { useRealtimeTable } from "@/lib/realtime";
 import { useMyRole, useMyAreas, isCoordinatorPlus } from "@/lib/permissions";
 import { PageHeader } from "@/components/page-header";
+import { Indice, Indices } from "@/components/indice";
 import { PunicoesGrafico } from "@/components/punicoes-grafico";
 import { PunicoesDistribuicao } from "@/components/punicoes-distribuicao";
 import { PunicoesLista } from "@/components/punicoes-lista";
@@ -75,11 +75,9 @@ function RankingStaffCard({
   itens: { staff: string; total: number }[];
 }) {
   return (
-    <div className="rounded-2xl glass p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-        {titulo}
-      </p>
-      <div className="mt-5 space-y-4">
+    <div className="glass hc p-5">
+      <p className="hc-sobre">{titulo}</p>
+      <div className="mt-4 space-y-3">
         {itens.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sem registros ainda.</p>
         ) : (
@@ -89,7 +87,7 @@ function RankingStaffCard({
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 {r.staff}
               </span>
-              <span className="text-sm font-semibold text-primary">{r.total}</span>
+              <span className="text-sm font-semibold tabular-nums text-foreground">{r.total}</span>
             </div>
           ))
         )}
@@ -98,38 +96,6 @@ function RankingStaffCard({
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: typeof Gauge;
-  label: string;
-  value: number;
-  accent: string;
-}) {
-  return (
-    <div className="group relative overflow-hidden rounded-2xl glass p-5 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </p>
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110",
-            accent
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-      </div>
-      <p className="mt-4 text-4xl font-semibold leading-none tracking-tight text-foreground font-display">
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function PunicoesPage() {
   const queryClient = useQueryClient();
@@ -241,27 +207,27 @@ function PunicoesPage() {
   const podeGerenciar = isCoordinatorPlus(role);
 
   return (
-    <div className="space-y-8">
+    <div className="pagina space-y-4">
       <PageHeader
         kicker="Registros"
         title="Punições"
         subtitle="Denúncias normais e punições de hack (VAR) em um só lugar."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <label className="campo-busca w-72">
+              <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar jogador, motivo, staff..."
-                className="w-72 rounded-xl glass py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition-colors focus:border-primary/60"
+                aria-label="Buscar punição"
               />
-            </div>
+            </label>
             {podeGerenciar ? (
             <button
               type="button"
               onClick={() => setRelatorioAberto(true)}
-              className="flex items-center gap-2 rounded-xl glass px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+              className="pilula rounded-full"
             >
               <FileText className="size-4" /> Gerar relatório
             </button>
@@ -270,7 +236,7 @@ function PunicoesPage() {
               <button
                 type="button"
                 onClick={() => setDialogAberto(true)}
-                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
               >
                 <Plus className="size-4" /> Nova punição
               </button>
@@ -279,39 +245,34 @@ function PunicoesPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card/50 p-2">
-        <div className="flex items-center gap-1 rounded-xl glass-modal p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div className="segmentos" role="group" aria-label="Período">
           {PERIODOS.map((p) => (
             <button
               key={p.key}
               type="button"
+              aria-pressed={periodo === p.key}
               onClick={() => setPeriodo(p.key)}
-              className={cn(
-                "rounded-lg px-4 py-2 text-xs font-semibold transition-all",
-                periodo === p.key
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
             >
               {p.label}
             </button>
           ))}
         </div>
-        <p className="px-3 text-xs font-medium text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           {totais.total} {totais.total === 1 ? "registro" : "registros"} no período
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Gavel} label="Total" value={totais.total} accent="bg-muted text-foreground" />
-        <StatCard icon={Siren} label="Denúncias" value={totais.denuncia} accent="bg-primary/10 text-primary" />
-        <StatCard icon={ShieldAlert} label="VAR (hack)" value={totais.var} accent="bg-blue-500/10 text-blue-500" />
-        <StatCard icon={Gauge} label="Hoje" value={totais.hoje} accent="bg-emerald-500/10 text-emerald-500" />
-      </div>
+      <Indices>
+        <Indice valor={totais.total} titulo="Total" nota="registros no período" icone={Gavel} />
+        <Indice valor={totais.denuncia} titulo="Denúncias" nota="punições normais" icone={Siren} />
+        <Indice valor={totais.var} titulo="VAR (hack)" nota="punições de hack" icone={ShieldAlert} />
+        <Indice valor={totais.hoje} titulo="Hoje" nota="registrados hoje" icone={Gauge} />
+      </Indices>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid gap-3.5 lg:grid-cols-[1fr_300px]">
         <PunicoesGrafico rows={dashboardRows} dias={periodo > 0 ? periodo : 30} />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-1">
           <RankingStaffCard titulo="Ranking staff VAR" itens={rankingVar} />
           <RankingStaffCard titulo="Ranking staff denúncias" itens={rankingDenuncias} />
         </div>
@@ -320,22 +281,18 @@ function PunicoesPage() {
       <PunicoesDistribuicao rows={dashboardRows} />
 
       <div className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-          <div className="flex items-center gap-1 rounded-xl border border-border p-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-2">
+          <div className="segmentos" role="tablist" aria-label="Tipo de registro">
             {abasDisponiveis.map((t) => (
               <button
                 key={t.key}
                 type="button"
+                role="tab"
+                aria-selected={aba === t.key}
                 onClick={() => setAba(t.key)}
-                className={cn(
-                  "rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
-                  aba === t.key
-                    ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
               >
                 {t.label}
-                <span className="ml-2 text-xs opacity-70">
+                <span className="text-xs tabular-nums opacity-60">
                   {t.key === "var" ? totais.var : totais.denuncia}
                 </span>
               </button>

@@ -21,7 +21,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
-import { InventarioFundo } from "@/components/players/inventario-fundo";
 import { useCan, useMyRole } from "@/lib/permissions";
 import {
   adminPodeUsar,
@@ -102,12 +101,13 @@ function Quem({ q }: { q: string }) {
       className={cn(
         "rounded-md px-1.5 py-px text-[10px] font-medium leading-4",
         admin
-          ? "bg-white/[0.06] text-white/70"
+          ? "bg-foreground/[0.06] text-foreground/70"
           : q === "Console / RCON"
-            ? "bg-amber-400/10 text-amber-200/90"
+            ? "bg-amber-400/10 text-amber-700 dark:text-amber-200/90"
             : q === "Conferir"
-              ? "border border-dashed border-white/15 text-ink-3"
-              : "bg-primary/[0.12] text-red-200/90",
+              ? "border border-dashed border-foreground/15 text-ink-3"
+              : // outros grupos (Var, Eventos, Imperio...): violeta; o vermelho fica só para alertas
+                "bg-violet-400/10 text-violet-700 dark:text-violet-200/90",
       )}
     >
       {rotulo}
@@ -130,22 +130,20 @@ function ComandoTile({
       onClick={() => onCopiar(c)}
       title={`Copiar “${textoParaCopiar(c)}”`}
       className={cn(
-        "cmd-tile group relative flex min-w-0 flex-col rounded-xl border px-3.5 py-3 text-left backdrop-blur-md transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px",
-        copiado
-          ? "border-emerald-400/50 bg-emerald-400/[0.06]"
-          : "border-white/[0.07] bg-black/40 hover:border-primary/40 hover:bg-white/[0.035]",
+        "cmd-tile hc-dentro group relative flex min-w-0 flex-col px-4 py-3.5 text-left",
+        copiado && "!border-emerald-400/50 !bg-emerald-400/[0.06]",
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
         <code className="min-w-0 truncate font-mono text-[13.5px] font-semibold tracking-tight text-foreground">
-          {!c.console && <span className="text-white/25">/</span>}
+          {!c.console && <span className="text-foreground/25">/</span>}
           {c.nome}
         </code>
         <span
           className={cn(
             "ml-auto flex shrink-0 items-center gap-1 text-[10.5px] transition-opacity",
             copiado
-              ? "text-emerald-300 opacity-100"
+              ? "text-emerald-600 opacity-100 dark:text-emerald-300"
               : "text-ink-3 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
           )}
         >
@@ -159,7 +157,7 @@ function ComandoTile({
         </span>
       )}
       {c.uso && (
-        <span className="mt-2 block truncate rounded-md border border-white/[0.05] bg-black/50 px-2 py-1 font-mono text-[10.5px] text-ink-3">
+        <span className="mt-2 block truncate rounded-lg border border-white/[0.06] bg-black/[0.04] px-2 py-1 font-mono text-[10.5px] text-ink-3 dark:bg-black/40">
           {c.uso}
         </span>
       )}
@@ -259,7 +257,7 @@ function ComandosPage() {
     return (
       <div className="pagina">
         <PageHeader kicker="OPERAÇÃO" title="Comandos Staffs" />
-        <p className="glass-inset mt-6 rounded-2xl px-4 py-14 text-center text-sm text-muted-foreground">
+        <p className="mt-6 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
           Você não tem acesso a esta área. Peça liberação da categoria “Comandos Staffs” a um
           Founder.
         </p>
@@ -267,22 +265,8 @@ function ComandosPage() {
     );
   }
 
-  const chip = (on: boolean) =>
-    cn(
-      "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] transition-colors",
-      on
-        ? "bg-white text-black"
-        : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
-    );
-
   return (
-    <div className="pagina relative isolate">
-      {/* fundo totalmente preto com a malha de holograma que segue o mouse */}
-      <div aria-hidden className="comandos-fundo pointer-events-none absolute inset-0 -z-10">
-        <div className="sticky top-0 h-[100dvh] overflow-hidden">
-          <InventarioFundo />
-        </div>
-      </div>
+    <div className="pagina">
 
       <PageHeader
         kicker="OPERAÇÃO"
@@ -291,9 +275,9 @@ function ComandosPage() {
       />
 
       {/* busca e filtros */}
-      <div className="sticky top-3 z-20 mt-5 rounded-2xl border border-white/[0.08] bg-black/75 p-2 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-        <label className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5">
-          <Search className="size-4 shrink-0 text-ink-3" />
+      <div className="glass sticky top-3 z-20 mt-5 rounded-[22px] p-2.5">
+        <label className="campo-busca w-full">
+          <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
           <input
             ref={buscaRef}
             value={busca}
@@ -304,7 +288,6 @@ function ComandosPage() {
             }}
             placeholder="Buscar comando, uso ou quem pode…  (Enter copia o primeiro)"
             aria-label="Buscar comando"
-            className="h-11 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-3"
           />
           {busca ? (
             <button
@@ -316,56 +299,63 @@ function ComandosPage() {
               <X className="size-4" />
             </button>
           ) : (
-            <kbd className="rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10.5px] text-ink-3">
+            <kbd className="rounded-md border border-foreground/10 px-1.5 py-0.5 font-mono text-[10.5px] text-ink-3">
               /
             </kbd>
           )}
         </label>
 
-        <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-          <button type="button" className={chip(cat === "todas")} onClick={() => setCat("todas")}>
-            Todos{" "}
-            <span className="opacity-60">{[...contagem.values()].reduce((s, n) => s + n, 0)}</span>
-          </button>
-          {CATEGORIAS_COMANDO.map((k) => {
-            const n = contagem.get(k.key) ?? 0;
-            if (n === 0) return null;
-            const Icone = ICONES[k.key];
-            return (
-              <button
-                key={k.key}
-                type="button"
-                className={chip(cat === k.key)}
-                onClick={() => setCat(k.key)}
-              >
-                <Icone className="size-3.5" strokeWidth={1.8} /> {k.label}{" "}
-                <span className="opacity-60">{n}</span>
-              </button>
-            );
-          })}
+        <div className="mt-2 flex">
+          <div className="segmentos" role="group" aria-label="Categoria dos comandos">
+            <button type="button" aria-pressed={cat === "todas"} onClick={() => setCat("todas")}>
+              Todos{" "}
+              <span className="tabular-nums opacity-60">
+                {[...contagem.values()].reduce((s, n) => s + n, 0)}
+              </span>
+            </button>
+            {CATEGORIAS_COMANDO.map((k) => {
+              const n = contagem.get(k.key) ?? 0;
+              if (n === 0) return null;
+              const Icone = ICONES[k.key];
+              return (
+                <button
+                  key={k.key}
+                  type="button"
+                  aria-pressed={cat === k.key}
+                  onClick={() => setCat(k.key)}
+                >
+                  <Icone className="size-3.5" strokeWidth={1.8} /> {k.label}{" "}
+                  <span className="tabular-nums opacity-60">{n}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-1 px-1">
-          <span className="mr-1 text-[11px] text-ink-3">Meu nível de Admin</span>
-          <button type="button" className={chip(nivel === null)} onClick={() => setNivel(null)}>
-            Todos
-          </button>
-          {NIVEIS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className={cn(chip(nivel === n), "w-8 justify-center !px-0")}
-              onClick={() => setNivel(n)}
-            >
-              {n}
+        <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
+          <span className="hc-sobre mr-1">Meu nível de Admin</span>
+          <div className="segmentos" role="group" aria-label="Meu nível de Admin">
+            <button type="button" aria-pressed={nivel === null} onClick={() => setNivel(null)}>
+              Todos
             </button>
-          ))}
+            {NIVEIS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={nivel === n}
+                className="w-8 justify-center !px-0 tabular-nums"
+                onClick={() => setNivel(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {recentes.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 flex items-center gap-1.5 text-[11px] text-ink-3">
+          <span className="hc-sobre mr-1 flex items-center gap-1.5">
             <History className="size-3.5" /> Recentes
           </span>
           {recentes.map((nome) => {
@@ -376,7 +366,7 @@ function ComandosPage() {
                 key={nome}
                 type="button"
                 onClick={() => copiar(c)}
-                className="rounded-full border border-white/[0.08] bg-black/40 px-2.5 py-1 font-mono text-[11.5px] text-muted-foreground backdrop-blur-md transition-colors hover:border-primary/40 hover:text-foreground"
+                className="hc-pilula font-mono"
               >
                 {c.nome}
               </button>
@@ -386,7 +376,7 @@ function ComandosPage() {
       )}
 
       {porCategoria.length === 0 ? (
-        <p className="mt-10 rounded-2xl border border-white/[0.06] bg-black/40 px-4 py-14 text-center text-sm text-muted-foreground backdrop-blur-md">
+        <p className="glass hc mt-8 px-4 py-14 text-center text-sm text-muted-foreground">
           Nenhum comando encontrado.
         </p>
       ) : (
@@ -394,15 +384,13 @@ function ComandosPage() {
           const Icone = ICONES[k.key];
           return (
             <section key={k.key} className="mt-8">
-              <header className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 px-0.5">
-                <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold">
-                  <span className="grid size-7 place-items-center rounded-lg border border-white/10 bg-white/[0.04]">
-                    <Icone className="size-3.5 text-primary" strokeWidth={1.8} />
-                  </span>
-                  {k.label}
-                </h2>
-                <span className="text-[11px] tabular-nums text-ink-3">{k.lista.length}</span>
-                <span className="text-[11.5px] text-muted-foreground">{k.desc}</span>
+              <header className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
+                <span className="hc-icone">
+                  <Icone className="size-4" strokeWidth={1.75} />
+                </span>
+                <h2 className="hc-titulo">{k.label}</h2>
+                <span className="hc-selo tabular-nums">{k.lista.length}</span>
+                <span className="hc-nota">{k.desc}</span>
               </header>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {k.lista.map((c) => (

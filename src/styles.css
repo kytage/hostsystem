@@ -954,14 +954,6 @@ img.foto-metal[src$="curvas.jpg"] { filter: grayscale(1) invert(1) contrast(1.2)
 .brilho::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: radial-gradient(72% 120% at 0% 0%, rgba(226, 32, 22, 0.3), rgba(160, 14, 10, 0.1) 44%, transparent 70%); pointer-events: none; }
 .pontilhado { position: absolute; inset: 0; border-radius: inherit; background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1.4px); background-size: 16px 16px; -webkit-mask-image: linear-gradient(200deg, #000, transparent 62%); mask-image: linear-gradient(200deg, #000, transparent 62%); pointer-events: none; }
 
-/* ---------- menu lateral ---------- */
-.menu-lateral { transition: width 320ms cubic-bezier(0.3, 0.7, 0.2, 1); }
-.menu-lateral .rotulo { transition: opacity 200ms; white-space: nowrap; }
-.menu-lateral[data-fechado="true"] .rotulo { opacity: 0; pointer-events: none; }
-.item-menu { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 9px; border-radius: 10px; border: 1px solid transparent; font-size: 12.5px; font-weight: 500; color: var(--muted-foreground); }
-.item-menu:hover { color: #ffffff; background: rgba(255, 255, 255, 0.05); }
-.item-menu-ativo, .item-menu-ativo:hover { color: #ffffff; background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06)); border-color: rgba(255, 255, 255, 0.1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 22px -14px rgba(0, 0, 0, 0.9); }
-.item-menu-ativo::after { content: ""; position: absolute; left: -9px; top: 9px; bottom: 9px; width: 2.5px; border-radius: 3px; background: #e5231b; box-shadow: 0 0 10px rgba(229, 35, 27, 0.9); }
 
 /* rolagem */
 .dark ::-webkit-scrollbar { width: 9px; height: 9px; }
@@ -1298,41 +1290,8 @@ button.inv-ico-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: 
   .coroa-brilho, .lider-geral::after { animation: none; }
 }
 
-/* Perfil & Agenda no menu: vermelho com brilho e desfoque, sempre em destaque */
-.item-menu-destaque {
-  color: #ffffff;
-  border-color: rgba(229, 35, 27, 0.35);
-  background: linear-gradient(100deg, rgba(229, 35, 27, 0.32), rgba(122, 18, 12, 0.18) 55%, rgba(0, 0, 0, 0.1));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 22px -12px rgba(229, 35, 27, 0.65);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  overflow: hidden;
-}
-.item-menu-destaque::before {
-  content: "";
-  position: absolute;
-  inset: -40% auto -40% -30%;
-  width: 45%;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
-  transform: skewX(-20deg);
-  animation: destaque-brilho 6s ease-in-out infinite;
-}
-.item-menu-destaque:hover { color: #ffffff; background: linear-gradient(100deg, rgba(229, 35, 27, 0.42), rgba(122, 18, 12, 0.24) 55%, rgba(0, 0, 0, 0.12)); }
-.item-menu-destaque.item-menu-ativo, .item-menu-destaque.item-menu-ativo:hover {
-  border-color: rgba(255, 90, 77, 0.55);
-  background: linear-gradient(100deg, rgba(229, 35, 27, 0.5), rgba(122, 18, 12, 0.3) 60%, rgba(0, 0, 0, 0.12));
-}
-@keyframes destaque-brilho {
-  0%, 72% { left: -45%; }
-  100% { left: 120%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .item-menu-destaque::before { animation: none; display: none; }
-}
 
-/* Comandos Staffs: fundo totalmente preto, só a malha de holograma */
-.comandos-fundo .inv-fundo-base { background: #000; }
+/* Comandos Staffs: foco do teclado nos quadros dos comandos */
 .cmd-tile:focus-visible { outline: none; border-color: rgba(229, 35, 27, 0.55); box-shadow: 0 0 0 3px rgba(229, 35, 27, 0.18); }
 
 /* HOST FAZENDAS: alerta de roubo (pisca e balança junto com a sirene de 4 segundos) */
@@ -1343,3 +1302,521 @@ button.inv-ico-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: 
 @media (prefers-reduced-motion: reduce) {
   .alerta-pisca, .alerta-balanca { animation: none !important; }
 }
+
+/* ================================================================== *
+ * GRAFITE (5ª geração, novembro de 2026): reforma da barra lateral e
+ * da HOME. Base em preto e grafite, texto branco e cinza, e o vermelho
+ * da HOST (#ce0e0e) só em pontos de destaque. A barra é um painel de
+ * grafite preso à borda, separado da página por um fio; a HOME é uma
+ * grade de cartões de tamanhos diferentes, com luz localizada nos
+ * cartões principais. As outras páginas seguem no vidro negro acima.
+ * ================================================================== */
+:root {
+  --gf-painel: #fafafa;
+  --gf-2: rgba(0, 0, 0, 0.03);
+  --gf-3: rgba(0, 0, 0, 0.065);
+  --gf-passar: rgba(0, 0, 0, 0.045);
+  --gf-linha: rgba(0, 0, 0, 0.09);
+  --gf-linha-2: rgba(0, 0, 0, 0.17);
+  --gf-tx-1: #111113;
+  --gf-tx-2: #55555c;
+  --gf-tx-3: #85858d;
+  --gf-foco: rgba(0, 0, 0, 0.6);
+}
+.dark {
+  --gf-painel: #0b0b0c;
+  --gf-2: rgba(255, 255, 255, 0.035);
+  --gf-3: rgba(255, 255, 255, 0.08);
+  --gf-passar: rgba(255, 255, 255, 0.05);
+  --gf-linha: rgba(255, 255, 255, 0.07);
+  --gf-linha-2: rgba(255, 255, 255, 0.15);
+  --gf-tx-1: #f4f4f5;
+  --gf-tx-2: #a1a1a7;
+  --gf-tx-3: #7c7c84;
+  --gf-foco: rgba(255, 255, 255, 0.72);
+}
+
+/* ---------- barra lateral: painel de grafite ---------- */
+.menu-lateral {
+  position: relative;
+  isolation: isolate;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100svh;
+  overflow: hidden;
+  color: var(--gf-tx-2);
+  background: var(--gf-painel);
+  border-right: 1px solid var(--gf-linha);
+  transition: width 320ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.dark .menu-lateral { background: linear-gradient(180deg, #111113 0%, #0b0b0c 44%, #09090a 100%); }
+/* reflexo difuso no alto do painel, bem leve */
+.dark .menu-lateral::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 260px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(140% 100% at 0% 0%, rgba(255, 255, 255, 0.065), transparent 66%);
+}
+/* em tela estreita, o menu aberto fica por cima da página (e um véu escurece o resto) */
+.menu-lateral-por-cima { position: fixed; inset: 0 auto 0 0; z-index: 90; box-shadow: 30px 0 80px rgba(0, 0, 0, 0.7); }
+.menu-veu { position: fixed; inset: 0; z-index: 85; border: 0; background: rgba(0, 0, 0, 0.62); cursor: default; }
+/* o foco do teclado aparece por dentro do botão (a barra corta o que passa da borda) */
+.menu-lateral :is(a, button):focus-visible { outline: 2px solid var(--gf-foco); outline-offset: -2px; }
+
+/* marca: o símbolo num selo vermelho, como o ícone de um aplicativo */
+.menu-marca { display: flex; min-width: 0; align-items: center; gap: 10px; border-radius: 10px; color: var(--gf-tx-1); }
+.menu-selo {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  /* selo escuro (grafite) com o H vermelho da marca */
+  background: linear-gradient(180deg, #232327 0%, #141416 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 18px -10px rgba(0, 0, 0, 0.9);
+}
+.menu-selo svg path { fill: #e01818; }
+/* conta: o ícone de configurações no lugar da foto (a foto aparece dentro do menu que ele abre) */
+.menu-config { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--gf-linha); background: var(--gf-2); color: var(--gf-tx-2); transition: color 180ms, background-color 180ms; }
+.menu-conta:hover .menu-config, .menu-conta[data-state="open"] .menu-config { background: var(--gf-3); color: var(--gf-tx-1); }
+
+/* botão só de ícone (abrir e fechar o menu) */
+.menu-botao { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; color: var(--gf-tx-2); }
+.menu-botao:hover { background: var(--gf-passar); color: var(--gf-tx-1); }
+
+/* busca */
+.menu-busca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 36px;
+  padding: 0 9px 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--gf-linha);
+  background: var(--gf-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--gf-tx-3);
+}
+.menu-busca:hover { background: var(--gf-3); border-color: var(--gf-linha-2); color: var(--gf-tx-1); }
+.menu-busca-so-icone { width: 40px; height: 34px; padding: 0; justify-content: center; }
+.menu-tecla { padding: 2px 6px; border-radius: 6px; border: 1px solid var(--gf-linha); background: var(--gf-2); font: 500 9.5px/1.3 var(--font-app); color: var(--gf-tx-2); }
+
+/* grupos e botões das páginas: um padrão só (ícone numa caixa de 20 px, nome em uma linha, 34 px de altura).
+   As medidas foram escolhidas para o menu inteiro caber, sem rolar, numa janela de uns 900 px de altura. */
+.menu-grupo { padding: 0 11px 8px; font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; color: var(--gf-tx-3); }
+.menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--gf-tx-2);
+}
+.menu-item-icone { display: grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; color: var(--gf-tx-3); transition: color 180ms; }
+/* passar o mouse: um véu claro; foco do teclado: o mesmo véu mais o contorno */
+.menu-item:hover, .menu-item:focus-visible { background: var(--gf-passar); color: var(--gf-tx-1); }
+.menu-item:hover .menu-item-icone, .menu-item:focus-visible .menu-item-icone { color: var(--gf-tx-1); }
+/* página ativa: grafite um degrau mais claro e um traço vermelho curto na borda */
+.menu-item[data-ativo], .menu-item[data-ativo]:hover {
+  background: var(--gf-3);
+  border-color: var(--gf-linha);
+  color: var(--gf-tx-1);
+}
+.dark .menu-item[data-ativo], .dark .menu-item[data-ativo]:hover {
+  background: linear-gradient(90deg, rgba(206, 14, 14, 0.1), rgba(206, 14, 14, 0) 48%), #1c1c1f;
+  border-color: rgba(255, 255, 255, 0.085);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 18px -12px rgba(0, 0, 0, 0.9);
+}
+.menu-item[data-ativo] .menu-item-icone { color: var(--gf-tx-1); }
+.menu-item[data-ativo]::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  translate: 0 -50%;
+  border-radius: 0 3px 3px 0;
+  background: #ce0e0e;
+  box-shadow: 0 0 12px rgba(206, 14, 14, 0.65);
+}
+/* menu fechado: o mesmo botão, quadrado, só com o ícone */
+.menu-item-so-icone { width: 40px; padding: 0; justify-content: center; }
+/* item em destaque (Perfil & Agenda): um ponto vermelho, sem sair do padrão */
+.menu-item-ponto { flex-shrink: 0; width: 6px; height: 6px; margin-left: auto; border-radius: 999px; background: #ce0e0e; box-shadow: 0 0 0 3px rgba(206, 14, 14, 0.18); }
+.menu-item-so-icone .menu-item-ponto { position: absolute; top: 7px; right: 7px; margin: 0; }
+
+/* quando o menu não cabe na altura da janela, a lista rola: um esfumado avisa que há mais botões */
+.menu-nav[data-mais-abaixo] { -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 36px), transparent); }
+.menu-nav[data-mais-acima] { -webkit-mask-image: linear-gradient(0deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(0deg, #000 calc(100% - 36px), transparent); }
+.menu-nav[data-mais-acima][data-mais-abaixo] { -webkit-mask-image: linear-gradient(180deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(180deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+
+/* conta, no pé da barra */
+.menu-conta-caixa { display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 14px; border: 1px solid var(--gf-linha); background: var(--gf-2); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03); }
+.menu-conta { display: flex; align-items: center; border-radius: 10px; text-align: left; }
+.menu-conta:hover { background: var(--gf-passar); }
+.menu-conta-nome { color: var(--gf-tx-1); }
+.menu-conta-cargo { color: var(--gf-tx-3); }
+
+/* ---------- luz de fundo de todas as páginas ---------- */
+/* um gradiente discreto atrás dos painéis: uma brasa no alto, à direita, um reflexo claro à esquerda
+   e uma retícula fina (pontos) só onde a luz bate. Fica no topo da área da página e rola com ela. */
+.page-main { position: relative; }
+.pagina-luz { position: absolute; z-index: -1; inset: 0 0 auto 0; height: 640px; pointer-events: none; }
+:root:not(.dark) .pagina-luz { display: none; }
+.dark .pagina-luz {
+  background:
+    radial-gradient(44% 64% at 70% -6%, rgba(206, 14, 14, 0.2), rgba(206, 14, 14, 0.05) 52%, transparent 74%),
+    radial-gradient(38% 54% at 14% -10%, rgba(255, 255, 255, 0.05), transparent 70%);
+}
+.dark .pagina-luz::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 520px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.13) 0.7px, transparent 1.1px);
+  background-size: 5px 5px;
+  -webkit-mask-image: radial-gradient(44% 70% at 70% -6%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(44% 70% at 70% -6%, #000 0%, transparent 74%);
+}
+
+/* ---------- HOME: a página ---------- */
+.home { position: relative; width: 100%; padding: 12px 12px 28px 2px; }
+@media (min-width: 768px) { .home { padding: 18px 20px 32px 10px; } }
+/* a grade: cada cartão sobe um pouco, um depois do outro */
+.home-grade > * { min-width: 0; animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.home-grade > *:nth-child(2) { animation-delay: 50ms; }
+.home-grade > *:nth-child(3) { animation-delay: 100ms; }
+.home-grade > *:nth-child(4) { animation-delay: 150ms; }
+.home-grade > *:nth-child(5) { animation-delay: 200ms; }
+.home-grade > *:nth-child(6) { animation-delay: 250ms; }
+.home-grade > *:nth-child(7) { animation-delay: 300ms; }
+.home-grade > *:nth-child(n + 8) { animation-delay: 350ms; }
+
+/* ---------- cartões (os da HOME; servem em qualquer página) ---------- */
+/* superfície escura, borda fina e cantos arredondados */
+.hc {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--gf-linha);
+  background: var(--card);
+}
+.dark .hc {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.016) 32%, rgba(255, 255, 255, 0.006) 100%),
+    rgba(11, 11, 12, 0.76);
+  border-color: rgba(255, 255, 255, 0.065);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 34px 70px -46px rgba(0, 0, 0, 0.95);
+}
+/* transparência leve: só nos cartões do alto, que têm o gradiente da página atrás */
+.dark .hc-vidro { -webkit-backdrop-filter: blur(26px) saturate(150%); backdrop-filter: blur(26px) saturate(150%); }
+/* fio de luz na borda: aceso no alto, ao centro, como o reflexo de uma luz acima do cartão */
+.dark .hc::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(75% 85% at 50% 0%, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 55%, rgba(255, 255, 255, 0) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.85;
+  transition: opacity 280ms;
+  pointer-events: none;
+}
+.dark .hc:hover::before { opacity: 1; }
+.dark :is(a, button).hc:hover { border-color: rgba(255, 255, 255, 0.14); }
+
+/* cartão Movimento (o mesmo da tela Players): na HOME, em tela estreita, os botões descem para a linha de baixo */
+@media (max-width: 639px) { .home .mov-topo { flex-wrap: wrap; row-gap: 10px; } }
+
+/* luz localizada (só nos cartões principais; as áreas de leitura ficam limpas) */
+.hc-facho, .hc-brasa, .hc-reticula, .hc-luz-icone { position: absolute; z-index: -1; pointer-events: none; }
+:root:not(.dark) :is(.hc-facho, .hc-brasa, .hc-reticula, .hc-luz-icone) { display: none; }
+/* facho: uma luz morna que desce do alto do cartão */
+.dark .hc-facho {
+  inset: 0;
+  background:
+    radial-gradient(46% 46% at 50% 0%, rgba(255, 238, 230, 0.13), rgba(255, 238, 230, 0.03) 55%, transparent 78%),
+    conic-gradient(from 162deg at 50% -4%, transparent 0deg, rgba(255, 238, 230, 0.075) 18deg, transparent 36deg);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 46%, transparent 86%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 46%, transparent 86%);
+}
+/* brasa: o vermelho da HOST aceso num canto (cartão de abertura), com a retícula por cima */
+.dark .hc-brasa {
+  inset: 0;
+  background:
+    radial-gradient(50% 95% at 92% -12%, rgba(206, 14, 14, 0.5), rgba(206, 14, 14, 0.13) 46%, transparent 74%),
+    radial-gradient(30% 50% at 100% 0%, rgba(255, 120, 90, 0.16), transparent 70%);
+}
+.dark .hc-reticula {
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.22) 0.7px, transparent 1.1px);
+  background-size: 5px 5px;
+  -webkit-mask-image: radial-gradient(52% 100% at 92% -10%, #000 0%, rgba(0, 0, 0, 0.35) 48%, transparent 76%);
+  mask-image: radial-gradient(52% 100% at 92% -10%, #000 0%, rgba(0, 0, 0, 0.35) 48%, transparent 76%);
+}
+/* luz do ícone: brilho vermelho e anéis finos saindo do ícone (centro a 37 px do canto do cartão) */
+.dark .hc-luz-icone {
+  left: -113px;
+  top: -113px;
+  width: 300px;
+  height: 300px;
+  background:
+    radial-gradient(closest-side, rgba(206, 14, 14, 0.4), rgba(206, 14, 14, 0.1) 46%, transparent 80%),
+    repeating-radial-gradient(circle at center, transparent 0 23px, rgba(255, 255, 255, 0.075) 23px 24px);
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+}
+
+/* textos dos cartões */
+.hc-sobre { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gf-tx-3); }
+.hc-titulo { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; color: var(--gf-tx-1); }
+.hc-nota { font-size: 12px; line-height: 1.35; color: var(--gf-tx-2); }
+
+/* cartão de dentro: um degrau mais claro, sem sombra */
+.hc-dentro { border-radius: 14px; border: 1px solid var(--gf-linha); background: var(--gf-2); }
+.dark .hc-dentro { border-color: rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035); }
+:is(a, button).hc-dentro:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
+
+/* quadradinho de ícone; o "vivo" é o vermelho da HOST */
+.hc-icone { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 11px; border: 1px solid var(--gf-linha); background: var(--gf-2); color: var(--gf-tx-1); }
+.dark .hc-icone { background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)); border-color: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+.hc-icone-vivo, .dark .hc-icone-vivo {
+  border-color: transparent;
+  color: #ffffff;
+  background: linear-gradient(160deg, #e21515 0%, #ce0e0e 46%, #9c0909 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 20px -8px rgba(206, 14, 14, 0.8);
+}
+
+/* seta redonda: leva a algum lugar. Ao passar o mouse vira uma tecla branca */
+.hc-seta { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--gf-linha); background: var(--gf-2); color: var(--gf-tx-2); transition: background-color 180ms, border-color 180ms, color 180ms; }
+:is(a, button).hc-seta:hover, :is(a, button):hover .hc-seta { background: var(--gf-tx-1); border-color: transparent; color: var(--gf-painel); }
+/* pílula de ação e selos */
+.hc-pilula { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--gf-linha); background: var(--gf-2); font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--gf-tx-1); }
+:is(a, button).hc-pilula:hover { background: var(--gf-tx-1); border-color: transparent; color: var(--gf-painel); }
+.hc-selo { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--gf-linha); background: var(--gf-2); font-size: 11px; font-weight: 500; white-space: nowrap; color: var(--gf-tx-2); }
+/* estado: uma pílula com um ponto vermelho aceso quando algo pede ação */
+.hc-estado { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 11px; border-radius: 999px; border: 1px solid var(--gf-linha); background: var(--gf-2); font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--gf-tx-1); }
+.dark .hc-estado { background: rgba(10, 10, 11, 0.5); border-color: rgba(255, 255, 255, 0.1); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.hc-estado > i { display: block; width: 6px; height: 6px; border-radius: 999px; background: #ce0e0e; animation: hc-pulsa 2.4s ease-in-out infinite; }
+@keyframes hc-pulsa {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(206, 14, 14, 0.22), 0 0 12px rgba(206, 14, 14, 0.9); }
+  50% { box-shadow: 0 0 0 6px rgba(206, 14, 14, 0.06), 0 0 16px rgba(206, 14, 14, 0.9); }
+}
+a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
+
+/* índices do cartão de abertura. Eles se arrumam pela largura do próprio cartão, não da janela
+   (o cartão muda de largura com o menu aberto ou fechado):
+   - cartão estreito: um por linha, em fila (ícone, nome e, à direita, o número);
+   - cartão médio: dois por linha, em quadros (o número grande em cima, o nome e a observação embaixo);
+   - cartão largo: todos na mesma linha. */
+/* o contêiner que os quadros consultam: o cartão de abertura da HOME ou o .hc-cont do componente <Indices> */
+.hc-abertura, .hc-cont { container-type: inline-size; }
+.hc-indices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.hc-indice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "icone rotulo valor" "icone nota valor";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 3px;
+  width: 100%;
+  padding: 11px 14px 11px 11px;
+  border-radius: 16px;
+  border: 1px solid var(--gf-linha);
+  background: var(--gf-2);
+  text-align: left;
+}
+.dark .hc-indice { background: rgba(255, 255, 255, 0.035); border-color: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+:is(a, button).hc-indice:hover, .dark :is(a, button).hc-indice:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
+.hc-indice[aria-pressed="true"], .dark .hc-indice[aria-pressed="true"] { background: var(--gf-3); border-color: rgba(255, 255, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+.hc-indice-valor { grid-area: valor; font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; font-size: 26px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--gf-tx-1); }
+.hc-indice-rotulo { grid-area: rotulo; min-width: 0; font-size: 13px; font-weight: 500; line-height: 1.25; color: var(--gf-tx-1); }
+.hc-indice-nota { grid-area: nota; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; color: var(--gf-tx-3); }
+/* o ícone do índice; ao passar o mouse ele dá lugar à seta de "abrir" */
+.hc-indice-icone { grid-area: icone; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--gf-linha); background: var(--gf-2); color: var(--gf-tx-2); transition: background-color 180ms, border-color 180ms, color 180ms; }
+.hc-indice-icone > svg { grid-area: 1 / 1; width: 15px; height: 15px; transition: opacity 180ms, translate 180ms; }
+.hc-indice-icone > svg:last-child:not(:only-child) { opacity: 0; translate: -4px 4px; }
+:is(a, button).hc-indice:hover .hc-indice-icone, .hc-indice:focus-visible .hc-indice-icone { background: var(--gf-tx-1); border-color: transparent; color: var(--gf-painel); }
+:is(a, button).hc-indice:hover .hc-indice-icone > svg:first-child:not(:only-child), .hc-indice:focus-visible .hc-indice-icone > svg:first-child:not(:only-child) { opacity: 0; translate: 4px -4px; }
+.hc-indice:hover .hc-indice-icone > svg:last-child, .hc-indice:focus-visible .hc-indice-icone > svg:last-child { opacity: 1; translate: 0 0; }
+.hc-indice-cor { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 999px; vertical-align: 1px; }
+.hc-indice-valor { min-width: 0; white-space: nowrap; }
+.hc-indice[data-compacto] .hc-indice-valor { overflow: hidden; text-overflow: ellipsis; font-size: 22px; }
+/* pede ação: um ponto vermelho ao lado do número */
+.hc-indice[data-alerta] .hc-indice-valor::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 8px; border-radius: 999px; vertical-align: 0.62em; background: #ce0e0e; box-shadow: 0 0 0 3px rgba(206, 14, 14, 0.2), 0 0 12px rgba(206, 14, 14, 0.85); }
+@container (min-width: 400px) {
+  .hc-indices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hc-indices > :last-child:nth-child(odd) { grid-column: span 2; }
+  .hc-indice { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "valor icone" "rotulo rotulo" "nota nota"; align-items: start; row-gap: 0; padding: 14px 14px 14px 16px; }
+  .hc-indice-valor { align-self: center; font-size: 34px; font-weight: 500; }
+  .hc-indice[data-compacto] .hc-indice-valor { font-size: 26px; }
+  .hc-indice-rotulo { margin-top: 14px; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .hc-indice-nota { margin-top: 3px; }
+}
+@container (min-width: 760px) {
+  .hc-indices { grid-template-columns: repeat(var(--quantos, 4), minmax(0, 1fr)); }
+  .hc-indices > :last-child:nth-child(odd) { grid-column: auto; }
+}
+
+/* dias do calendário: hoje ganha um fio vermelho; o dia escolhido vira uma tecla branca */
+.hc-dia { position: relative; display: flex; height: 40px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 11px; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--gf-tx-1); }
+.hc-dia:hover { background: var(--gf-passar); }
+.hc-dia[data-fora] { color: var(--gf-tx-3); opacity: 0.6; }
+.hc-dia[data-hoje] { font-weight: 600; box-shadow: inset 0 0 0 1px rgba(206, 14, 14, 0.8); }
+.hc-dia[data-escolhido], .hc-dia[data-escolhido]:hover { background: var(--gf-tx-1); color: var(--gf-painel); font-weight: 600; opacity: 1; box-shadow: 0 10px 22px -12px rgba(255, 255, 255, 0.45); }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-grade > *, .hc-estado > i { animation: none !important; }
+}
+
+/* ================================================================== *
+ * O PADRÃO DA HOME EM TODAS AS TELAS (novembro de 2026)
+ * As peças que todas as páginas usam (glass, glass-inset, eyebrow,
+ * janelas e menus por cima) passam a ter o mesmo acabamento dos
+ * cartões da HOME (classes hc-*, acima).
+ * ================================================================== */
+/* cinzas um degrau mais claros, para ler sem esforço */
+.dark { --muted-foreground: #a1a1a7; --ink-3: #7c7c84; }
+
+/* cartão de vidro: superfície escura, borda fina e o fio de luz aceso no alto, ao centro */
+.dark .glass,
+.dark .metal {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.016) 32%, rgba(255, 255, 255, 0.006) 100%),
+    #0a0a0b;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 34px 70px -46px rgba(0, 0, 0, 0.95);
+}
+.dark .glass::before {
+  background: radial-gradient(75% 85% at 50% 0%, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.07) 55%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0.85;
+}
+.dark a.glass:hover, .dark button.glass:hover { border-color: rgba(255, 255, 255, 0.14); }
+.dark .surface-hover:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 34px 70px -46px rgba(0, 0, 0, 0.95); }
+/* os cartões grandes das páginas ganham os mesmos cantos dos cartões da HOME */
+.dark .page-main .glass:is(.rounded-2xl, .rounded-3xl, .rounded-\[20px\], .rounded-\[24px\]) { border-radius: 22px; }
+
+/* cartão de dentro: um degrau mais claro, sem sombra */
+.dark .glass-inset { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035); }
+.dark :is(a, button).glass-inset:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.15); }
+
+/* quadradinho de ícone */
+.dark .icone-quadro { border-radius: 11px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)); border-color: rgba(255, 255, 255, 0.08); }
+
+/* rótulo pequeno acima dos títulos */
+.dark .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: var(--gf-tx-3); }
+
+/* janelas, menus e avisos por cima da página: vidro escuro com desfoque de verdade.
+   (o desfoque antigo usava var(--borrao) e o processador de CSS descartava a regra: ficava transparente) */
+.dark .glass-elevated,
+.dark .glass-modal,
+.dark [role="dialog"],
+.dark [role="alertdialog"],
+.dark [data-radix-popper-content-wrapper] > * {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 30%, rgba(255, 255, 255, 0.01)),
+    rgba(12, 12, 14, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  backdrop-filter: blur(28px) saturate(140%);
+}
+/* o que fica preso dentro da barra lateral (como o painel do sino) não enxerga a página atrás para desfocar:
+   ali o vidro é quase opaco */
+.dark .menu-lateral :is(.glass-modal, .glass-elevated) { background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 30%, rgba(255, 255, 255, 0.01)), #0d0d0f; }
+
+/* cabeçalho das páginas (src/components/page-header.tsx): o mesmo título grande da tela inicial */
+.pagina-topo { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; column-gap: 24px; row-gap: 14px; padding: 4px 4px 6px; }
+.pagina-titulo { margin-top: 10px; font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; font-size: 28px; font-weight: 600; line-height: 1.08; letter-spacing: -0.03em; color: var(--gf-tx-1); }
+@media (min-width: 640px) { .pagina-titulo { font-size: 34px; } }
+.pagina-sub { margin-top: 8px; max-width: 48rem; font-size: 13px; line-height: 1.45; color: var(--gf-tx-2); }
+.pagina-acoes { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* invólucro das páginas: as mesmas margens da tela inicial */
+.pagina { padding: 12px 12px 28px 2px; }
+@media (min-width: 768px) { .pagina { padding: 18px 20px 32px 10px; } }
+
+/* campo de busca das páginas: o mesmo da barra lateral (ícone, texto e borda fina) */
+.campo-busca { display: flex; min-width: 0; align-items: center; gap: 9px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--gf-linha); background: var(--gf-2); color: var(--gf-tx-3); transition: border-color 180ms, background-color 180ms; }
+.campo-busca:hover { border-color: var(--gf-linha-2); }
+.campo-busca:focus-within { border-color: rgba(255, 255, 255, 0.34); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06); color: var(--gf-tx-1); }
+.campo-busca input { min-width: 0; flex: 1; height: 100%; border: 0; background: transparent; font-size: 12.5px; color: var(--gf-tx-1); outline: none; }
+.campo-busca input::placeholder { color: var(--gf-tx-3); }
+.dark .campo-busca input:focus { box-shadow: none; }
+
+/* calendário (react-day-picker) nas páginas: o mesmo da tela inicial (hoje com fio vermelho, dia escolhido como tecla branca) */
+.dark .page-main .rdp-root { --cell-size: 2.35rem; }
+.dark .page-main .rdp-caption_label { font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.015em; text-transform: capitalize; }
+.dark .page-main .rdp-weekday { padding-bottom: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gf-tx-3); }
+.dark .page-main .rdp-day button { position: relative; border-radius: 11px; font-variant-numeric: tabular-nums; }
+.dark .page-main .rdp-day button:hover { background: rgba(255, 255, 255, 0.06); }
+.dark .page-main .rdp-today { background: transparent; }
+.dark .page-main .rdp-today button { font-weight: 600; box-shadow: inset 0 0 0 1px rgba(206, 14, 14, 0.8); }
+.dark .page-main .rdp-day button[data-selected-single="true"] { background: #f4f4f5; color: #09090a; font-weight: 600; box-shadow: 0 10px 22px -12px rgba(255, 255, 255, 0.45); }
+.dark .page-main .rdp-outside { opacity: 0.45; }
+/* dia com evento: um ponto vermelho embaixo do número */
+.dia-com-evento button::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; translate: -50% 0; border-radius: 999px; background: #ce0e0e; }
+.dia-com-evento button[data-selected-single="true"]::after { background: currentColor; }
+/* as linhas dos quadros de número não esticam quando um vizinho é mais alto (o número fica sempre no mesmo lugar) */
+.hc-indice { align-content: start; }
+
+/* telas estreitas: as ações do cabeçalho quebram em linhas dentro da largura da página (antes vazavam para fora),
+   e os controles de segmentos rolam por dentro quando não cabem */
+.pagina-acoes { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.pagina-acoes > * { min-width: 0; max-width: 100%; }
+.segmentos { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.segmentos::-webkit-scrollbar { display: none; }
+.segmentos > :is(button, a) { flex-shrink: 0; }
+/* textos com links ou palavras muito longas quebram dentro do cartão em vez de esticar a página */
+.page-main { overflow-wrap: break-word; }
+
+/* ================================================================== *
+ * MODO CLARO das peças novas (quando o html não tem a classe .dark).
+ * O padrão escuro é o principal; aqui só garantimos que tudo fique
+ * legível e com o mesmo desenho: superfícies brancas, bordas finas,
+ * o escolhido vira uma tecla escura e o vermelho continua só no detalhe.
+ * ================================================================== */
+:root:not(.dark) .hc { background: #ffffff; border-color: rgba(0, 0, 0, 0.08); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 34px -22px rgba(0, 0, 0, 0.22); }
+:root:not(.dark) .hc-indice { background: #ffffff; border-color: rgba(0, 0, 0, 0.08); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); }
+:root:not(.dark) .hc .hc-indice { background: var(--gf-2); box-shadow: none; }
+:root:not(.dark) .pilula { color: var(--gf-tx-1); background: #ffffff; border-color: var(--gf-linha); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root:not(.dark) .pilula:hover { background: var(--gf-3); color: #000000; border-color: var(--gf-linha-2); transform: none; }
+:root:not(.dark) .pilula-ativa, :root:not(.dark) .pilula-ativa:hover { background: #111113; color: #ffffff; border-color: transparent; box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.45); }
+:root:not(.dark) .segmentos { background: rgba(0, 0, 0, 0.04); border-color: rgba(0, 0, 0, 0.08); box-shadow: none; }
+:root:not(.dark) .segmentos > :is(button, a) { color: var(--gf-tx-2); }
+:root:not(.dark) .segmentos > :is(button, a):hover { color: var(--gf-tx-1); }
+:root:not(.dark) .segmentos > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], [data-ativo="true"], [data-state="active"]) { background: #111113; color: #ffffff; box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.45); }
+:root:not(.dark) .selo-neutro { background: rgba(0, 0, 0, 0.06); color: var(--gf-tx-2); }
+:root:not(.dark) .selo-verde { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+:root:not(.dark) .selo-vermelho { background: rgba(206, 14, 14, 0.1); color: #b91c1c; }
+:root:not(.dark) .tiques > i { background: rgba(0, 0, 0, 0.14); }
+:root:not(.dark) .icone-quadro { background: var(--gf-2); border-color: var(--gf-linha); box-shadow: none; }
+:root:not(.dark) .pontilhado { background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1.4px); }
+:root:not(.dark) .campo-busca { background: #ffffff; }
+:root:not(.dark) .hc-dia[data-escolhido], :root:not(.dark) .hc-dia[data-escolhido]:hover { box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.45); }

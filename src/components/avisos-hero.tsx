@@ -41,38 +41,46 @@ export function AvisosHero() {
   });
 
   return (
-    <section className="glass-inset h-full w-full rounded-2xl p-3.5 text-left" aria-live="polite">
-      <header className="flex items-center gap-2">
-        <Megaphone className="size-4 text-ink-3" strokeWidth={1.7} />
-        <h2 className="font-display text-sm font-semibold">Quadro de avisos</h2>
-        {pendentes.length > 0 && (
-          <span className="flex items-center gap-1.5 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-red-200">
-            <span className="size-1.5 animate-pulse rounded-full bg-primary" /> {pendentes.length}{" "}
-            para confirmar
-          </span>
-        )}
+    <section
+      className="glass hc hc-vidro flex min-h-[190px] w-full flex-col p-5 text-left"
+      aria-live="polite"
+    >
+      <span aria-hidden className="hc-facho" />
+      <header className="flex items-center gap-3">
+        <span className="hc-icone">
+          <Megaphone className="size-4" strokeWidth={1.75} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="hc-titulo">Quadro de avisos</h2>
+          {pendentes.length > 0 && (
+            <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#ff9d94]">
+              <span className="size-1.5 animate-pulse rounded-full bg-primary" /> {pendentes.length}{" "}
+              para confirmar
+            </p>
+          )}
+        </div>
         <Link
           to="/avisos"
           aria-label="Abrir todos os avisos"
           title="Todos os avisos"
-          className="ml-auto grid size-7 place-items-center rounded-full text-ink-3 transition-colors hover:bg-white/[0.07] hover:text-foreground"
+          className="hc-seta"
         >
           <ArrowUpRight className="size-3.5" />
         </Link>
       </header>
 
       {isLoading ? (
-        <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+        <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" /> Carregando avisos…
         </p>
       ) : atual ? (
-        <div key={atual.id} className="pf-sobe mt-3">
-          <p className="text-sm font-semibold">{atual.titulo}</p>
-          <p className="mt-1 line-clamp-3 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
+        <div key={atual.id} className="pf-sobe mt-4 flex flex-1 flex-col">
+          <p className="text-[15px] font-semibold leading-snug">{atual.titulo}</p>
+          <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
             {atual.texto}
           </p>
-          <div className="mt-3 flex items-center gap-3">
-            <p className="min-w-0 flex-1 truncate text-[11px] text-ink-3">
+          <div className="mt-auto flex items-center gap-3 pt-4">
+            <p className="min-w-0 flex-1 truncate text-[11.5px] text-ink-3">
               {atual.criadoPor} ·{" "}
               {new Date(atual.createdAt).toLocaleDateString("pt-BR", {
                 day: "2-digit",
@@ -94,10 +102,14 @@ export function AvisosHero() {
           </div>
         </div>
       ) : (
-        <p className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
-          <CheckCheck className="size-4 text-emerald-400" />
-          {avisos.length === 0 ? "Nenhum aviso publicado." : "Você confirmou todos os avisos."}
-        </p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2.5 pb-1 pt-4 text-center">
+          <span className="hc-seta !size-10" aria-hidden>
+            <CheckCheck className="size-[18px] text-foreground" strokeWidth={1.75} />
+          </span>
+          <p className="text-[13px] text-muted-foreground">
+            {avisos.length === 0 ? "Nenhum aviso publicado." : "Você confirmou todos os avisos."}
+          </p>
+        </div>
       )}
     </section>
   );

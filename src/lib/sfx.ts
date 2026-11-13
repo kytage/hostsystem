@@ -85,7 +85,12 @@ export type Sfx = "check" | "uncheck" | "complete" | "add" | "remove" | "click" 
   // eventos da praça do HOKI
   | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito" | "sino"
   // HOST FAZENDAS: alarme de roubo (4 segundos)
-  | "alarme";
+  | "alarme"
+  // praça do HOKI: pulo e pouso (bem curtinhos)
+  | "pulo"
+  | "pouso"
+  // soco no ar (botão direito)
+  | "soco";
 
 /**
  * Ruído filtrado com ataque e queda: a base do trovão, do mergulho, dos fogos e
@@ -210,6 +215,21 @@ export function playSfx(kind: Sfx) {
         break;
       case "pop":
         tone(880, 0, 0.06, 0.03, "sine", 1320);
+        break;
+      case "pulo":
+        // impulso que sobe, macio
+        tone(330, 0, 0.12, 0.035, "triangle", 620);
+        sopro(0.12, 900, 2200, 0.006);
+        break;
+      case "soco":
+        // vento do braço passando e uma batidinha seca
+        sopro(0.11, 700, 2600, 0.022);
+        tone(120, 0.05, 0.06, 0.05, "sine", 70);
+        break;
+      case "pouso":
+        // batidinha no chão
+        tone(150, 0, 0.07, 0.05, "sine", 90);
+        ruido(0.06, "lowpass", 900, 300, 0.03, 0, 0.003);
         break;
       case "trovao":
         // estalo seco e um ronco grave que rola por uns segundos

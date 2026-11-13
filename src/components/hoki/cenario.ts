@@ -8,14 +8,12 @@ import { criarManchas, texturaMancha } from "./luz";
 import {
   Blocos,
   anelDaMarca,
-  arbusto,
-  arvore,
   criarNuvens,
   letrasDePedra,
-  pedregulho,
   sorteador,
   texturaQueda,
 } from "./voxel";
+import { Natureza } from "./natureza";
 
 type Lixo = { dispose: () => void }[];
 
@@ -151,6 +149,7 @@ export function criarFundo(THREE: typeof TH) {
 
   // ---------- longe: o gramado em volta, em degraus, com canteiros, árvores e pedras ----------
   const mundo = new Blocos(r);
+  const mato = new Natureza(); // árvores, arbustos e pedras (modelos 3D)
   const degrau = (x: number, z: number) =>
     x < -3.3
       ? Math.min(3, Math.floor((-x - 3.3) * 0.6 + (z < -1.5 ? 1 : 0))) * 0.5
@@ -213,14 +212,14 @@ export function criarFundo(THREE: typeof TH) {
       mundo.base(fx, 0.6 * s + 0.07, fz, 0.08 * s, 0.05, 0.08 * s, 0xffd84a, 0);
     }
   }
-  arvore(mundo, -5.6, -2.4, { tipo: "copa", cor: "amarelo", u: 0.5, y: degrau(-5.6, -2.4) });
-  arvore(mundo, -4.5, -5.2, { tipo: "copinha", u: 0.52, y: degrau(-4.5, -5.2) });
-  arvore(mundo, -7, 0.5, { tipo: "pinheiro", u: 0.46, y: degrau(-7, 0.5) });
-  arvore(mundo, 5.2, -4.6, { tipo: "copinha", cor: "laranja", u: 0.46, y: degrau(5.2, -4.6) });
-  arbusto(mundo, -2.6, -3.4, 0.7);
-  arbusto(mundo, 2.7, -3.6, 0.6, { flor: 0xff8fc8 });
-  pedregulho(mundo, 4.9, 0.9, 0.7);
-  pedregulho(mundo, -4.9, 3.4, 0.6);
+  mato.arvore(-5.6, -2.4, { tipo: "copa", cor: "amarelo", u: 0.5, y: degrau(-5.6, -2.4) });
+  mato.arvore(-4.5, -5.2, { tipo: "copinha", u: 0.52, y: degrau(-4.5, -5.2) });
+  mato.arvore(-7, 0.5, { tipo: "pinheiro", u: 0.46, y: degrau(-7, 0.5) });
+  mato.arvore(5.2, -4.6, { tipo: "copinha", cor: "laranja", u: 0.46, y: degrau(5.2, -4.6) });
+  mato.arbusto(-2.6, -3.4, 0.7);
+  mato.arbusto(2.7, -3.6, 0.6, { flor: 0xff8fc8 });
+  mato.pedra(4.9, 0.9, 0.7);
+  mato.pedra(-4.9, 3.4, 0.6);
 
   // paredão de rocha à direita, com a cachoeira e árvores em cima
   const alturaParedao = (x: number, z: number) =>
@@ -242,8 +241,8 @@ export function criarFundo(THREE: typeof TH) {
       mundo.base(x, h, z, 1.05, 0.3, 1.05, escolhe(GRAMA), 0.05);
     }
   }
-  arvore(mundo, 8.2, -11.4, { tipo: "copinha", u: 0.52, y: 5.3 });
-  arvore(mundo, 6.2, -12.4, { tipo: "pinheiro", u: 0.46, y: 4.3 });
+  mato.arvore(8.2, -11.4, { tipo: "copinha", u: 0.52, y: 5.3 });
+  mato.arvore(6.2, -12.4, { tipo: "pinheiro", u: 0.46, y: 4.3 });
   // ilha flutuando à esquerda e outra, pequena, mais ao fundo
   const ilha = (cx: number, cy: number, cz: number, raio: number) => {
     for (let k = 0; k <= 4; k++) {
@@ -267,10 +266,10 @@ export function criarFundo(THREE: typeof TH) {
     }
   };
   ilha(-8, 1.6, -12.5, 3.3);
-  arvore(mundo, -8.8, -12.4, { tipo: "copa", u: 0.5, y: 1.6 });
-  arvore(mundo, -6.6, -13, { tipo: "copinha", cor: "amarelo", u: 0.48, y: 1.6 });
+  mato.arvore(-8.8, -12.4, { tipo: "copa", u: 0.5, y: 1.6 });
+  mato.arvore(-6.6, -13, { tipo: "copinha", cor: "amarelo", u: 0.48, y: 1.6 });
   ilha(1.5, 4.6, -24, 2.4);
-  arvore(mundo, 1.5, -24, { tipo: "copinha", u: 0.5, y: 4.6 });
+  mato.arvore(1.5, -24, { tipo: "copinha", u: 0.5, y: 4.6 });
   const cMundo = mundo.construir(THREE, {
     sombra: false,
     acabamento: { chanfro: 0.06, junta: 0.14, pe: 0.26, grao: 0.06 },
@@ -298,12 +297,16 @@ export function criarFundo(THREE: typeof TH) {
   );
   for (const n of ceu.nuvens) longe.add(n.malha);
   lixo.push({ dispose: cMundo.descartar }, tQueda, mQueda, gQueda, { dispose: ceu.descartar });
+  const natureza = mato.construir(THREE, { sombra: false });
+  longe.add(natureza.grupo);
+  lixo.push({ dispose: natureza.descartar });
 
   return {
     perto,
     longe,
     atualizar(t: number) {
       tQueda.offset.y = t * 0.6;
+      natureza.atualizar(t);
       ceu.nuvens.forEach(
         (n, i) => (n.malha.position.x = ((n.x0 + 16 + t * (0.1 + i * 0.025)) % 32) - 16),
       );

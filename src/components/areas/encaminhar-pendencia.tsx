@@ -48,9 +48,9 @@ function Opcao({
       type="button"
       onClick={onClick}
       disabled={carregando}
-      className="group flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.07] disabled:opacity-60"
+      className="hc-dentro group flex items-center gap-2.5 px-3 py-2.5 text-left disabled:opacity-60"
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-black/40 text-muted-foreground transition-colors group-hover:text-foreground">
+      <span className="hc-icone !size-8">
         {carregando ? <Loader2 className="size-3.5 animate-spin" /> : <Icon className="size-3.5" strokeWidth={1.8} />}
       </span>
       <span className="min-w-0">
@@ -107,8 +107,8 @@ export function EncaminharPendencia({
   });
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-black/30 p-2.5">
-      <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-3">Encaminhar para</p>
+    <div className="hc-dentro p-2.5">
+      <p className="hc-sobre mb-2 px-0.5">Encaminhar para</p>
       <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
         <Opcao
           icon={NotebookPen}
@@ -189,23 +189,23 @@ function EscolherPessoa({
       <div className="pf-modal glass-elevated flex max-h-[80vh] w-full max-w-md flex-col rounded-[22px]" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 px-5 pt-5">
           <div className="min-w-0">
-            <p className="eyebrow">Designar tarefa</p>
-            <h3 className="mt-1 truncate font-display text-lg font-semibold">{titulo}</h3>
-            <p className="text-xs text-muted-foreground">Escolha quem vai receber. A tarefa cai no quadro da pessoa.</p>
+            <p className="hc-sobre">Designar tarefa</p>
+            <h3 className="hc-titulo mt-1.5 truncate">{titulo}</h3>
+            <p className="hc-nota mt-1">Escolha quem vai receber. A tarefa cai no quadro da pessoa.</p>
           </div>
-          <button type="button" onClick={onClose} className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">
-            <X className="size-4" />
+          <button type="button" onClick={onClose} aria-label="Fechar" className="hc-seta">
+            <X className="size-3.5" />
           </button>
         </header>
         <div className="px-5 pt-4">
-          <label className="glass-inset flex items-center gap-2 rounded-xl px-3 py-2">
-            <Search className="size-3.5 text-ink-3" />
+          <label className="campo-busca w-full">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             <input
               autoFocus
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar pessoa…"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-ink-3"
+              aria-label="Buscar pessoa"
             />
           </label>
         </div>
@@ -217,7 +217,7 @@ function EscolherPessoa({
                 onClick={() => setEscolhido(u)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
-                  escolhido?.id === u.id ? "bg-primary/[0.12]" : "hover:bg-white/[0.04]",
+                  escolhido?.id === u.id ? "bg-foreground/[0.07]" : "hover:bg-foreground/[0.04]",
                 )}
               >
                 <img src={u.avatar_url || DEFAULT_AVATAR_URL} alt="" className="size-7 rounded-full object-cover" />
@@ -228,7 +228,9 @@ function EscolherPessoa({
                 <span
                   className={cn(
                     "size-4 rounded-full border transition-colors",
-                    escolhido?.id === u.id ? "border-primary bg-primary shadow-[0_0_10px_rgba(229,35,27,0.7)]" : "border-white/20",
+                    escolhido?.id === u.id
+                      ? "border-foreground bg-foreground"
+                      : "border-foreground/20",
                   )}
                 />
               </button>
@@ -241,7 +243,7 @@ function EscolherPessoa({
             type="button"
             disabled={!escolhido || enviando}
             onClick={() => escolhido && onEscolher(escolhido)}
-            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-opacity disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
           >
             {enviando && <Loader2 className="size-3.5 animate-spin" />}
             {escolhido ? `Designar para ${escolhido.username}` : "Escolha alguém"}

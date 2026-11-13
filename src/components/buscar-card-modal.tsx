@@ -43,22 +43,24 @@ export function BuscarCardModal({ onSelect, onClose }: BuscarCardModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-24 backdrop-blur-sm">
-      <div className="flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl glass">
-        <div className="flex items-center gap-3 border-b border-border p-4">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por palavra, título ou #número..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          />
+      <div className="flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-[22px] glass-modal">
+        <div className="flex items-center gap-3 border-b border-white/[0.06] p-4">
+          <label className="campo-busca flex-1">
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
+            <input
+              autoFocus
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por palavra, título ou #número..."
+              aria-label="Buscar solicitação"
+            />
+          </label>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="text-muted-foreground hover:text-foreground"
+            className="hc-seta"
           >
-            <X className="size-5" />
+            <X className="size-4" />
           </button>
         </div>
 
@@ -81,7 +83,7 @@ export function BuscarCardModal({ onSelect, onClose }: BuscarCardModalProps) {
                 <button
                   key={c.id}
                   onClick={() => onSelect(c)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border px-3.5 py-2.5 text-left transition-colors hover:bg-accent/40"
+                  className="hc-dentro flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">

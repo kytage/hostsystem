@@ -20,7 +20,10 @@ interface CalendarMonthProps {
   onSelectDay: (dayKey: string) => void;
 }
 
-/** Calendário mensal minimalista com marcadores de eventos */
+/**
+ * Calendário mensal da tela inicial, com marcadores de eventos. Hoje ganha um fio
+ * vermelho e o dia escolhido vira uma tecla branca (classes `hc-dia`, em src/styles.css).
+ */
 export function CalendarMonth({ eventos, selectedDay, onSelectDay }: CalendarMonthProps) {
   const today = new Date();
   const [view, setView] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -65,29 +68,23 @@ export function CalendarMonth({ eventos, selectedDay, onSelectDay }: CalendarMon
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold capitalize text-foreground">
-          {MONTHS[view.month]} <span className="text-muted-foreground">{view.year}</span>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="min-w-0 truncate font-display text-[15px] font-semibold capitalize tracking-[-0.015em] text-foreground sm:text-[17px]">
+          {MONTHS[view.month]}{" "}
+          <span className="font-normal text-muted-foreground">{view.year}</span>
         </h3>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => nav(-1)}
-            className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-            aria-label="Mês anterior"
-          >
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button type="button" onClick={() => nav(-1)} className="hc-seta" aria-label="Mês anterior">
             <ChevronLeft className="size-4" />
           </button>
           <button
+            type="button"
             onClick={() => setView({ year: today.getFullYear(), month: today.getMonth() })}
-            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+            className="hc-pilula"
           >
             Hoje
           </button>
-          <button
-            onClick={() => nav(1)}
-            className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-            aria-label="Próximo mês"
-          >
+          <button type="button" onClick={() => nav(1)} className="hc-seta" aria-label="Próximo mês">
             <ChevronRight className="size-4" />
           </button>
         </div>
@@ -95,7 +92,10 @@ export function CalendarMonth({ eventos, selectedDay, onSelectDay }: CalendarMon
 
       <div className="mt-4 grid grid-cols-7 gap-1">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div
+            key={d}
+            className="pb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-3"
+          >
             {d}
           </div>
         ))}
@@ -107,25 +107,25 @@ export function CalendarMonth({ eventos, selectedDay, onSelectDay }: CalendarMon
           return (
             <button
               key={k}
+              type="button"
               onClick={() => onSelectDay(k)}
-              className={cn(
-                "relative flex min-h-9 flex-col items-center rounded-lg py-1.5 text-sm transition-colors",
-                inMonth ? "text-foreground hover:bg-white/[0.08]" : "text-muted-foreground/40",
-                isSelected && "bg-primary text-primary-foreground hover:bg-primary",
-                !isSelected && isToday && "border border-primary/50 font-semibold"
-              )}
+              aria-pressed={isSelected}
+              aria-current={isToday ? "date" : undefined}
+              data-sem-elastico
+              className="hc-dia"
+              data-fora={inMonth ? undefined : ""}
+              data-hoje={isToday ? "" : undefined}
+              data-escolhido={isSelected ? "" : undefined}
             >
-              <span className={cn("leading-none", isToday && !isSelected && "text-primary")}>
-                {date.getDate()}
-              </span>
+              <span className="leading-none">{date.getDate()}</span>
               {evs.length > 0 && (
-                <span className="mt-1 flex gap-0.5">
+                <span className="flex gap-0.5">
                   {evs.slice(0, 3).map((ev) => (
                     <span
                       key={ev.id}
                       className={cn(
                         "size-1 rounded-full",
-                        isSelected ? "bg-primary-foreground" : eventoTipoDef(ev.tipo).dot
+                        isSelected ? "bg-current" : eventoTipoDef(ev.tipo).dot,
                       )}
                     />
                   ))}

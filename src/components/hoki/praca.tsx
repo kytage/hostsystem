@@ -36,9 +36,17 @@ import {
   type Visual,
 } from "@/lib/hoki";
 import { Hoki2D } from "./hoki-2d";
+import { ControlesDeToque } from "./controles-toque";
+import { INTERACOES_BONECO } from "./boneco";
+import { RodaDeAnimacoes } from "./roda-animacoes";
 import {
+  abrirMovimento,
   definirLugar,
+  enviarMovimento,
   enviarNaPraca,
+  fecharMovimento,
+  olhandoMovimento,
+  ouvirMovimento,
   enviarShow,
   ouvirNaPraca,
   reiniciarPraca,
@@ -86,6 +94,7 @@ import {
   CHEGADA,
   CHUVEIRO,
   CENTRO_DO_COMERCIO,
+  COMERCIO_NA_PRACA,
   CORREIO,
   FRENTE_DO_COMERCIO,
   FRENTE_DO_CORREIO,
@@ -129,6 +138,8 @@ const TRUQUES: Reacao[] = [
   "onda",
   "pulinhos",
   "disco",
+  ...INTERACOES_BONECO.map((i) => i.id),
+  "soco",
 ];
 /** Interações em dupla: o nome no botão, o que aparece no convite e quanto duram (as de tempo certo). */
 const INTERACOES: Record<Dupla, { nome: string; convite: string; emoji: string; dura?: number }> = {
@@ -341,6 +352,16 @@ export function Praca({
       pararTruque();
     };
   }, [anotarFala]);
+
+  /* ---------- movimento contínuo dos outros (andar com o teclado, correr, pular) ---------- */
+  useEffect(() => {
+    abrirMovimento();
+    const parar = ouvirMovimento((m) => mundo.current?.movimento(m.id, m));
+    return () => {
+      parar();
+      fecharMovimento();
+    };
+  }, []);
 
   /* ---------- interações em dupla: convite, resposta e soltar ---------- */
   useEffect(() => {
@@ -781,8 +802,9 @@ export function Praca({
     if (naBeiraDaFonte(p)) return { tipo: "fonte" as const };
     // na frente do balcão do Comércio
     if (
-      Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.9 ||
-      Math.hypot(p.x - CENTRO_DO_COMERCIO.x, p.z - CENTRO_DO_COMERCIO.z) < 2.6
+      COMERCIO_NA_PRACA &&
+      (Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.9 ||
+        Math.hypot(p.x - CENTRO_DO_COMERCIO.x, p.z - CENTRO_DO_COMERCIO.z) < 2.6)
     )
       return { tipo: "comercio" as const };
     // na frente do portal do Magnata
@@ -882,7 +904,9 @@ export function Praca({
       return;
     }
     playSfx("add");
-    toast.success(`+1 ${agua.emoji} ${agua.nome}. Para beber, abra a mochila (ou o botão de bebida do HOKI).`);
+    toast.success(
+      `+1 ${agua.emoji} ${agua.nome}. Para beber, abra a mochila (ou o botão de bebida do HOKI).`,
+    );
     aoSalvar({
       inventario: { ...pet.inventario, agua: (pet.inventario["agua"] ?? 0) + 1 },
       colheitas: { ...pet.colheitas, fonte: Date.now() },
@@ -1291,7 +1315,7 @@ export function Praca({
     }
     e.fila = {};
     if (sobrou)
-      toast.info("A mochila do HOKI está cheia (50 kg): coma, beba ou venda algo no Comércio.", {
+      toast.info("A mochila do HOKI está cheia (50 kg): coma, beba ou jogue algo fora.", {
         id: "mochila-cheia",
       });
     if (!entrou.length) return;
@@ -1447,9 +1471,21 @@ export function Praca({
         vistaRanking={vistaRanking}
         onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
         onCorreio={irAoCorreio}
-        onComercio={irAoComercio}
+        {...(COMERCIO_NA_PRACA ? { onComercio: irAoComercio } : {})}
         onCanteiro={irAoCanteiro}
+        onMover={(p) => {
+          // começou a andar pelo teclado ou joystick: larga o que estava fazendo e levanta do banco
+          largarTudo();
+          setAlvo(null);
+          setEu({ x: p.x, z: p.z, banco: null });
+        }}
+        onFluxo={enviarMovimento}
+        onSoco={() => enviarNaPraca("truque", { id: euPessoa.id, tipo: "soco" })}
+        olhando={olhandoMovimento}
         onParou={(p) => {
+          // parou depois de andar pelo teclado: o lugar onde parou vira o destino (todos veem, até a versão antiga)
+          if (eu.banco === null && (Math.abs(eu.x - p.x) > 0.001 || Math.abs(eu.z - p.z) > 0.001))
+            setEu({ x: p.x, z: p.z, banco: null });
           // cheguei perto de quem eu queria: abre as ações
           const quem = indoAte ? outros[indoAte] : undefined;
           if (indoAte) setIndoAte(null);
@@ -1500,6 +1536,22 @@ export function Praca({
           }
         }}
         className="absolute inset-0"
+      />
+      {/* no celular: joystick para andar (e correr) e botão de pular */}
+      <ControlesDeToque
+        ativo={dentro && !vistaRanking && !fazenda}
+        onJoystick={(lado, frente, correr) => mundo.current?.joystick(lado, frente, correr)}
+        onPular={() => mundo.current?.pular()}
+        onSocar={() => mundo.current?.socar()}
+      />
+      <DicaDeTeclas ativo={dentro && !vistaRanking && !fazenda} />
+      {/* B: roda de animações */}
+      <RodaDeAnimacoes
+        ativo={dentro && !vistaRanking && !fazenda}
+        emotes={emotes}
+        tocando={animacao}
+        onEscolher={aoEmote}
+        onParar={() => setAnimacao(null)}
       />
 
       {/* jogos (só ícones, sem textos no topo) */}
@@ -1787,7 +1839,7 @@ export function Praca({
       {emotesAberto && (
         <div
           className={cn(
-            "pf-pop absolute z-10 grid w-[236px] grid-cols-2 gap-1.5 rounded-2xl border border-white/15 bg-black/80 p-2 text-white backdrop-blur-xl",
+            "pf-pop absolute z-10 grid max-h-[min(340px,calc(100%-90px))] w-[264px] grid-cols-2 gap-1.5 overflow-y-auto overscroll-contain rounded-2xl border border-white/15 bg-black/80 p-2 text-white backdrop-blur-xl",
             dentro ? "bottom-[68px] right-[150px]" : "bottom-[66px] left-3",
           )}
           role="menu"
@@ -1936,30 +1988,65 @@ export function Praca({
           </button>
         </div>
       )}
-      {conversa.length > 0 && (
-        <div
-          className={cn(
-            "pointer-events-none absolute left-3 z-10 flex max-w-[min(420px,60%)] flex-col items-start gap-1",
-            "top-3",
-          )}
-        >
-          {conversa.map((m) => (
-            <div
-              key={m.chave}
-              className="pf-pop flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/60 py-0.5 pl-0.5 pr-2.5 text-[11.5px] text-white backdrop-blur-md"
-            >
-              <span className="block size-5 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50">
-                <Hoki2D visual={m.visual} busto />
-              </span>
-              {m.tag && (
-                <span className="shrink-0 rounded bg-primary px-1 text-[8.5px] font-bold leading-[13px]">
-                  {m.tag}
-                </span>
-              )}
-              <span className="shrink-0 font-semibold">{m.nome}</span>
-              <span className="truncate text-white/85">{m.texto}</span>
+      {/* chat: no canto de cima, logo abaixo da HUD (mensagens e, falando, o campo de escrever) */}
+      {(conversa.length > 0 || (falando && dentro && !vistaRanking)) && (
+        <div className="absolute left-3 top-[52px] z-20 flex pointer-coarse:top-[150px] w-[min(360px,calc(100%-1.5rem))] flex-col items-start gap-1.5">
+          {conversa.length > 0 && (
+            <div className="pointer-events-none flex max-w-full flex-col items-start gap-1">
+              {conversa.map((m) => (
+                <div
+                  key={m.chave}
+                  className="pf-pop flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-black/60 py-0.5 pl-0.5 pr-2.5 text-[11.5px] text-white backdrop-blur-md"
+                >
+                  <span className="block size-5 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50">
+                    <Hoki2D visual={m.visual} busto />
+                  </span>
+                  {m.tag && (
+                    <span className="shrink-0 rounded bg-primary px-1 text-[8.5px] font-bold leading-[13px]">
+                      {m.tag}
+                    </span>
+                  )}
+                  <span className="shrink-0 font-semibold">{m.nome}</span>
+                  <span className="truncate text-white/85">{m.texto}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+          {falando && dentro && !vistaRanking && (
+            <form
+              onSubmit={falar}
+              className="pf-pop flex w-full items-center gap-1.5 rounded-xl border border-white/15 bg-black/80 p-1 pl-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+            >
+              <kbd className="shrink-0 rounded-md bg-white px-1.5 py-px font-sans text-[10.5px] font-bold text-black">
+                T
+              </kbd>
+              <input
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setFalando(false);
+                  }
+                }}
+                onBlur={() => {
+                  if (!texto.trim()) setFalando(false);
+                }}
+                autoFocus
+                maxLength={90}
+                placeholder="Fale algo e aperte Enter (Esc fecha)"
+                aria-label="Mensagem para a praça"
+                className="h-8 min-w-0 flex-1 bg-transparent px-1.5 text-[13px] text-white outline-none placeholder:text-white/45"
+              />
+              <button
+                type="submit"
+                disabled={!texto.trim()}
+                className="h-8 shrink-0 rounded-lg bg-primary px-3 text-[12px] font-semibold text-white transition-opacity disabled:opacity-35"
+              >
+                Enviar
+              </button>
+            </form>
+          )}
         </div>
       )}
       {/* (o botão de dormir fica na divisa, junto do lápis, da mochila e da loja) */}
@@ -1992,31 +2079,9 @@ export function Praca({
           {/* chat e status */}
           <form
             onSubmit={falar}
-            className={cn(
-              "absolute bottom-3 right-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/75 p-1.5 backdrop-blur-xl",
-              falando && "left-3",
-            )}
+            className="absolute bottom-3 right-3 flex items-center gap-2 rounded-full border border-white/15 bg-black/75 p-1.5 backdrop-blur-xl"
           >
-            {falando ? (
-              <input
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    e.stopPropagation();
-                    setFalando(false);
-                  }
-                }}
-                onBlur={() => {
-                  if (!texto.trim()) setFalando(false);
-                }}
-                autoFocus
-                maxLength={90}
-                placeholder="Fale algo e aperte Enter (Esc fecha)"
-                aria-label="Mensagem para a praça"
-                className="pf-pop h-9 min-w-0 flex-1 rounded-full bg-transparent px-3 text-[13px] text-white outline-none placeholder:text-white/45"
-              />
-            ) : (
+            {!falando && (
               <button
                 type="button"
                 onClick={() => setFalando(true)}
@@ -2031,16 +2096,18 @@ export function Praca({
             )}
             {/* total online: clica e abre quem está online, dormindo, no lobby ou na HOST FAZENDAS */}
             <OnlineAgora pessoas={pessoasOnline} selos={selos} onPessoa={setPerfilDe} />
-            {/* comércio do lobby: atalho que leva o HOKI até a barraca */}
-            <button
-              type="button"
-              onClick={irAoComercio}
-              aria-label="Ir ao Comércio do lobby"
-              title="Comércio: vender e comprar itens"
-              className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 text-white/70 transition-colors hover:text-white"
-            >
-              <Store className="size-4" />
-            </button>
+            {/* comércio do lobby: atalho que leva o HOKI até a barraca (desligado: COMERCIO_NA_PRACA) */}
+            {COMERCIO_NA_PRACA && (
+              <button
+                type="button"
+                onClick={irAoComercio}
+                aria-label="Ir ao Comércio do lobby"
+                title="Comércio: vender e comprar itens"
+                className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 text-white/70 transition-colors hover:text-white"
+              >
+                <Store className="size-4" />
+              </button>
+            )}
             {animacao ? (
               <button
                 type="button"
@@ -2268,7 +2335,9 @@ export function Praca({
                 title={r.titulo}
                 className={cn(
                   "rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition-colors",
-                  quadroRanking.pagina === i ? "bg-[#ffd84a] text-black" : "text-white/75 hover:text-white",
+                  quadroRanking.pagina === i
+                    ? "bg-[#ffd84a] text-black"
+                    : "text-white/75 hover:text-white",
                 )}
               >
                 {/* o título grande no arco já diz "TOP …": aqui fica só o nome, para caber numa linha */}
@@ -2281,14 +2350,18 @@ export function Praca({
               onClick={() => setPaginaRanking((n) => n + 1)}
               className="flex h-9 items-center gap-2 rounded-full border border-white/15 bg-black/75 pl-1.5 pr-4 text-[12px] font-semibold text-white backdrop-blur-md hover:border-white/30"
             >
-              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">E</kbd>
+              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
+                E
+              </kbd>
               Próximo
             </button>
             <button
               onClick={sairDoRanking}
               className="flex h-9 items-center gap-2 rounded-full border border-white/15 bg-black/75 pl-1.5 pr-4 text-[12px] font-semibold text-white backdrop-blur-md hover:border-white/30"
             >
-              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">F</kbd>
+              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
+                F
+              </kbd>
               Sair
             </button>
           </div>
@@ -2609,6 +2682,61 @@ function EscolherPresente({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Dica das teclas no computador: aparece ao entrar na praça (nas 6 primeiras vezes) e some
+ * sozinha depois de alguns segundos ou na primeira tecla de andar.
+ */
+function DicaDeTeclas({ ativo }: { ativo: boolean }) {
+  const [mostra, setMostra] = useState(false);
+  useEffect(() => {
+    if (!ativo) return setMostra(false);
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    let vezes = 0;
+    try {
+      vezes = Number(localStorage.getItem("hoki-dica-teclas") ?? "0") || 0;
+      if (vezes >= 6) return;
+      localStorage.setItem("hoki-dica-teclas", String(vezes + 1));
+    } catch {
+      // sem armazenamento: mostra mesmo assim
+    }
+    setMostra(true);
+    const fim = setTimeout(() => setMostra(false), 9000);
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (/^(Key[WASD]|Arrow|Space)/.test(e.code)) setMostra(false);
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => {
+      clearTimeout(fim);
+      window.removeEventListener("keydown", aoTeclar);
+    };
+  }, [ativo]);
+  if (!mostra) return null;
+  const tecla =
+    "rounded-md border border-white/25 bg-white/15 px-1.5 py-px font-mono text-[10.5px] font-semibold";
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-full border border-white/15 bg-black/70 px-3.5 py-1.5 text-[11.5px] text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md">
+      <span className="flex items-center gap-1">
+        <span className={tecla}>W A S D</span> andar
+      </span>
+      <span className="flex items-center gap-1">
+        <span className={tecla}>Shift</span> correr
+      </span>
+      <span className="flex items-center gap-1">
+        <span className={tecla}>Espaço</span> pular
+      </span>
+      <span className="flex items-center gap-1">
+        <span className={tecla}>Botão direito</span> soco
+      </span>
+      <span className="flex items-center gap-1">
+        <span className={tecla}>B</span> animações
+      </span>
+      <span className="hidden items-center gap-1 sm:flex">
+        arraste para girar · roda para afastar
+      </span>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/dashboard/Logo";
+import { Indice, Indices } from "@/components/indice";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { ROLE_LABELS } from "@/lib/roles";
 import { fetchPendenciasArea, type PendenciaArea, type StatusPendencia } from "@/lib/area-manager";
@@ -107,12 +108,12 @@ function AreaNode({ a, onOpen }: { a: AreaResumo; onOpen: () => void }) {
   const saude = saudeDa(a);
   const auxiliares = a.membros.filter((m) => !a.lideres.includes(m));
   return (
-    <div className="glass surface-hover flex w-[250px] flex-col gap-3 rounded-2xl p-3.5">
+    <div className="glass hc flex w-[250px] flex-col gap-3 p-3.5">
       <div className="flex items-start justify-between gap-2">
-        <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-2 text-left">
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-lg">{a.def.emoji}</span>
+        <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-2.5 text-left">
+          <span className="hc-icone text-[17px] leading-none">{a.def.emoji}</span>
           <span className="min-w-0">
-            <span className="block truncate text-[13.5px] font-semibold">{a.def.label}</span>
+            <span className="hc-titulo block truncate">{a.def.label}</span>
             <span className="block text-[11px] text-muted-foreground">
               {a.membros.length} membro{a.membros.length === 1 ? "" : "s"}
             </span>
@@ -122,7 +123,7 @@ function AreaNode({ a, onOpen }: { a: AreaResumo; onOpen: () => void }) {
           type="button"
           onClick={onOpen}
           title="Ver pendências da área"
-          className="relative grid size-8 shrink-0 place-items-center rounded-full border border-white/[0.08] bg-white/[0.04] text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+          className="hc-seta relative"
         >
           <ClipboardList className="size-3.5" />
           {a.abertas > 0 && (
@@ -133,9 +134,9 @@ function AreaNode({ a, onOpen }: { a: AreaResumo; onOpen: () => void }) {
         </button>
       </div>
 
-      <div className="glass-inset rounded-xl px-2.5 py-2">
-        <p className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wider text-ink-3">
-          <Crown className="size-3 text-primary" /> Líder
+      <div className="hc-dentro px-2.5 py-2">
+        <p className="hc-sobre mb-1.5 flex items-center gap-1">
+          <Crown className="size-3 text-amber-300" /> Líder
         </p>
         {a.lideres.length === 0 ? (
           <p className="text-xs text-ink-3">Sem líder definido</p>
@@ -212,26 +213,28 @@ export function AreasOrg({
   const areaAberta = resumo.find((a) => a.def.key === aberta) ?? null;
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <div className="space-y-3.5">
+      {/* números das áreas, no padrão da tela inicial (ponto vermelho = pede atenção) */}
+      <Indices>
         {kpis.map((k) => (
-          <div key={k.label} className="glass-inset rounded-2xl p-4">
-            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <k.icon className="size-3.5" strokeWidth={1.7} /> {k.label}
-            </p>
-            <p className={cn("mt-2 font-display text-3xl font-semibold tabular-nums", k.warn && k.value > 0 && "text-warning")}>{k.value}</p>
-          </div>
+          <Indice
+            key={k.label}
+            valor={k.value}
+            titulo={k.label}
+            icone={k.icon}
+            alerta={k.warn && k.value > 0}
+          />
         ))}
-      </div>
+      </Indices>
 
       {/* Organograma das áreas */}
       <OrgCanvas height="min(78vh, 860px)">
         <div className="flex min-w-max flex-col items-center px-10 pb-16">
-          <div className="glass-elevated flex items-center gap-3 rounded-2xl px-5 py-3.5">
+          <div className="glass hc flex items-center gap-3 px-5 py-3.5">
             <Logo className="h-6" />
             <div>
-              <p className="font-display text-sm font-semibold">Áreas HOST</p>
-              <p className="text-[11px] text-muted-foreground">{resumo.length} áreas em {GRUPOS.length} grupos</p>
+              <p className="hc-titulo">Áreas HOST</p>
+              <p className="hc-nota mt-0.5">{resumo.length} áreas em {GRUPOS.length} grupos</p>
             </div>
           </div>
           <div className="h-8 w-px bg-white/15" />
@@ -262,14 +265,14 @@ export function AreasOrg({
                   <div className="h-4 w-px bg-white/15" />
                   <div
                     className={cn(
-                      "flex w-[300px] items-center gap-3 rounded-2xl px-4 py-3",
-                      g.key === "legal" ? "glass-elevated border-white/15" : "glass",
+                      "glass hc flex w-[300px] items-center gap-3 px-4 py-3",
+                      g.key === "legal" && "!border-white/15",
                     )}
                   >
                     <span
                       className={cn(
-                        "grid size-11 place-items-center rounded-xl border",
-                        g.key === "legal" ? "border-primary/40 bg-primary/15 text-foreground" : "border-white/10 bg-white/[0.05] text-muted-foreground",
+                        "hc-icone !size-11",
+                        g.key === "legal" ? "!text-foreground" : "!text-muted-foreground",
                       )}
                     >
                       <g.icon className="size-5" strokeWidth={1.6} />
@@ -292,7 +295,7 @@ export function AreasOrg({
                   {g.key === "confronto" && lista.length === 2 ? (
                     <div className="flex items-center gap-2">
                       <AreaNode a={lista[0]!} onOpen={() => setAberta(lista[0]!.def.key)} />
-                      <span className="grid size-9 shrink-0 place-items-center rounded-full border border-primary/40 bg-primary/10 font-display text-[11px] font-semibold tracking-wider text-primary">
+                      <span className="hc-seta !size-9 font-display text-[11px] font-semibold tracking-wider">
                         VS
                       </span>
                       <AreaNode a={lista[1]!} onOpen={() => setAberta(lista[1]!.def.key)} />
@@ -312,11 +315,11 @@ export function AreasOrg({
       </OrgCanvas>
 
       {/* Painel de administração */}
-      <section className="glass rounded-[20px]">
+      <section className="glass hc">
         <header className="flex flex-wrap items-end justify-between gap-2 px-5 pt-5">
           <div>
-            <p className="eyebrow">Administração</p>
-            <h3 className="mt-1 font-display text-lg font-semibold">Como cada área está fluindo</h3>
+            <p className="hc-sobre">Administração</p>
+            <h3 className="hc-titulo mt-1.5">Como cada área está fluindo</h3>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-ink-3">
             <Activity className="size-3.5" /> Pendências vindas da Área Manager, em tempo real
@@ -325,15 +328,15 @@ export function AreasOrg({
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] text-left text-[11px] uppercase tracking-wider text-ink-3">
-                <th className="px-5 py-2.5 font-medium">Área</th>
-                <th className="px-3 py-2.5 font-medium">Líder</th>
-                <th className="px-3 py-2.5 font-medium">Equipe</th>
-                <th className="px-3 py-2.5 text-right font-medium">Abertas</th>
-                <th className="px-3 py-2.5 text-right font-medium">Stand-by</th>
-                <th className="px-3 py-2.5 text-right font-medium">Resolvidas 30d</th>
-                <th className="px-3 py-2.5 font-medium">Última atividade</th>
-                <th className="px-5 py-2.5 font-medium">Situação</th>
+              <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+                <th className="px-5 py-2.5 font-semibold">Área</th>
+                <th className="px-3 py-2.5 font-semibold">Líder</th>
+                <th className="px-3 py-2.5 font-semibold">Equipe</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Abertas</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Stand-by</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Resolvidas 30d</th>
+                <th className="px-3 py-2.5 font-semibold">Última atividade</th>
+                <th className="px-5 py-2.5 font-semibold">Situação</th>
               </tr>
             </thead>
             <tbody>
@@ -343,7 +346,7 @@ export function AreasOrg({
                 return (
                   <Fragment key={g.key}>
                     <tr>
-                      <td colSpan={8} className="px-5 pb-1.5 pt-4 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground">
+                      <td colSpan={8} className="hc-sobre px-5 pb-1.5 pt-4">
                         <span className="inline-flex items-center gap-1.5">
                           <g.icon className="size-3.5" /> {g.label}
                         </span>
@@ -355,7 +358,7 @@ export function AreasOrg({
                         <tr
                           key={a.def.key}
                           onClick={() => setAberta(a.def.key)}
-                          className="cursor-pointer border-t border-white/[0.04] transition-colors hover:bg-white/[0.03]"
+                          className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.03]"
                         >
                           <td className="px-5 py-2.5">
                             <span className="flex items-center gap-2 font-medium">
@@ -413,14 +416,14 @@ function AreaDrawer({ area, onClose, onVerEquipe }: { area: AreaResumo; onClose:
       <aside className="glass-modal animate-rise fixed bottom-4 right-4 top-4 z-50 flex w-[420px] max-w-[calc(100vw-2rem)] flex-col rounded-[22px]">
         <div className="flex items-start justify-between p-5 pb-0">
           <div className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-xl">{area.def.emoji}</span>
+            <span className="hc-icone !size-11 text-xl leading-none">{area.def.emoji}</span>
             <div>
-              <p className="eyebrow">{GRUPOS.find((g) => g.key === area.grupo)?.label ?? area.grupo}</p>
-              <p className="font-display text-lg font-semibold">{area.def.label}</p>
+              <p className="hc-sobre">{GRUPOS.find((g) => g.key === area.grupo)?.label ?? area.grupo}</p>
+              <p className="mt-0.5 font-display text-lg font-semibold">{area.def.label}</p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.07] hover:text-foreground">
-            <X className="size-4" />
+          <button onClick={onClose} aria-label="Fechar" className="hc-seta">
+            <X className="size-3.5" />
           </button>
         </div>
 
@@ -430,9 +433,9 @@ function AreaDrawer({ area, onClose, onVerEquipe }: { area: AreaResumo; onClose:
             { l: "Abertas", v: area.abertas },
             { l: "Resolv. 30d", v: area.resolvidas30 },
           ].map((k) => (
-            <div key={k.l} className="glass-inset rounded-xl p-3">
-              <p className="text-[10.5px] text-ink-3">{k.l}</p>
-              <p className="mt-0.5 font-display text-xl font-semibold tabular-nums">{k.v}</p>
+            <div key={k.l} className="hc-dentro p-3">
+              <p className="hc-sobre">{k.l}</p>
+              <p className="mt-1.5 font-display text-xl font-semibold tabular-nums">{k.v}</p>
             </div>
           ))}
         </div>
@@ -441,25 +444,25 @@ function AreaDrawer({ area, onClose, onVerEquipe }: { area: AreaResumo; onClose:
             {saude.tone !== "ok" && <AlertTriangle className="mr-1 inline size-3" />}
             {saude.label}
           </span>
-          <button onClick={onVerEquipe} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <button onClick={onVerEquipe} className="hc-pilula">
             Ver membros na Equipe <ArrowUpRight className="size-3" />
           </button>
         </div>
 
         <div className="mt-4 px-5">
-          <p className="text-xs font-medium text-muted-foreground">Pessoas</p>
+          <p className="hc-sobre">Pessoas</p>
           <div className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto">
-            {area.membros.length === 0 && <p className="glass-inset rounded-xl px-3 py-3 text-xs text-ink-3">Ninguém nesta área ainda.</p>}
+            {area.membros.length === 0 && <p className="hc-dentro px-3 py-3 text-xs text-ink-3">Ninguém nesta área ainda.</p>}
             {[...area.lideres, ...area.membros.filter((m) => !area.lideres.includes(m))].map((m) => {
               const lider = area.lideres.includes(m);
               return (
-                <div key={m.id} className="glass-inset flex items-center gap-2.5 rounded-xl px-3 py-2">
+                <div key={m.id} className="hc-dentro flex items-center gap-2.5 px-3 py-2">
                   <img src={m.avatar_url || DEFAULT_AVATAR_URL} alt="" className="size-7 rounded-lg object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium">{m.username}</p>
                     <p className="text-[11px] text-ink-3">{ROLE_LABELS[m.role]}</p>
                   </div>
-                  <span className={cn("flex items-center gap-1 text-[11px]", lider ? "text-primary" : "text-ink-3")}>
+                  <span className={cn("flex items-center gap-1 text-[11px]", lider ? "text-amber-300" : "text-ink-3")}>
                     {lider && <Crown className="size-3" />}
                     {lider ? "Líder" : "Auxiliar"}
                   </span>
@@ -471,34 +474,38 @@ function AreaDrawer({ area, onClose, onVerEquipe }: { area: AreaResumo; onClose:
 
         <div className="mt-5 flex min-h-0 flex-1 flex-col px-5">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium text-muted-foreground">Pendências</p>
-            <button onClick={() => navigate({ to: "/area-manager" })} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <p className="hc-sobre">Pendências</p>
+            <button onClick={() => navigate({ to: "/area-manager" })} className="hc-pilula">
               Área Manager <ArrowUpRight className="size-3" />
             </button>
           </div>
-          <div className="glass-inset mt-2 flex gap-1 rounded-full p-1">
+          <div
+            className="segmentos mt-2 w-full"
+            role="tablist"
+            aria-label="Situação das pendências"
+          >
             {STATUS_TABS.map((t) => {
               const n = area.pend.filter((p) => p.status === t.key).length;
               return (
                 <button
                   key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.key}
                   onClick={() => setTab(t.key)}
-                  className={cn(
-                    "flex-1 rounded-full px-2 py-1 text-[11px] transition-colors",
-                    tab === t.key ? "bg-white/[0.09] text-foreground" : "text-muted-foreground hover:text-foreground",
-                  )}
+                  className="flex-1 justify-center !px-2 !text-[11px]"
                 >
-                  {t.label} <span className="tabular-nums text-ink-3">{n}</span>
+                  {t.label} <span className="tabular-nums opacity-60">{n}</span>
                 </button>
               );
             })}
           </div>
           <div className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto pb-5">
             {lista.length === 0 ? (
-              <p className="glass-inset rounded-xl px-3 py-6 text-center text-xs text-ink-3">Nada aqui.</p>
+              <p className="hc-dentro px-3 py-6 text-center text-xs text-ink-3">Nada aqui.</p>
             ) : (
               lista.map((p) => (
-                <div key={p.id} className="glass-inset rounded-xl p-3">
+                <div key={p.id} className="hc-dentro p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[13px] font-medium">{p.titulo}</p>
                     {p.prioridade && <span className="shrink-0 rounded-full border border-white/[0.08] px-1.5 py-px text-[10px] capitalize text-muted-foreground">{p.prioridade}</span>}

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, Loader2, Trash2 } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchNotificacoes,
@@ -82,16 +82,16 @@ export function NotificationsBell() {
             onClick={() => setAberto(false)}
           />
           <div
-            className="fixed z-50 w-96 overflow-hidden rounded-2xl glass-modal shadow-black/60"
+            className="fixed z-50 w-96 overflow-hidden rounded-[22px] glass-modal shadow-black/60"
             style={{ left: pos.left, top: pos.top, bottom: pos.bottom }}
           >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">Notificações</p>
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
+              <p className="hc-titulo">Notificações</p>
+              <div className="flex items-center gap-1.5">
                 {naoLidas > 0 && (
                   <button
                     onClick={() => marcar.mutate()}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                    className="hc-pilula"
                     title="Marcar todas como lidas"
                   >
                     <CheckCheck className="size-3.5" /> Lidas
@@ -101,7 +101,7 @@ export function NotificationsBell() {
                   <button
                     onClick={() => limpar.mutate()}
                     disabled={limpar.isPending}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    className="hc-pilula hover:!bg-destructive/15 hover:!text-destructive disabled:opacity-50"
                     title="Limpar notificações lidas"
                   >
                     <Trash2 className="size-3.5" /> Limpar
@@ -111,15 +111,15 @@ export function NotificationsBell() {
             </div>
             <div className="scrollbar-thin max-h-[70vh] overflow-y-auto">
               {notificacoes.length === 0 && (
-                <p className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
-                  <Loader2 className="size-4" /> Nenhuma notificação.
+                <p className="m-4 flex items-center justify-center gap-2 rounded-[14px] border border-dashed border-white/[0.1] px-4 py-8 text-sm text-muted-foreground">
+                  <BellOff className="size-4" strokeWidth={1.75} /> Nenhuma notificação.
                 </p>
               )}
               {notificacoes.map((n) => (
                 <div
                   key={n.id}
                   className={cn(
-                    "border-b border-border/50 px-4 py-3.5 text-[13px] leading-relaxed last:border-0",
+                    "border-b border-white/[0.06] px-4 py-3.5 text-[13px] leading-relaxed last:border-0",
                     n.lida ? "text-muted-foreground" : "text-foreground",
                   )}
                 >
@@ -127,9 +127,7 @@ export function NotificationsBell() {
                     <span className="mb-1.5 inline-block size-1.5 rounded-full bg-primary align-middle" />
                   )}
                   <p className={cn(!n.lida && "ml-3 -mt-4")}>{n.texto}</p>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground/70">
-                    {fmtDataHora(n.createdAt)}
-                  </p>
+                  <p className="mt-1.5 text-[11px] text-ink-3">{fmtDataHora(n.createdAt)}</p>
                 </div>
               ))}
             </div>

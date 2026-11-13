@@ -13,11 +13,11 @@ export const Route = createFileRoute("/_authenticated/hoki")({
 function HokiPage() {
   const visita = useSouVisita();
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="eyebrow">{visita ? "Visita" : "HOKI"}</p>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Praça do HOKI</h1>
+    <div className="pagina">
+      <div className="pagina-topo mb-4">
+        <div className="min-w-0">
+          <p className="hc-sobre">{visita ? "Visita" : "HOKI"}</p>
+          <h1 className="pagina-titulo">Praça do HOKI</h1>
         </div>
         {visita && (
           <button

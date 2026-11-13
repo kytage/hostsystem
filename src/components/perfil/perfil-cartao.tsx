@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Check, Copy, Heart, ImagePlus, Loader2, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
+import { Camera, Check, Coins, Copy, Heart, ImagePlus, Loader2, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthUserData } from "@/lib/auth-cache";
@@ -90,7 +90,7 @@ function Copiar({ valor, rotulo }: { valor: string; rotulo: string }) {
           setTimeout(() => setOk(false), 1200);
         });
       }}
-      className="grid size-6 place-items-center rounded-md text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+      className="hc-seta !size-6"
     >
       {ok ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
     </button>
@@ -168,7 +168,7 @@ export function PerfilCartao() {
   const avatar = perfil?.avatar_url || DEFAULT_AVATAR_URL;
 
   return (
-    <section className="perfil-cartao relative rounded-[22px] border border-white/[0.08] bg-black/35 shadow-[0_30px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-[3px]">
+    <section className="perfil-cartao glass relative rounded-[22px]">
       {/* Banner */}
       <div className="group/banner relative h-16 overflow-hidden rounded-t-[22px]">
         <img src={banner} alt="" draggable={false} className="size-full object-cover" />
@@ -192,7 +192,7 @@ export function PerfilCartao() {
             onClick={() => fotoRef.current?.click()}
             disabled={trocarFoto.isPending}
             aria-label="Trocar foto"
-            className="group/foto relative size-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black ring-[3px] ring-black"
+            className="group/foto relative size-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black ring-[3px] ring-background"
           >
             <img src={avatar} alt="" draggable={false} className="size-full object-cover" />
             <span className="absolute inset-0 grid place-items-center bg-black/55 opacity-0 transition-opacity group-hover/foto:opacity-100">
@@ -223,7 +223,7 @@ export function PerfilCartao() {
             <button
               type="button"
               onClick={() => setMudandoStatus((v) => !v)}
-              className="flex w-full min-w-0 items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1.5 text-left text-[11.5px] transition-colors hover:bg-white/[0.09]"
+              className="hc-estado w-full min-w-0 text-left hover:!bg-[var(--gf-3)]"
               title="Status do HOKI (o mesmo da praça)"
             >
               <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
@@ -243,7 +243,7 @@ export function PerfilCartao() {
           <button
             type="button"
             onClick={() => setEditando(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-black transition-opacity hover:opacity-90"
+            className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground"
           >
             <Pencil className="size-3" /> Editar perfil
           </button>
@@ -256,14 +256,14 @@ export function PerfilCartao() {
         )}
 
         {/* Números */}
-        <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+        <div className="hc-dentro mt-3 grid grid-cols-2 overflow-hidden">
           <div className="border-b border-r border-white/[0.06] p-2.5">
             <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
-              <Sparkles className="size-3 text-amber-300" /> HOKI Level
+              <Sparkles className="size-3" /> HOKI Level
             </p>
             <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{nivel?.nivel ?? 1}</p>
             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.08]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#7a120c] to-[#ff4a3d]" style={{ width: `${prog.pct}%` }} />
+              <div className="h-full rounded-full bg-foreground/85" style={{ width: `${prog.pct}%` }} />
             </div>
             <p className="mt-1 text-[10px] text-ink-3" title={prog.maximo ? undefined : "XP para o próximo nível"}>
               {prog.maximo ? "Nível máximo" : `${prog.noNivel}/${prog.paraSubir} XP`}
@@ -271,7 +271,7 @@ export function PerfilCartao() {
           </div>
           <div className="border-b border-white/[0.06] p-2.5">
             <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
-              <span className="text-[12px] leading-none">💰</span> Staff Coins
+              <Coins className="size-3" /> Staff Coins
             </p>
             <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{coins.toLocaleString("pt-BR")}</p>
             <p className="mt-1.5 text-[10px] leading-snug text-ink-3" title="Tarefa recebida concluída: +10 · Sua própria tarefa: +1">
@@ -284,12 +284,12 @@ export function PerfilCartao() {
                 className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-muted-foreground"
                 title="Emojis que você recebeu hoje, nesta semana (desde segunda) e neste mês (desde o dia 1)"
               >
-                <Heart className="size-3 shrink-0 text-primary" /> Queridômetro
+                <Heart className="size-3 shrink-0" /> Queridômetro
               </p>
               <button
                 type="button"
                 onClick={() => setQuadroAberto(true)}
-                className="shrink-0 whitespace-nowrap rounded-full border border-white/10 px-2 py-px text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                className="hc-pilula !h-6 shrink-0 !px-2.5 !text-[10.5px]"
               >
                 Entregar{pendentes > 0 ? ` (${pendentes})` : ""}
               </button>
@@ -327,17 +327,17 @@ export function PerfilCartao() {
               </tbody>
             </table>
           </div>
-          <div className="col-span-2 space-y-0.5 px-2.5 py-2 text-[11.5px]">
+          <div className="col-span-2 space-y-1 px-2.5 py-2 text-[11.5px]">
             <p className="flex items-center justify-between gap-2">
               <span className="text-ink-3">ID Host</span>
-              <span className="flex min-w-0 items-center gap-0.5 font-mono">
+              <span className="flex min-w-0 items-center gap-1.5 font-mono">
                 <span className="truncate">{perfil?.host_id || <span className="text-ink-3">—</span>}</span>
                 <Copiar valor={perfil?.host_id ?? ""} rotulo="ID Host" />
               </span>
             </p>
             <p className="flex items-center justify-between gap-2">
               <span className="text-ink-3">Discord</span>
-              <span className="flex min-w-0 items-center gap-0.5 font-mono">
+              <span className="flex min-w-0 items-center gap-1.5 font-mono">
                 <span className="truncate">{perfil?.discord_id || <span className="text-ink-3">—</span>}</span>
                 <Copiar valor={perfil?.discord_id ?? ""} rotulo="ID Discord" />
               </span>
@@ -412,9 +412,9 @@ function EditorStatus({
   return (
     <div
       ref={ref}
-      className="pf-pop absolute right-0 top-full z-30 mt-2 w-[290px] rounded-2xl border border-white/10 bg-[#0b0b0b]/95 p-3 shadow-2xl backdrop-blur-xl"
+      className="pf-pop glass-modal absolute right-0 top-full z-30 mt-2 w-[290px] rounded-2xl p-3"
     >
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-3">Status do HOKI</p>
+      <p className="hc-sobre mb-2.5">Status do HOKI</p>
       <div className="flex flex-wrap gap-1.5">
         {STATUS_PRONTOS.map((s) => (
           <button
@@ -423,7 +423,7 @@ function EditorStatus({
             onClick={() => onSalvar(s)}
             className={cn(
               "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors",
-              s === atual ? "border-primary/50 bg-primary/15 text-foreground" : "border-white/10 text-muted-foreground hover:text-foreground",
+              s === atual ? "border-transparent bg-foreground font-medium text-background" : "border-white/[0.08] text-muted-foreground hover:text-foreground",
             )}
           >
             {s}
@@ -434,7 +434,7 @@ function EditorStatus({
         <select
           value={emoji}
           onChange={(e) => setEmoji(e.target.value)}
-          className="h-8 rounded-lg border border-white/10 bg-black/40 px-1 text-sm outline-none"
+          className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-1 text-sm outline-none"
           aria-label="Emoji do status"
         >
           {EMOJIS_STATUS.map((e) => (
@@ -449,7 +449,7 @@ function EditorStatus({
           onKeyDown={(e) => e.key === "Enter" && texto.trim() && onSalvar(`${emoji} ${texto}`)}
           maxLength={28}
           placeholder="Escreva o seu…"
-          className="h-8 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-2.5 text-[12.5px] outline-none placeholder:text-ink-3 focus:border-white/25"
+          className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-[12.5px] text-foreground outline-none placeholder:text-ink-3 focus:border-white/30"
         />
       </div>
       <div className="mt-2.5 flex items-center justify-between">
@@ -460,7 +460,7 @@ function EditorStatus({
           type="button"
           disabled={!texto.trim()}
           onClick={() => onSalvar(`${emoji} ${texto}`)}
-          className="rounded-full bg-white px-3 py-1 text-[11.5px] font-semibold text-black disabled:opacity-40"
+          className="rounded-full bg-primary px-3 py-1 text-[11.5px] font-semibold text-primary-foreground disabled:opacity-40"
         >
           Salvar
         </button>
@@ -487,37 +487,37 @@ function EditarPerfil({
   const [semFoto, setSemFoto] = useState(false);
   const [semBanner, setSemBanner] = useState(false);
   const campo =
-    "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/25";
+    "w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-ink-3 focus:border-white/30";
 
   return createPortal(
     <div className="pf-fade fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="pf-modal glass-elevated max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-[24px] p-5"
+        className="pf-modal glass-elevated max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-[22px] p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3">
           <div>
-            <p className="eyebrow">Perfil & Agenda</p>
-            <h3 className="mt-1 font-display text-lg font-semibold">Editar perfil</h3>
+            <p className="hc-sobre">Perfil & Agenda</p>
+            <h3 className="hc-titulo mt-1.5">Editar perfil</h3>
           </div>
-          <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">
+          <button type="button" onClick={onClose} className="hc-seta">
             <X className="size-4" />
           </button>
         </header>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
-            ID Host
+          <label className="space-y-1.5">
+            <span className="hc-sobre block">ID Host</span>
             <input value={hostId} onChange={(e) => setHostId(e.target.value)} maxLength={40} placeholder="ex: 1024" className={cn(campo, "font-mono")} />
           </label>
-          <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
-            ID Discord
+          <label className="space-y-1.5">
+            <span className="hc-sobre block">ID Discord</span>
             <input value={discord} onChange={(e) => setDiscord(e.target.value)} maxLength={40} placeholder="ex: 285948123456789012" className={cn(campo, "font-mono")} />
           </label>
         </div>
 
-        <label className="mt-3 block space-y-1.5 text-xs font-medium text-muted-foreground">
-          Sobre mim (bio)
+        <label className="mt-3 block space-y-1.5">
+          <span className="hc-sobre block">Sobre mim (bio)</span>
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
@@ -529,17 +529,14 @@ function EditarPerfil({
         </label>
 
         <div className="mt-4">
-          <p className="text-xs font-medium text-muted-foreground">Status no chat</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <p className="hc-sobre">Status no chat</p>
+          <div className="segmentos mt-2" role="group" aria-label="Status no chat">
             {(["online", "ocupado", "ausente", "invisivel"] as PresenceStatus[]).map((s) => (
               <button
                 key={s}
                 type="button"
+                aria-pressed={presenca === s}
                 onClick={() => setPresenca(s)}
-                className={cn(
-                  "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                  presenca === s ? "border-primary/60 bg-primary/10 text-foreground" : "border-white/10 text-muted-foreground hover:text-foreground",
-                )}
               >
                 <span className={cn("size-2 rounded-full", STATUS_CONFIG[s].dot)} />
                 {STATUS_CONFIG[s].label}
@@ -552,11 +549,9 @@ function EditarPerfil({
           {perfil.avatar_url && (
             <button
               type="button"
+              aria-pressed={semFoto}
               onClick={() => setSemFoto((v) => !v)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                semFoto ? "border-primary/60 bg-primary/10 text-foreground" : "border-white/10 text-muted-foreground hover:text-foreground",
-              )}
+              className={cn("pilula rounded-full", semFoto && "pilula-ativa")}
             >
               <RotateCcw className="size-3.5" /> Foto padrão
             </button>
@@ -564,11 +559,9 @@ function EditarPerfil({
           {perfil.banner_url && (
             <button
               type="button"
+              aria-pressed={semBanner}
               onClick={() => setSemBanner((v) => !v)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                semBanner ? "border-primary/60 bg-primary/10 text-foreground" : "border-white/10 text-muted-foreground hover:text-foreground",
-              )}
+              className={cn("pilula rounded-full", semBanner && "pilula-ativa")}
             >
               <RotateCcw className="size-3.5" /> Banner padrão
             </button>
@@ -589,7 +582,7 @@ function EditarPerfil({
                 ...(semBanner ? { banner_url: null } : {}),
               })
             }
-            className="flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
           >
             {salvando && <Loader2 className="size-3.5 animate-spin" />} Salvar
           </button>

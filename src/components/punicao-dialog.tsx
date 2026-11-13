@@ -52,9 +52,9 @@ const vazio = (tipo: PunicaoTipo): PunicaoInput => ({
 });
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-primary/60";
-const labelCls =
-  "space-y-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground";
+  "w-full rounded-xl border border-white/[0.08] bg-black/25 px-3 py-2 text-sm font-normal tracking-normal text-foreground outline-none placeholder:text-ink-3 focus:border-white/25";
+/** Rótulo do campo no padrão da HOME. O que fica dentro dele usa `font-normal` e `tracking-normal` para não herdar o negrito e o espaçamento largo. */
+const labelCls = "hc-sobre flex flex-col gap-1.5";
 
 /**
  * Registro/edição de punição. Passo 1: escolha da área (Denúncia ou VAR).
@@ -194,7 +194,7 @@ export function PunicaoDialog({
         {form.anexos.map((src, i) => (
           <div
             key={`${i}-${src.slice(-16)}`}
-            className="group relative size-20 overflow-hidden rounded-lg border border-border"
+            className="group relative size-20 overflow-hidden rounded-xl border border-white/[0.08]"
           >
             <img src={src} alt={`Prova ${i + 1}`} className="size-full object-cover" />
             <button
@@ -209,9 +209,9 @@ export function PunicaoDialog({
             </button>
           </div>
         ))}
-        <label className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-foreground">
+        <label className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/[0.1] text-muted-foreground transition-colors hover:border-white/25 hover:text-foreground">
           <ImagePlus className="size-4" />
-          <span className="text-[10px] normal-case">Adicionar</span>
+          <span className="text-[10px] normal-case tracking-normal">Adicionar</span>
           <input
             type="file"
             accept="image/*"
@@ -226,13 +226,13 @@ export function PunicaoDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl glass-modal p-5">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[22px] glass-modal p-5">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+            <p className="hc-sobre">
               {area === "var" ? "VAR" : area === "denuncia" ? "Denúncia" : "Selecionar área"}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-foreground font-display">
+            <h2 className="hc-titulo mt-1.5">
               {registro ? "Editar punição" : "Nova punição"}
             </h2>
           </div>
@@ -240,7 +240,7 @@ export function PunicaoDialog({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="hc-seta"
           >
             <X className="size-4" />
           </button>
@@ -254,15 +254,15 @@ export function PunicaoDialog({
               onClick={() => podeDenuncia && setArea("denuncia")}
               disabled={!podeDenuncia}
               className={cn(
-                "rounded-xl border border-border p-5 text-left transition-colors",
-                podeDenuncia
-                  ? "hover:border-primary hover:bg-muted/40"
-                  : "cursor-not-allowed opacity-50"
+                "hc-dentro p-5 text-left transition-colors",
+                !podeDenuncia && "cursor-not-allowed opacity-50"
               )}
             >
-              <Siren className="size-5 text-primary" />
-              <p className="mt-3 text-base font-semibold text-foreground">Denúncia</p>
-              <p className="text-xs text-muted-foreground">
+              <span className="hc-icone">
+                <Siren className="size-4" strokeWidth={1.75} />
+              </span>
+              <p className="hc-titulo mt-3">Denúncia</p>
+              <p className="hc-nota mt-1">
                 {podeDenuncia
                   ? "Punições normais originadas de tickets de denúncia."
                   : "Apenas Coordinator+ ou área Denúncias."}
@@ -274,15 +274,15 @@ export function PunicaoDialog({
               onClick={() => podeVar && setArea("var")}
               disabled={!podeVar}
               className={cn(
-                "rounded-xl border border-border p-5 text-left transition-colors",
-                podeVar
-                  ? "hover:border-primary hover:bg-muted/40"
-                  : "cursor-not-allowed opacity-50"
+                "hc-dentro p-5 text-left transition-colors",
+                !podeVar && "cursor-not-allowed opacity-50"
               )}
             >
-              <ShieldAlert className="size-5 text-blue-500" />
-              <p className="mt-3 text-base font-semibold text-foreground">VAR</p>
-              <p className="text-xs text-muted-foreground">
+              <span className="hc-icone">
+                <ShieldAlert className="size-4" strokeWidth={1.75} />
+              </span>
+              <p className="hc-titulo mt-3">VAR</p>
+              <p className="hc-nota mt-1">
                 {podeVar
                   ? "Punições de hack analisadas pelo VAR."
                   : "Apenas Coordinator+ ou área VAR."}
@@ -374,14 +374,8 @@ export function PunicaoDialog({
                         type="button"
                         onClick={() => set("resultado", r.label)}
                         className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-semibold normal-case transition-colors",
-                          ativo
-                            ? r.destaque
-                              ? "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-foreground/40 bg-muted text-foreground"
-                            : r.destaque
-                              ? "border-primary/40 text-primary hover:bg-primary/10"
-                              : "border-border text-muted-foreground hover:text-foreground"
+                          "pilula !h-8 !px-3 !text-xs normal-case tracking-normal",
+                          ativo ? "pilula-ativa" : r.destaque && "!border-primary/40 !text-primary"
                         )}
                       >
                         {r.label}
@@ -402,14 +396,8 @@ export function PunicaoDialog({
                         type="button"
                         onClick={() => set("punicao", p.label)}
                         className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-semibold normal-case transition-colors",
-                          ativo
-                            ? p.destaque
-                              ? "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-foreground/40 bg-muted text-foreground"
-                            : p.destaque
-                              ? "border-primary/40 text-primary hover:bg-primary/10"
-                              : "border-border text-muted-foreground hover:text-foreground"
+                          "pilula !h-8 !px-3 !text-xs normal-case tracking-normal",
+                          ativo ? "pilula-ativa" : p.destaque && "!border-primary/40 !text-primary"
                         )}
                       >
                         {p.label}
@@ -439,7 +427,7 @@ export function PunicaoDialog({
                 <button
                   type="button"
                   onClick={() => setArea(null)}
-                  className="mr-auto rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="pilula mr-auto rounded-full"
                 >
                   Voltar
                 </button>
@@ -447,7 +435,7 @@ export function PunicaoDialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="pilula rounded-full"
               >
                 Cancelar
               </button>
@@ -455,7 +443,7 @@ export function PunicaoDialog({
                 type="button"
                 disabled={!podeSalvar || saving}
                 onClick={submit}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : null}
                 {registro ? "Salvar" : "Registrar"}
@@ -494,9 +482,9 @@ export function PunicaoDialog({
                 <button
                   type="button"
                   onClick={() => setAbrirResponsaveis((v) => !v)}
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-black/25 px-3 py-2 text-sm normal-case text-foreground transition-colors hover:border-foreground/30"
+                  className="flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/25 px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground transition-colors hover:border-white/20"
                 >
-                  <span className={form.responsaveis.length === 0 ? "text-muted-foreground/60" : ""}>
+                  <span className={form.responsaveis.length === 0 ? "text-ink-3" : ""}>
                     {form.responsaveis.length === 0
                       ? "Clique para selecionar..."
                       : form.responsaveis.join(", ")}
@@ -506,9 +494,9 @@ export function PunicaoDialog({
                   />
                 </button>
                 {abrirResponsaveis ? (
-                  <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-black/25 p-2">
+                  <div className="hc-dentro flex flex-wrap gap-2 p-2">
                     {responsaveisDisponiveis.length === 0 ? (
-                      <span className="px-1 py-0.5 text-xs normal-case text-muted-foreground">
+                      <span className="px-1 py-0.5 text-xs font-normal normal-case tracking-normal text-muted-foreground">
                         Nenhum usuário com a área "Denuncias" cadastrada.
                       </span>
                     ) : (
@@ -520,10 +508,8 @@ export function PunicaoDialog({
                             type="button"
                             onClick={() => toggleResponsavel(nome)}
                             className={cn(
-                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold normal-case transition-colors",
-                              ativo
-                                ? "border-white/15 bg-white/[0.09] text-foreground"
-                                : "border-border text-muted-foreground hover:text-foreground"
+                              "pilula !h-8 !gap-1.5 !px-3 !text-xs normal-case tracking-normal",
+                              ativo && "pilula-ativa"
                             )}
                           >
                             {ativo ? <Check className="size-3" /> : null}
@@ -588,9 +574,9 @@ export function PunicaoDialog({
                 <button
                   type="button"
                   onClick={() => setAbrirMotivo((v) => !v)}
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-black/25 px-3 py-2 text-sm normal-case text-foreground transition-colors hover:border-foreground/30"
+                  className="flex w-full items-center justify-between rounded-xl border border-white/[0.08] bg-black/25 px-3 py-2 text-sm font-normal normal-case tracking-normal text-foreground transition-colors hover:border-white/20"
                 >
-                  <span className={form.motivo ? "" : "text-muted-foreground/60"}>
+                  <span className={form.motivo ? "" : "text-ink-3"}>
                     {form.motivo || "Clique para selecionar..."}
                   </span>
                   <ChevronDown
@@ -598,7 +584,7 @@ export function PunicaoDialog({
                   />
                 </button>
                 {abrirMotivo ? (
-                  <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-black/25 p-2">
+                  <div className="hc-dentro flex flex-wrap gap-2 p-2">
                     {MOTIVOS.map((m) => {
                       const ativo = form.motivo === m.label;
                       return (
@@ -607,14 +593,10 @@ export function PunicaoDialog({
                           type="button"
                           onClick={() => set("motivo", m.label)}
                           className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-semibold normal-case transition-colors",
+                            "pilula !h-8 !px-3 !text-xs normal-case tracking-normal",
                             ativo
-                              ? m.destaque
-                                ? "border-white/15 bg-white/[0.09] text-foreground"
-                                : "border-foreground/40 bg-muted text-foreground"
-                              : m.destaque
-                                ? "border-primary/40 text-primary hover:bg-primary/10"
-                                : "border-border text-muted-foreground hover:text-foreground"
+                              ? "pilula-ativa"
+                              : m.destaque && "!border-primary/40 !text-primary"
                           )}
                         >
                           {m.label}
@@ -636,14 +618,8 @@ export function PunicaoDialog({
                         type="button"
                         onClick={() => set("punicao", p.label)}
                         className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-semibold normal-case transition-colors",
-                          ativo
-                            ? p.destaque
-                              ? "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-foreground/40 bg-muted text-foreground"
-                            : p.destaque
-                              ? "border-primary/40 text-primary hover:bg-primary/10"
-                              : "border-border text-muted-foreground hover:text-foreground"
+                          "pilula !h-8 !px-3 !text-xs normal-case tracking-normal",
+                          ativo ? "pilula-ativa" : p.destaque && "!border-primary/40 !text-primary"
                         )}
                       >
                         {p.label}
@@ -651,7 +627,7 @@ export function PunicaoDialog({
                     );
                   })}
                   {punicaoAtual?.dias ? (
-                    <span className="flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs normal-case text-muted-foreground">
+                    <span className="flex items-center gap-2 rounded-full border border-white/[0.08] px-3 py-1 text-xs normal-case tracking-normal text-muted-foreground">
                       Dias
                       <input
                         type="number"
@@ -660,7 +636,7 @@ export function PunicaoDialog({
                         onChange={(e) =>
                           set("dias", e.target.value ? Number(e.target.value) : null)
                         }
-                        className="w-16 rounded border border-border bg-black/25 px-2 py-0.5 text-xs text-foreground outline-none focus:border-primary/60"
+                        className="w-16 rounded-md border border-white/[0.08] bg-black/25 px-2 py-0.5 text-xs font-normal text-foreground outline-none focus:border-white/25"
                       />
                     </span>
                   ) : null}
@@ -687,7 +663,7 @@ export function PunicaoDialog({
                 <button
                   type="button"
                   onClick={() => setArea(null)}
-                  className="mr-auto rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="pilula mr-auto rounded-full"
                 >
                   Voltar
                 </button>
@@ -695,7 +671,7 @@ export function PunicaoDialog({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="pilula rounded-full"
               >
                 Cancelar
               </button>
@@ -703,7 +679,7 @@ export function PunicaoDialog({
                 type="button"
                 disabled={!podeSalvar || saving}
                 onClick={submit}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : null}
                 {registro ? "Salvar" : "Registrar"}

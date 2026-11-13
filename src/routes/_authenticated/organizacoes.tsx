@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Building2, Search, Swords } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowUpRight, Building2, CircleDashed, Search, Skull, Swords } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { Indice, Indices } from "@/components/indice";
 import { CaptacoesEstabelecimentos } from "@/components/captacoes-estabelecimentos";
 import { fetchCategorias } from "@/lib/ilegal-data";
 import { isSemLocal } from "@/lib/ilegal-status";
@@ -49,16 +49,16 @@ function OrganizacoesLivres() {
         title="Organizações livres"
         subtitle="Veja o que está livre ou ocupado e ajude a encontrar alguém para assumir."
         actions={
-          <div className="flex gap-1 rounded-full border border-white/[0.08] bg-black/40 p-1" role="tablist">
+          <div className="segmentos" role="tablist" aria-label="Tipo de organização">
             {abas.map((a) => (
               <button
                 key={a.id}
+                type="button"
                 role="tab"
                 aria-selected={aba === a.id}
                 onClick={() => void navigate({ search: a.id === "legais" ? {} : { aba: a.id }, replace: true })}
-                className={cn("flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium transition-colors", aba === a.id ? "bg-white text-black" : "text-muted-foreground hover:text-foreground")}
               >
-                <a.icon className="size-4" /> {a.nome}
+                <a.icon className="size-3.5" /> {a.nome}
               </button>
             ))}
           </div>
@@ -88,41 +88,43 @@ function Faccoes() {
   const totalGeral = categorias.reduce((s, c) => s + c.orgs.length, 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="glass flex flex-wrap items-center gap-6 rounded-2xl p-4">
-        <div>
-          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="size-2 rounded-full bg-emerald-500" /> Facções livres
-          </p>
-          <p className="font-display text-2xl font-semibold">{isLoading ? "…" : total}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-muted-foreground">Organizações no total</p>
-          <p className="font-display text-2xl font-semibold">{isLoading ? "…" : totalGeral}</p>
-        </div>
-        <label className="relative ml-auto">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-3" />
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar setagem, local, CDS…" aria-label="Buscar facção livre" className="h-9 w-[240px] rounded-full border border-white/[0.09] bg-black/40 pl-8 pr-3 text-[13px] outline-none placeholder:text-ink-3 focus:border-white/30" />
+    <div className="flex flex-col gap-3.5">
+      {/* busca e atalho para o Ilegal; embaixo, os números no padrão da tela inicial */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <label className="campo-busca w-[240px]">
+          <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar setagem, local, CDS…" aria-label="Buscar facção livre" />
         </label>
         {podeEditar && (
-          <Link to="/ilegal" className="flex h-9 items-center gap-1.5 rounded-full border border-white/[0.12] px-3.5 text-xs font-medium transition-colors hover:bg-white/[0.06]">
+          <Link to="/ilegal" className="pilula rounded-full">
             Gerenciar no Ilegal <ArrowUpRight className="size-3.5" />
           </Link>
         )}
       </div>
+      <Indices>
+        <Indice valor={isLoading ? "…" : total} titulo="Facções livres" cor="#10b981" icone={CircleDashed} />
+        <Indice valor={isLoading ? "…" : totalGeral} titulo="Organizações no total" icone={Skull} />
+      </Indices>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3.5 xl:grid-cols-2">
         {grupos.map((c) => (
-          <section key={c.id} className="glass rounded-2xl p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide">{c.nome}</h3>
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+          <section key={c.id} className="glass hc p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <Swords className="size-4" strokeWidth={1.75} />
+                </span>
+                <h3 className="hc-titulo truncate">{c.nome}</h3>
+              </div>
+              <span className="hc-selo shrink-0 tabular-nums">
+                <i className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
                 {c.livres.length} livre{c.livres.length === 1 ? "" : "s"}
               </span>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+                <tr className="border-b border-white/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
                   <th className="py-1.5 pr-2">Setagem</th>
                   <th className="py-1.5 pr-2">Local</th>
                   <th className="py-1.5 pr-2">CDS</th>
@@ -131,8 +133,8 @@ function Faccoes() {
               </thead>
               <tbody>
                 {c.livres.map((o) => (
-                  <tr key={o.id} className="border-b border-border/50 border-l-2 border-l-emerald-500 last:border-b-0">
-                    <td className="py-2 pl-1.5 pr-2 font-semibold">{o.setagem || "—"}</td>
+                  <tr key={o.id} className="border-b border-white/[0.06] border-l-2 border-l-emerald-500 transition-colors last:border-b-0 hover:bg-white/[0.03]">
+                    <td className="py-2 pl-1.5 pr-2 font-semibold text-foreground">{o.setagem || "—"}</td>
                     <td className="py-2 pr-2 text-muted-foreground">{o.local || "—"}</td>
                     <td className="py-2 pr-2 font-mono text-[11px] text-muted-foreground">{o.cds || "—"}</td>
                     <td className="max-w-40 truncate py-2 pr-2 text-muted-foreground" title={o.observacao}>
@@ -142,10 +144,11 @@ function Faccoes() {
                 ))}
               </tbody>
             </table>
+            </div>
           </section>
         ))}
       </div>
-      {!isLoading && grupos.length === 0 && <p className="glass rounded-2xl px-4 py-10 text-center text-sm text-muted-foreground">{busca ? "Nenhuma facção livre com essa busca." : "Nenhuma facção livre no momento."}</p>}
+      {!isLoading && grupos.length === 0 && <p className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">{busca ? "Nenhuma facção livre com essa busca." : "Nenhuma facção livre no momento."}</p>}
     </div>
   );
 }

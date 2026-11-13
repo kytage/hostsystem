@@ -62,6 +62,7 @@ import {
 } from "@/lib/casting";
 import type { EquipeUser } from "@/lib/equipe-merge";
 import { PageHeader } from "@/components/page-header";
+import { Indice, Indices } from "@/components/indice";
 import { PermissoesModal } from "@/components/permissoes-modal";
 import { PuxarCommit } from "@/components/puxar-commit";
 import { BotaoReiniciarSite } from "@/components/reiniciar-site";
@@ -161,30 +162,11 @@ function CopyValue({ value }: { value: string }) {
             .then(() => toast.success("Copiado!"))
             .catch(() => toast.error("Não foi possível copiar"));
         }}
-        className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
       >
         <Copy className="size-3" />
       </button>
     </span>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  icon: typeof Users;
-}) {
-  return (
-    <div className="rounded-xl glass p-4">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <Icon className="size-3.5" /> {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold text-foreground font-display">{value}</p>
-    </div>
   );
 }
 
@@ -533,7 +515,7 @@ function EquipePage() {
   if (loadingRole) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="size-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
       </div>
     );
   }
@@ -548,7 +530,7 @@ function EquipePage() {
         </p>
         <button
           onClick={() => void navigate({ to: "/" })}
-          className="mt-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
+          className="mt-2 flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
         >
           Voltar ao início
         </button>
@@ -557,27 +539,27 @@ function EquipePage() {
   }
 
   return (
-    <div className="pagina space-y-6">
+    <div className="pagina space-y-4">
       <PageHeader
         title="Equipe"
         subtitle="Usuários do painel organizados por cargo, áreas e controle de casting."
         actions={
           <div className="flex flex-wrap items-center gap-3">
             {isFounder ? <BotaoReiniciarSite /> : null}
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <label className="campo-busca w-64">
+              <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
               <input
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar nome, ID, cargo, área..."
-                className="w-64 rounded-xl glass py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition-colors focus:border-primary/60"
+                aria-label="Buscar na equipe"
               />
-            </div>
+            </label>
             {isFounder ? <PuxarCommit /> : null}
             {podeCriar && aba === "casting" ? (
               <button
                 onClick={() => setCastingForm({ id: null, ...EMPTY_CASTING })}
-                className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
               >
                 <Plus className="size-4" /> Novo casting
               </button>
@@ -589,7 +571,7 @@ function EquipePage() {
                   setNovoRole("staff");
                   setNovoOpen(true);
                 }}
-                className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
               >
                 <UserPlus className="size-4" /> Criar usuário
               </button>
@@ -598,45 +580,40 @@ function EquipePage() {
         }
       />
 
-      {/* Dashboard */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Equipe" value={linhas.length} icon={Users} />
-        <StatCard
-          label="Coordenação+"
-          value={
+      {/* números da equipe, no padrão da tela inicial */}
+      <Indices>
+        <Indice valor={linhas.length} titulo="Equipe" icone={Users} />
+        <Indice
+          valor={
             linhas.filter((u) =>
               (["founder", "c_level", "direcao", "coordinator"] as AppRole[]).includes(u.role),
             ).length
           }
-          icon={Crown}
+          titulo="Coordenação+"
+          icone={Crown}
         />
-        <StatCard label="Áreas ativas" value={areaStats.length} icon={BarChart3} />
-        <StatCard label="Casting" value={(casting ?? []).length} icon={Clapperboard} />
-      </div>
+        <Indice valor={areaStats.length} titulo="Áreas ativas" icone={BarChart3} />
+        <Indice valor={(casting ?? []).length} titulo="Casting" icone={Clapperboard} />
+      </Indices>
 
       {/* Abas */}
       <div className="flex flex-wrap items-center gap-2">
-        {ABAS.map((a) => (
-          <button
-            key={a.key}
-            onClick={() => setAba(a.key)}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-              aba === a.key
-                ? "border-white/15 bg-white/[0.07] text-foreground"
-                : "glass text-muted-foreground hover:bg-white/[0.08]",
-            )}
-          >
-            <a.icon className="size-4" /> {a.label}
-          </button>
-        ))}
+        <div className="segmentos" role="tablist" aria-label="Seções da equipe">
+          {ABAS.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.key}
+              onClick={() => setAba(a.key)}
+            >
+              <a.icon className="size-3.5" /> {a.label}
+            </button>
+          ))}
+        </div>
         {aba === "equipe" && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div
-              className="glass flex items-center gap-0.5 rounded-full p-1"
-              role="group"
-              aria-label="Modo de visualização"
-            >
+            <div className="segmentos" role="group" aria-label="Modo de visualização">
               {(
                 [
                   { v: "org", icon: Network, label: "Organograma" },
@@ -649,12 +626,7 @@ function EquipePage() {
                   title={o.label}
                   aria-label={o.label}
                   aria-pressed={visao === o.v}
-                  className={cn(
-                    "grid size-8 place-items-center rounded-full transition-colors duration-200",
-                    visao === o.v
-                      ? "bg-white/[0.1] text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+                  className="!w-9 justify-center !px-0"
                 >
                   <o.icon className="size-4" strokeWidth={1.7} />
                 </button>
@@ -664,7 +636,7 @@ function EquipePage() {
               <MinimalSelect
                 value={cargoFiltro}
                 onChange={setCargoFiltro}
-                className="rounded-full glass font-semibold"
+                className="pilula rounded-full"
                 options={[
                   { value: "todos", label: "Todos os cargos" },
                   ...ROLE_ORDER.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
@@ -675,7 +647,7 @@ function EquipePage() {
               <MinimalSelect
                 value={areaFiltro}
                 onChange={setAreaFiltro}
-                className="rounded-full glass font-semibold"
+                className="pilula rounded-full"
                 options={[
                   { value: "todas", label: "Todas as áreas" },
                   ...areaStats.map((a) => ({ value: a.area, label: a.label })),
@@ -686,7 +658,7 @@ function EquipePage() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl glass">
+      <div className="glass hc">
         {loadingUsers || (aba === "casting" && loadingCasting) ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             Carregando equipe...
@@ -704,7 +676,7 @@ function EquipePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
                   <th className="px-4 py-3">ID Host</th>
                   <th className="px-4 py-3">Nome</th>
                   <th className="px-4 py-3">Cargo</th>
@@ -725,7 +697,7 @@ function EquipePage() {
                   filtradas.map((u) => (
                     <tr
                       key={u.id}
-                      className="border-b border-border/50 align-top last:border-0 hover:bg-accent/40"
+                      className="border-b border-white/[0.06] align-top last:border-0 hover:bg-white/[0.03]"
                     >
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {u.host_id || "—"}
@@ -736,7 +708,7 @@ function EquipePage() {
                             <img
                               src={u.avatar_url || DEFAULT_AVATAR_URL}
                               alt={u.username}
-                              className="size-8 rounded-lg border border-border bg-muted object-cover"
+                              className="size-8 rounded-lg border border-white/[0.08] bg-muted object-cover"
                             />
                             <span
                               className={cn(
@@ -769,7 +741,7 @@ function EquipePage() {
                             <MinimalSelect
                               value={u.role}
                               onChange={(v) => mutRole.mutate({ userId: u.id, role: v as AppRole })}
-                              className="rounded-lg bg-black/25 px-2 py-1 text-xs font-semibold"
+                              className="h-8 rounded-full px-3 text-xs font-semibold"
                               options={ROLE_ORDER.filter((x) => isFounder || x !== "founder").map(
                                 (x) => ({
                                   value: x,
@@ -779,7 +751,10 @@ function EquipePage() {
                             />
                           </div>
                         ) : (
-                          <span className="rounded-full border border-primary/30 bg-primary/15 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                          <span className="hc-selo">
+                            <span
+                              className={cn("size-1.5 shrink-0 rounded-full", ROLE_DOT[u.role])}
+                            />
                             {ROLE_LABELS[u.role]}
                           </span>
                         )}
@@ -801,11 +776,11 @@ function EquipePage() {
                                   className={cn(
                                     "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
                                     lider
-                                      ? "border-white/15 bg-white/[0.07] text-foreground"
-                                      : "border-border bg-accent text-accent-foreground",
+                                      ? "border-amber-300/25 bg-amber-300/[0.06] text-foreground"
+                                      : "border-white/[0.08] bg-white/[0.03] text-muted-foreground",
                                   )}
                                 >
-                                  {lider ? <Crown className="size-3" /> : null}
+                                  {lider ? <Crown className="size-3 text-amber-300" /> : null}
                                   {areaLabel(a)}
                                 </span>
                               );
@@ -823,28 +798,28 @@ function EquipePage() {
                               <button
                                 onClick={() => openRename(u)}
                                 title="Renomear usuário"
-                                className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                                className="hc-seta"
                               >
                                 <AtSign className="size-3.5" />
                               </button>
                               <button
                                 onClick={() => openIdsEditor(u)}
                                 title="Editar IDs"
-                                className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                                className="hc-seta"
                               >
                                 <Pencil className="size-3.5" />
                               </button>
                               <button
                                 onClick={() => openAreaEditor(u)}
                                 title="Editar áreas"
-                                className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                                className="hc-seta"
                               >
                                 <MapPin className="size-3.5" />
                               </button>
                               <button
                                 onClick={() => setResetTarget(u)}
                                 title="Gerar token de acesso"
-                                className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                                className="hc-seta"
                               >
                                 <KeyRound className="size-3.5" />
                               </button>
@@ -862,7 +837,7 @@ function EquipePage() {
                                 }
                               }}
                               title="Excluir usuário"
-                              className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              className="hc-seta hover:!border-destructive/40 hover:!bg-destructive/10 hover:!text-destructive"
                             >
                               <Trash2 className="size-3.5" />
                             </button>
@@ -878,7 +853,7 @@ function EquipePage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
                 <th className="px-4 py-3">Casting</th>
                 <th className="px-4 py-3">ID Host</th>
                 <th className="px-4 py-3">ID Discord</th>
@@ -897,7 +872,7 @@ function EquipePage() {
                 castingFiltrado.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-b border-border/50 last:border-0 hover:bg-accent/40"
+                    className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.03]"
                   >
                     <td className="px-4 py-2.5 font-semibold text-foreground">{r.nome || "—"}</td>
                     <td className="px-4 py-2.5">
@@ -921,7 +896,7 @@ function EquipePage() {
                               })
                             }
                             title="Editar casting"
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                            className="hc-seta"
                           >
                             <Pencil className="size-3.5" />
                           </button>
@@ -944,7 +919,7 @@ function EquipePage() {
                             }}
                             disabled={mutUpar.isPending}
                             title="Upar para Support"
-                            className="rounded-lg border border-primary/40 p-1.5 text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                            className="hc-seta disabled:opacity-50"
                           >
                             <ArrowUpCircle className="size-3.5" />
                           </button>
@@ -956,7 +931,7 @@ function EquipePage() {
                                 mutCastingDelete.mutate(r.id);
                             }}
                             title="Excluir casting"
-                            className="rounded-lg border border-border p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            className="hc-seta hover:!border-destructive/40 hover:!bg-destructive/10 hover:!text-destructive"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -974,42 +949,36 @@ function EquipePage() {
       {/* Modal renomear usuário */}
       {renameTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <AtSign className="size-5 text-primary" /> Renomear {renameTarget.username}
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <AtSign className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">Renomear {renameTarget.username}</span>
               </h2>
-              <button
-                onClick={() => setRenameTarget(null)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setRenameTarget(null)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
-            <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-              Novo usuário
-            </label>
+            <label className="hc-sobre mb-1.5 block">Novo usuário</label>
             <input
               value={novoNome}
               onChange={(e) => setNovoNome(e.target.value)}
               placeholder="ex: lelet"
-              className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-white/30"
             />
             <p className="mt-2 text-xs text-muted-foreground">
               O login passa a ser feito com o novo nome. A senha atual continua a mesma.
             </p>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setRenameTarget(null)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
-              >
+              <button onClick={() => setRenameTarget(null)} className="pilula rounded-full">
                 Cancelar
               </button>
               <button
                 onClick={() => mutRename.mutate()}
                 disabled={mutRename.isPending || novoNome.trim().length < 3}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {mutRename.isPending ? "Salvando..." : "Salvar nome"}
               </button>
@@ -1021,73 +990,62 @@ function EquipePage() {
       {/* Modal casting */}
       {castingForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <Clapperboard className="size-5 text-primary" />
-                {castingForm.id ? "Editar casting" : "Novo casting"}
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <Clapperboard className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">
+                  {castingForm.id ? "Editar casting" : "Novo casting"}
+                </span>
               </h2>
-              <button
-                onClick={() => setCastingForm(null)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setCastingForm(null)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  Nome
-                </label>
+                <label className="hc-sobre mb-1.5 block">Nome</label>
                 <input
                   value={castingForm.nome}
                   onChange={(e) => setCastingForm({ ...castingForm, nome: e.target.value })}
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  ID Host
-                </label>
+                <label className="hc-sobre mb-1.5 block">ID Host</label>
                 <input
                   value={castingForm.host_id}
                   onChange={(e) => setCastingForm({ ...castingForm, host_id: e.target.value })}
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  ID Discord
-                </label>
+                <label className="hc-sobre mb-1.5 block">ID Discord</label>
                 <input
                   value={castingForm.discord_id}
                   onChange={(e) => setCastingForm({ ...castingForm, discord_id: e.target.value })}
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  Observação
-                </label>
+                <label className="hc-sobre mb-1.5 block">Observação</label>
                 <input
                   value={castingForm.obs}
                   onChange={(e) => setCastingForm({ ...castingForm, obs: e.target.value })}
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setCastingForm(null)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
-              >
+              <button onClick={() => setCastingForm(null)} className="pilula rounded-full">
                 Cancelar
               </button>
               <button
                 onClick={() => mutCastingSave.mutate()}
                 disabled={mutCastingSave.isPending || !castingForm.nome.trim()}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {mutCastingSave.isPending ? "Salvando..." : "Salvar"}
               </button>
@@ -1101,24 +1059,28 @@ function EquipePage() {
         <button
           type="button"
           onClick={() => setPermOpen(true)}
-          className="group flex w-full items-center justify-between gap-4 rounded-2xl glass px-5 py-4 text-left transition-colors hover:border-primary/50"
+          className="glass hc group flex w-full items-center justify-between gap-4 p-5 text-left"
         >
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ShieldCheck className="size-5" />
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="hc-icone">
+              <ShieldCheck className="size-4" strokeWidth={1.75} />
             </span>
-            <span>
-              <span className="block text-sm font-semibold text-foreground">Permissões</span>
-              <span className="block text-xs text-muted-foreground">
+            <span className="min-w-0">
+              <span className="hc-titulo block">Permissões</span>
+              <span className="hc-nota mt-0.5 block">
                 Cargos, áreas e o que cada um pode visualizar, criar, editar, excluir e aprovar.
               </span>
             </span>
           </span>
-          <span className="flex items-center gap-3">
-            <span className="hidden text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:block">
-              {ROLE_ORDER.length - 1} cargos · {areasDisponiveis.length} áreas
+          <span className="flex shrink-0 items-center gap-3">
+            <span className="hidden sm:block">
+              <span className="hc-selo tabular-nums">
+                {ROLE_ORDER.length - 1} cargos · {areasDisponiveis.length} áreas
+              </span>
             </span>
-            <ChevronRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+            <span className="hc-seta" aria-hidden>
+              <ChevronRight className="size-3.5" />
+            </span>
           </span>
         </button>
       )}
@@ -1136,39 +1098,34 @@ function EquipePage() {
       {/* Modal criar usuário */}
       {novoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <UserPlus className="size-5 text-primary" /> Criar usuário
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <UserPlus className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">Criar usuário</span>
               </h2>
-              <button
-                onClick={() => setNovoOpen(false)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setNovoOpen(false)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  Usuário
-                </label>
+                <label className="hc-sobre mb-1.5 block">Usuário</label>
                 <input
                   value={novoUser}
                   onChange={(e) => setNovoUser(e.target.value)}
                   placeholder="ex: joao.silva"
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  Cargo
-                </label>
+                <label className="hc-sobre mb-1.5 block">Cargo</label>
                 <MinimalSelect
                   value={novoRole}
                   onChange={(v) => setNovoRole(v as AppRole)}
-                  className="rounded-lg bg-black/25"
+                  className="rounded-xl"
                   options={ROLE_ORDER.filter((r) => isFounder || r !== "founder").map((r) => ({
                     value: r,
                     label: ROLE_LABELS[r],
@@ -1177,16 +1134,13 @@ function EquipePage() {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setNovoOpen(false)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
-              >
+              <button onClick={() => setNovoOpen(false)} className="pilula rounded-full">
                 Cancelar
               </button>
               <button
                 onClick={() => mutCreate.mutate()}
                 disabled={mutCreate.isPending || novoUser.trim().length < 3}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {mutCreate.isPending ? "Gerando token..." : "Criar e gerar token"}
               </button>
@@ -1198,54 +1152,46 @@ function EquipePage() {
       {/* Modal IDs Discord / Host */}
       {idsTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <IdCard className="size-5 text-primary" /> IDs de {idsTarget.username}
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <IdCard className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">IDs de {idsTarget.username}</span>
               </h2>
-              <button
-                onClick={() => setIdsTarget(null)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setIdsTarget(null)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  ID Discord
-                </label>
+                <label className="hc-sobre mb-1.5 block">ID Discord</label>
                 <input
                   value={discordId}
                   onChange={(e) => setDiscordId(e.target.value)}
                   placeholder="ex: 285948123456789012"
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
-                  ID Host
-                </label>
+                <label className="hc-sobre mb-1.5 block">ID Host</label>
                 <input
                   value={hostId}
                   onChange={(e) => setHostId(e.target.value)}
                   placeholder="ex: 1024"
-                  className="w-full rounded-lg border border-border bg-black/25 px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-primary/60"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 font-mono text-sm text-foreground outline-none focus:border-white/30"
                 />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setIdsTarget(null)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
-              >
+              <button onClick={() => setIdsTarget(null)} className="pilula rounded-full">
                 Cancelar
               </button>
               <button
                 onClick={() => mutIds.mutate({ userId: idsTarget.id })}
                 disabled={mutIds.isPending}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {mutIds.isPending ? "Salvando..." : "Salvar IDs"}
               </button>
@@ -1257,17 +1203,16 @@ function EquipePage() {
       {/* Modal gerar token (reset de senha) */}
       {resetTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-1 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <KeyRound className="size-5 text-primary" /> Gerar token de acesso
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <KeyRound className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">Gerar token de acesso</span>
               </h2>
-              <button
-                onClick={() => setResetTarget(null)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setResetTarget(null)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
@@ -1276,16 +1221,13 @@ function EquipePage() {
               deixa de funcionar e o usuário criará uma nova senha no próximo login.
             </p>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setResetTarget(null)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
-              >
+              <button onClick={() => setResetTarget(null)} className="pilula rounded-full">
                 Cancelar
               </button>
               <button
                 onClick={() => mutReset.mutate()}
                 disabled={mutReset.isPending}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {mutReset.isPending ? "Gerando..." : "Gerar token"}
               </button>
@@ -1297,17 +1239,16 @@ function EquipePage() {
       {/* Modal token gerado */}
       {tokenGerado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl glass-modal p-6">
-            <div className="mb-1 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <KeyRound className="size-5 text-primary" /> Token de acesso
+          <div className="w-full max-w-md rounded-[22px] glass-modal p-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <KeyRound className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">Token de acesso</span>
               </h2>
-              <button
-                onClick={() => setTokenGerado(null)}
-                aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
-              >
-                <X className="size-4" />
+              <button onClick={() => setTokenGerado(null)} aria-label="Fechar" className="hc-seta">
+                <X className="size-3.5" />
               </button>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
@@ -1316,14 +1257,14 @@ function EquipePage() {
               token no lugar da senha e criará a própria senha no primeiro acesso. Este token é
               exibido apenas agora.
             </p>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-black/25 px-3 py-2.5">
-              <code className="flex-1 select-all break-all font-mono text-sm font-semibold text-primary">
+            <div className="hc-dentro flex items-center gap-2 px-3 py-2.5">
+              <code className="flex-1 select-all break-all font-mono text-sm font-semibold text-foreground">
                 {tokenGerado.token}
               </code>
               <button
                 onClick={() => copiarToken(tokenGerado.token)}
                 title="Copiar token"
-                className="rounded-lg border border-border p-2 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                className="hc-seta !size-9"
               >
                 <Copy className="size-4" />
               </button>
@@ -1331,7 +1272,7 @@ function EquipePage() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setTokenGerado(null)}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
               >
                 Entendi
               </button>
@@ -1343,10 +1284,13 @@ function EquipePage() {
       {/* Modal áreas do usuário */}
       {areaTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl glass-modal p-6">
-            <div className="mb-1 flex items-start justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground font-display">
-                <MapPin className="size-5 text-primary" /> Áreas de {areaTarget.username}
+          <div className="w-full max-w-2xl rounded-[22px] glass-modal p-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex min-w-0 items-center gap-3">
+                <span className="hc-icone">
+                  <MapPin className="size-4" strokeWidth={1.75} />
+                </span>
+                <span className="hc-titulo">Áreas de {areaTarget.username}</span>
               </h2>
               <button
                 onClick={() => {
@@ -1354,9 +1298,9 @@ function EquipePage() {
                   setSelectedAreas([]);
                 }}
                 aria-label="Fechar"
-                className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground"
+                className="hc-seta"
               >
-                <X className="size-4" />
+                <X className="size-3.5" />
               </button>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
@@ -1374,9 +1318,9 @@ function EquipePage() {
                       "rounded-xl border px-3 py-2 transition-colors",
                       checked
                         ? isLider
-                          ? "border-primary bg-primary/15"
-                          : "border-primary/50 bg-primary/5"
-                        : "border-border bg-white/[0.035]",
+                          ? "border-amber-300/30 bg-amber-300/[0.06]"
+                          : "border-white/20 bg-white/[0.06]"
+                        : "border-white/[0.06] bg-white/[0.02]",
                     )}
                   >
                     <button
@@ -1387,10 +1331,12 @@ function EquipePage() {
                       <span
                         className={cn(
                           "flex min-w-0 items-center gap-1.5 truncate",
-                          checked ? "text-primary" : "text-foreground",
+                          checked ? "text-foreground" : "text-muted-foreground",
                         )}
                       >
-                        {checked && isLider ? <Crown className="size-3.5 shrink-0" /> : null}
+                        {checked && isLider ? (
+                          <Crown className="size-3.5 shrink-0 text-amber-300" />
+                        ) : null}
                         <span className="truncate">
                           {area.emoji} {area.label}
                         </span>
@@ -1399,36 +1345,32 @@ function EquipePage() {
                         className={cn(
                           "flex size-4 shrink-0 items-center justify-center rounded border",
                           checked
-                            ? "border-white/15 bg-white/[0.09] text-foreground"
-                            : "border-border bg-black/25",
+                            ? "border-transparent bg-foreground text-background"
+                            : "border-white/[0.15]",
                         )}
                       >
                         {checked ? <Check className="size-3" /> : null}
                       </span>
                     </button>
                     {checked ? (
-                      <div className="mt-2 flex gap-1.5">
+                      <div
+                        className="segmentos mt-2 w-full"
+                        role="group"
+                        aria-label="Nível na área"
+                      >
                         <button
                           type="button"
+                          aria-pressed={isLider}
                           onClick={() => setNivelArea(area.key, "lider")}
-                          className={cn(
-                            "flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors",
-                            isLider
-                              ? "border-white/15 bg-white/[0.09] text-foreground"
-                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]",
-                          )}
+                          className="flex-1 justify-center"
                         >
                           <Crown className="size-3" /> Líder
                         </button>
                         <button
                           type="button"
+                          aria-pressed={!isLider}
                           onClick={() => setNivelArea(area.key, "auxiliar")}
-                          className={cn(
-                            "flex-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors",
-                            !isLider
-                              ? "border-foreground/30 bg-accent text-foreground"
-                              : "border-border bg-black/25 text-muted-foreground hover:bg-white/[0.08]",
-                          )}
+                          className="flex-1 justify-center"
                         >
                           Auxiliar
                         </button>
@@ -1445,7 +1387,7 @@ function EquipePage() {
                   setSelectedAreas([]);
                   setSelectedLideres([]);
                 }}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
+                className="pilula rounded-full"
               >
                 Limpar áreas
               </button>
@@ -1457,7 +1399,7 @@ function EquipePage() {
                     setSelectedAreas([]);
                     setSelectedLideres([]);
                   }}
-                  className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-white/[0.08]"
+                  className="pilula rounded-full"
                 >
                   Cancelar
                 </button>
@@ -1471,7 +1413,7 @@ function EquipePage() {
                     })
                   }
                   disabled={mutArea.isPending}
-                  className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                  className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {mutArea.isPending ? "Salvando..." : "Salvar áreas"}
                 </button>

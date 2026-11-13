@@ -38,7 +38,10 @@ export const naFonte = (p: Ponto) => Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < 
 /** Beira da água pela passagem do canteiro mais perto de `p`. */
 export function beiraDaFonte(p: Ponto): Ponto {
   const q = Math.round(Math.atan2(p.z - FONTE.z, p.x - FONTE.x) / (Math.PI / 2)) * (Math.PI / 2);
-  return { x: FONTE.x + Math.round(Math.cos(q)) * BEIRA, z: FONTE.z + Math.round(Math.sin(q)) * BEIRA };
+  return {
+    x: FONTE.x + Math.round(Math.cos(q)) * BEIRA,
+    z: FONTE.z + Math.round(Math.sin(q)) * BEIRA,
+  };
 }
 /** O HOKI está na beira da água da fonte (no fim de uma das passagens)? */
 export const naBeiraDaFonte = (p: Ponto) => Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < BEIRA + 0.3;
@@ -399,6 +402,11 @@ export const PIER_DO_AVIAO = { x0: EMBARQUE.x - 2.6, x1: EMBARQUE.x + 2.6, z0: 2
 export const PLACA_EMBARQUE: Ponto = { x: EMBARQUE.x - 4.8, z: PIER_DO_AVIAO.z0 - 0.9 };
 
 /** Comércio HOST: barraca de feira no gramado a noroeste da fonte, de frente para o sul. */
+/**
+ * Comércio HOST (barraca de feira) na praça. Desligado em 13/11/2026 a pedido:
+ * some a barraca, o marcador, o clique e o atalho da barra. Para voltar, trocar para true.
+ */
+export const COMERCIO_NA_PRACA: boolean = false;
 export const COMERCIO = { x0: -15.9, x1: -12.1, z0: -8.5, z1: -6.9 };
 export const CENTRO_DO_COMERCIO: Ponto = {
   x: (COMERCIO.x0 + COMERCIO.x1) / 2,
@@ -563,7 +571,7 @@ const PAREDES: Ret[] = [
   // terraço do RANKING: o morrinho de trás (na frente dá para chegar perto do arco)
   { x0: TERRACO_TOP3.x0, x1: TERRACO_TOP3.x1, z0: TERRACO_TOP3.z0 - 2, z1: TERRACO_TOP3.z0 + 1.6 },
   // barraca do Comércio (balcão e fundo)
-  COMERCIO,
+  ...(COMERCIO_NA_PRACA ? [COMERCIO] : []),
 ];
 
 /** Dá para pisar fora da ilha central? (pontes, ilhas laterais, escadarias e ilhas altas) */

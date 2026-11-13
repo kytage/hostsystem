@@ -16,6 +16,7 @@ import {
   Baby,
   CircleUserRound,
   Wallet,
+  FlaskConical,
   Contact,
   Clapperboard,
   Map as MapIcon,
@@ -26,9 +27,10 @@ import {
   Sun,
   Moon,
   ChevronsUpDown,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
@@ -96,7 +98,10 @@ const nav: NavEntry[] = [
 ];
 
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
-const founderOnly: NavEntry[] = [{ title: "Financeiro", icon: Wallet, url: "/financeiro" }];
+const founderOnly: NavEntry[] = [
+  { title: "Financeiro", icon: Wallet, url: "/financeiro" },
+  { title: "TESTE", icon: FlaskConical, url: "/teste" },
+];
 
 const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" }];
 
@@ -111,7 +116,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
     nome: "Gestão",
     itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
   },
-  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários"] },
+  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "TESTE"] },
 ];
 export const grupoDe = (titulo: string) =>
   GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
@@ -158,24 +163,37 @@ export function useMenu() {
   };
 }
 
-/** Um item do menu. Aberto: ícone e nome numa linha fina. Fechado: só o ícone, com o nome numa dica ao lado. */
-function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fechado: boolean }) {
+/**
+ * Um botão do menu. Todos seguem o mesmo padrão: ícone numa caixa de 20 px, nome em uma linha e
+ * 34 px de altura. Fechado: só o ícone, com o nome numa dica ao lado. A página ativa ganha um
+ * grafite mais claro e um traço vermelho; o item em destaque, um ponto vermelho.
+ */
+function Item({
+  item,
+  active,
+  fechado,
+  aoIr,
+}: {
+  item: NavEntry;
+  active: boolean;
+  fechado: boolean;
+  /** chamado ao escolher a página (em tela estreita, fecha o menu que estava por cima) */
+  aoIr: () => void;
+}) {
   const prefetch = usePrefetchRoute(item.url);
-  const classes = cn(
-    "item-menu w-full text-left",
-    item.destaque && "item-menu-destaque",
-    active && "item-menu-ativo",
-    fechado && "justify-center !px-0",
-  );
+  const classes = cn("menu-item", fechado && "menu-item-so-icone");
   const miolo = (
     <>
-      <item.icon className="size-[15px] shrink-0" strokeWidth={1.6} />
+      <span className="menu-item-icone" aria-hidden>
+        <item.icon className="size-4" strokeWidth={1.75} />
+      </span>
       {!fechado && (
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate">{item.title}</span>
           {item.trailing}
         </span>
       )}
+      {item.destaque && <span className="menu-item-ponto" aria-hidden />}
     </>
   );
   const peca = item.url ? (
@@ -184,9 +202,11 @@ function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fech
       className={classes}
       aria-label={item.title}
       aria-current={active ? "page" : undefined}
+      data-ativo={active ? "" : undefined}
       data-sem-elastico
       data-som-passar
       {...prefetch}
+      onClick={aoIr}
     >
       {miolo}
     </Link>
@@ -195,6 +215,7 @@ function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fech
       type="button"
       className={classes}
       aria-label={item.title}
+      data-ativo={active ? "" : undefined}
       data-sem-elastico
       data-som-passar
     >
@@ -213,22 +234,23 @@ function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fech
 }
 
 /**
- * Menu lateral: a única barra do painel. Um painel de vidro solto da borda,
- * com letras pequenas e ícones finos. O botão de abrir e fechar fica sempre
- * no topo. Aqui também moram a busca (Ctrl K), o sino, a pendência rápida e a conta.
+ * Menu lateral: a única barra do painel. Um painel de grafite preso à borda,
+ * separado da página por um fio, com letras pequenas e ícones finos. O botão
+ * de abrir e fechar fica sempre no topo. Aqui também moram a busca (Ctrl K),
+ * o sino, a pendência rápida e a conta. Em tela estreita a barra fica só com
+ * os ícones e, quando aberta, vem por cima da página.
  */
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const { role, username, avatarUrl, todos } = useMenu();
   const [fechado, setFechado] = useState(false);
+  const [estreito, setEstreito] = useState(false);
   const [busca, setBusca] = useState(false);
   const [mudo, setMudo] = useState(false);
   const [escuro, setEscuro] = useState(true);
 
   useEffect(() => {
-    const salvo = localStorage.getItem("host-sidebar-collapsed");
-    setFechado(salvo === null ? window.innerWidth < 900 : salvo === "1");
     setMudo(sfxMuted());
     setEscuro(document.documentElement.classList.contains("dark"));
     const tecla = (e: KeyboardEvent) => {
@@ -238,14 +260,63 @@ export function AppSidebar() {
       }
     };
     window.addEventListener("keydown", tecla);
-    return () => window.removeEventListener("keydown", tecla);
+    const telas = window.matchMedia("(max-width: 767px)");
+    const medir = () => {
+      setEstreito(telas.matches);
+      // em tela estreita começa sempre fechado; nas outras vale o que a pessoa escolheu
+      const salvo = localStorage.getItem("host-sidebar-collapsed");
+      setFechado(telas.matches || (salvo === null ? window.innerWidth < 900 : salvo === "1"));
+    };
+    medir();
+    telas.addEventListener("change", medir);
+    return () => {
+      window.removeEventListener("keydown", tecla);
+      telas.removeEventListener("change", medir);
+    };
   }, []);
+
+  // menu aberto por cima da página (tela estreita): Esc fecha
+  const porCima = estreito && !fechado;
+  useEffect(() => {
+    if (!porCima) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFechado(true);
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [porCima]);
 
   const alternarMenu = () =>
     setFechado((f) => {
-      localStorage.setItem("host-sidebar-collapsed", f ? "0" : "1");
+      // a escolha só é guardada em tela larga: no celular o menu abre e fecha sem mexer nela
+      if (!estreito) localStorage.setItem("host-sidebar-collapsed", f ? "0" : "1");
       return !f;
     });
+  /** Ao escolher uma página em tela estreita, o menu que estava por cima se fecha. */
+  const aoIr = () => {
+    if (estreito) setFechado(true);
+  };
+
+  // se o menu não cabe na altura da janela, a lista rola: um esfumado avisa que há mais botões
+  const lista = useRef<HTMLElement>(null);
+  const [rola, setRola] = useState({ acima: false, abaixo: false });
+  useEffect(() => {
+    const nav = lista.current;
+    if (!nav) return;
+    const medir = () => {
+      const acima = nav.scrollTop > 4;
+      const abaixo = nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4;
+      setRola((r) => (r.acima === acima && r.abaixo === abaixo ? r : { acima, abaixo }));
+    };
+    medir();
+    nav.addEventListener("scroll", medir, { passive: true });
+    const tamanho = new ResizeObserver(medir);
+    tamanho.observe(nav);
+    return () => {
+      nav.removeEventListener("scroll", medir);
+      tamanho.disconnect();
+    };
+  }, [fechado, todos.length]);
   const alternarSom = () => {
     const novo = !mudo;
     setSfxMuted(novo);
@@ -277,9 +348,10 @@ export function AppSidebar() {
       aria-label={fechado ? "Abrir menu" : "Fechar menu"}
       aria-expanded={!fechado}
       title={fechado ? "Abrir menu" : "Fechar menu"}
-      className="grid size-8 shrink-0 place-items-center rounded-[10px] text-muted-foreground hover:bg-white/[0.07] hover:text-foreground"
+      data-sem-elastico
+      className="menu-botao"
     >
-      <PanelLeft className="size-[15px]" strokeWidth={1.6} />
+      <PanelLeft className="size-4" strokeWidth={1.75} />
     </button>
   );
 
@@ -288,27 +360,29 @@ export function AppSidebar() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="Sua conta"
+          aria-label="Configurações e conta"
+          title="Configurações e conta"
           data-sem-elastico
           className={cn(
-            "flex items-center rounded-xl text-left outline-none hover:bg-white/[0.06]",
-            fechado ? "size-9 justify-center" : "min-w-0 flex-1 gap-2 p-1",
+            "menu-conta",
+            fechado ? "size-[38px] justify-center" : "min-w-0 flex-1 gap-2.5 p-1",
           )}
         >
-          <img
-            src={avatarUrl}
-            alt=""
-            className="size-7 shrink-0 rounded-[9px] object-cover ring-1 ring-white/10"
-          />
+          {/* ícone de configurações no lugar da foto (que repetia o H do topo); a foto fica dentro do menu */}
+          <span className="menu-config" aria-hidden>
+            <Settings className="size-4" strokeWidth={1.75} />
+          </span>
           {!fechado && (
             <>
               <span className="min-w-0 flex-1 leading-tight">
-                <span className="block truncate text-[12px] font-semibold text-foreground">
+                <span className="menu-conta-nome block truncate text-[12.5px] font-semibold">
                   {username || "…"}
                 </span>
-                <span className="block truncate text-[10px] text-ink-3">{ROLE_LABELS[role]}</span>
+                <span className="menu-conta-cargo mt-px block truncate text-[10.5px]">
+                  {ROLE_LABELS[role]}
+                </span>
               </span>
-              <ChevronsUpDown className="size-3 shrink-0 text-ink-3" strokeWidth={1.8} />
+              <ChevronsUpDown className="menu-conta-cargo size-3.5 shrink-0" strokeWidth={1.75} />
             </>
           )}
         </button>
@@ -357,26 +431,42 @@ export function AppSidebar() {
 
   return (
     <TooltipProvider delayDuration={60} skipDelayDuration={300}>
+      {/* tela estreita com o menu aberto: um véu escurece a página e um espaço guarda o lugar da barra */}
+      {porCima && (
+        <>
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            data-sem-elastico
+            className="menu-veu"
+            onClick={() => setFechado(true)}
+          />
+          <div aria-hidden className="w-[70px] shrink-0" />
+        </>
+      )}
       <aside
         data-fechado={fechado}
         className={cn(
-          "menu-lateral glass z-30 my-2.5 ml-2.5 flex h-[calc(100svh-1.25rem)] shrink-0 flex-col overflow-hidden rounded-[24px]",
-          fechado ? "w-[58px]" : "w-[226px]",
+          "menu-lateral",
+          porCima ? "menu-lateral-por-cima w-[248px]" : "mr-2.5",
+          !porCima && (fechado ? "w-[60px]" : "w-[234px]"),
         )}
       >
         {/* topo: a marca e o botão de abrir e fechar, que nunca sai daqui */}
         {fechado ? (
           <div className="flex shrink-0 flex-col items-center gap-2 pt-2.5">
             {alternar}
-            <Link to="/" title="HOST" className="grid size-8 place-items-center">
-              <Logo className="h-[17px]" />
+            <Link to="/" title="HOST" aria-label="HOST" className="menu-selo">
+              <Logo className="h-[14px]" />
             </Link>
           </div>
         ) : (
-          <div className="flex h-[52px] shrink-0 items-center gap-2 pl-4 pr-2.5">
-            <Link to="/" title="HOST" className="flex min-w-0 items-center gap-2.5">
-              <Logo className="h-[18px] shrink-0" />
-              <span className="font-display text-[15px] font-semibold tracking-[-0.01em]">
+          <div className="flex h-[54px] shrink-0 items-center gap-2 pl-[13px] pr-2.5">
+            <Link to="/" title="HOST" className="menu-marca" onClick={aoIr}>
+              <span className="menu-selo">
+                <Logo className="h-[14px]" />
+              </span>
+              <span className="font-display text-[15.5px] font-semibold tracking-[-0.015em]">
                 HOST
               </span>
             </Link>
@@ -385,55 +475,52 @@ export function AppSidebar() {
         )}
 
         {/* busca */}
-        <div className={cn("shrink-0", fechado ? "flex justify-center pt-2" : "px-2.5 pb-1.5")}>
+        <div className={cn("shrink-0", fechado ? "flex justify-center pt-1.5" : "px-2.5 pb-1.5")}>
           <button
             type="button"
             onClick={() => setBusca(true)}
             aria-label="Buscar página"
             title="Buscar página (Ctrl K)"
-            className={cn(
-              "glass-inset flex items-center border text-muted-foreground hover:text-foreground",
-              fechado
-                ? "size-9 justify-center rounded-xl"
-                : "h-[34px] w-full gap-2 rounded-xl px-2.5 text-left text-[12px]",
-            )}
+            data-sem-elastico
+            className={cn("menu-busca", fechado && "menu-busca-so-icone")}
           >
-            <Search className="size-[14px] shrink-0" strokeWidth={1.7} />
+            <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
             {!fechado && (
               <>
                 <span className="min-w-0 flex-1 truncate">Buscar</span>
-                <kbd className="rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-px font-sans text-[9.5px] font-medium text-foreground/70">
-                  Ctrl K
-                </kbd>
+                <kbd className="menu-tecla">Ctrl K</kbd>
               </>
             )}
           </button>
         </div>
 
         <nav
+          ref={lista}
           aria-label="Menu principal"
+          data-mais-acima={rola.acima ? "" : undefined}
+          data-mais-abaixo={rola.abaixo ? "" : undefined}
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-            fechado ? "px-[10px] pt-2" : "px-2.5 pt-1.5",
+            "menu-nav min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            fechado ? "flex flex-col items-center pt-1.5" : "px-2.5 pt-1.5",
           )}
         >
           {grupos.map((g, n) => (
             <div
               key={g.nome}
-              className={cn(n > 0 && (fechado ? "mt-2 border-t border-white/[0.06] pt-2" : "mt-4"))}
-            >
-              {!fechado && (
-                <p className="px-[9px] pb-1.5 text-[9.5px] font-medium uppercase tracking-[0.2em] text-ink-3">
-                  {g.nome}
-                </p>
+              className={cn(
+                n > 0 &&
+                  (fechado ? "mt-1.5 border-t border-[color:var(--gf-linha)] pt-1.5" : "mt-4"),
               )}
-              <div className="space-y-px">
+            >
+              {!fechado && <p className="menu-grupo">{g.nome}</p>}
+              <div className="flex flex-col gap-0.5">
                 {g.itens.map((item) => (
                   <Item
                     key={item.title}
                     item={item}
                     active={item.title === tituloAtual}
                     fechado={fechado}
+                    aoIr={aoIr}
                   />
                 ))}
               </div>
@@ -443,14 +530,14 @@ export function AppSidebar() {
 
         {/* rodapé: conta, sino e pendência rápida */}
         {fechado ? (
-          <div className="flex shrink-0 flex-col items-center gap-1 border-t border-white/[0.06] pb-2.5 pt-2">
+          <div className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[color:var(--gf-linha)] pb-2.5 pt-2">
             <NotificationsBell />
             <QuickPendenciaButton />
             {conta}
           </div>
         ) : (
-          <div className="shrink-0 p-2.5 pt-1.5">
-            <div className="glass-inset flex items-center gap-0.5 rounded-2xl border p-1">
+          <div className="shrink-0 p-2.5 pt-2">
+            <div className="menu-conta-caixa">
               {conta}
               <NotificationsBell />
               <QuickPendenciaButton />

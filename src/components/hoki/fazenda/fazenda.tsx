@@ -2605,7 +2605,7 @@ function Vizinhos({
                       <select
                         value={material}
                         onChange={(e) => setMaterial(e.target.value as Material)}
-                        className="h-8 rounded-full border border-white/15 bg-black/60 px-2 text-[11px]"
+                        className="h-8 rounded-full border border-white/15 bg-black/60 px-2 text-[11px] [color-scheme:dark] [&>option]:bg-[#141416] [&>option]:text-white"
                       >
                         {MATERIAIS.map((m) => (
                           <option key={m.id} value={m.id}>

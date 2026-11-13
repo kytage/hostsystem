@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { lerVisual, type Visual } from "@/lib/hoki";
 import { TIPOS_SHOW, type Show, type TipoShow } from "@/lib/hoki-shows";
 import { registrarAcesso } from "@/lib/hoki-rankings";
+import {
+  compactar,
+  lerMensagem,
+  type AmostraMovimento,
+  type MensagemMovimento,
+} from "@/lib/hoki-fluxo";
 
 /**
  * Presença dos HOKIs, ao vivo. Um canal só para o site inteiro: enquanto a
@@ -372,6 +378,8 @@ function abrirCanal(id: string) {
     if (canal !== ch) return;
     pronto = s === "SUBSCRIBED";
     if (pronto) {
+      // a praça pediu o canal do movimento antes de a presença ligar: abre agora
+      if (querMovimento && !canalMovimento) abrirMovimento();
       // entrou ou voltou depois de uma queda: o servidor não lembra de mim, manda tudo de novo
       publicar(true);
       void ch.send({ type: "broadcast", event: "ola", payload: { id } });
@@ -583,4 +591,73 @@ export const meuIdNaPraca = () => meuId;
 /** Os outros HOKIs que estão com o site aberto (dormindo ou acordados) e se o canal já ligou. */
 export function usePresencaHoki() {
   return useSyncExternalStore(assinar, ler, ler);
+}
+
+/* ---------- movimento contínuo: canal à parte, só para quem está com a praça aberta ---------- */
+// O destino continua indo pelo canal de sempre (quem está com a versão antiga do site vê o
+// HOKI andar até onde parou). Aqui vão só as amostras curtas do andar com o teclado, correr e
+// pular, num tópico separado: quem está em outra tela do painel não recebe nada (poupa a cota).
+const CANAL_MOVIMENTO = "hoki-praca-mov";
+let canalMovimento: RealtimeChannel | null = null;
+let movimentoPronto = false;
+/** A praça está aberta e quer o canal (abre assim que a presença ligar). */
+let querMovimento = false;
+const ouvintesMovimento = new Set<(m: MensagemMovimento) => void>();
+
+/** Abre o canal do movimento (quando a praça aparece). Chamar de novo não faz nada. */
+export function abrirMovimento() {
+  querMovimento = true;
+  const id = meuId;
+  if (canalMovimento || !id) return;
+  const antigos = supabase.getChannels().filter((c) => c.topic === `realtime:${CANAL_MOVIMENTO}`);
+  void Promise.all(antigos.map((c) => supabase.removeChannel(c)))
+    .catch(() => undefined)
+    .then(() => {
+      if (canalMovimento || meuId !== id) return;
+      const ch = supabase.channel(CANAL_MOVIMENTO, {
+        config: { broadcast: { self: false, ack: false }, presence: { key: `${id}:${MINHA_ABA}` } },
+      });
+      ch.on("broadcast", { event: "mov" }, ({ payload }) => {
+        const m = lerMensagem(payload);
+        if (m && m.id !== meuId) ouvintesMovimento.forEach((f) => f(m));
+      });
+      canalMovimento = ch;
+      ch.subscribe((s) => {
+        if (canalMovimento !== ch) return;
+        movimentoPronto = s === "SUBSCRIBED";
+        // uma presença só ao entrar, para saber quantos estão olhando (nunca a cada passo)
+        if (movimentoPronto) void ch.track({ v: 1 }).catch(() => undefined);
+      });
+    });
+}
+
+/** Fecha o canal do movimento (quando a praça sai da tela). */
+export function fecharMovimento() {
+  querMovimento = false;
+  const ch = canalMovimento;
+  canalMovimento = null;
+  movimentoPronto = false;
+  if (ch) void supabase.removeChannel(ch).catch(() => undefined);
+}
+
+/** Manda uma amostra do meu movimento (só com o canal ligado). */
+export function enviarMovimento(a: AmostraMovimento) {
+  if (!canalMovimento || !movimentoPronto || !meuId) return;
+  void canalMovimento.send({
+    type: "broadcast",
+    event: "mov",
+    payload: { ...compactar(a), id: meuId, aba: MINHA_ABA },
+  });
+}
+
+/** Ouve o movimento dos outros. Devolve a função que para de ouvir. */
+export function ouvirMovimento(f: (m: MensagemMovimento) => void) {
+  ouvintesMovimento.add(f);
+  return () => void ouvintesMovimento.delete(f);
+}
+
+/** Quantas outras abas estão com a praça aberta agora (para escolher o ritmo do envio). */
+export function olhandoMovimento() {
+  if (!canalMovimento || !movimentoPronto) return 0;
+  return Math.max(0, Object.keys(canalMovimento.presenceState()).length - 1);
 }

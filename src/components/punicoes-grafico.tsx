@@ -20,20 +20,20 @@ export function PunicoesGrafico({ rows, dias = 14 }: PunicoesGraficoProps) {
   const data = useMemo(() => serieDiaria(rows, dias), [rows, dias]);
 
   return (
-    <div className="rounded-xl glass p-4">
+    <div className="glass hc p-5">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="hc-sobre">
             Últimos {dias} {dias === 1 ? "dia" : "dias"}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground font-display">Evolução de punições</h2>
+          <h2 className="hc-titulo mt-1.5">Evolução de punições</h2>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-primary" /> Denúncias
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-blue-500" /> VAR
+            <span className="size-2 rounded-full bg-[#a8a8a8]" /> VAR
           </span>
         </div>
       </div>

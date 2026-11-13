@@ -181,7 +181,7 @@ export function SaidaDialog({ mes, saida, onClose, onSaved }: SaidaDialogProps) 
         </div>
 
         {tipo === "fixa" && !saida ? (
-          <div className="sm:col-span-2 rounded-lg border border-sky-500/30 bg-sky-500/10 p-3">
+          <div className="hc-dentro p-3 sm:col-span-2">
             <label className={labelClasses} htmlFor="saida-repetir">
               Repetir nos próximos meses
             </label>
@@ -227,7 +227,7 @@ export function SaidaDialog({ mes, saida, onClose, onSaved }: SaidaDialogProps) 
               placeholder={comprovante.startsWith("data:") ? "Imagem anexada" : "https://..."}
               className={`${inputClasses} flex-1`}
             />
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-white/[0.08] hover:text-foreground">
+            <label className="pilula cursor-pointer rounded-full">
               <ImagePlus className="size-4" /> Imagem
               <input
                 type="file"
@@ -249,7 +249,7 @@ export function SaidaDialog({ mes, saida, onClose, onSaved }: SaidaDialogProps) 
                 type="button"
                 onClick={() => setComprovante("")}
                 aria-label="Remover comprovante"
-                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                className="hc-seta !size-9 hover:!border-destructive/30 hover:!bg-destructive/15 hover:!text-destructive"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -259,7 +259,7 @@ export function SaidaDialog({ mes, saida, onClose, onSaved }: SaidaDialogProps) 
             <img
               src={comprovante}
               alt="Comprovante"
-              className="mt-3 max-h-40 rounded-lg border border-border object-contain"
+              className="mt-3 max-h-40 rounded-xl border border-white/[0.08] object-contain"
             />
           ) : null}
         </div>

@@ -1,6 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Crown, LayoutGrid, Loader2, Network } from "lucide-react";
+import {
+  ArrowUpRight,
+  CircleDot,
+  Crown,
+  LayoutGrid,
+  Loader2,
+  Map as MapIcon,
+  Network,
+  PauseCircle,
+  UserX,
+  Users,
+} from "lucide-react";
+import { Indice, Indices } from "@/components/indice";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { AreasOrg } from "@/components/equipe/areas-org";
@@ -57,13 +69,15 @@ function AreaCard({ a, index }: { a: AreaVisao; index: number }) {
     <Link
       to="/areas/$area"
       params={{ area: a.def.key }}
-      className="glass surface-hover animate-rise group flex flex-col rounded-[20px] p-4 hover:-translate-y-0.5"
+      className="glass hc animate-rise group flex flex-col p-5"
       style={{ animationDelay: `${Math.min(index, 12) * 30}ms` }}
     >
-      <div className="flex items-center gap-2.5">
-        <span className="text-xl leading-none">{a.def.emoji}</span>
-        <span className="min-w-0 flex-1 truncate font-display text-[15px] font-semibold">{a.def.label}</span>
-        <ArrowUpRight className="size-4 text-ink-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+      <div className="flex items-center gap-3">
+        <span className="hc-icone text-[17px] leading-none">{a.def.emoji}</span>
+        <span className="hc-titulo min-w-0 flex-1 truncate">{a.def.label}</span>
+        <span className="hc-seta" aria-hidden>
+          <ArrowUpRight className="size-3.5" />
+        </span>
       </div>
 
       <div className="mt-4 flex-1 space-y-3">
@@ -101,7 +115,7 @@ function AreaCard({ a, index }: { a: AreaVisao; index: number }) {
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2.5 text-[11px]">
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3 text-[11.5px]">
         <span className="flex items-center gap-1.5 text-muted-foreground">
           <span className="font-semibold tabular-nums text-foreground">{a.abertas.length}</span>
           em aberto
@@ -134,43 +148,51 @@ function AreasPage() {
   const demais = filtradas.filter((v) => !AREAS_COM_PAGINA.has(v.def.key));
   const fila = useMemo(() => ordenarPendencias(visoes.flatMap((v) => v.abertas)).slice(0, 8), [visoes]);
 
+  const semLider = visoes.filter((v) => v.lideres.length === 0).length;
   const kpis = [
-    { k: "Áreas", v: visoes.length },
-    { k: "Pessoas nas áreas", v: new Set(visoes.flatMap((v) => v.membros.map((m) => m.id))).size },
-    { k: "Em aberto", v: visoes.reduce((s, v) => s + v.abertas.length, 0) },
-    { k: "Em stand-by", v: visoes.reduce((s, v) => s + v.standby.length, 0) },
-    { k: "Sem líder", v: visoes.filter((v) => v.lideres.length === 0).length },
+    { k: "Áreas", v: visoes.length, icone: MapIcon, nota: "na cidade" },
+    {
+      k: "Pessoas nas áreas",
+      v: new Set(visoes.flatMap((v) => v.membros.map((m) => m.id))).size,
+      icone: Users,
+      nota: "em pelo menos uma área",
+    },
+    { k: "Em aberto", v: visoes.reduce((s, v) => s + v.abertas.length, 0), icone: CircleDot, nota: "pendências das áreas" },
+    { k: "Em stand-by", v: visoes.reduce((s, v) => s + v.standby.length, 0), icone: PauseCircle, nota: "pausadas por enquanto" },
+    { k: "Sem líder", v: semLider, icone: UserX, nota: "precisam de alguém", alerta: semLider > 0 },
   ];
-
-  const seg = (on: boolean) =>
-    cn(
-      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors",
-      on ? "bg-white/[0.1] text-foreground" : "text-muted-foreground hover:text-foreground",
-    );
 
   return (
     <div className="pagina">
       <PageHeader kicker="GERAL DA CIDADE" title="Áreas" subtitle="Quem cuida de cada área e o que precisa ser feito." />
 
-      <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5">
+      <Indices className="mt-5">
         {kpis.map((c) => (
-          <div key={c.k} className="border-l border-white/[0.08] pl-4">
-            <p className="font-display text-2xl font-semibold tabular-nums">{carregando ? "—" : c.v}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{c.k}</p>
-          </div>
+          <Indice
+            key={c.k}
+            valor={carregando ? "—" : c.v}
+            titulo={c.k}
+            nota={c.nota}
+            icone={c.icone}
+            alerta={!carregando && c.alerta}
+          />
         ))}
-      </div>
+      </Indices>
 
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-2">
-        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
-          <button className={seg(escopo === "todas")} onClick={() => setEscopo("todas")}>Todas</button>
-          <button className={seg(escopo === "minhas")} onClick={() => setEscopo("minhas")}>Minhas áreas</button>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+        <div className="segmentos" role="group" aria-label="Quais áreas mostrar">
+          <button type="button" aria-pressed={escopo === "todas"} onClick={() => setEscopo("todas")}>
+            Todas
+          </button>
+          <button type="button" aria-pressed={escopo === "minhas"} onClick={() => setEscopo("minhas")}>
+            Minhas áreas
+          </button>
         </div>
-        <div className="glass-inset inline-flex gap-1 rounded-full p-1">
-          <button className={seg(visao === "cards")} onClick={() => setVisao("cards")}>
+        <div className="segmentos" role="group" aria-label="Como mostrar">
+          <button type="button" aria-pressed={visao === "cards"} onClick={() => setVisao("cards")}>
             <LayoutGrid className="size-3.5" /> Visão geral
           </button>
-          <button className={seg(visao === "org")} onClick={() => setVisao("org")}>
+          <button type="button" aria-pressed={visao === "org"} onClick={() => setVisao("org")}>
             <Network className="size-3.5" /> Organograma
           </button>
         </div>
@@ -207,9 +229,9 @@ function AreasPage() {
               if (cards.length === 0) return null;
               return (
                 <section key={g.key}>
-                  <div className="mb-3 flex items-baseline gap-2.5">
-                    <h2 className="font-display text-sm font-semibold">{g.label}</h2>
-                    <span className="text-[11px] text-ink-3">{g.descricao}</span>
+                  <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-1">
+                    <h2 className="hc-titulo">{g.label}</h2>
+                    <span className="hc-nota">{g.descricao}</span>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                     {cards.map((a, i) => (
@@ -221,11 +243,11 @@ function AreasPage() {
             })}
             {demais.length > 0 && (
               <section>
-                <h2 className="mb-3 font-display text-sm font-semibold">Demais áreas</h2>
-                <ul className="glass divide-y divide-white/[0.05] rounded-[20px]">
+                <h2 className="hc-titulo mb-3 px-1">Demais áreas</h2>
+                <ul className="glass hc divide-y divide-white/[0.05]">
                   {demais.map((a) => (
                     <li key={a.def.key} className="flex items-center gap-3 px-4 py-3">
-                      <span className="text-base leading-none">{a.def.emoji}</span>
+                      <span className="hc-icone !size-8 text-[15px] leading-none">{a.def.emoji}</span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">{a.def.label}</span>
                       <span className="hidden truncate text-[11px] text-ink-3 sm:block">
                         {a.lideres.map((l) => l.username).join(", ") || "Sem líder"}
@@ -241,8 +263,8 @@ function AreasPage() {
           </div>
 
           <aside className="xl:sticky xl:top-6 xl:self-start">
-            <h2 className="mb-3 font-display text-sm font-semibold">Fila da cidade</h2>
-            <div className="glass rounded-[20px] p-2">
+            <h2 className="hc-titulo mb-3 px-1">Fila da cidade</h2>
+            <div className="glass hc p-2">
               {fila.length === 0 ? (
                 <p className="px-3 py-10 text-center text-xs text-ink-3">Nenhuma pendência em aberto.</p>
               ) : (

@@ -1,5 +1,15 @@
+import {
+  Bookmark,
+  CircleDashed,
+  MessageSquareText,
+  PackageOpen,
+  ShieldCheck,
+  Skull,
+  type LucideIcon,
+} from "lucide-react";
 import type { IlegalCategoria } from "@/lib/ilegal-data";
 import { HEX_CATEGORIA } from "@/lib/ilegal-cores";
+import { Indice, Indices } from "@/components/indice";
 import { cn } from "@/lib/utils";
 
 /**
@@ -165,6 +175,21 @@ export function Linha({
   );
 }
 
+/** Ícone de cada número do resumo. */
+const ICONES: Record<FiltroIlegal, LucideIcon> = {
+  todas: Skull,
+  assumidas: ShieldCheck,
+  reservadas: Bookmark,
+  livres: CircleDashed,
+  pendentes: PackageOpen,
+  comObs: MessageSquareText,
+};
+
+/**
+ * Resumo do topo do Ilegal, no padrão da tela inicial: os números em quadros (o ponto de cor
+ * antes do nome é a cor do estado na planilha) e, ao lado, as categorias. Clicar num número
+ * filtra a planilha; clicar de novo volta a mostrar todas.
+ */
 export function IlegalResumo({
   numeros,
   total,
@@ -184,56 +209,42 @@ export function IlegalResumo({
 }) {
   const todas = categorias.reduce((s, c) => s + c.orgs.length, 0);
   return (
-    <section className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,2.2fr)]">
-      {numeros.map((n) => {
-        const parte = n.id === "todas" ? (total ? 1 : 0) : total ? n.valor / total : 0;
-        const ativo = filtro === n.id;
-        return (
-          <button
-            key={n.id}
-            onClick={() => onFiltro(ativo ? "todas" : n.id)}
-            title={n.id === "todas" ? "Mostrar todas" : `Ver só: ${n.rotulo}`}
-            aria-pressed={ativo}
-            className={cn(
-              "glass relative isolate overflow-hidden rounded-[20px] px-3 pb-2.5 pt-2.5 text-left",
-              ativo && "!border-white/30",
-            )}
-          >
-            <span className="block truncate text-[10px] text-muted-foreground">{n.rotulo}</span>
-            <span className="flex items-baseline gap-1.5 leading-tight">
-              <span
-                className="font-display text-[19px] font-medium tabular-nums"
-                style={{ color: n.cor }}
-              >
-                {n.valor}
-              </span>
-              {n.id !== "todas" && (
-                <span className="text-[10px] tabular-nums text-muted-foreground">de {total}</span>
-              )}
-            </span>
-            {/* um pico mínimo para o que não é zero, para o ponto não sumir na base */}
-            <Linha
-              id={n.id}
-              cor={n.cor}
-              parte={n.valor ? Math.max(parte, 0.14) : 0}
+    <section className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] xl:gap-3.5">
+      <Indices colunas={3}>
+        {numeros.map((n) => {
+          const ativo = filtro === n.id;
+          return (
+            <Indice
+              key={n.id}
+              valor={n.valor}
+              titulo={n.rotulo}
+              nota={n.id === "todas" ? "no total" : `de ${total}`}
+              icone={ICONES[n.id]}
+              cor={n.id === "todas" ? undefined : n.cor}
               ativo={ativo}
+              onClick={() => onFiltro(ativo ? "todas" : n.id)}
+              dica={n.id === "todas" ? "Mostrar todas" : `Ver só: ${n.rotulo}`}
             />
-          </button>
-        );
-      })}
+          );
+        })}
+      </Indices>
 
-      {/* por categoria: barra nas cores de cada uma (com o mesmo brilho) + legenda que filtra */}
-      <div className="glass relative isolate col-span-2 overflow-hidden rounded-[20px] px-3.5 pb-3 pt-2.5 sm:col-span-3 xl:col-span-1">
+      {/* por categoria: barra nas cores de cada uma + legenda que filtra */}
+      <div className="glass hc flex flex-col p-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-muted-foreground">Por categoria</span>
+          <div className="min-w-0">
+            <p className="hc-sobre">Por categoria</p>
+            <p className="hc-titulo mt-1.5">{todas} organizações</p>
+          </div>
           <button
+            type="button"
             onClick={() => onAba("todas")}
-            className={cn("pilula !h-6 !px-2 !text-[10.5px]", aba === "todas" && "pilula-ativa")}
+            className={cn("pilula !h-8 !px-3 !text-[11.5px]", aba === "todas" && "pilula-ativa")}
           >
-            Todas {todas}
+            Todas
           </button>
         </div>
-        <div className="mt-3 flex h-[4px] gap-[3px]">
+        <div className="mt-4 flex h-[5px] gap-[3px]">
           {categorias
             .filter((c) => c.orgs.length > 0)
             .map((c) => {
@@ -256,18 +267,20 @@ export function IlegalResumo({
               );
             })}
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-0.5 gap-y-1">
+        <div className="mt-auto flex flex-wrap gap-x-1 gap-y-1.5 pt-4">
           {categorias.map((c) => {
             const cor = HEX_CATEGORIA[c.id] ?? "#71717a";
             return (
               <button
                 key={c.id}
+                type="button"
                 onClick={() => onAba(aba === c.id ? "todas" : c.id)}
+                aria-pressed={aba === c.id}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-2 text-[11px] leading-[20px] transition-colors",
+                  "flex items-center gap-1.5 rounded-full border px-2.5 text-[12px] leading-[24px] transition-colors",
                   aba === c.id
-                    ? "border-white/25 bg-white/[0.09] text-white"
-                    : "border-transparent text-foreground/60 hover:bg-white/[0.05] hover:text-white",
+                    ? "border-white/25 bg-white/[0.09] text-foreground"
+                    : "border-white/[0.06] bg-white/[0.02] text-foreground/70 hover:bg-white/[0.06] hover:text-foreground",
                 )}
               >
                 <span

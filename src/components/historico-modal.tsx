@@ -22,7 +22,7 @@ export interface HistoricoModalProps {
 }
 
 const inputCls =
-  "rounded-xl border border-input bg-black/25 px-3.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring";
+  "h-9 rounded-xl border border-input bg-black/25 px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-ring";
 
 type Tab = "patch" | "arquivados";
 
@@ -35,16 +35,16 @@ export function HistoricoModal({ onClose }: HistoricoModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl glass">
-        <div className="flex items-center justify-between gap-4 border-b border-border p-5">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[22px] glass-modal">
+        <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] p-5">
           <div>
-            <h2 className="text-lg font-semibold text-foreground font-display">Histórico</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <h2 className="hc-titulo">Histórico</h2>
+            <p className="hc-nota mt-1">
               Patch Notes publicados e solicitações arquivadas — nada é deletado
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
+            <div className="segmentos" role="tablist" aria-label="Seções do histórico">
               {(
                 [
                   { key: "patch", label: "Patch Notes" },
@@ -53,13 +53,10 @@ export function HistoricoModal({ onClose }: HistoricoModalProps) {
               ).map((t) => (
                 <button
                   key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.key}
                   onClick={() => setTab(t.key)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                    tab === t.key
-                      ? "border-white/15 bg-white/[0.09] text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  )}
                 >
                   {t.label}
                 </button>
@@ -68,9 +65,9 @@ export function HistoricoModal({ onClose }: HistoricoModalProps) {
             <button
               onClick={onClose}
               aria-label="Fechar"
-              className="text-muted-foreground hover:text-foreground"
+              className="hc-seta"
             >
-              <X className="size-5" />
+              <X className="size-4" />
             </button>
           </div>
         </div>
@@ -112,10 +109,10 @@ function PatchNotesTab() {
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-foreground">
+            <h3 className="hc-titulo">
               Patch Notes #{String(selected.numero).padStart(3, "0")}
             </h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="hc-nota mt-1">
               {new Date(selected.publicadoEm).toLocaleDateString("pt-BR")} ·{" "}
               {selected.totalAlteracoes} alterações · gerado por {selected.geradoPor}
             </p>
@@ -127,26 +124,26 @@ function PatchNotesTab() {
                 setCopiado(true);
                 setTimeout(() => setCopiado(false), 1200);
               }}
-              className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-white/[0.08]"
+              className="hc-pilula"
             >
               {copiado ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
               Copiar
             </button>
             <button
               onClick={() => setSelected(null)}
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              className="hc-pilula"
             >
               Voltar
             </button>
           </div>
         </div>
-        <pre className="whitespace-pre-wrap rounded-xl border border-border bg-black/25 p-4 font-sans text-sm text-foreground">
+        <pre className="hc-dentro whitespace-pre-wrap p-4 font-sans text-sm text-foreground">
           {selected.texto}
         </pre>
 
         {/* Log de auditoria gerado no arquivamento */}
         {selected.logTexto && (
-          <div className="rounded-xl border border-border bg-black/25">
+          <div className="hc-dentro">
             <button
               onClick={() => setLogAberto((v) => !v)}
               className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -163,7 +160,7 @@ function PatchNotesTab() {
                     setLogCopiado(true);
                     setTimeout(() => setLogCopiado(false), 1200);
                   }}
-                  className="rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                  className="hc-selo hover:!text-foreground"
                 >
                   {logCopiado ? "Copiado" : "Copiar log"}
                 </span>
@@ -173,7 +170,7 @@ function PatchNotesTab() {
               </span>
             </button>
             {logAberto && (
-              <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap border-t border-border p-4 font-mono text-[12px] leading-relaxed text-muted-foreground">
+              <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap border-t border-white/[0.06] p-4 font-mono text-[12px] leading-relaxed text-muted-foreground">
                 {selected.logTexto}
               </pre>
             )}
@@ -181,14 +178,14 @@ function PatchNotesTab() {
         )}
 
         <div>
-          <h4 className="text-sm font-semibold text-foreground">
+          <h4 className="hc-sobre">
             Cards relacionados ({cardsVinculados.length})
           </h4>
-          <div className="mt-2 space-y-1.5">
+          <div className="mt-2.5 space-y-1.5">
             {cardsVinculados.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2 text-sm"
+                className="hc-dentro flex items-center justify-between gap-3 px-3.5 py-2 text-sm"
               >
                 <span className="min-w-0 truncate text-foreground">
                   <span className="text-muted-foreground">#{c.numero}</span> {c.titulo}
@@ -222,7 +219,7 @@ function PatchNotesTab() {
 
   if (patchNotes.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+      <div className="rounded-[14px] border border-dashed border-white/[0.1] p-10 text-center text-sm text-muted-foreground">
         Nenhum Patch Note publicado ainda.
       </div>
     );
@@ -234,11 +231,11 @@ function PatchNotesTab() {
         <button
           key={p.id}
           onClick={() => setSelected(p)}
-          className="flex w-full items-center gap-4 rounded-2xl glass p-4 text-left transition-colors hover:bg-accent/40"
+          className="hc-dentro flex w-full items-center gap-4 p-4 text-left"
         >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05]">
-            <FileText className="size-4 text-muted-foreground" strokeWidth={1.8} />
-          </div>
+          <span className="hc-icone">
+            <FileText className="size-4" strokeWidth={1.75} />
+          </span>
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-foreground">
               Patch Notes #{String(p.numero).padStart(3, "0")}
@@ -305,15 +302,15 @@ function ArquivadosTab() {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <label className="campo-busca min-w-56 flex-1">
+          <Search className="size-[15px] shrink-0" strokeWidth={1.75} />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Palavra-chave, ID, título, descrição..."
-            className={cn(inputCls, "w-full pl-9")}
+            aria-label="Buscar solicitação arquivada"
           />
-        </div>
+        </label>
         <div className="min-w-36">
           <MinimalSelect
             value={fDev}
@@ -349,7 +346,7 @@ function ArquivadosTab() {
           <Loader2 className="size-4 animate-spin" /> Carregando arquivo...
         </div>
       ) : filtrados.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+        <div className="mt-6 rounded-[14px] border border-dashed border-white/[0.1] p-10 text-center text-sm text-muted-foreground">
           Nenhuma solicitação arquivada encontrada.
         </div>
       ) : (
@@ -363,7 +360,7 @@ function ArquivadosTab() {
               <button
                 key={c.id}
                 onClick={() => setSelected(c)}
-                className="flex w-full items-center gap-4 rounded-2xl glass p-4 text-left transition-colors hover:bg-accent/40"
+                className="hc-dentro flex w-full items-center gap-4 p-4 text-left"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -378,7 +375,7 @@ function ArquivadosTab() {
                       {CATEGORIA_LABEL[c.categoria]}
                     </span>
                     {pn && (
-                      <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                         Patch #{String(pn.numero).padStart(3, "0")}
                       </span>
                     )}

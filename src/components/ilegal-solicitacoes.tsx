@@ -34,10 +34,11 @@ const PRIORIDADE_OPTS = [
   { value: "alta", label: "Prioridade alta" },
 ];
 
+/** Cor do pontinho de cada status (o selo em si é neutro, como na tela inicial). */
 const statusStyle: Record<string, string> = {
-  pendente: "bg-warning/15 text-warning",
-  aprovada: "bg-success/15 text-success",
-  reprovada: "bg-destructive/15 text-destructive",
+  pendente: "bg-warning",
+  aprovada: "bg-success",
+  reprovada: "bg-destructive",
 };
 
 /**
@@ -132,16 +133,20 @@ export function IlegalSolicitacoes() {
           }
           criar.mutate();
         }}
-        className="rounded-2xl glass p-5"
+        className="glass rounded-[22px] p-5"
       >
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <ClipboardList className="size-4 text-primary" /> Nova solicitação de
-          Ilegal
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Precisa de aprovação de um Coordinator+ para entrar na aba de
-          Desenvolvimento.
-        </p>
+        <div className="flex items-center gap-3">
+          <span className="hc-icone">
+            <ClipboardList className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="hc-titulo">Nova solicitação de Ilegal</h2>
+            <p className="hc-nota mt-0.5">
+              Precisa de aprovação de um Coordinator+ para entrar na aba de
+              Desenvolvimento.
+            </p>
+          </div>
+        </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <input
@@ -194,7 +199,7 @@ export function IlegalSolicitacoes() {
                 ]);
                 setAnexoUrl("");
               }}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border px-3 text-xs font-semibold text-foreground hover:bg-white/[0.08]"
+              className="pilula shrink-0 self-center"
             >
               <Paperclip className="size-3.5" /> Anexar
             </button>
@@ -204,7 +209,7 @@ export function IlegalSolicitacoes() {
               {anexos.map((a, i) => (
                 <span
                   key={`${a.url}-${i}`}
-                  className="flex items-center gap-1.5 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                  className="hc-selo"
                 >
                   <Paperclip className="size-3" />
                   <span className="max-w-40 truncate">{a.nome}</span>
@@ -227,7 +232,7 @@ export function IlegalSolicitacoes() {
           <button
             type="submit"
             disabled={criar.isPending}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground disabled:opacity-50"
           >
             {criar.isPending ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -239,9 +244,9 @@ export function IlegalSolicitacoes() {
         </div>
       </form>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-3.5 lg:grid-cols-[1.4fr_1fr]">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="hc-titulo px-1">
             Aguardando aprovação ({pendentes.length})
           </h2>
           <div className="mt-3 space-y-2.5">
@@ -251,7 +256,7 @@ export function IlegalSolicitacoes() {
               </p>
             )}
             {!isLoading && pendentes.length === 0 && (
-              <p className="rounded-2xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
+              <p className="rounded-[22px] border border-dashed border-white/[0.1] p-8 text-center text-sm text-muted-foreground">
                 Nenhuma solicitação aguardando aprovação.
               </p>
             )}
@@ -269,12 +274,12 @@ export function IlegalSolicitacoes() {
         </div>
 
         <aside>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="hc-titulo px-1">
             Resolvidas ({resolvidas.length})
           </h2>
           <div className="mt-3 max-h-[70vh] space-y-2.5 overflow-y-auto pr-1 scrollbar-thin">
             {resolvidas.length === 0 && !isLoading && (
-              <p className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+              <p className="rounded-[22px] border border-dashed border-white/[0.1] p-6 text-center text-xs text-muted-foreground">
                 Nada resolvido ainda.
               </p>
             )}
@@ -312,18 +317,14 @@ function PendItem({
   busy: boolean;
 }) {
   return (
-    <article className="rounded-2xl glass p-4">
+    <article className="glass hc p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{p.titulo}</h3>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
-            statusStyle[p.status]
-          )}
-        >
+        <h3 className="hc-titulo">{p.titulo}</h3>
+        <span className="hc-selo capitalize">
+          <i className={cn("size-1.5 rounded-full", statusStyle[p.status])} aria-hidden />
           {p.status}
         </span>
-        <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-medium capitalize text-muted-foreground">
+        <span className="hc-selo capitalize">
           {p.prioridade}
         </span>
       </div>
@@ -331,7 +332,7 @@ function PendItem({
       {p.descricao && (
         <p
           className={cn(
-            "mt-1.5 whitespace-pre-line text-sm text-muted-foreground",
+            "mt-2 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground",
             compact && "line-clamp-2 text-xs"
           )}
         >
@@ -347,7 +348,7 @@ function PendItem({
               href={a.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-primary hover:underline"
+              className="hc-selo !text-foreground hover:!bg-white/[0.09]"
             >
               <Paperclip className="size-3" /> {a.nome}
             </a>
@@ -355,12 +356,12 @@ function PendItem({
         </div>
       )}
 
-      <p className="mt-2 text-[11px] text-muted-foreground/70">
-        Criado por <span className="font-semibold">{p.criadoPor || "—"}</span>
+      <p className="mt-2.5 text-xs text-ink-3">
+        Criado por <span className="font-medium text-muted-foreground">{p.criadoPor || "—"}</span>
         {p.aprovadoPor && (
           <>
             {" "}· {p.status === "reprovada" ? "Reprovado" : "Aprovado"} por{" "}
-            <span className="font-semibold">{p.aprovadoPor}</span>
+            <span className="font-medium text-muted-foreground">{p.aprovadoPor}</span>
           </>
         )}{" "}
         · {new Date(p.createdAt).toLocaleString("pt-BR")}
@@ -371,14 +372,14 @@ function PendItem({
           <button
             onClick={onAprovar}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1.5 text-xs font-semibold text-success transition-colors hover:bg-success hover:text-success-foreground disabled:opacity-50"
+            className="flex h-[30px] items-center gap-1.5 rounded-full bg-primary px-3 text-[11.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Check className="size-3.5" /> Aprovar → Desenvolvimento
           </button>
           <button
             onClick={onReprovar}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-full bg-destructive/15 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+            className="flex h-[30px] items-center gap-1.5 rounded-full bg-destructive/15 px-3 text-[11.5px] font-semibold text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
           >
             <X className="size-3.5" /> Reprovar
           </button>
