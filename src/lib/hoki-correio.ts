@@ -15,13 +15,15 @@ export interface Carta {
   para_user_id: string | null;
   titulo: string;
   texto: string;
-  /** Presente anexado (id do item da mochila), ou vazio. */
+  /** Item anexado (id do item da mochila: presente, comida ou bebida), ou vazio. */
   flor: string;
+  /** Quantas unidades do item vieram (1 a 10). */
+  qtd: number;
   anonima: boolean;
   created_at: string;
 }
 
-const COLUNAS = "id, tipo, de_nome, para_user_id, titulo, texto, flor, anonima, created_at";
+const COLUNAS = "id, tipo, de_nome, para_user_id, titulo, texto, flor, qtd, anonima, created_at";
 // as tabelas do correio ainda não estão nos tipos gerados do banco
 const cartas = () => supabase.from("hoki_cartas" as never);
 const lidas = () => supabase.from("hoki_cartas_lidas" as never);
@@ -33,7 +35,10 @@ export async function minhasCartas(): Promise<Carta[]> {
     .order("created_at", { ascending: false })
     .limit(60);
   if (error) throw error;
-  return (data ?? []) as unknown as Carta[];
+  return ((data ?? []) as unknown as Carta[]).map((c) => ({
+    ...c,
+    qtd: Math.min(10, Math.max(1, Number(c.qtd) || 1)),
+  }));
 }
 
 /** Quais cartas eu já li (ou confirmei). */
@@ -59,6 +64,8 @@ export async function enviarCarta(c: {
   titulo: string;
   texto: string;
   flor: string;
+  /** Quantas unidades do item anexado (1 a 10). */
+  qtd?: number;
   anonima: boolean;
 }): Promise<void> {
   const { error } = await cartas().insert({
@@ -67,6 +74,7 @@ export async function enviarCarta(c: {
     titulo: c.titulo.trim().slice(0, 80),
     texto: c.texto.trim().slice(0, 1200),
     flor: c.flor,
+    qtd: c.flor ? Math.min(10, Math.max(1, Math.floor(c.qtd ?? 1))) : 1,
     anonima: c.tipo === "direta" && c.anonima,
   } as never);
   if (error) throw error;

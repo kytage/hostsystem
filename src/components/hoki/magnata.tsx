@@ -13,6 +13,9 @@ import {
   History,
   Loader2,
   LogOut,
+  MessageCircle,
+  Minus,
+  Send,
   Smile,
   Timer,
   X,
@@ -47,7 +50,14 @@ import {
   type Jogador,
   type Troca,
 } from "@/lib/hoki-magnata";
-import { guardarSala, marcarEmPartida, useSalaMagnata, type Eu } from "@/lib/hoki-magnata-sala";
+import {
+  guardarSala,
+  LIMITE_DO_CHAT,
+  marcarEmPartida,
+  useSalaMagnata,
+  type Eu,
+  type MensagemChat,
+} from "@/lib/hoki-magnata-sala";
 import { Hoki2D } from "./hoki-2d";
 import { criarCenaMagnata, type CenaMagnata } from "./magnata-cena";
 
@@ -223,6 +233,9 @@ export function Magnata({ codigo, criar, eu, amigos, onConvidar, onClose }: Prop
       className="fixed inset-0 z-[90] overflow-hidden bg-black text-white"
     >
       <div ref={palco} className="absolute inset-0" />
+      {e && (
+        <ChatDaSala chat={sala.chat} meuId={eu.id} jogadores={e.jogadores} onFalar={sala.falar} />
+      )}
       {sala.erro && !e ? (
         <Centro>
           <p className="text-sm text-white/80">{sala.erro}</p>
@@ -1582,5 +1595,148 @@ function Final({
         <Botao onClick={onSair}>Voltar à ilha</Botao>
       </div>
     </div>
+  );
+}
+
+/**
+ * Chat da sala: público para todos que estão nela (jogadores e quem está assistindo).
+ * Fica no canto esquerdo; dá para minimizar (no celular já começa minimizado).
+ */
+function ChatDaSala({
+  chat,
+  meuId,
+  jogadores,
+  onFalar,
+}: {
+  chat: MensagemChat[];
+  meuId: string;
+  jogadores: Jogador[];
+  onFalar: (texto: string) => void;
+}) {
+  const [aberto, setAberto] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 768,
+  );
+  const [texto, setTexto] = useState("");
+  const [vistoAte, setVistoAte] = useState(() => Date.now());
+  const lista = useRef<HTMLDivElement>(null);
+  const ultima = chat[chat.length - 1];
+
+  useEffect(() => {
+    if (aberto && ultima) setVistoAte(ultima.em);
+    // desce até a mensagem mais nova
+    if (aberto) lista.current?.scrollTo({ top: lista.current.scrollHeight });
+  }, [aberto, ultima]);
+  // mensagem nova de outra pessoa com o chat minimizado: um "pop" baixinho
+  useEffect(() => {
+    if (!aberto && ultima && ultima.de !== meuId && ultima.em > vistoAte) playSfx("pop");
+    // só quando chega mensagem nova
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ultima?.id]);
+
+  const naoLidas = aberto ? 0 : chat.filter((m) => m.em > vistoAte && m.de !== meuId).length;
+  const jogadorDe = (id: string) => jogadores.find((j) => j.id === id);
+  const enviar = () => {
+    const t = texto.trim();
+    if (!t) return;
+    onFalar(t);
+    setTexto("");
+  };
+
+  if (!aberto)
+    return (
+      <button
+        type="button"
+        onClick={() => setAberto(true)}
+        title="Abrir o chat da sala"
+        className={cn(
+          vidro,
+          "absolute left-3 top-[124px] z-40 flex h-9 items-center gap-2 rounded-full pl-3 pr-3.5 text-[12px] hover:border-white/25",
+        )}
+      >
+        <MessageCircle className="size-4" />
+        Chat
+        {naoLidas > 0 && (
+          <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#e5231b] px-1 text-[10px] font-bold">
+            {naoLidas > 9 ? "9+" : naoLidas}
+          </span>
+        )}
+      </button>
+    );
+
+  return (
+    <section
+      aria-label="Chat da sala"
+      className={cn(
+        vidro,
+        "pf-pop absolute left-3 top-[124px] z-40 flex w-[min(300px,calc(100vw-24px))] flex-col overflow-hidden",
+      )}
+    >
+      <header className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+        <MessageCircle className="size-3.5 text-white/70" />
+        <p className="min-w-0 flex-1 text-[12px] font-semibold">
+          Chat da sala <span className="font-normal text-white/50">· todos veem</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => setAberto(false)}
+          aria-label="Minimizar o chat"
+          className="grid size-6 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+        >
+          <Minus className="size-3.5" />
+        </button>
+      </header>
+      <div
+        ref={lista}
+        className="h-[min(260px,34vh)] space-y-1.5 overflow-y-auto px-3 py-2 text-[12.5px] leading-snug"
+      >
+        {chat.length === 0 ? (
+          <p className="pt-6 text-center text-[11.5px] text-white/45">
+            Ninguém falou ainda. Diga oi para a mesa!
+          </p>
+        ) : (
+          chat.map((m) => {
+            const j = jogadorDe(m.de);
+            return (
+              <p key={m.id} className="break-words [overflow-wrap:anywhere]">
+                <b className="font-semibold" style={{ color: j ? corDe(j) : "rgba(255,255,255,0.7)" }}>
+                  {m.de === meuId ? "Você" : m.nome}
+                </b>
+                {!j && <span className="ml-1 text-[10px] text-white/40">assistindo</span>}
+                <span className="text-white/45">: </span>
+                <span className="text-white/90">{m.texto}</span>
+              </p>
+            );
+          })
+        )}
+      </div>
+      <form
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          enviar();
+        }}
+        className="flex items-center gap-1.5 border-t border-white/10 p-2"
+      >
+        <input
+          value={texto}
+          onChange={(ev) => setTexto(ev.target.value)}
+          onKeyDown={(ev) => {
+            ev.stopPropagation();
+            if (ev.key === "Escape") (ev.target as HTMLInputElement).blur();
+          }}
+          maxLength={LIMITE_DO_CHAT}
+          placeholder="Escreva para a mesa…"
+          aria-label="Mensagem do chat"
+          className="h-8 min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12.5px] outline-none placeholder:text-white/40 focus:border-white/30"
+        />
+        <button
+          type="submit"
+          disabled={!texto.trim()}
+          aria-label="Enviar"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-black disabled:opacity-40"
+        >
+          <Send className="size-3.5" />
+        </button>
+      </form>
+    </section>
   );
 }

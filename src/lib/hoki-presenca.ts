@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { lerVisual, type Visual } from "@/lib/hoki";
 import { TIPOS_SHOW, type Show, type TipoShow } from "@/lib/hoki-shows";
+import { registrarAcesso } from "@/lib/hoki-rankings";
 
 /**
  * Presença dos HOKIs, ao vivo. Um canal só para o site inteiro: enquanto a
@@ -31,6 +32,8 @@ export interface PresencaHoki {
   anim: string | null;
   /** HOKI sujo (aparece com mosquitos em volta). */
   sujo: boolean;
+  /** Com fome ou sede (10% ou menos): anda devagar. */
+  lento: boolean;
   /** Está dentro da HOST FAZENDAS (numa ilha de fazenda, a própria ou a de alguém). */
   naFazenda: boolean;
 }
@@ -47,7 +50,7 @@ export interface Par {
 type Identidade = Pick<PresencaHoki, "nome" | "tag" | "pet" | "visual">;
 type Lugar = Pick<
   PresencaHoki,
-  "x" | "z" | "banco" | "status" | "dorme" | "par" | "anim" | "sujo" | "naFazenda"
+  "x" | "z" | "banco" | "status" | "dorme" | "par" | "anim" | "sujo" | "lento" | "naFazenda"
 >;
 /** fala e truque vão para todos; convite, resposta, soltar e chamar dizem para quem são (`para`). */
 type Evento =
@@ -122,6 +125,7 @@ const NO_BERCO: Lugar = {
   par: null,
   anim: null,
   sujo: false,
+  lento: false,
   naFazenda: false,
 };
 
@@ -237,6 +241,7 @@ function lerPessoa(id: string, p: Partial<PresencaHoki>): PresencaHoki | null {
     par: lerPar(p.par, dorme),
     anim: !dorme && typeof p.anim === "string" && p.anim.length < 24 ? p.anim : null,
     sujo: p.sujo === true,
+    lento: !dorme && p.lento === true,
     // quem ainda está na versão anterior do site só avisa pelo status
     naFazenda: !dorme && (p.naFazenda === true || status === STATUS_NA_FAZENDA),
   };
@@ -299,11 +304,26 @@ function avisarSaida() {
 }
 if (typeof window !== "undefined") window.addEventListener("pagehide", avisarSaida);
 
+/**
+ * Relógio de acesso (TOP HORAS e TOP DORMINDO do arco da praça): a cada minuto com o site
+ * aberto e visível, conta um minuto; se o HOKI está no berço, conta também como dormindo.
+ */
+let relogioDeAcesso: ReturnType<typeof setInterval> | null = null;
+function ligarRelogioDeAcesso() {
+  if (relogioDeAcesso) return;
+  const bater = () => {
+    if (!meuId || document.visibilityState !== "visible") return;
+    void registrarAcesso(lugar.dorme).catch(() => undefined);
+  };
+  relogioDeAcesso = setInterval(bater, 60_000);
+}
+
 /** Liga a presença deste usuário (uma vez só; chamar de novo com o mesmo id não faz nada). */
 export function conectarPresenca(id: string) {
   if (meuId === id) return;
   desconectarPresenca();
   meuId = id;
+  ligarRelogioDeAcesso();
   // Se sobrou um canal antigo com este nome (troca rápida de usuário, recarga parcial do site),
   // ele precisa sair antes: o Supabase devolveria o mesmo canal, já ligado, e não aceitaria os ouvintes.
   const antigos = supabase.getChannels().filter((c) => c.topic === `realtime:${CANAL}`);
@@ -503,6 +523,8 @@ export function desconectarPresenca() {
   avisarSaida();
   if (batida) clearInterval(batida);
   batida = null;
+  if (relogioDeAcesso) clearInterval(relogioDeAcesso);
+  relogioDeAcesso = null;
   porMensagem.clear();
   if (envioMarcado) clearTimeout(envioMarcado);
   envioMarcado = null;

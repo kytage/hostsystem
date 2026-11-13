@@ -12,6 +12,7 @@ import { isCoordinatorPlus, useMyAreas, useMyRole, type AreaKey } from "@/lib/pe
 import { ROLE_LABELS } from "@/lib/roles";
 import { playSfx } from "@/lib/sfx";
 import type { EquipeUser } from "@/lib/equipe-merge";
+import { EncaminharPendencia } from "@/components/areas/encaminhar-pendencia";
 import {
   AREAS_COM_PAGINA,
   GRUPOS_AREA,
@@ -42,7 +43,7 @@ const haQuanto = (iso: string) => {
 
 function AreaPage() {
   const { area } = Route.useParams();
-  const { visoes, carregando } = useAreasDados();
+  const { visoes, equipe, carregando } = useAreasDados();
   const { data: role } = useMyRole();
   const { data: minhas = [] } = useMyAreas();
   const { data: eu = "" } = useQuery({ queryKey: ["current-username"], queryFn: getCurrentUsername, staleTime: 300_000 });
@@ -154,7 +155,12 @@ function AreaPage() {
 
           <ul className="mt-3 space-y-2">
             {listas[aba].map((p) => (
-              <PendenciaItem key={p.id} p={p} podeExcluir={coord || (p.criadoPor === eu && p.status === "pendente")} />
+              <PendenciaItem
+                key={p.id}
+                p={p}
+                podeExcluir={coord || (p.criadoPor === eu && p.status === "pendente")}
+                encaminhar={coord && (p.status === "pendente" || p.status === "standby") ? { eu, equipe } : null}
+              />
             ))}
             {listas[aba].length === 0 && (
               <li className="glass-inset rounded-2xl px-4 py-12 text-center text-sm text-ink-3">Nada por aqui.</li>
@@ -310,7 +316,16 @@ function NovaPendencia({ area, eu }: { area: string; eu: string }) {
   );
 }
 
-function PendenciaItem({ p, podeExcluir }: { p: PendenciaArea; podeExcluir: boolean }) {
+function PendenciaItem({
+  p,
+  podeExcluir,
+  encaminhar,
+}: {
+  p: PendenciaArea;
+  podeExcluir: boolean;
+  /** Só Coordinator+ (e só pendências em aberto ou em stand-by) pode encaminhar. */
+  encaminhar: { eu: string; equipe: EquipeUser[] } | null;
+}) {
   const qc = useQueryClient();
   const [aberto, setAberto] = useState(false);
   const pr = prioridade(p.prioridade);
@@ -350,6 +365,13 @@ function PendenciaItem({ p, podeExcluir }: { p: PendenciaArea; podeExcluir: bool
                 <b>{p.obsPor || "Coordenação"}:</b> {p.obsCoordenacao}
               </p>
             )}
+            {p.encaminhadoPara && (
+              <p className="text-xs text-ink-3">
+                Encaminhada para <span className="text-foreground">{p.encaminhadoPara}</span>
+                {p.aprovadoPor ? ` por ${p.aprovadoPor}` : ""}.
+              </p>
+            )}
+            {encaminhar && <EncaminharPendencia p={p} eu={encaminhar.eu} equipe={encaminhar.equipe} />}
             {podeExcluir && (
               <div className="flex justify-end">
                 <button

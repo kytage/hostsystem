@@ -171,16 +171,21 @@ export async function addDevTask(input: {
   description: string;
   priority: Priority;
   tag: string;
-}): Promise<void> {
-  const { error } = await supabase.from("dev_tasks").insert({
-    title: input.title,
-    description: input.description,
-    priority: input.priority,
-    tag: input.tag,
-    assignee: "DEV",
-    column_id: "backlog",
-  });
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from("dev_tasks")
+    .insert({
+      title: input.title,
+      description: input.description,
+      priority: input.priority,
+      tag: input.tag,
+      assignee: "DEV",
+      column_id: "backlog",
+    })
+    .select("id")
+    .single();
   if (error) throw error;
+  return data.id;
 }
 
 export async function moveDevTask(id: string, column: ColumnId): Promise<void> {

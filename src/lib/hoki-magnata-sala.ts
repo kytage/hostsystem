@@ -105,14 +105,41 @@ export interface Emote {
   reacao: string;
   n: number;
 }
+/** Mensagem do chat da sala: pública para todos que estão nela (jogadores e quem assiste). */
+export interface MensagemChat {
+  id: string;
+  de: string;
+  nome: string;
+  texto: string;
+  em: number;
+}
+export const LIMITE_DO_CHAT = 240;
+const lerMensagem = (m: unknown): MensagemChat | null => {
+  const x = m as Partial<MensagemChat> | null;
+  if (!x || typeof x.id !== "string" || typeof x.de !== "string" || typeof x.texto !== "string")
+    return null;
+  const texto = x.texto.replace(/\s+/g, " ").trim().slice(0, LIMITE_DO_CHAT);
+  if (!texto || x.id.length > 80) return null;
+  return {
+    id: x.id,
+    de: x.de.slice(0, 64),
+    nome: String(x.nome ?? "HOKI").slice(0, 24),
+    texto,
+    em: typeof x.em === "number" && Number.isFinite(x.em) ? x.em : Date.now(),
+  };
+};
+
 export interface SalaMagnata {
   estado: Estado | null;
   /** Quem está com a sala aberta agora. */
   presentes: Set<string>;
   erro: string | null;
   emote: Emote | null;
+  /** Chat da sala (as últimas mensagens, das mais antigas para as mais novas). */
+  chat: MensagemChat[];
   agir: (a: Acao) => void;
   reagir: (reacao: string) => void;
+  falar: (texto: string) => void;
 }
 
 /**
@@ -125,8 +152,10 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
   const [presentes, setPresentes] = useState<Set<string>>(() => new Set([eu.id]));
   const [erro, setErro] = useState<string | null>(null);
   const [emote, setEmote] = useState<Emote | null>(null);
+  const [chat, setChat] = useState<MensagemChat[]>([]);
   const agirRef = useRef<(a: Acao) => void>(() => {});
   const reagirRef = useRef<(r: string) => void>(() => {});
+  const falarRef = useRef<(texto: string) => void>(() => {});
   const euRef = useRef(eu);
   euRef.current = eu;
 
@@ -142,6 +171,24 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
     let ultimaJogada = Date.now();
     let chaveDaEtapa = "";
     let nEmote = 0;
+    // chat: guarda as últimas 80 mensagens; quem chega pede o histórico ao anfitrião
+    let historico: MensagemChat[] = [];
+    let nChat = 0;
+    let ultimaFala = 0;
+    const juntar = (novas: unknown[]) => {
+      const mapa = new Map(historico.map((m) => [m.id, m]));
+      let mudou = false;
+      for (const bruta of novas) {
+        const m = lerMensagem(bruta);
+        if (m && !mapa.has(m.id)) {
+          mapa.set(m.id, m);
+          mudou = true;
+        }
+      }
+      if (!mudou) return;
+      historico = [...mapa.values()].sort((a, b) => a.em - b.em).slice(-80);
+      if (!morto) setChat(historico);
+    };
 
     const canal: RealtimeChannel = supabase.channel(`hoki-magnata-${codigo}`, {
       config: { broadcast: { self: false, ack: false }, presence: { key: meu } },
@@ -194,6 +241,22 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
       setEmote(e);
       mandar("emote", { id: meu, reacao });
     };
+    falarRef.current = (texto) => {
+      const agora = Date.now();
+      // segura quem aperta Enter sem parar (uma mensagem a cada 0,7 s)
+      if (agora - ultimaFala < 700) return;
+      const m = lerMensagem({
+        id: `${meu}-${agora}-${++nChat}`,
+        de: meu,
+        nome: euRef.current.nome,
+        texto,
+        em: agora,
+      });
+      if (!m) return;
+      ultimaFala = agora;
+      juntar([m]);
+      mandar("chat", { m });
+    };
 
     canal.on("broadcast", { event: "estado" }, ({ payload }) => {
       const e = (payload as { e?: Estado }).e;
@@ -223,6 +286,16 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
       if (typeof id !== "string" || typeof reacao !== "string" || reacao.length > 20) return;
       if (!morto) setEmote({ id, reacao, n: ++nEmote });
     });
+    canal.on("broadcast", { event: "chat" }, ({ payload }) => {
+      juntar([(payload as { m?: unknown }).m]);
+    });
+    canal.on("broadcast", { event: "chat-ola" }, () => {
+      if (souAnfitriao() && historico.length) mandar("chat-historico", { lista: historico.slice(-40) });
+    });
+    canal.on("broadcast", { event: "chat-historico" }, ({ payload }) => {
+      const lista = (payload as { lista?: unknown }).lista;
+      if (Array.isArray(lista)) juntar(lista.slice(-40));
+    });
     canal.on("presence", { event: "sync" }, () => {
       aqui = new Set([meu, ...Object.keys(canal.presenceState())]);
       if (!morto) setPresentes(aqui);
@@ -231,6 +304,7 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
       ligado = s === "SUBSCRIBED";
       if (!ligado) return;
       void canal.track({ id: meu });
+      mandar("chat-ola", {});
       if (criar && !atual) publicar(novaSala(codigo, euRef.current));
       else if (!atual) mandar("ola", {});
       else if (souAnfitriao()) mandar("estado", { e: atual });
@@ -304,7 +378,9 @@ export function useSalaMagnata(codigo: string, eu: Eu, criar: boolean): SalaMagn
     presentes,
     erro,
     emote,
+    chat,
     agir: (a) => agirRef.current(a),
     reagir: (r) => reagirRef.current(r),
+    falar: (texto) => falarRef.current(texto),
   };
 }

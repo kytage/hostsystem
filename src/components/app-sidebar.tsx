@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   Skull,
   Code2,
-  Settings,
   Users,
   ClipboardList,
   LogOut,
@@ -15,7 +14,7 @@ import {
   Gavel,
   Handshake,
   Baby,
-  NotebookPen,
+  CircleUserRound,
   Wallet,
   Contact,
   Clapperboard,
@@ -74,12 +73,15 @@ export interface NavEntry {
   badge?: number;
   category?: CategoryKey;
   trailing?: ReactNode;
+  /** Item em destaque no menu (vermelho com brilho). */
+  destaque?: boolean;
 }
 
 const nav: NavEntry[] = [
   { title: "Home", icon: Home, url: "/" },
+  { title: "Perfil & Agenda", icon: CircleUserRound, url: "/perfil", destaque: true },
   // Avisos saiu do menu: o quadro fica na tela inicial (a página /avisos continua, pelo atalho do quadro).
-  { title: "Comandos Staffs", icon: ShieldCheck, category: "comandos" },
+  { title: "Comandos Staffs", icon: ShieldCheck, url: "/comandos", category: "comandos" },
   { title: "Ilegal", icon: Skull, url: "/ilegal", category: "ilegal" },
   { title: "Captações", icon: Handshake, url: "/captacoes", category: "captacoes" },
   { title: "Peds", icon: Baby, url: "/peds", category: "peds" },
@@ -90,7 +92,6 @@ const nav: NavEntry[] = [
   { title: "Área Manager", icon: FolderKanban, url: "/area-manager", category: "area_manager" },
   { title: "Eventos e Cronograma", icon: PartyPopper, url: "/eventos" },
   { title: "Punições", icon: Gavel, url: "/punicoes", category: "punicoes" },
-  { title: "Tarefas", icon: NotebookPen, url: "/tarefas" },
   { title: "Desenvolvimento", icon: Code2, url: "/desenvolvimento", category: "desenvolvimento" },
 ];
 
@@ -101,7 +102,7 @@ const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update
 
 /** Grupos do menu, na ordem em que aparecem. Item que não estiver aqui cai em "Outros". */
 export const GRUPOS: { nome: string; itens: string[] }[] = [
-  { nome: "Geral", itens: ["Home", "Áreas", "Eventos e Cronograma", "Tarefas"] },
+  { nome: "Geral", itens: ["Home", "Perfil & Agenda", "Áreas", "Eventos e Cronograma"] },
   {
     nome: "Operação",
     itens: ["Comandos Staffs", "Ilegal", "Captações", "Peds", "Players", "Punições"],
@@ -110,7 +111,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
     nome: "Gestão",
     itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
   },
-  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Configurações", "Usuários"] },
+  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários"] },
 ];
 export const grupoDe = (titulo: string) =>
   GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
@@ -145,7 +146,6 @@ export function useMenu() {
     ...nav.filter(pode),
     ...(role === "founder" ? founderOnly : []),
     ...ops.filter(pode),
-    { title: "Configurações", icon: Settings, url: "/configuracoes" },
     ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms, userPerms)
       ? [{ title: "Usuários", icon: Users, url: "/usuarios" } satisfies NavEntry]
       : []),
@@ -163,6 +163,7 @@ function Item({ item, active, fechado }: { item: NavEntry; active: boolean; fech
   const prefetch = usePrefetchRoute(item.url);
   const classes = cn(
     "item-menu w-full text-left",
+    item.destaque && "item-menu-destaque",
     active && "item-menu-ativo",
     fechado && "justify-center !px-0",
   );
@@ -325,9 +326,6 @@ export function AppSidebar() {
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void navigate({ to: "/configuracoes" })}>
-          <Settings strokeWidth={1.6} /> Minha conta
-        </DropdownMenuItem>
         <DropdownMenuItem
           data-sem-som
           onSelect={(e) => {

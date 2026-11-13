@@ -356,7 +356,15 @@ export function TarefasParticulares() {
   const moveMutation = useMutation({
     mutationFn: ({ id, coluna }: { id: string; coluna: ColunaTarefa }) =>
       moveTarefa(id, coluna),
-    onSuccess: invalidate,
+    onSuccess: (coins) => {
+      invalidate();
+      if (coins > 0) {
+        toast.success(`+${coins} Staff Coin${coins === 1 ? "" : "s"}!`, {
+          description: coins >= 10 ? "Tarefa recebida concluída." : "Tarefa concluída.",
+        });
+        void queryClient.invalidateQueries({ queryKey: ["hoki-meu"] });
+      }
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: deleteTarefa,
@@ -699,7 +707,7 @@ export function TarefasPreview() {
 
   return (
     <Link
-      to="/tarefas"
+      to="/perfil"
       className="group block rounded-2xl glass p-5 transition-colors hover:border-primary/50 hover:bg-accent/30"
     >
       <div className="flex items-center justify-between">

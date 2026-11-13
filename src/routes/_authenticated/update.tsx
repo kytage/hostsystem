@@ -21,6 +21,8 @@ import { UpdateOverview } from "@/components/update-overview";
 import { MinhasDemandas, STATUS_PILL } from "@/components/update-minhas-demandas";
 import { PendenciasPanel } from "@/components/update-pendencias";
 import { playSfx } from "@/lib/sfx";
+import { NovoProjetoModal } from "@/components/update/novo-projeto-modal";
+import { CATEGORIAS, COLUNAS } from "@/lib/update-board";
 
 export const Route = createFileRoute("/_authenticated/update")({
   head: () => ({
@@ -41,24 +43,6 @@ export const Route = createFileRoute("/_authenticated/update")({
   }),
   component: HostUpdate,
 });
-
-const COLUNAS: { id: ColumnId; label: string; dot: string }[] = [
-  { id: "backlog", label: "Planejado", dot: "bg-muted-foreground" },
-  { id: "doing", label: "Em andamento", dot: "bg-warning" },
-  { id: "review", label: "Em teste", dot: "bg-info" },
-  { id: "done", label: "Concluído", dot: "bg-success" },
-];
-
-const CATEGORIAS = [
-  "Sistema",
-  "Ilegal",
-  "Polícia",
-  "Economia",
-  "Carros",
-  "Interface",
-  "Otimização",
-  "Outros",
-];
 
 const inputCls =
   "rounded-md border border-input bg-black/25 px-3.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring";
@@ -285,111 +269,5 @@ function ProjetoCard({
         </label>
       </div>
     </article>
-  );
-}
-
-function NovoProjetoModal({
-  onClose,
-  onCriado,
-}: {
-  onClose: () => void;
-  onCriado: () => void;
-}) {
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0] ?? "Outros");
-  const [responsavel, setResponsavel] = useState("");
-  const [status, setStatus] = useState<ColumnId>("backlog");
-  const [salvando, setSalvando] = useState(false);
-
-  const criar = async () => {
-    const t = titulo.trim();
-    if (!t || salvando) return;
-    setSalvando(true);
-    try {
-      await addDevTask({
-        title: t,
-        description: descricao.trim(),
-        priority: "media",
-        tag: categoria,
-      });
-      // ajusta responsável e status após criação
-      const lista = await fetchDevTasks();
-      const criado = lista.find((p) => p.title === t);
-      if (criado) {
-        if (status !== "backlog") await moveDevTask(criado.id, status);
-        if (responsavel.trim()) {
-          const { supabase } = await import("@/integrations/supabase/client");
-          await supabase
-            .from("dev_tasks")
-            .update({ assignee: responsavel.trim() })
-            .eq("id", criado.id);
-        }
-      }
-      onCriado();
-    } catch {
-      toast.error("Não foi possível adicionar o projeto. Tente novamente.");
-    } finally {
-      setSalvando(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-label="Novo projeto" className="w-full max-w-md rounded-lg glass p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Novo projeto</h2>
-          <Button variant="ghost" size="icon"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-        <div className="mt-4 space-y-3">
-          <input
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Título do projeto"
-            className={cn(inputCls, "w-full")}
-            autoFocus
-          />
-          <textarea
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            placeholder="Descrição (opcional)"
-            rows={3}
-            className={cn(inputCls, "w-full resize-none")}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <MinimalSelect
-              value={categoria}
-              onChange={setCategoria}
-              options={CATEGORIAS.map((c) => ({ value: c, label: c }))}
-            />
-            <MinimalSelect
-              value={status}
-              onChange={(v) => setStatus(v as ColumnId)}
-              options={COLUNAS.map((c) => ({ value: c.id, label: c.label }))}
-            />
-          </div>
-          <input
-            value={responsavel}
-            onChange={(e) => setResponsavel(e.target.value)}
-            placeholder="Responsável"
-            className={cn(inputCls, "w-full")}
-          />
-          <Button
-            onClick={() => void criar()}
-            disabled={!titulo.trim() || salvando}
-            className="w-full shadow-none"
-          >
-            {salvando && <Loader2 className="size-4 animate-spin" />}
-            Adicionar projeto
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }

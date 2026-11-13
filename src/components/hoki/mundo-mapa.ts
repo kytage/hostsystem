@@ -266,9 +266,17 @@ export const CORETO: Ponto = { x: -18.4, z: 10.4 };
 export const RAIO_DO_CORETO = 3.1;
 /** Arco de flores (pérgola) na trilha do coreto. */
 export const ARCO_DE_FLORES: Ponto = { x: -11.9, z: 9.0 };
-/** TOP 3: pódio pequeno no terraço ao norte, embaixo do letreiro HOST. */
+/** Arco do RANKING no terraço ao norte, embaixo do letreiro HOST (no lugar do antigo pódio do TOP 3). */
 export const TOP3: Ponto = { x: 0, z: -18.6 };
 export const TERRACO_TOP3 = { x0: -6, x1: 6, z0: -22, z1: -15.4 };
+/** Colunas do arco: centro em x (a partir do meio) e raio, para não atravessar. */
+const COLUNA_DO_ARCO = { x: 2.2, r: 0.62 };
+/**
+ * Em frente ao arco do RANKING: parando aqui, a câmera vai para a primeira pessoa,
+ * de frente para o letreiro.
+ */
+export const naFrenteDoRanking = (x: number, z: number) =>
+  Math.abs(x - TOP3.x) < 2.3 && z > TOP3.z + 0.5 && z < TOP3.z + 3.9;
 /** Letreiro HOST flutuando atrás do terraço. */
 export const LETREIRO = { x: 0, y: 10, z: -28 };
 
@@ -496,8 +504,8 @@ const OBSTACULOS: (Ponto & { r: number })[] = [
     z: ARCO_DE_FLORES.z + l * 0.42,
     r: 0.25,
   })),
-  // pódio do TOP 3
-  ...[-0.7, 0, 0.7].map((d) => ({ x: TOP3.x + d, z: TOP3.z, r: 0.42 })),
+  // colunas do arco do RANKING
+  ...[-1, 1].map((l) => ({ x: TOP3.x + l * COLUNA_DO_ARCO.x, z: TOP3.z, r: COLUNA_DO_ARCO.r })),
   // pilares no pé das escadarias
   ...ESCADARIAS.flatMap(pilaresDaEscadaria).map((p) => ({ ...p, r: 0.6 })),
   // ilhas altas: moinho, árvores e postes
@@ -532,7 +540,7 @@ const PAREDES: Ret[] = [
   { x0: ESCRITORIO.x1 - 0.4, x1: ESCRITORIO.x1, z0: ESCRITORIO.z0, z1: ESCRITORIO.z1 },
   { x0: ESCRITORIO.x0, x1: ESCRITORIO.x1, z0: ESCRITORIO.z0, z1: ESCRITORIO.z0 + 0.4 },
   { x0: ESCRITORIO.x0, x1: ESCRITORIO.x1, z0: ESCRITORIO.z1 - 0.4, z1: ESCRITORIO.z1 },
-  // terraço do TOP 3: o morrinho de trás (na frente dá para chegar perto do pódio)
+  // terraço do RANKING: o morrinho de trás (na frente dá para chegar perto do arco)
   { x0: TERRACO_TOP3.x0, x1: TERRACO_TOP3.x1, z0: TERRACO_TOP3.z0 - 2, z1: TERRACO_TOP3.z0 + 1.6 },
   // barraca do Comércio (balcão e fundo)
   COMERCIO,

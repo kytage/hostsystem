@@ -10,6 +10,7 @@
  */
 import type * as TH from "three";
 import { acabamento, criarManchas, texturaMancha, type Mancha } from "./luz";
+import { COLUNAS_ARCO, criarArcoDoRanking } from "./ranking-arco";
 import {
   ANEL,
   ARCO_DE_FLORES,
@@ -1038,7 +1039,7 @@ export function criarMundo(THREE: typeof TH) {
   }
 
   // =====================================================================
-  // TERRAÇO DO TOP 3 (norte): morrinho verde atrás, pódio pequeno 2-1-3 e a faixa
+  // TERRAÇO DO RANKING (norte): morrinho verde atrás e o arco do RANKING (no lugar do antigo pódio)
   // =====================================================================
   {
     const T = TERRACO_TOP3;
@@ -1064,48 +1065,12 @@ export function criarMundo(THREE: typeof TH) {
         madeira,
       );
     }
-    pedra.base(x, 0.12, z, 2.5, 0.1, 1.0, 0xe7dfcf, 0.02);
-    for (const [dx, h, cor, n] of [
-      [-0.72, 0.5, 0xd7dbe2, "2"],
-      [0, 0.78, 0xffc531, "1"],
-      [0.72, 0.36, 0xd2884a, "3"],
-    ] as const) {
-      pedra.base(x + dx, 0.22, z, 0.68, h, 0.68, cor, 0.02);
-      placas.push({
-        tex: texturaDePlaca(THREE, [n], {
-          fundo: "rgba(0,0,0,0)",
-          borda: "rgba(0,0,0,0)",
-          cor: "#3b2a12",
-          largura: 128,
-          altura: 128,
-        }),
-        x: x + dx,
-        y: 0.22 + h * 0.5,
-        z: z + 0.345,
-        w: 0.5,
-        h: 0.5,
-      });
-    }
-    for (const l of [-1, 1]) {
-      madeira.base(x + l * 1.45, 0.12, z - 0.2, 0.14, 2.2, 0.14, 0x6e4a2b, 0.03);
-      folhas.base(x + l * 1.45, 1.7, z - 0.2, 0.36, 0.36, 0.36, 0x58a83b, 0.08);
-    }
-    placas.push({
-      tex: texturaDePlaca(THREE, ["TOP 3 LEVEL"], {
-        fundo: "#4a2f16",
-        borda: "#e7b334",
-        cor: "#ffd55a",
-        largura: 512,
-        altura: 112,
-      }),
-      x,
-      y: 2.15,
-      z: z - 0.14,
-      w: 2.6,
-      h: 0.58,
-    });
-    sombras.push({ x, z, rx: 1.5, rz: 0.7 });
+    // o arco do RANKING (modelo 3D) com os textos flutuando no vão; as colunas fazem sombra
+    for (const l of [-1, 1]) sombras.push({ x: x + l * COLUNAS_ARCO.x, z, rx: 0.9, rz: 0.55 });
   }
+
+  const arcoDoRanking = criarArcoDoRanking(THREE, grupo, TOP3);
+  lixo.push({ dispose: () => arcoDoRanking.descartar() });
 
   // =====================================================================
   // PONTES DO OESTE E DO LESTE: lajes, balaustrada com pilares e lanternas, apoios por baixo
@@ -2491,7 +2456,10 @@ export function criarMundo(THREE: typeof TH) {
 
   return {
     grupo,
+    /** Arco do RANKING: `definir` troca o que está escrito no vão. */
+    ranking: arcoDoRanking,
     atualizar(t: number) {
+      arcoDoRanking.atualizar(t);
       tAgua.offset.y = -t * 0.42;
       tQueda.offset.y = t * 0.9;
       tAguaCalha.offset.y = -t * 1.6;

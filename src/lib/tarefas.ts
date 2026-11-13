@@ -145,12 +145,30 @@ export async function designarTarefa(input: {
   );
 }
 
-export async function moveTarefa(id: string, coluna: ColunaTarefa): Promise<void> {
+/**
+ * Move a tarefa de coluna. Devolve quantas Staff Coins a pessoa ganhou com isso
+ * (o banco decide: tarefa recebida de outra pessoa +10, a própria +1, com limites contra spam).
+ */
+export async function moveTarefa(id: string, coluna: ColunaTarefa): Promise<number> {
   const { error } = await supabase
     .from("tarefas_particulares")
     .update({ coluna, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
+
+  let coins = 0;
+  if (coluna === "concluido") {
+    const { data } = await supabase
+      .from("tarefas_particulares")
+      .select("coins_recebidas, recompensada_em" as never)
+      .eq("id", id)
+      .maybeSingle();
+    const r = data as { coins_recebidas: number | null; recompensada_em: string | null } | null;
+    // só conta se a recompensa acabou de sair (agora há pouco), não de uma conclusão antiga
+    if (r?.coins_recebidas && r.recompensada_em && Date.now() - new Date(r.recompensada_em).getTime() < 60_000) {
+      coins = r.coins_recebidas;
+    }
+  }
 
   // Se a tarefa veio de uma solicitação administrativa, concluir a tarefa
   // conclui a solicitação e notifica quem a criou.
@@ -178,6 +196,7 @@ export async function moveTarefa(id: string, coluna: ColunaTarefa): Promise<void
       );
     }
   }
+  return coins;
 }
 
 export async function deleteTarefa(id: string): Promise<void> {

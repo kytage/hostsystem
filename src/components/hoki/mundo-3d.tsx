@@ -31,9 +31,16 @@ import {
   frenteDoBanco,
   planejar,
   TERMOMETRO,
+  TOP3,
   vagaDoBerco,
   type Ponto,
 } from "./mundo-mapa";
+import {
+  ALTURA_ARCO,
+  LARGURA_ARCO,
+  PROFUNDIDADE_ARCO,
+  type QuadroRanking,
+} from "./ranking-arco";
 import {
   anoitecerLuzes,
   COR_NEVOA,
@@ -68,6 +75,8 @@ export interface PessoaMundo {
   anim?: Reacao | null;
   /** Sujo: mosquitos zumbindo em cima da cabeça. */
   sujo?: boolean;
+  /** Com fome ou sede (10% ou menos): anda devagar. */
+  lento?: boolean;
   souEu?: boolean;
 }
 export interface Mundo3DRef {
@@ -120,6 +129,10 @@ const DURACAO: Partial<Record<Reacao, number>> = {
   festa: 1.6,
 };
 const VELOCIDADE = 3.4; // blocos por segundo
+/** Abertura da câmera na vista do RANKING (mais aberta, para caber o arco inteiro de perto). */
+const FOV_RANKING = 50;
+/** Altura (px, a partir de baixo) dos botões que aparecem na vista do RANKING. */
+const BOTOES_DA_VISTA = 96;
 // classes dos rótulos (ficam aqui, por extenso, para o Tailwind gerar o CSS)
 const CL_ROTULO = "absolute left-0 top-0 flex flex-col items-center will-change-transform";
 const CL_FALA =
@@ -131,6 +144,8 @@ const CL_STATUS =
 interface Avatar {
   id: string;
   souEu: boolean;
+  /** Com fome ou sede: anda devagar. */
+  lento: boolean;
   grupo: TH.Group;
   mascote: ReturnType<typeof criarMascote>;
   sombra: TH.Mesh;
@@ -616,6 +631,13 @@ function criarMotor(
   let dentro = false;
   let zoomUsuario = 0.52;
   let zoom = 1;
+  // vista do RANKING: em primeira pessoa, de frente para o arco (0 = normal, 1 = no arco)
+  let vistaRanking = false;
+  let vista = 0;
+  let fovAtual = FOV;
+  const posRanking = new THREE.Vector3();
+  const miraRanking = new THREE.Vector3();
+  const mira = new THREE.Vector3();
   let distMax = 40;
   // câmera: ângulo em volta do HOKI (arrastando o mouse) e altura do olhar
   const ALTURA_PADRAO = 0.512;
@@ -705,6 +727,7 @@ function criarMotor(
     return {
       id: p.id,
       souEu: !!p.souEu,
+      lento: !!p.lento,
       grupo,
       mascote,
       sombra,
@@ -800,6 +823,7 @@ function criarMotor(
         }
       }
       a.vaga = vaga;
+      a.lento = !!p.lento && !p.dorme;
       a.par = p.dorme ? null : (p.par ?? null);
       // sujo: aparece (ou some) a nuvem de mosquitos
       if (p.sujo && !a.mosquitos) {
@@ -1282,7 +1306,7 @@ function criarMotor(
       let andando = false;
       const proximo = a.rota[0];
       if (proximo) {
-        const n = avancar(a.pos, proximo, VELOCIDADE * dt);
+        const n = avancar(a.pos, proximo, VELOCIDADE * (a.lento ? 0.45 : 1) * dt);
         if (Math.hypot(n.x - a.pos.x, n.z - a.pos.z) > 0.0005)
           a.rumo = Math.atan2(n.x - a.pos.x, n.z - a.pos.z);
         a.pos = { x: n.x, z: n.z };
@@ -1464,6 +1488,36 @@ function criarMotor(
       olhar.y + Math.sin(subida) * dist,
       olhar.z + Math.cos(giroCam) * plano,
     );
+    mira.copy(olhar);
+    // vista do RANKING: a câmera vai para a altura dos olhos, de frente para o arco, com o letreiro inteiro na tela
+    vista += ((vistaRanking ? 1 : 0) - vista) * (1 - Math.exp(-dt * 3.4));
+    if (Math.abs(vista - (vistaRanking ? 1 : 0)) < 0.001) vista = vistaRanking ? 1 : 0;
+    const fovAlvo = FOV + (FOV_RANKING - FOV) * vista;
+    if (Math.abs(fovAlvo - fovAtual) > 0.01) {
+      fovAtual = fovAlvo;
+      camera.fov = fovAtual;
+      camera.updateProjectionMatrix();
+    }
+    if (vista > 0) {
+      // o arco inteiro na tela: folga dos lados e em cima, e embaixo o espaço dos botões da vista
+      // (abas dos rankings e E/F). As contas valem na frente do arco.
+      const meio = Math.tan((FOV_RANKING * Math.PI) / 360);
+      const folgaCima = 0.08;
+      const folgaLado = 0.1;
+      const folgaBaixo = Math.min(0.6, (BOTOES_DA_VISTA + 10) / Math.max(1, el.clientHeight / 2));
+      const ate = Math.max(
+        ALTURA_ARCO / (2 - folgaCima - folgaBaixo) / meio,
+        LARGURA_ARCO / 2 / (1 - folgaLado) / (meio * camera.aspect),
+      );
+      // meia altura visível na frente do arco; o centro desce para sobrar espaço embaixo
+      const meia = ate * meio;
+      const centro = ALTURA_ARCO / 2 - (meia * (folgaBaixo - folgaCima)) / 2;
+      posRanking.set(TOP3.x, centro, TOP3.z + PROFUNDIDADE_ARCO / 2 + ate);
+      miraRanking.set(TOP3.x, centro, TOP3.z);
+      const e = vista * vista * (3 - 2 * vista);
+      camera.position.lerp(posRanking, e);
+      mira.lerp(miraRanking, e);
+    }
     // raio, explosões e gigantes: a tela treme
     const tremor = shows.tremor(agora);
     if (tremor > 0) {
@@ -1471,7 +1525,13 @@ function criarMotor(
       camera.position.y += (Math.random() - 0.5) * tremor;
       camera.position.z += (Math.random() - 0.5) * tremor;
     }
-    camera.lookAt(olhar);
+    camera.lookAt(mira);
+    // em primeira pessoa o próprio HOKI some (senão ficaria na frente da câmera)
+    if (eu) {
+      const visivel = vista < 0.55;
+      eu.grupo.visible = visivel;
+      eu.sombra.visible = visivel;
+    }
     renderer.render(cena, camera);
 
     // rótulos (nome, status e balão) por cima de cada HOKI
@@ -1481,7 +1541,8 @@ function criarMotor(
       vetor
         .set(a.mostra.x, a.mostra.y + a.mascote.topo * a.grupo.scale.y + 0.2, a.mostra.z)
         .project(camera);
-      const fora = vetor.z > 1 || Math.abs(vetor.x) > 1.15 || Math.abs(vetor.y) > 1.25;
+      const fora =
+        vista > 0.5 || vetor.z > 1 || Math.abs(vetor.x) > 1.15 || Math.abs(vetor.y) > 1.25;
       a.rotulo.style.display = fora ? "none" : "";
       if (!fora)
         a.rotulo.style.transform = `translate3d(${((vetor.x * 0.5 + 0.5) * w).toFixed(1)}px, ${((-vetor.y * 0.5 + 0.5) * h).toFixed(1)}px, 0) translate(-50%, -100%)`;
@@ -1554,6 +1615,14 @@ function criarMotor(
     },
     setSemTermometro(v: boolean) {
       semBlip = v;
+    },
+    /** O que está escrito no arco do RANKING. */
+    setRanking(q: QuadroRanking) {
+      mundo.ranking.definir(q);
+    },
+    /** Liga/desliga a vista em primeira pessoa de frente para o arco do RANKING. */
+    setVistaRanking(v: boolean) {
+      vistaRanking = v;
     },
     setPendentes(n: number) {
       if (!blipN) return;
@@ -1646,6 +1715,10 @@ export const Mundo3D = forwardRef<
     cartas?: number;
     /** Esconde o símbolo do termômetro (para visitas, que não usam o queridômetro). */
     semTermometro?: boolean;
+    /** O que aparece no arco do RANKING. */
+    ranking?: QuadroRanking | null;
+    /** Câmera em primeira pessoa, de frente para o arco do RANKING. */
+    vistaRanking?: boolean;
     className?: string;
   } & Eventos
 >(function Mundo3D(props, ref) {
@@ -1691,6 +1764,8 @@ export const Mundo3D = forwardRef<
         m.setColheitas(atual.current.colheitas ?? {});
         m.setCartas(atual.current.cartas ?? 0);
         m.setSemTermometro(!!atual.current.semTermometro);
+        if (atual.current.ranking) m.setRanking(atual.current.ranking);
+        m.setVistaRanking(!!atual.current.vistaRanking);
         setEstado("pronto");
       })
       .catch(() => vivo && setEstado("falhou"));
@@ -1708,6 +1783,10 @@ export const Mundo3D = forwardRef<
   useEffect(() => motor.current?.setColheitas(props.colheitas ?? {}), [props.colheitas]);
   useEffect(() => motor.current?.setCartas(props.cartas ?? 0), [props.cartas]);
   useEffect(() => motor.current?.setSemTermometro(!!props.semTermometro), [props.semTermometro]);
+  useEffect(() => {
+    if (props.ranking) motor.current?.setRanking(props.ranking);
+  }, [props.ranking]);
+  useEffect(() => motor.current?.setVistaRanking(!!props.vistaRanking), [props.vistaRanking]);
   useImperativeHandle(
     ref,
     () => ({

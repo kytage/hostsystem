@@ -30,6 +30,8 @@ export interface PendenciaArea {
   obsPor: string;
   obsAt: string | null;
   obsResolvida: boolean;
+  /** Para onde a coordenação encaminhou (ex.: "Tarefa de luke", "Desenvolvimento", "HOST UPDATE"). */
+  encaminhadoPara: string;
 }
 
 export interface SolicitacaoAdmin {
@@ -74,6 +76,7 @@ type PendRow = {
   obs_por: string | null;
   obs_at: string | null;
   obs_resolvida: boolean | null;
+  encaminhado_para: string | null;
 };
 
 function rowToPendencia(r: PendRow): PendenciaArea {
@@ -95,6 +98,7 @@ function rowToPendencia(r: PendRow): PendenciaArea {
     obsPor: r.obs_por ?? "",
     obsAt: r.obs_at,
     obsResolvida: r.obs_resolvida ?? false,
+    encaminhadoPara: r.encaminhado_para ?? "",
   };
 }
 
@@ -102,7 +106,7 @@ export async function fetchPendenciasArea(): Promise<PendenciaArea[]> {
   const { data, error } = await supabase
     .from("pendencias")
     .select(
-      "id, title, description, priority, area, tipo, status, criado_por, aprovado_por, aprovado_at, kanban_card_id, anexos, created_at, obs_coordenacao, obs_por, obs_at, obs_resolvida"
+      "id, title, description, priority, area, tipo, status, criado_por, aprovado_por, aprovado_at, kanban_card_id, anexos, created_at, obs_coordenacao, obs_por, obs_at, obs_resolvida, encaminhado_para"
     )
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -184,6 +188,39 @@ export async function aprovarPendencia(
   addNotificacao(
     `${aprovadoPor} aprovou "${p.titulo}" — enviado para Solicitações do Desenvolvimento.`
   );
+}
+
+/**
+ * Marca a pendência como encaminhada pela coordenação: sai de "em aberto", vai para
+ * Aprovadas e guarda o destino. Se foi para o Desenvolvimento, liga ao card criado.
+ */
+export async function marcarPendenciaEncaminhada(
+  p: PendenciaArea,
+  por: string,
+  destino: string,
+  kanbanCardId?: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("pendencias")
+    .update({
+      status: "aprovada",
+      aprovado_por: por,
+      aprovado_at: new Date().toISOString(),
+      encaminhado_para: destino,
+      ...(kanbanCardId ? { kanban_card_id: kanbanCardId } : {}),
+    } as never)
+    .eq("id", p.id);
+  if (error) throw error;
+  if (kanbanCardId) {
+    await supabase.from("card_historico").insert({
+      card_id: kanbanCardId,
+      autor: por,
+      de_coluna: "area_manager",
+      para_coluna: COL_SOLICITACOES,
+      observacao: `Pendência de ${p.criadoPor || "área"} (${areaLabel(p.area)}) encaminhada por ${por}`,
+    });
+  }
+  addNotificacao(`${por} encaminhou "${p.titulo}" para ${destino}.`);
 }
 
 export async function reprovarPendencia(

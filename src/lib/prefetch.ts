@@ -42,7 +42,7 @@ const ROUTE_PREFETCH: Record<string, Prefetcher> = {
   },
   "/eventos": (qc) => warm(qc, ["eventos"], fetchEventos),
   "/avisos": (qc) => warm(qc, ["avisos"], fetchAvisos),
-  "/tarefas": (qc) => {
+  "/perfil": (qc) => {
     warm(qc, ["tarefas-particulares"], fetchTarefas);
     warm(qc, ["anotacoes"], fetchAnotacao);
   },

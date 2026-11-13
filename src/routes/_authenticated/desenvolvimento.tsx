@@ -56,6 +56,7 @@ import { KanbanCardModal } from "@/components/kanban-card-modal";
 import { KanbanCardItem } from "@/components/kanban-card-item";
 
 import { PatchNotePreview } from "@/components/patch-note-preview";
+import { NovaSolicitacaoModal } from "@/components/desenvolvimento/nova-solicitacao";
 import { HistoricoModal } from "@/components/historico-modal";
 import { BuscarCardModal } from "@/components/buscar-card-modal";
 import { MinimalSelect } from "@/components/ui/minimal-select";
@@ -102,16 +103,6 @@ function Desenvolvimento() {
   const [showPatch, setShowPatch] = useState(false);
   const [selected, setSelected] = useState<KanbanCard | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState<Categoria | null>(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newCategoria, setNewCategoria] = useState<Categoria>("normal");
-  const [newPrioridade, setNewPrioridade] = useState<Prioridade>("media");
-  const [newAnexos, setNewAnexos] = useState<Anexo[]>([]);
-  const [newObsDev, setNewObsDev] = useState("");
-  const [newPatchTexto, setNewPatchTexto] = useState("");
-  const [newChecklist, setNewChecklist] = useState<ChecklistItem[]>([]);
-  const [newChecklistItem, setNewChecklistItem] = useState("");
-  const [novoAnexo, setNovoAnexo] = useState("");
   const [novoDev, setNovoDev] = useState("");
   const [showNovoDev, setShowNovoDev] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
@@ -193,36 +184,6 @@ function Desenvolvimento() {
       );
     },
     onSettled: invalidate,
-  });
-
-  const addMutation = useMutation({
-    mutationFn: async () => {
-      await createCard({
-        titulo: newTitle.trim(),
-        descricao: newDesc.trim(),
-        categoria: newCategoria,
-        prioridade: newPrioridade,
-        criadoPor: username || "desconhecido",
-        anexos: newAnexos,
-        obsDev: newObsDev.trim(),
-        patchTexto: newPatchTexto.trim(),
-        checklist: newChecklist,
-      });
-    },
-    onSuccess: () => {
-      invalidate();
-      setNewTitle("");
-      setNewDesc("");
-      setNewCategoria("normal");
-      setNewPrioridade("media");
-      setNewAnexos([]);
-      setNewObsDev("");
-      setNewPatchTexto("");
-      setNewChecklist([]);
-      setNewChecklistItem("");
-      setNovoAnexo("");
-      setShowNew(false);
-    },
   });
 
   const deleteMutation = useMutation({
@@ -528,163 +489,7 @@ function Desenvolvimento() {
 
       {/* Modal nova solicitação */}
       {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl glass">
-            <div className="flex items-start justify-between gap-4 border-b border-border p-5">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">Nova</span>
-                  <span className="rounded-full bg-chart-2/15 px-2 py-0.5 text-[11px] font-semibold text-chart-2">{CATEGORIA_LABEL[newCategoria]}</span>
-                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-semibold capitalize text-warning">{newPrioridade}</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">Solicitação</span>
-                </div>
-                <input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Título da solicitação"
-                  autoFocus
-                  className="mt-2 w-full bg-transparent text-lg font-semibold text-foreground outline-none placeholder:text-muted-foreground font-display"
-                />
-                <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  Criado por <span className="font-semibold text-foreground/80">{username || "desconhecido"}</span>
-                </p>
-              </div>
-              <button
-                onClick={() => setShowNew(false)}
-                aria-label="Fechar"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
-            <div className="flex gap-1 border-b border-border px-5 pt-3">
-              <button className="flex items-center gap-1.5 rounded-t-lg bg-white/[0.05] px-3 py-2 text-xs font-semibold text-foreground"><FileText className="size-3.5" /> Detalhes</button>
-              <button disabled className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground opacity-60"><MessageSquare className="size-3.5" /> Comentários (0)</button>
-              <button disabled className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground opacity-60"><History className="size-3.5" /> Histórico (0)</button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex min-h-[560px] flex-col">
-                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">Descrição</label>
-                  <textarea
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    placeholder="Descreva detalhadamente a solicitação..."
-                    className={cn(inputCls, "min-h-[560px] flex-1 resize-y")}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-muted-foreground">Categoria</label>
-                      <MinimalSelect value={newCategoria} onChange={(value) => setNewCategoria(value as Categoria)} options={Object.entries(CATEGORIA_LABEL).map(([value, label]) => ({ value, label }))} />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-muted-foreground">Prioridade</label>
-                      <MinimalSelect value={newPrioridade} onChange={(value) => setNewPrioridade(value as Prioridade)} options={[{ value: "baixa", label: "Baixa" }, { value: "media", label: "Média" }, { value: "alta", label: "Alta" }]} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><StickyNote className="size-3.5" /> Observações do desenvolvedor (interno)</label>
-                    <textarea value={newObsDev} onChange={(e) => setNewObsDev(e.target.value)} rows={2} placeholder="Anotações técnicas, não aparecem no Patch Note" className={cn(inputCls, "resize-none")} />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><FileText className="size-3.5" /> Texto para Patch Note</label>
-                    <textarea value={newPatchTexto} onChange={(e) => setNewPatchTexto(e.target.value)} rows={2} placeholder="Ex.: Corrigido o sistema... (vazio = IA gera)" className={cn(inputCls, "resize-none")} />
-                  </div>
-
-                  <div className="rounded-xl border border-border p-3.5">
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground"><ListChecks className="size-3.5" /> Checklist</p>
-                    {newChecklist.length > 0 && <div className="mt-2 space-y-1.5">{newChecklist.map((item, index) => <div key={`${item.texto}-${index}`} className="flex items-center gap-2 text-xs text-foreground"><span className="flex-1">{item.texto}</span><button type="button" onClick={() => setNewChecklist((items) => items.filter((_, itemIndex) => itemIndex !== index))} aria-label="Remover item" className="text-muted-foreground hover:text-destructive"><Trash2 className="size-3.5" /></button></div>)}</div>}
-                    <div className="mt-2 flex gap-2">
-                      <input value={newChecklistItem} onChange={(e) => setNewChecklistItem(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && newChecklistItem.trim()) { e.preventDefault(); setNewChecklist((items) => [...items, { texto: newChecklistItem.trim(), feito: false }]); setNewChecklistItem(""); } }} placeholder="Adicionar item..." className="flex-1 rounded-lg border border-input bg-black/25 px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring" />
-                      <button type="button" onClick={() => { if (!newChecklistItem.trim()) return; setNewChecklist((items) => [...items, { texto: newChecklistItem.trim(), feito: false }]); setNewChecklistItem(""); }} className="rounded-lg bg-white/[0.05] px-2.5 text-foreground hover:bg-white/[0.08]" aria-label="Adicionar item"><Plus className="size-3.5" /></button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border p-3.5">
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                      <Paperclip className="size-3.5" /> Anexos / Imagens ({newAnexos.length})
-                    </p>
-                {newAnexos.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {newAnexos.map((a, i) => (
-                      <div key={`${a.nome}-${i}`} className="group overflow-hidden rounded-lg border border-border bg-black/25">
-                        {(a.url.startsWith("data:image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(a.url)) && (
-                          <img
-                            src={a.url}
-                            alt={a.nome}
-                            className="h-32 w-full object-contain"
-                          />
-                        )}
-                        <div className="flex items-center gap-2 border-t border-border px-2 py-1.5"><span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                          {a.nome}
-                        </span>
-                        <button
-                          onClick={() => setNewAnexos(newAnexos.filter((_, j) => j !== i))}
-                          aria-label="Remover anexo"
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="mt-2 flex gap-2">
-                  <input
-                    value={novoAnexo}
-                    onChange={(e) => setNovoAnexo(e.target.value)}
-                    onPaste={(e) => {
-                      void clipboardImageToDataUrl(e.nativeEvent).then((dataUrl) => {
-                        if (!dataUrl) return; // texto comum segue o fluxo normal
-                        e.preventDefault();
-                        setNewAnexos((prev) => [
-                          ...prev,
-                          { nome: nomeImagemColada(), url: dataUrl },
-                        ]);
-                      });
-                    }}
-                    placeholder="Cole URL ou Ctrl+V com print..."
-                    className="flex-1 rounded-lg border border-input bg-black/25 px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
-                  />
-                  <button
-                    onClick={() => {
-                      const url = novoAnexo.trim();
-                      if (!url) return;
-                      const nome = url.split("/").pop()?.slice(0, 40) || "anexo";
-                      setNewAnexos((prev) => [...prev, { nome, url }]);
-                      setNovoAnexo("");
-                    }}
-                    className="rounded-lg bg-white/[0.05] px-2.5 text-foreground hover:bg-white/[0.08]"
-                    aria-label="Adicionar anexo"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                </div>
-                <p className="mt-1.5 text-[10px] text-muted-foreground/70">
-                  Dica: copie um print e pressione Ctrl+V no campo acima para anexar.
-                </p>
-                  </div>
-
-                  <button
-                    onClick={() => newTitle.trim() && addMutation.mutate()}
-                    disabled={addMutation.isPending || !newTitle.trim()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-                  >
-                    {addMutation.isPending && <Loader2 className="size-4 animate-spin" />}
-                    Criar solicitação
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NovaSolicitacaoModal criadoPor={username} onClose={() => setShowNew(false)} />
       )}
 
       {/* Modal devs — adicionar e vincular a usuários reais */}

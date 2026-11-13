@@ -92,10 +92,14 @@ import {
   FRENTE_DO_PORTAL,
   FRENTE_DO_PORTAL_FAZENDAS,
   naPortaDoCeleiro,
+  naFrenteDoRanking,
+  ANEL,
+  FONTE,
   PORTAL,
   FRENTE_DO_TERMOMETRO,
   type Ponto,
 } from "./mundo-mapa";
+import { buscarRankings, quadroDoRanking, RANKINGS } from "@/lib/hoki-rankings";
 import { Fazenda } from "./fazenda/fazenda";
 import { PortalDasFazendas } from "./fazenda/portal-fazendas";
 import type { PresenteNaIlha } from "./fazenda/ilhas-de";
@@ -104,23 +108,12 @@ import { Comercio } from "./comercio";
 import { useSelos } from "@/lib/fazenda/selos";
 import { CULTURAS, faltaParaCrescer, item, ITENS, quantosCabem } from "@/lib/hoki-itens";
 import { Queridometro, useQueridometro } from "./queridometro";
+import { EMOJIS_STATUS, STATUS_PRONTOS, useStatusHoki } from "@/lib/hoki-status";
 import { PerfilHoki } from "./perfil";
 import { Correio, useCorreio } from "./correio";
 
 type Presenca = PresencaHoki;
 
-const EMOJIS_STATUS = ["📘", "💻", "☕", "🎮", "🎧", "🍔", "😴", "🔥", "🚗", "🎬", "📞", "🏋️"];
-const STATUS_PRONTOS = [
-  "📘 Lendo",
-  "💻 Trabalhando",
-  "☕ Pausa pro café",
-  "🎮 Jogando",
-  "🎧 Ouvindo música",
-  "🍔 Almoçando",
-  "📞 Em reunião",
-  "😴 Ausente",
-];
-const CHAVE_STATUS = "hoki-praca-status";
 const FALA_MS = 6500;
 const TRUQUES: Reacao[] = [
   "acenar",
@@ -149,7 +142,6 @@ const CONVITE_MS = 20_000;
 /** Quantas mensagens ficam no canto da praça e por quanto tempo. */
 const MAX_CONVERSA = 4;
 const CONVERSA_MS = 60_000;
-const limparStatus = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, 32);
 /**
  * Praça HOST: o mundo 3D compartilhado. Quem está com o site aberto aparece
  * dormindo no berço; ao acordar, o HOKI desce o escorregador e aí anda, senta,
@@ -201,6 +193,8 @@ export function Praca({
   // Texto estável do visual: só muda (e só reenvia a presença) quando o pet troca de aparência.
   const visualTxt = JSON.stringify(pet.visual);
   const meuVisual = useMemo(() => JSON.parse(visualTxt) as Visual, [visualTxt]);
+  /** Com 10% ou menos de fome ou de sede, o HOKI anda devagar (todos veem). */
+  const lento = pet.fome <= 10 || pet.sede <= 10;
 
   const { outros } = usePresencaHoki();
   // voltando de outra tela do painel: o HOKI continua de onde estava (andando ou sentado)
@@ -210,26 +204,13 @@ export function Praca({
   });
   const [falas, setFalas] = useState<Record<string, { texto: string; ate: number }>>({});
   const [texto, setTexto] = useState("");
-  // O status fica guardado neste navegador para não precisar escrever de novo.
-  const [status, setStatus] = useState(() => {
-    try {
-      return limparStatus(localStorage.getItem(CHAVE_STATUS) ?? "");
-    } catch {
-      return "";
-    }
-  });
+  // O status fica guardado neste navegador e é o mesmo do Perfil & Agenda.
+  const [status, gravarStatus] = useStatusHoki();
   const [editandoStatus, setEditandoStatus] = useState(false);
   const [rascunho, setRascunho] = useState({ emoji: "📘", texto: "" });
   const salvarStatus = (novo: string) => {
-    const limpo = limparStatus(novo);
-    setStatus(limpo);
+    gravarStatus(novo);
     setEditandoStatus(false);
-    try {
-      if (limpo) localStorage.setItem(CHAVE_STATUS, limpo);
-      else localStorage.removeItem(CHAVE_STATUS);
-    } catch {
-      // sem armazenamento: o status vale só até recarregar
-    }
   };
   const [alvo, setAlvo] = useState<Presenca | null>(null);
   const [indoAoTermometro, setIndoAoTermometro] = useState(false);
@@ -266,12 +247,27 @@ export function Praca({
   /** O que está ao alcance do meu HOKI agora (para a tecla E): termômetro, parkour ou uma cadeira do escritório. */
   const [perto, setPerto] = useState<
     | {
-        tipo: "termometro" | "chuveiro" | "correio" | "portal" | "fazendas" | "comercio";
+        tipo:
+          | "termometro"
+          | "chuveiro"
+          | "correio"
+          | "portal"
+          | "fazendas"
+          | "comercio"
+          | "ranking"
+          | "fonte";
       }
     | { tipo: "cadeira" | "canteiro"; i: number }
     | null
   >(null);
   const [indoAoCanteiro, setIndoAoCanteiro] = useState<number | null>(null);
+  /** Arco do RANKING: câmera em primeira pessoa de frente para o letreiro, e qual ranking está nele. */
+  const [vistaRanking, setVistaRanking] = useState(false);
+  const [paginaRanking, setPaginaRanking] = useState(0);
+  /** Depois de sair com F, só abre sozinho de novo quando a pessoa sair da frente do arco. */
+  const rankingArmado = useRef(true);
+  /** Correio aberto direto em "escrever", para mandar comida/bebida a alguém. */
+  const [escreverPara, setEscreverPara] = useState<{ id: string; nome: string } | null>(null);
   /** Sentado numa cadeira do escritório: o status vira "Trabalhando" até levantar. */
   const [trabalhando, setTrabalhando] = useState(() => {
     const l = meuLugar();
@@ -572,9 +568,10 @@ export function Praca({
       par: dentro ? par : null,
       anim: dentro ? animacao : null,
       sujo: pet.higiene < SUJO_ABAIXO_DE,
+      lento: dentro && lento,
       naFazenda: !!fazenda,
     });
-  }, [dentro, eu, statusAtual, par, animacao, pet.higiene, fazenda]);
+  }, [dentro, eu, statusAtual, par, animacao, pet.higiene, lento, fazenda]);
   // Raio do Founder: todo mundo volta a dormir no berço e a praça sincroniza do zero.
   const dentroRef = useRef(dentro);
   dentroRef.current = dentro;
@@ -776,10 +773,13 @@ export function Praca({
   };
   /** O que fica ao alcance de quem está parado neste ponto. */
   const pertoDe = (p: Ponto) => {
+    if (naFrenteDoRanking(p.x, p.z)) return { tipo: "ranking" as const };
     if (!souVisita && Math.hypot(p.x - FRENTE_DO_TERMOMETRO.x, p.z - FRENTE_DO_TERMOMETRO.z) < 1.7)
       return { tipo: "termometro" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
+    // na beira da fonte do meio: dá para pegar água
+    if (Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < ANEL.dentro + 1.4) return { tipo: "fonte" as const };
     // na frente do balcão do Comércio
     if (
       Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.9 ||
@@ -868,6 +868,26 @@ export function Praca({
     playSfx("success");
     toast.success(`${pet.nome} tomou banho. Limpinho de novo!`);
     aoSalvar({ higiene: 100 });
+  };
+  /** Fonte do meio da praça: enche uma garrafa de água (vai para a mochila; uma a cada 30 segundos). */
+  const pegarAgua = () => {
+    const agua = item("agua");
+    if (!agua || salvando) return;
+    const falta = faltaParaCrescer("agua", pet.colheitas["fonte"]);
+    if (falta) {
+      toast.info(`A garrafa enche de novo em ${falta}.`);
+      return;
+    }
+    if (quantosCabem(pet.inventario, "agua") <= 0) {
+      toast.info("A mochila está cheia (50 kg). Coma, beba ou jogue algo fora.");
+      return;
+    }
+    playSfx("add");
+    toast.success(`+1 ${agua.emoji} ${agua.nome}. Para beber, abra a mochila (ou o botão de bebida do HOKI).`);
+    aoSalvar({
+      inventario: { ...pet.inventario, agua: (pet.inventario["agua"] ?? 0) + 1 },
+      colheitas: { ...pet.colheitas, fonte: Date.now() },
+    });
   };
   /** O que a tecla E faz num lugar da fazenda: "colher Milho" ou quanto falta para ficar pronto. */
   const textoDoCanteiro = (i: number) => {
@@ -976,17 +996,64 @@ export function Praca({
   const [falando, setFalando] = useState(false);
   const abrirFala = useRef<() => boolean>(() => false);
   abrirFala.current = () => {
-    if (!dentro) return false;
+    // na vista do RANKING a barra de fala fica escondida
+    if (!dentro || vistaRanking) return false;
     setFalando(true);
     return true;
   };
   useEffect(() => {
     if (!dentro) setFalando(false);
   }, [dentro]);
+  /* ---------- arco do RANKING: parar na frente põe a câmera em primeira pessoa ---------- */
+  const sairDoRanking = () => {
+    setVistaRanking(false);
+    rankingArmado.current = false;
+  };
+  useEffect(() => {
+    if (dentro && perto?.tipo === "ranking") {
+      if (rankingArmado.current) setVistaRanking(true);
+      return;
+    }
+    rankingArmado.current = true;
+    setVistaRanking(false);
+  }, [perto, dentro]);
+  // sem ninguém olhando de perto, o arco vai trocando de ranking sozinho
+  useEffect(() => {
+    if (vistaRanking) return;
+    const t = setInterval(() => setPaginaRanking((n) => n + 1), 9000);
+    return () => clearInterval(t);
+  }, [vistaRanking]);
+  const { data: rankings } = useQuery({
+    queryKey: ["hoki-rankings"],
+    queryFn: buscarRankings,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const quadroRanking = useMemo(
+    () => quadroDoRanking(rankings, paginaRanking),
+    [rankings, paginaRanking],
+  );
+  // só para testes: simula parar num ponto (o que fica "ao alcance") sem andar com o HOKI
+  if (import.meta.env.DEV)
+    Object.assign(window, { __chegar: (x: number, z: number) => setPerto(pertoDe({ x, z })) });
   // Teclas: E usa o que está ao alcance; R abre o ranking do parkour. Não valem enquanto se digita ou com uma janela aberta.
-  const usar = useRef<(tecla: "e" | "r") => void>(() => undefined);
+  const usar = useRef<(tecla: "e" | "r" | "f") => void>(() => undefined);
   usar.current = (tecla) => {
+    // no arco do RANKING: E troca o ranking, F sai da primeira pessoa
+    if (vistaRanking) {
+      if (tecla === "e") setPaginaRanking((n) => n + 1);
+      if (tecla === "f") sairDoRanking();
+      return;
+    }
     if (!dentro || !perto || eu.banco !== null || tecla !== "e") return;
+    if (perto.tipo === "ranking") {
+      setVistaRanking(true);
+      return;
+    }
+    if (perto.tipo === "fonte") {
+      pegarAgua();
+      return;
+    }
     if (perto.tipo === "cadeira") sentar(perto.i);
     else if (perto.tipo === "canteiro") colher(perto.i);
     else if (perto.tipo === "chuveiro") tomarBanho();
@@ -999,7 +1066,8 @@ export function Praca({
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if ((k !== "e" && k !== "r" && k !== "t") || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((k !== "e" && k !== "r" && k !== "t" && k !== "f") || e.ctrlKey || e.metaKey || e.altKey)
+        return;
       const alvoDaTecla = e.target as HTMLElement | null;
       if (
         alvoDaTecla?.closest("input, textarea, [contenteditable='true']") ||
@@ -1282,6 +1350,7 @@ export function Praca({
         par: dentro ? par : null,
         anim: dentro ? animacao : null,
         sujo: pet.higiene < SUJO_ABAIXO_DE,
+        lento: dentro && lento,
         souEu: true,
         selo: selos?.[euPessoa.id] ?? null,
       },
@@ -1297,6 +1366,7 @@ export function Praca({
       par,
       animacao,
       pet.higiene,
+      lento,
       selos,
     ],
   );
@@ -1374,6 +1444,8 @@ export function Praca({
         onTermometro={irAoTermometro}
         colheitas={pet.colheitas}
         cartas={naoLidas}
+        ranking={quadroRanking}
+        vistaRanking={vistaRanking}
         onAviso={(texto) => toast(texto, { id: `aviso-${texto.slice(0, 12)}`, duration: 4500 })}
         onCorreio={irAoCorreio}
         onComercio={irAoComercio}
@@ -1893,7 +1965,8 @@ export function Praca({
       )}
       {/* (o botão de dormir fica na divisa, junto do lápis, da mochila e da loja) */}
 
-      {dentro && (
+      {/* na vista do RANKING (câmera parada de frente para o arco) o zoom e o chat saem da frente */}
+      {dentro && !vistaRanking && (
         <>
           {/* zoom da câmera */}
           <div className="absolute bottom-[68px] right-3 flex flex-col gap-1.5">
@@ -2142,6 +2215,17 @@ export function Praca({
             <button onClick={() => chamar(alvo)} className={acaoSobre}>
               <BellRing className="size-3.5" /> Chamar
             </button>
+            <button
+              onClick={() => {
+                setEscreverPara({ id: alvo.id, nome: alvo.nome });
+                setCorreioAberto(true);
+                setAlvo(null);
+              }}
+              title="Manda pelo correio: chega mesmo se a pessoa estiver dormindo"
+              className={acaoSobre}
+            >
+              <span className="text-[13px] leading-none">🍎</span> Mandar comida/bebida
+            </button>
             {dentro && !alvo.dorme && (
               <>
                 <button
@@ -2171,6 +2255,53 @@ export function Praca({
               </>
             )}
           </div>
+        </div>
+      )}
+      {/* arco do RANKING em primeira pessoa: trocar de ranking e sair */}
+      {vistaRanking && (
+        <div className="pf-pop absolute inset-x-3 bottom-4 z-20 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] flex-col items-center gap-2">
+          <div className="flex flex-wrap justify-center gap-1 rounded-full border border-white/15 bg-black/70 p-1 backdrop-blur-md">
+            {RANKINGS.map((r, i) => (
+              <button
+                key={r.chave}
+                onClick={() => setPaginaRanking(i)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-[11.5px] font-semibold transition-colors",
+                  quadroRanking.pagina === i ? "bg-[#ffd84a] text-black" : "text-white/75 hover:text-white",
+                )}
+              >
+                {r.titulo}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPaginaRanking((n) => n + 1)}
+              className="flex h-9 items-center gap-2 rounded-full border border-white/15 bg-black/75 pl-1.5 pr-4 text-[12px] font-semibold text-white backdrop-blur-md hover:border-white/30"
+            >
+              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">E</kbd>
+              Próximo
+            </button>
+            <button
+              onClick={sairDoRanking}
+              className="flex h-9 items-center gap-2 rounded-full border border-white/15 bg-black/75 pl-1.5 pr-4 text-[12px] font-semibold text-white backdrop-blur-md hover:border-white/30"
+            >
+              <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">F</kbd>
+              Sair
+            </button>
+          </div>
+        </div>
+      )}
+      {/* com fome ou sede (10% ou menos): o HOKI anda devagar */}
+      {dentro && lento && !vistaRanking && (
+        <div className="pf-pop pointer-events-none absolute left-1/2 top-12 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-300/30 bg-black/75 px-3 py-1 text-[11.5px] text-amber-100 backdrop-blur-md">
+          <span className="text-[13px] leading-none">🐢</span>
+          {pet.fome <= 10 && pet.sede <= 10
+            ? "Com fome e sede: andando devagar"
+            : pet.fome <= 10
+              ? "Com fome: andando devagar"
+              : "Com sede: andando devagar"}
+          <span className="text-amber-100/60">· pegue água na fonte</span>
         </div>
       )}
       {/* carta nova: aviso discreto no topo (clicar leva o HOKI até a caixa) */}
@@ -2290,7 +2421,7 @@ export function Praca({
         />
       )}
       {/* ao alcance: o que a tecla E faz aqui */}
-      {dentro && perto && eu.banco === null && (
+      {dentro && perto && eu.banco === null && !vistaRanking && (
         <div className="pf-pop pointer-events-none absolute bottom-[68px] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[12px] text-white backdrop-blur-md">
           <kbd className="rounded-md bg-white px-1.5 py-px font-sans text-[11px] font-bold text-black">
             E
@@ -2309,17 +2440,25 @@ export function Praca({
                       ? "entrar no portal do Magnata"
                       : perto.tipo === "fazendas"
                         ? "entrar no HOST FAZENDAS"
-                        : "abrir o queridômetro"}
+                        : perto.tipo === "ranking"
+                          ? "ver o ranking"
+                          : perto.tipo === "fonte"
+                            ? "pegar água na fonte"
+                            : "abrir o queridômetro"}
         </div>
       )}
       {correioAberto && (
         <Correio
           pet={pet}
+          escreverPara={escreverPara}
           podeDirecao={isCoordinatorPlus(cargo)}
           onFlor={(id, n) =>
             guardarMochila((inv) => (n > 0 ? comMais(inv, id, n) : comMenos(inv, id, -n)))
           }
-          onClose={() => setCorreioAberto(false)}
+          onClose={() => {
+            setCorreioAberto(false);
+            setEscreverPara(null);
+          }}
         />
       )}
       {comercioAberto && (

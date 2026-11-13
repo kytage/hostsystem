@@ -69,7 +69,7 @@ export function Mochila({
               </DialogTitle>
               <p className="text-xs text-muted-foreground">
                 {kg(peso)} de {LIMITE_DA_MOCHILA} kg. Cada colheita da HOST FAZENDAS manda uma
-                unidade para cá; o resto se compra no Comércio do lobby.
+                unidade para cá; água é de graça na fonte da praça; o resto se compra no Comércio.
               </p>
             </div>
             <div className="segmentos" role="tablist" aria-label="O que mostrar">
@@ -112,10 +112,20 @@ export function Mochila({
                 <p className="font-display text-base font-semibold">
                   {filtro === "tudo" ? "Mochila vazia" : "Nada disso na mochila"}
                 </p>
-                <p className="mx-auto mt-1 max-w-[320px] text-xs text-muted-foreground">
-                  Colha na HOST FAZENDAS (suba a escadaria do noroeste da praça): cada colheita e
-                  cada coleta de árvore ou bicho mandam uma unidade para a mochila. Também dá para
-                  comprar dos outros no Comércio do lobby.
+                <p className="mx-auto mt-1 max-w-[340px] text-xs text-muted-foreground">
+                  {filtro === "bebida" ? (
+                    <>
+                      Água é de graça: vá até a fonte no meio da praça e aperte E (uma garrafa a
+                      cada 30 segundos). Leite, café e água de coco vêm da HOST FAZENDAS ou do
+                      Comércio.
+                    </>
+                  ) : (
+                    <>
+                      Colha na HOST FAZENDAS (suba a escadaria do noroeste da praça): cada colheita
+                      e cada coleta de árvore ou bicho mandam uma unidade para a mochila. Água é de
+                      graça na fonte da praça. Também dá para comprar dos outros no Comércio.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

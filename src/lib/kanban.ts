@@ -227,8 +227,8 @@ export async function createCard(input: {
   obsDev?: string;
   patchTexto?: string;
   checklist?: ChecklistItem[];
-}): Promise<void> {
-  const { error } = await supabase.from("kanban_cards").insert({
+}): Promise<string> {
+  const { data, error } = await supabase.from("kanban_cards").insert({
     titulo: input.titulo,
     descricao: input.descricao,
     categoria: input.categoria,
@@ -240,8 +240,9 @@ export async function createCard(input: {
     obs_dev: input.obsDev ?? "",
     patch_texto: input.patchTexto ?? "",
     checklist: (input.checklist ?? []) as never,
-  });
+  }).select("id").single();
   if (error) throw error;
+  return data.id;
 }
 
 export async function updateCard(

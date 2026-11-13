@@ -53,17 +53,20 @@ export function Correio({
   podeDirecao,
   onFlor,
   onClose,
+  escreverPara,
 }: {
   pet: HokiPet;
   /** Coordinator+ pode escrever a carta da direção. */
   podeDirecao: boolean;
+  /** Abre já na tela de escrever, para esta pessoa, com comida/bebida para mandar. */
+  escreverPara?: { id: string; nome: string } | null;
   /** Tira (-1) ou põe (+1) um presente na mochila: ao anexar numa carta, e ao receber a carta que veio com ele. */
   onFlor: (id: string, n: number) => void;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
   const { cartas, lidas, naoLidas } = useCorreio();
-  const [aba, setAba] = useState<"entrada" | "escrever">("entrada");
+  const [aba, setAba] = useState<"entrada" | "escrever">(escreverPara ? "escrever" : "entrada");
   const [aberta, setAberta] = useState<string | null>(null);
 
   const ler = useMutation({
@@ -76,9 +79,10 @@ export function Correio({
       }
       // a flor que veio na carta direta vai para a mochila (uma vez só)
       if (nova && c.tipo === "direta" && c.flor && item(c.flor)) {
-        onFlor(c.flor, 1);
+        const n = c.qtd || 1;
+        onFlor(c.flor, n);
         toast.success(
-          `Veio junto: ${item(c.flor)?.emoji} ${item(c.flor)?.nome}. Já está na sua mochila.`,
+          `Veio junto: ${n > 1 ? `${n}× ` : ""}${item(c.flor)?.emoji} ${item(c.flor)?.nome}. Já está na sua mochila.`,
         );
       }
     },
@@ -139,6 +143,7 @@ export function Correio({
               pet={pet}
               podeDirecao={podeDirecao}
               onFlor={onFlor}
+              paraInicial={escreverPara ?? null}
               onEnviada={() => setAba("entrada")}
             />
           ) : cartas.length === 0 ? (
@@ -283,20 +288,25 @@ function Escrever({
   pet,
   podeDirecao,
   onFlor,
+  paraInicial,
   onEnviada,
 }: {
   pet: HokiPet;
   podeDirecao: boolean;
   onFlor: (id: string, n: number) => void;
+  paraInicial: { id: string; nome: string } | null;
   onEnviada: () => void;
 }) {
   const qc = useQueryClient();
   const [tipo, setTipo] = useState<"direta" | "direcao">("direta");
-  const [para, setPara] = useState("");
+  const [para, setPara] = useState(paraInicial?.id ?? "");
   const [anonima, setAnonima] = useState(false);
   const [flor, setFlor] = useState("");
-  const [titulo, setTitulo] = useState("");
-  const [texto, setTexto] = useState("");
+  const [qtd, setQtd] = useState(1);
+  const [titulo, setTitulo] = useState(paraInicial ? "Comida e bebida para você" : "");
+  const [texto, setTexto] = useState(
+    paraInicial ? `Oi, ${paraInicial.nome}! Mandei um lanchinho para o seu HOKI. Bom apetite!` : "",
+  );
   const { data: perfis = [] } = useQuery({
     queryKey: ["correio-perfis"],
     queryFn: async () => {
@@ -309,7 +319,12 @@ function Escrever({
     },
     staleTime: 300_000,
   });
-  const presentes = ITENS.filter((i) => i.tipo === "presente" && (pet.inventario[i.id] ?? 0) > 0);
+  // tudo o que dá para mandar: comidas e bebidas primeiro, depois os presentes
+  const anexaveis = ITENS.filter((i) => (pet.inventario[i.id] ?? 0) > 0).sort(
+    (a, b) => Number(a.tipo === "presente") - Number(b.tipo === "presente"),
+  );
+  const tenho = flor ? (pet.inventario[flor] ?? 0) : 0;
+  const quantos = Math.max(1, Math.min(qtd, tenho, 10));
   const enviar = useMutation({
     mutationFn: () =>
       enviarCarta({
@@ -318,16 +333,18 @@ function Escrever({
         titulo,
         texto,
         flor: tipo === "direta" ? flor : "",
+        qtd: quantos,
         anonima,
       }),
     onSuccess: () => {
-      if (tipo === "direta" && flor) onFlor(flor, -1);
+      if (tipo === "direta" && flor) onFlor(flor, -quantos);
       playSfx("success");
       toast.success(tipo === "direcao" ? "Carta da direção enviada para todos." : "Carta enviada.");
       void qc.invalidateQueries({ queryKey: ["hoki-cartas"] });
       setTexto("");
       setTitulo("");
       setFlor("");
+      setQtd(1);
       onEnviada();
     },
     onError: (e) =>
@@ -412,19 +429,24 @@ function Escrever({
       {tipo === "direta" && (
         <div>
           <p className="text-[11.5px] text-muted-foreground">
-            Mandar junto um presente da mochila (opcional)
+            Mandar junto comida, bebida ou um presente da mochila (opcional). Chega quando a pessoa
+            abrir a carta, mesmo que esteja dormindo agora.
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {presentes.length === 0 && (
+          <div className="mt-1.5 flex max-h-[148px] flex-wrap gap-1.5 overflow-y-auto">
+            {anexaveis.length === 0 && (
               <span className="text-[11.5px] text-ink-3">
-                Sem presentes na mochila. Pegue flores na floricultura ou doces na doceria.
+                Mochila vazia. Pegue água na fonte da praça, colha na HOST FAZENDAS ou compre no
+                Comércio.
               </span>
             )}
-            {presentes.map((i) => (
+            {anexaveis.map((i) => (
               <button
                 key={i.id}
                 type="button"
-                onClick={() => setFlor((f) => (f === i.id ? "" : i.id))}
+                onClick={() => {
+                  setFlor((f) => (f === i.id ? "" : i.id));
+                  setQtd(1);
+                }}
                 aria-pressed={flor === i.id}
                 title={i.nome}
                 className={cn(
@@ -433,9 +455,35 @@ function Escrever({
                 )}
               >
                 <span className="text-[16px] leading-none">{i.emoji}</span> {i.nome}
+                <span className="text-[10.5px] tabular-nums text-muted-foreground">
+                  {pet.inventario[i.id]}
+                </span>
               </button>
             ))}
           </div>
+          {flor && (
+            <div className="mt-2 flex items-center gap-2 text-[12px]">
+              <span className="text-muted-foreground">Quantidade</span>
+              <button
+                type="button"
+                onClick={() => setQtd((v) => Math.max(1, v - 1))}
+                aria-label="Menos um"
+                className="grid size-7 place-items-center rounded-full border border-white/15"
+              >
+                −
+              </button>
+              <span className="w-6 text-center font-semibold tabular-nums">{quantos}</span>
+              <button
+                type="button"
+                onClick={() => setQtd((v) => Math.min(Math.min(tenho, 10), v + 1))}
+                aria-label="Mais um"
+                className="grid size-7 place-items-center rounded-full border border-white/15"
+              >
+                +
+              </button>
+              <span className="text-[11px] text-ink-3">até 10 por carta</span>
+            </div>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between gap-3">

@@ -1273,3 +1273,64 @@ button.inv-ico-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: 
 @media (prefers-reduced-motion: reduce) {
   .inv-raiz *, .inv-raiz *::before, .inv-raiz *::after { animation-duration: 1ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
+
+/* Coroa do líder geral (Áreas → Organograma) */
+@keyframes coroa-brilho {
+  0%, 100% { filter: drop-shadow(0 0 2px rgb(252 211 77 / 45%)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 7px rgb(252 211 77 / 95%)); transform: scale(1.08); }
+}
+@keyframes lider-geral-brilho {
+  0%, 70% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(320%) skewX(-18deg); }
+}
+.coroa-brilho { animation: coroa-brilho 2.4s ease-in-out infinite; }
+.lider-geral { box-shadow: 0 0 22px -8px rgb(252 211 77 / 35%); }
+.lider-geral::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(252 211 77 / 12%), transparent);
+  animation: lider-geral-brilho 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .coroa-brilho, .lider-geral::after { animation: none; }
+}
+
+/* Perfil & Agenda no menu: vermelho com brilho e desfoque, sempre em destaque */
+.item-menu-destaque {
+  color: #ffffff;
+  border-color: rgba(229, 35, 27, 0.35);
+  background: linear-gradient(100deg, rgba(229, 35, 27, 0.32), rgba(122, 18, 12, 0.18) 55%, rgba(0, 0, 0, 0.1));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 22px -12px rgba(229, 35, 27, 0.65);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+.item-menu-destaque::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto -40% -30%;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: skewX(-20deg);
+  animation: destaque-brilho 6s ease-in-out infinite;
+}
+.item-menu-destaque:hover { color: #ffffff; background: linear-gradient(100deg, rgba(229, 35, 27, 0.42), rgba(122, 18, 12, 0.24) 55%, rgba(0, 0, 0, 0.12)); }
+.item-menu-destaque.item-menu-ativo, .item-menu-destaque.item-menu-ativo:hover {
+  border-color: rgba(255, 90, 77, 0.55);
+  background: linear-gradient(100deg, rgba(229, 35, 27, 0.5), rgba(122, 18, 12, 0.3) 60%, rgba(0, 0, 0, 0.12));
+}
+@keyframes destaque-brilho {
+  0%, 72% { left: -45%; }
+  100% { left: 120%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .item-menu-destaque::before { animation: none; display: none; }
+}
+
+/* Comandos Staffs: fundo totalmente preto, só a malha de holograma */
+.comandos-fundo .inv-fundo-base { background: #000; }
+.cmd-tile:focus-visible { outline: none; border-color: rgba(229, 35, 27, 0.55); box-shadow: 0 0 0 3px rgba(229, 35, 27, 0.18); }

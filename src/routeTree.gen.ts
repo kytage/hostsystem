@@ -17,6 +17,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAreaManagerRouteImport } from './routes/_authenticated/area-manager'
 import { Route as AuthenticatedAvisosRouteImport } from './routes/_authenticated/avisos'
 import { Route as AuthenticatedCaptacoesRouteImport } from './routes/_authenticated/captacoes'
+import { Route as AuthenticatedComandosRouteImport } from './routes/_authenticated/comandos'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_authenticated/desenvolvimento'
 import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
@@ -26,6 +27,7 @@ import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOrganizacoesRouteImport } from './routes/_authenticated/organizacoes'
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
@@ -79,6 +81,11 @@ const AuthenticatedCaptacoesRoute = AuthenticatedCaptacoesRouteImport.update({
   path: '/captacoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedComandosRoute = AuthenticatedComandosRouteImport.update({
+  id: '/comandos',
+  path: '/comandos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConfiguracoesRoute =
   AuthenticatedConfiguracoesRouteImport.update({
     id: '/configuracoes',
@@ -125,6 +132,11 @@ const AuthenticatedOrganizacoesRoute =
 const AuthenticatedPedsRoute = AuthenticatedPedsRouteImport.update({
   id: '/peds',
   path: '/peds',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
@@ -196,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/area-manager': typeof AuthenticatedAreaManagerRoute
   '/avisos': typeof AuthenticatedAvisosRoute
   '/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/comandos': typeof AuthenticatedComandosRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
@@ -205,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
@@ -225,6 +239,7 @@ export interface FileRoutesByTo {
   '/area-manager': typeof AuthenticatedAreaManagerRoute
   '/avisos': typeof AuthenticatedAvisosRoute
   '/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/comandos': typeof AuthenticatedComandosRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
@@ -234,6 +249,7 @@ export interface FileRoutesByTo {
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
@@ -257,6 +273,7 @@ export interface FileRoutesById {
   '/_authenticated/area-manager': typeof AuthenticatedAreaManagerRoute
   '/_authenticated/avisos': typeof AuthenticatedAvisosRoute
   '/_authenticated/captacoes': typeof AuthenticatedCaptacoesRoute
+  '/_authenticated/comandos': typeof AuthenticatedComandosRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/_authenticated/eventos': typeof AuthenticatedEventosRoute
@@ -266,6 +283,7 @@ export interface FileRoutesById {
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
@@ -290,6 +308,7 @@ export interface FileRouteTypes {
     | '/area-manager'
     | '/avisos'
     | '/captacoes'
+    | '/comandos'
     | '/configuracoes'
     | '/desenvolvimento'
     | '/eventos'
@@ -299,6 +318,7 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/organizacoes'
     | '/peds'
+    | '/perfil'
     | '/players'
     | '/punicoes'
     | '/tarefas'
@@ -319,6 +339,7 @@ export interface FileRouteTypes {
     | '/area-manager'
     | '/avisos'
     | '/captacoes'
+    | '/comandos'
     | '/configuracoes'
     | '/desenvolvimento'
     | '/eventos'
@@ -328,6 +349,7 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/organizacoes'
     | '/peds'
+    | '/perfil'
     | '/players'
     | '/punicoes'
     | '/tarefas'
@@ -350,6 +372,7 @@ export interface FileRouteTypes {
     | '/_authenticated/area-manager'
     | '/_authenticated/avisos'
     | '/_authenticated/captacoes'
+    | '/_authenticated/comandos'
     | '/_authenticated/configuracoes'
     | '/_authenticated/desenvolvimento'
     | '/_authenticated/eventos'
@@ -359,6 +382,7 @@ export interface FileRouteTypes {
     | '/_authenticated/marketing'
     | '/_authenticated/organizacoes'
     | '/_authenticated/peds'
+    | '/_authenticated/perfil'
     | '/_authenticated/players'
     | '/_authenticated/punicoes'
     | '/_authenticated/tarefas'
@@ -444,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCaptacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/comandos': {
+      id: '/_authenticated/comandos'
+      path: '/comandos'
+      fullPath: '/comandos'
+      preLoaderRoute: typeof AuthenticatedComandosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracoes': {
       id: '/_authenticated/configuracoes'
       path: '/configuracoes'
@@ -505,6 +536,13 @@ declare module '@tanstack/react-router' {
       path: '/peds'
       fullPath: '/peds'
       preLoaderRoute: typeof AuthenticatedPedsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/players': {
@@ -598,6 +636,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAreaManagerRoute: typeof AuthenticatedAreaManagerRoute
   AuthenticatedAvisosRoute: typeof AuthenticatedAvisosRoute
   AuthenticatedCaptacoesRoute: typeof AuthenticatedCaptacoesRoute
+  AuthenticatedComandosRoute: typeof AuthenticatedComandosRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDesenvolvimentoRoute: typeof AuthenticatedDesenvolvimentoRoute
   AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
@@ -607,6 +646,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOrganizacoesRoute: typeof AuthenticatedOrganizacoesRoute
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
@@ -621,6 +661,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAreaManagerRoute: AuthenticatedAreaManagerRoute,
   AuthenticatedAvisosRoute: AuthenticatedAvisosRoute,
   AuthenticatedCaptacoesRoute: AuthenticatedCaptacoesRoute,
+  AuthenticatedComandosRoute: AuthenticatedComandosRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDesenvolvimentoRoute: AuthenticatedDesenvolvimentoRoute,
   AuthenticatedEventosRoute: AuthenticatedEventosRoute,
@@ -630,6 +671,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOrganizacoesRoute: AuthenticatedOrganizacoesRoute,
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,

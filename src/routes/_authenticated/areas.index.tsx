@@ -28,26 +28,31 @@ export const Route = createFileRoute("/_authenticated/areas/")({
 
 const PRIO_DOT: Record<string, string> = { alta: "bg-primary", media: "bg-amber-400", baixa: "bg-white/40" };
 
-function Rostos({ a }: { a: AreaVisao }) {
-  const lista = [...a.lideres, ...a.membros.filter((m) => !a.lideres.includes(m))].slice(0, 4);
+/** Foto pequena + nome, para líderes e auxiliares no card da área. */
+function Nome({ u, lider }: { u: { id: string; username: string; avatar_url: string }; lider?: boolean }) {
   return (
-    <span className="flex items-center">
-      {lista.map((u, i) => (
-        <img
-          key={u.id}
-          src={u.avatar_url || DEFAULT_AVATAR_URL}
-          alt={u.username}
-          title={u.username}
-          className={cn("size-6 rounded-full border-2 border-[#0c0c0c] object-cover", i > 0 && "-ml-1.5")}
-        />
-      ))}
-      {a.membros.length > 4 && <span className="ml-1.5 text-[11px] text-ink-3">+{a.membros.length - 4}</span>}
+    <span
+      className={cn(
+        "flex min-w-0 items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2.5",
+        lider ? "border border-amber-300/20 bg-amber-300/[0.06]" : "border border-white/[0.07] bg-white/[0.03]",
+      )}
+    >
+      <img
+        src={u.avatar_url || DEFAULT_AVATAR_URL}
+        alt=""
+        className={cn("size-[18px] shrink-0 rounded-full object-cover", lider && "ring-1 ring-amber-300/50")}
+      />
+      <span className={cn("truncate text-[11.5px]", lider ? "font-medium text-foreground" : "text-muted-foreground")}>
+        {u.username}
+      </span>
     </span>
   );
 }
 
 function AreaCard({ a, index }: { a: AreaVisao; index: number }) {
   const saude = saudeDaArea(a);
+  const auxiliares = a.membros.filter((m) => !a.lideres.includes(m));
+  const MAX_AUX = 6;
   return (
     <Link
       to="/areas/$area"
@@ -60,20 +65,51 @@ function AreaCard({ a, index }: { a: AreaVisao; index: number }) {
         <span className="min-w-0 flex-1 truncate font-display text-[15px] font-semibold">{a.def.label}</span>
         <ArrowUpRight className="size-4 text-ink-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
       </div>
-      <div className="mt-5 flex items-end justify-between gap-3">
+
+      <div className="mt-4 flex-1 space-y-3">
         <div>
-          <p className="font-display text-3xl font-semibold leading-none tabular-nums">{a.abertas.length}</p>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            em aberto
-            {a.altas > 0 && <span className="text-primary"> · {a.altas} alta{a.altas === 1 ? "" : "s"}</span>}
+          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/90">
+            <Crown className="size-3 text-amber-300" fill="currentColor" fillOpacity={0.25} />
+            Líder{a.lideres.length > 1 ? "es" : ""}
           </p>
+          {a.lideres.length === 0 ? (
+            <p className="text-[11.5px] text-ink-3">Sem líder definido</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {a.lideres.map((l) => (
+                <Nome key={l.id} u={l} lider />
+              ))}
+            </div>
+          )}
         </div>
-        <Rostos a={a} />
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-3">
+            Auxiliares <span className="font-normal tracking-normal">{auxiliares.length}</span>
+          </p>
+          {auxiliares.length === 0 ? (
+            <p className="text-[11.5px] text-ink-3">Ninguém ainda</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {auxiliares.slice(0, MAX_AUX).map((u) => (
+                <Nome key={u.id} u={u} />
+              ))}
+              {auxiliares.length > MAX_AUX && (
+                <span className="self-center text-[11px] text-ink-3">+{auxiliares.length - MAX_AUX}</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3 text-[11px]">
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
-          <Crown className="size-3 shrink-0 text-ink-3" />
-          <span className="truncate">{a.lideres.map((l) => l.username).join(", ") || "Sem líder"}</span>
+
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2.5 text-[11px]">
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          <span className="font-semibold tabular-nums text-foreground">{a.abertas.length}</span>
+          em aberto
+          {a.altas > 0 && (
+            <span className="text-primary">
+              · {a.altas} alta{a.altas === 1 ? "" : "s"}
+            </span>
+          )}
         </span>
         <span className="flex shrink-0 items-center gap-1.5 text-ink-3">
           <span className={cn("size-1.5 rounded-full", saude.dot)} /> {saude.label}

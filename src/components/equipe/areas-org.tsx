@@ -24,6 +24,7 @@ import { fetchPendenciasArea, type PendenciaArea, type StatusPendencia } from "@
 import { useRealtimeTable } from "@/lib/realtime";
 import type { EquipeUser } from "@/lib/equipe-merge";
 import { OrgCanvas } from "./org-canvas";
+import { LiderGeralBloco, useLideresGerais, usePodeEditarLideresGerais } from "./lideres-gerais";
 
 export interface AreaComGrupo {
   key: string;
@@ -174,6 +175,8 @@ export function AreasOrg({
     staleTime: 20_000,
   });
   const [aberta, setAberta] = useState<string | null>(null);
+  const { data: lideresGerais = {} } = useLideresGerais();
+  const podeEditarLideres = usePodeEditarLideresGerais();
 
   const resumo: AreaResumo[] = useMemo(() => {
     const agora = Date.now();
@@ -249,6 +252,14 @@ export function AreasOrg({
                   )}
                 >
                   <span className="absolute left-1/2 top-0 h-6 w-px bg-white/15" />
+                  <LiderGeralBloco
+                    grupo={g.key}
+                    rotulo={g.label}
+                    ids={lideresGerais[g.key] ?? []}
+                    membros={membros}
+                    podeEditar={podeEditarLideres}
+                  />
+                  <div className="h-4 w-px bg-white/15" />
                   <div
                     className={cn(
                       "flex w-[300px] items-center gap-3 rounded-2xl px-4 py-3",
