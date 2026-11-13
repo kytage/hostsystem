@@ -34,14 +34,40 @@ export interface TermometroVoto {
   dia: string;
 }
 
-function hoje(): string {
-  // Data local de São Paulo (reseta a cada 24h)
+/** Data de hoje em São Paulo (AAAA-MM-DD): o queridômetro zera à meia-noite de lá. */
+export function hoje(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+/**
+ * Votos recebidos entre os dias `de` e `ate` (inclusive), para somar a semana e o mês.
+ * Vem em páginas, porque o banco entrega no máximo mil linhas por pedido.
+ */
+export async function fetchTermometroEntre(
+  de: string,
+  ate: string,
+): Promise<{ paraUserId: string; emoji: string; dia: string }[]> {
+  const todos: { paraUserId: string; emoji: string; dia: string }[] = [];
+  let total = Infinity;
+  while (todos.length < total) {
+    const { data, error, count } = await supabase
+      .from("termometro_votos")
+      .select("para_user_id, emoji, dia", todos.length ? {} : { count: "exact" })
+      .gte("dia", de)
+      .lte("dia", ate)
+      .order("id", { ascending: true })
+      .range(todos.length, todos.length + 999);
+    if (error) throw error;
+    if (typeof count === "number") total = count;
+    if (!data?.length) break;
+    for (const r of data) todos.push({ paraUserId: r.para_user_id, emoji: r.emoji, dia: r.dia });
+  }
+  return todos;
 }
 
 export async function fetchTermometroHoje(): Promise<TermometroVoto[]> {

@@ -97,6 +97,7 @@ import { CHAVE_MEU_NIVEL, useSelos, type MeuNivel } from "@/lib/fazenda/selos";
 import { enviarNaPraca } from "@/lib/hoki-presenca";
 import { itemDaFazenda } from "@/lib/hoki-itens";
 import { Hoki2D } from "../hoki-2d";
+import { alertaDeLadrao } from "./alerta-ladrao";
 import { centroDoQuadrado, criarCenaDaFazenda, type CenaDaFazenda } from "./fazenda-cena";
 import { NaIlhaAgora } from "./portal-fazendas";
 import type { PresenteNaIlha } from "./ilhas-de";
@@ -190,6 +191,95 @@ function Botao({
     >
       {children}
     </button>
+  );
+}
+
+/* ---------- confirmação dentro da tela do jogo (no lugar da caixinha do navegador) ---------- */
+interface Pergunta {
+  titulo: string;
+  texto?: ReactNode;
+  icone?: string;
+  sim: string;
+  perigo?: boolean;
+  responder: (ok: boolean) => void;
+}
+let pergunta: Pergunta | null = null;
+const ouvintesDaPergunta = new Set<() => void>();
+/** Pergunta na tela do jogo; responde true quando a pessoa confirma. */
+function confirmar(p: Omit<Pergunta, "responder" | "sim"> & { sim?: string }): Promise<boolean> {
+  pergunta?.responder(false);
+  return new Promise((resolve) => {
+    const nova: Pergunta = {
+      sim: "Confirmar",
+      ...p,
+      responder: (ok) => {
+        if (pergunta === nova) pergunta = null;
+        ouvintesDaPergunta.forEach((f) => f());
+        resolve(ok);
+      },
+    };
+    pergunta = nova;
+    ouvintesDaPergunta.forEach((f) => f());
+  });
+}
+/** A caixa da pergunta, por cima da ilha. Enter confirma e Esc cancela. */
+function CaixaDePergunta() {
+  const [, setVersao] = useState(0);
+  useEffect(() => {
+    const f = () => setVersao((v) => v + 1);
+    ouvintesDaPergunta.add(f);
+    return () => {
+      ouvintesDaPergunta.delete(f);
+      pergunta?.responder(false);
+    };
+  }, []);
+  const p = pergunta;
+  useEffect(() => {
+    if (!p) return;
+    // enquanto a pergunta está aberta, as teclas não mexem no HOKI nem nas ferramentas
+    const tecla = (e: KeyboardEvent) => {
+      e.stopPropagation();
+      if (e.key === "Escape") p.responder(false);
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        p.responder(true);
+      }
+    };
+    window.addEventListener("keydown", tecla, true);
+    return () => window.removeEventListener("keydown", tecla, true);
+  }, [p]);
+  if (!p) return null;
+  return (
+    <div
+      className="pf-fade absolute inset-0 z-[60] grid place-items-center bg-black/50 p-4"
+      onClick={() => p.responder(false)}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={p.titulo}
+        onClick={(e) => e.stopPropagation()}
+        className={cn(vidro, "pf-pop w-[min(400px,100%)] p-5")}
+      >
+        <p className="flex items-center gap-2.5 text-[15px] font-semibold leading-snug">
+          {p.icone && <span className="text-xl leading-none">{p.icone}</span>}
+          {p.titulo}
+        </p>
+        {p.texto && (
+          <div className="mt-2.5 space-y-1.5 text-[12.5px] leading-relaxed text-white/75">{p.texto}</div>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <Botao onClick={() => p.responder(false)}>Cancelar</Botao>
+          <Botao
+            tipo={p.perigo ? "perigo" : "forte"}
+            onClick={() => p.responder(true)}
+            className={p.perigo ? "border-red-500 bg-red-600 text-white hover:bg-red-500" : ""}
+          >
+            {p.sim}
+          </Botao>
+        </div>
+      </div>
+    </div>
   );
 }
 function Janela({
@@ -598,16 +688,26 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
     if (!souVisita || !jogador || roubando) return;
     const restam = roubosRestantes(jogador, agora);
     if (motivoSemRoubo) return void toast.info(motivoSemRoubo, { icon: "🦹" });
-    if (
-      !window.confirm(
-        `Roubar a fazenda de ${dono?.nome || "alguém"}?\n\n` +
-          `Você leva as colheitas maduras mais valiosas (até ${SOCIAL.rouboMaduros}) e a produção ` +
-          `pronta de animais e árvores (até ${SOCIAL.rouboProducoes}). Na fuga, pisoteia até ` +
-          `${SOCIAL.rouboEstragos} canteiros que ainda estão crescendo.\n\n` +
-          `O dono fica sabendo. Restam ${restam} de ${SOCIAL.roubosPorDia} roubos hoje.`,
-      )
-    )
-      return;
+    const ok = await confirmar({
+      icone: "🦹",
+      titulo: `Roubar a fazenda de ${dono?.nome || "alguém"}?`,
+      texto: (
+        <>
+          <p>
+            Você leva as colheitas maduras mais valiosas (até {SOCIAL.rouboMaduros}) e a produção
+            pronta de animais e árvores (até {SOCIAL.rouboProducoes}).
+          </p>
+          <p>Na fuga, pisoteia até {SOCIAL.rouboEstragos} canteiros que ainda estão crescendo.</p>
+          <p className="text-white/55">
+            O alarme toca e o dono fica sabendo. Restam {restam} de {SOCIAL.roubosPorDia} roubos
+            hoje.
+          </p>
+        </>
+      ),
+      sim: "Roubar",
+      perigo: true,
+    });
+    if (!ok) return;
     setRoubando(true);
     try {
       const r = await roubarFn({ data: { op: novoOp(), dono: donoId } });
@@ -615,10 +715,11 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
       if (r.jogador) setJogador(r.jogador);
       if (r.erro) return void toast.error(r.erro);
       if (!r.resumo) return;
-      toast.success(`Roubo feito: você ${r.resumo}.`, {
-        icon: "🦹",
-        description: r.roubo?.ouros ? `+${ouros(r.roubo.ouros)} Ouros para você.` : undefined,
-      });
+      // o alarme da fazenda dispara: toca para quem rouba e para o dono
+      alertaDeLadrao(
+        `O alarme da fazenda de ${dono?.nome || "alguém"} disparou! Você ${r.resumo}.` +
+          (r.roubo?.ouros ? ` +${ouros(r.roubo.ouros)} Ouros para você.` : ""),
+      );
       entregarProdutos(r.ev);
       avisarMudanca();
       // o dono recebe o aviso onde estiver no painel
@@ -732,14 +833,15 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
       }
       if (f.t === "pa") {
         if (!can) return;
-        if (
-          can.estado === "crescendo" &&
-          !window.confirm(
-            `Descartar ${cultura(can.cultura ?? "")?.nome ?? "a cultura"}? Você não recebe nada.`,
-          )
-        )
-          return;
-        return pertoEDepois(x, z, () => void agir({ t: "remover", x, z }));
+        const remover = () => pertoEDepois(x, z, () => void agir({ t: "remover", x, z }));
+        if (can.estado !== "crescendo") return remover();
+        void confirmar({
+          titulo: `Descartar ${cultura(can.cultura ?? "")?.nome ?? "a cultura"}?`,
+          texto: "Ela ainda está crescendo. Você não recebe nada.",
+          sim: "Descartar",
+          perigo: true,
+        }).then((ok) => ok && remover());
+        return;
       }
       if (f.t === "trator")
         return void agir({
@@ -1053,6 +1155,7 @@ export function Fazenda({ eu, visitar, painelInicial, online, onProdutos, onClos
           </p>
         </>
       )}
+      <CaixaDePergunta />
     </div>,
     document.body,
   );
@@ -1395,10 +1498,15 @@ function PainelDaSelecao({
             {can && (
               <Botao
                 tipo="perigo"
-                onClick={() => {
+                onClick={async () => {
                   if (
                     can.estado === "crescendo" &&
-                    !window.confirm("Descartar essa cultura? Você não recebe nada.")
+                    !(await confirmar({
+                      titulo: "Descartar essa cultura?",
+                      texto: "Ela ainda está crescendo. Você não recebe nada.",
+                      sim: "Descartar",
+                      perigo: true,
+                    }))
                   )
                     return;
                   pertoEDepois(
@@ -1508,9 +1616,10 @@ function PainelDaSelecao({
                 <Botao
                   tipo="perigo"
                   onClick={() =>
-                    window.confirm(
-                      `Vender ${it.nome} por ${Math.floor(it.compra * 0.25)} Ouros?`,
-                    ) && void agir({ t: "vender", id: o.id }).then(onClose)
+                    void confirmar({
+                      titulo: `Vender ${it.nome} por ${Math.floor(it.compra * 0.25)} Ouros?`,
+                      sim: "Vender",
+                    }).then((ok) => ok && void agir({ t: "vender", id: o.id }).then(onClose))
                   }
                 >
                   Vender 💰{Math.floor(it.compra * 0.25)}
@@ -1659,9 +1768,11 @@ function Loja({
                 tipo="forte"
                 disabled={jogador.nivel < prox.nivel || jogador.ouros < prox.ouros}
                 onClick={() =>
-                  window.confirm(
-                    `Pagar ${ouros(prox.ouros)} Ouros? (precisa de ${prox.vizinhos} vizinho(s) com ilha)`,
-                  ) && void agir({ t: "expandir", rota: "ouros" })
+                  void confirmar({
+                    titulo: `Pagar ${ouros(prox.ouros)} Ouros para expandir?`,
+                    texto: `Precisa de ${prox.vizinhos} vizinho(s) com ilha.`,
+                    sim: "Pagar",
+                  }).then((ok) => ok && void agir({ t: "expandir", rota: "ouros" }))
                 }
               >
                 💰 {ouros(prox.ouros)} + {prox.vizinhos} vizinho(s)
@@ -1669,8 +1780,10 @@ function Loja({
               <Botao
                 disabled={jogador.nivel < prox.nivel || jogador.granas < prox.granas}
                 onClick={() =>
-                  window.confirm(`Pagar ${prox.granas} Granas?`) &&
-                  void agir({ t: "expandir", rota: "granas" })
+                  void confirmar({
+                    titulo: `Pagar ${prox.granas} Granas para expandir?`,
+                    sim: "Pagar",
+                  }).then((ok) => ok && void agir({ t: "expandir", rota: "granas" }))
                 }
               >
                 💎 {prox.granas}
@@ -1802,9 +1915,10 @@ function Inventario({
                 {g.origem === "loja" && (
                   <Botao
                     onClick={() =>
-                      window.confirm(
-                        `Vender ${it?.nome} por ${Math.floor((it?.compra ?? 0) * 0.25)} Ouros?`,
-                      ) && void agir({ t: "vender", id: g.id })
+                      void confirmar({
+                        titulo: `Vender ${it?.nome} por ${Math.floor((it?.compra ?? 0) * 0.25)} Ouros?`,
+                        sim: "Vender",
+                      }).then((ok) => ok && void agir({ t: "vender", id: g.id }))
                     }
                   >
                     Vender

@@ -12,10 +12,13 @@ import { playSfx } from "@/lib/sfx";
 import {
   faltaParaZerar,
   fetchMeusVotosHoje,
+  fetchTermometroEntre,
   fetchTermometroHoje,
+  hoje,
   QUERIDOMETRO,
   votarTermometro,
 } from "@/lib/termometro";
+import { diaCurto, iniciosDosPeriodos, PERIODOS, type Periodo } from "@/lib/termometro-periodos";
 import { cn } from "@/lib/utils";
 import { Hoki2D } from "./hoki-2d";
 
@@ -29,9 +32,27 @@ interface Perfil {
 }
 export interface LinhaDoQuadro {
   perfil: Perfil;
-  /** Quantos de cada emoji a pessoa recebeu hoje (na ordem do queridômetro). */
+  /** Quantos de cada emoji a pessoa recebeu no período (na ordem do queridômetro). */
   contagem: number[];
   total: number;
+}
+
+/** Monta o quadro (uma linha por perfil, quem recebeu mais primeiro) a partir dos votos. */
+function montarQuadro(perfis: Perfil[], votos: { paraUserId: string; emoji: string }[]) {
+  const porPessoa = new Map<string, number[]>();
+  for (const v of votos) {
+    const i = QUERIDOMETRO.findIndex((e) => e.emoji === v.emoji);
+    if (i < 0) continue; // emoji antigo, de antes do queridômetro
+    const c = porPessoa.get(v.paraUserId) ?? QUERIDOMETRO.map(() => 0);
+    c[i] = (c[i] ?? 0) + 1;
+    porPessoa.set(v.paraUserId, c);
+  }
+  return perfis
+    .map((perfil) => {
+      const contagem = porPessoa.get(perfil.id) ?? QUERIDOMETRO.map(() => 0);
+      return { perfil, contagem, total: contagem.reduce((s, n) => s + n, 0) };
+    })
+    .sort((a, b) => b.total - a.total || a.perfil.username.localeCompare(b.perfil.username));
 }
 
 /**
@@ -39,7 +60,7 @@ export interface LinhaDoQuadro {
  * o que eu já entreguei e para quantas pessoas ainda posso entregar.
  * Um emoji por pessoa, por dia; zera à meia-noite.
  */
-export function useQueridometro(euId: string) {
+export function useQueridometro(euId: string, comPeriodos = false) {
   const qc = useQueryClient();
   useRealtimeTable("termometro_votos", [["termometro"], ["meus-votos-termometro"]]);
   const { data: contas = [] } = useQuery({
@@ -105,22 +126,27 @@ export function useQueridometro(euId: string) {
     queryFn: fetchMeusVotosHoje,
   });
 
-  const quadro = useMemo<LinhaDoQuadro[]>(() => {
-    const porPessoa = new Map<string, number[]>();
-    for (const v of votos) {
-      const i = QUERIDOMETRO.findIndex((e) => e.emoji === v.emoji);
-      if (i < 0) continue; // emoji antigo, de antes do queridômetro
-      const c = porPessoa.get(v.paraUserId) ?? QUERIDOMETRO.map(() => 0);
-      c[i] = (c[i] ?? 0) + 1;
-      porPessoa.set(v.paraUserId, c);
-    }
-    return perfis
-      .map((perfil) => {
-        const contagem = porPessoa.get(perfil.id) ?? QUERIDOMETRO.map(() => 0);
-        return { perfil, contagem, total: contagem.reduce((s, n) => s + n, 0) };
-      })
-      .sort((a, b) => b.total - a.total || a.perfil.username.localeCompare(b.perfil.username));
-  }, [perfis, votos]);
+  const quadro = useMemo<LinhaDoQuadro[]>(() => montarQuadro(perfis, votos), [perfis, votos]);
+
+  // semana (desde segunda) e mês (desde o dia 1): os dias que já passaram vêm uma vez só,
+  // porque não mudam mais; o dia de hoje é o mesmo da contagem ao vivo
+  const inicios = iniciosDosPeriodos(hoje());
+  const desde = inicios.semana < inicios.mes ? inicios.semana : inicios.mes;
+  const temPassado = comPeriodos && desde <= inicios.ontem;
+  const passado = useQuery({
+    queryKey: ["termometro-passado", desde, inicios.ontem],
+    queryFn: () => fetchTermometroEntre(desde, inicios.ontem),
+    enabled: temPassado,
+    staleTime: Infinity,
+  });
+  const quadros = useMemo<Record<Periodo, LinhaDoQuadro[]>>(() => {
+    const antes = temPassado ? (passado.data ?? []) : [];
+    return {
+      hoje: quadro,
+      semana: montarQuadro(perfis, [...antes.filter((v) => v.dia >= inicios.semana), ...votos]),
+      mes: montarQuadro(perfis, [...antes.filter((v) => v.dia >= inicios.mes), ...votos]),
+    };
+  }, [quadro, perfis, votos, passado.data, temPassado, inicios.semana, inicios.mes]);
 
   const entregues = useMemo(() => new Map(meus.map((m) => [m.para, m.emoji])), [meus]);
   const pendentes = perfis.filter((p) => p.id !== euId && !entregues.has(p.id)).length;
@@ -137,7 +163,19 @@ export function useQueridometro(euId: string) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return { perfis, quadro, entregues, pendentes, entregar, tags };
+  return {
+    perfis,
+    quadro,
+    quadros,
+    inicios,
+    /** A semana e o mês ainda estão sendo somados (ou não deu para somar). */
+    somandoPeriodos: temPassado && passado.isPending,
+    erroNosPeriodos: temPassado && passado.isError,
+    entregues,
+    pendentes,
+    entregar,
+    tags,
+  };
 }
 
 /** A "foto" da pessoa: o busto do HOKI dela. */
@@ -167,7 +205,7 @@ function Nome({ p, className }: { p: Perfil; className?: string }) {
   );
 }
 
-/** Um cartão do quadro: a pessoa e, embaixo de cada emoji, quantos ela recebeu hoje. */
+/** Um cartão do quadro: a pessoa e, embaixo de cada emoji, quantos ela recebeu no período. */
 export function CartaoDoQuadro({ linha, compacto }: { linha: LinhaDoQuadro; compacto?: boolean }) {
   return (
     <div
@@ -214,9 +252,10 @@ export function CartaoDoQuadro({ linha, compacto }: { linha: LinhaDoQuadro; comp
  * vê quantos de cada emoji todo mundo recebeu hoje.
  */
 export function Queridometro({ euId, onClose }: { euId: string; onClose: () => void }) {
-  const { perfis, quadro, entregues, pendentes, entregar } = useQueridometro(euId);
-  // abre no quadro de hoje; entregar fica na outra aba
-  const [aba, setAba] = useState<"entregar" | "quadro">("quadro");
+  const { perfis, quadros, inicios, somandoPeriodos, erroNosPeriodos, entregues, pendentes, entregar } =
+    useQueridometro(euId, true);
+  // abre no quadro de hoje; semana e mês somam os dias que já passaram; entregar fica na última aba
+  const [aba, setAba] = useState<"entregar" | Periodo>("hoje");
   const falta = faltaParaZerar();
   // quem ainda não recebeu o meu emoji vem primeiro
   const pessoas = perfis
@@ -243,15 +282,18 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
             </p>
           </div>
           <div className="flex items-center gap-2" role="tablist" aria-label="O que mostrar">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={aba === "quadro"}
-              onClick={() => setAba("quadro")}
-              className={cn("pilula rounded-full", aba === "quadro" && "pilula-ativa")}
-            >
-              Quadro de hoje
-            </button>
+            {PERIODOS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={aba === p.id}
+                onClick={() => setAba(p.id)}
+                className={cn("pilula rounded-full", aba === p.id && "pilula-ativa")}
+              >
+                {p.rotulo}
+              </button>
+            ))}
             {/* entregar em destaque: vermelho, com brilho e a contagem de quem ainda falta */}
             <button
               type="button"
@@ -349,13 +391,36 @@ export function Queridometro({ euId, onClose }: { euId: string; onClose: () => v
               </ul>
             )
           ) : (
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(204px,1fr))] gap-2">
-              {quadro.map((l) => (
-                <li key={l.perfil.id}>
-                  <CartaoDoQuadro linha={l} compacto />
-                </li>
-              ))}
-            </ul>
+            <>
+              {aba !== "hoje" && (
+                <p className="mb-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-[12px] text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {aba === "semana"
+                      ? `Semana: desde segunda, ${diaCurto(inicios.semana)}`
+                      : `Mês: desde ${diaCurto(inicios.mes)}`}
+                  </span>
+                  <span className="text-ink-3">·</span>
+                  {aba === "semana" ? "zera toda segunda-feira" : "zera no dia 1 de cada mês"}
+                  {somandoPeriodos && (
+                    <span className="flex items-center gap-1 text-ink-3">
+                      <Loader2 className="size-3 animate-spin" /> somando…
+                    </span>
+                  )}
+                  {erroNosPeriodos && (
+                    <span className="text-red-300">
+                      Não deu para somar os dias anteriores agora; mostrando só hoje.
+                    </span>
+                  )}
+                </p>
+              )}
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(204px,1fr))] gap-2">
+                {quadros[aba].map((l) => (
+                  <li key={l.perfil.id}>
+                    <CartaoDoQuadro linha={l} compacto />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </DialogContent>

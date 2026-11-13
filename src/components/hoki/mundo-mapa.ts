@@ -22,6 +22,27 @@ export const ANEL = { dentro: 6.0, fora: 11.5 };
 /** Raio do "corpo" de um HOKI, para não atravessar as coisas. */
 export const CORPO = 0.45;
 
+/*
+ * Fonte do meio: a bacia (borda de pedra até 4,85 do centro) e o canteiro de flores em volta.
+ * O canteiro tem quatro passagens estreitas, onde chegam os caminhos (norte, sul, leste e oeste):
+ * só por elas o HOKI chega até a beira da água, e só lá dá para pegar água.
+ */
+const BACIA_DA_FONTE = 4.85;
+const MEIA_PASSAGEM = 0.15;
+/** Onde o HOKI fica parado na beira da água (no fim de uma passagem). */
+const BEIRA = BACIA_DA_FONTE + CORPO + 0.05;
+const naPassagemDaFonte = (x: number, z: number) =>
+  Math.min(Math.abs(x - FONTE.x), Math.abs(z - FONTE.z)) < MEIA_PASSAGEM;
+/** O ponto está na fonte (água, bacia ou canteiro)? */
+export const naFonte = (p: Ponto) => Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < ANEL.dentro;
+/** Beira da água pela passagem do canteiro mais perto de `p`. */
+export function beiraDaFonte(p: Ponto): Ponto {
+  const q = Math.round(Math.atan2(p.z - FONTE.z, p.x - FONTE.x) / (Math.PI / 2)) * (Math.PI / 2);
+  return { x: FONTE.x + Math.round(Math.cos(q)) * BEIRA, z: FONTE.z + Math.round(Math.sin(q)) * BEIRA };
+}
+/** O HOKI está na beira da água da fonte (no fim de uma das passagens)? */
+export const naBeiraDaFonte = (p: Ponto) => Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < BEIRA + 0.3;
+
 export function dentroDaIlha(x: number, z: number, folga = 0) {
   return (
     Math.pow(Math.abs(x) / (ILHA.a - folga), ILHA.n) +
@@ -480,7 +501,6 @@ export const CANTEIROS: Canteiro[] = [];
 
 // ---------------- o que não dá para atravessar ----------------
 const OBSTACULOS: (Ponto & { r: number })[] = [
-  { ...FONTE, r: ANEL.dentro - 0.1 },
   ...ARVORES.map((a) => ({ x: a.x, z: a.z, r: a.tipo === "copinha" ? 0.6 : 0.75 })),
   ...POSTES.map((p) => ({ ...p, r: 0.3 })),
   ...BANCOS.filter((b) => !b.trabalho).map((b) => ({ x: b.x, z: b.z, r: 0.7 })),
@@ -586,6 +606,10 @@ export function livre(x: number, z: number) {
     if (naAgua(x, z, CORPO) && !naPonte(x, z)) return false;
   }
   for (const p of PAREDES) if (dentroDe(p, x, z, CORPO)) return false;
+  // fonte: a bacia nunca; o canteiro em volta só pelas quatro passagens
+  const df = Math.hypot(x - FONTE.x, z - FONTE.z);
+  if (df < BACIA_DA_FONTE + CORPO) return false;
+  if (df < ANEL.dentro - 0.1 + CORPO && !naPassagemDaFonte(x, z)) return false;
   for (const o of OBSTACULOS) if (Math.hypot(x - o.x, z - o.z) < o.r + CORPO) return false;
   return true;
 }

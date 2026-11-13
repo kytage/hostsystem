@@ -27,16 +27,18 @@ function PerfilPage() {
 
       <PageHeader title="Perfil & Agenda" subtitle="Sua central no painel: perfil, status, Staff Coins, tarefas e anotações." />
 
-      <div className="mt-5">
-        <PerfilCartao />
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-4">
-        <div className="xl:col-span-3">
+      {/* tarefas à esquerda; perfil compacto e anotações na coluna da direita (no celular: perfil, tarefas e anotações) */}
+      <div className="mt-5 flex flex-col gap-6 xl:grid xl:grid-cols-4 xl:items-start">
+        <div className="order-2 min-w-0 xl:order-none xl:col-span-3">
           <TarefasParticulares />
         </div>
-        <div className="xl:col-span-1">
-          <Anotacoes />
+        <div className="contents xl:col-span-1 xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
+          <div className="order-1 xl:order-none">
+            <PerfilCartao />
+          </div>
+          <div className="order-3 xl:order-none">
+            <Anotacoes />
+          </div>
         </div>
       </div>
     </div>

@@ -93,8 +93,7 @@ import {
   FRENTE_DO_PORTAL_FAZENDAS,
   naPortaDoCeleiro,
   naFrenteDoRanking,
-  ANEL,
-  FONTE,
+  naBeiraDaFonte,
   PORTAL,
   FRENTE_DO_TERMOMETRO,
   type Ponto,
@@ -778,8 +777,8 @@ export function Praca({
       return { tipo: "termometro" as const };
     if (Math.hypot(p.x - CHUVEIRO.x, p.z - CHUVEIRO.z) < 1.2) return { tipo: "chuveiro" as const };
     if (Math.hypot(p.x - CORREIO.x, p.z - CORREIO.z) < 1.5) return { tipo: "correio" as const };
-    // na beira da fonte do meio: dá para pegar água
-    if (Math.hypot(p.x - FONTE.x, p.z - FONTE.z) < ANEL.dentro + 1.4) return { tipo: "fonte" as const };
+    // só encostado na água da fonte (no fim de uma das passagens do canteiro): dá para pegar água
+    if (naBeiraDaFonte(p)) return { tipo: "fonte" as const };
     // na frente do balcão do Comércio
     if (
       Math.hypot(p.x - FRENTE_DO_COMERCIO.x, p.z - FRENTE_DO_COMERCIO.z) < 1.9 ||

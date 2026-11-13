@@ -13,6 +13,7 @@ import { useMeuNivel } from "@/lib/fazenda/selos";
 import { corDoSelo, progressoDoNivel } from "@/lib/fazenda/catalogo";
 import { ROLE_LABELS, useMyRole } from "@/lib/permissions";
 import { QUERIDOMETRO } from "@/lib/termometro";
+import { PERIODOS, type Periodo } from "@/lib/termometro-periodos";
 import { Queridometro, useQueridometro } from "@/components/hoki/queridometro";
 import { cn } from "@/lib/utils";
 
@@ -111,8 +112,10 @@ export function PerfilCartao() {
   const bannerRef = useRef<HTMLInputElement>(null);
 
   const euId = perfil?.id ?? "";
-  const { quadro, pendentes } = useQueridometro(euId);
-  const meuQuadro = quadro.find((l) => l.perfil.id === euId);
+  const { quadros, pendentes, somandoPeriodos } = useQueridometro(euId, true);
+  /** Quantos de cada emoji eu recebi no período (hoje, na semana ou no mês). */
+  const minhaContagem = (p: Periodo) =>
+    quadros[p].find((l) => l.perfil.id === euId)?.contagem ?? QUERIDOMETRO.map(() => 0);
 
   const atualizar = () => {
     void qc.invalidateQueries({ queryKey: CHAVE_PERFIL });
@@ -165,161 +168,180 @@ export function PerfilCartao() {
   const avatar = perfil?.avatar_url || DEFAULT_AVATAR_URL;
 
   return (
-    <section className="perfil-cartao relative rounded-[28px] border border-white/[0.08] bg-black/35 shadow-[0_40px_80px_-40px_rgba(0,0,0,0.9)] backdrop-blur-[3px]">
+    <section className="perfil-cartao relative rounded-[22px] border border-white/[0.08] bg-black/35 shadow-[0_30px_60px_-36px_rgba(0,0,0,0.9)] backdrop-blur-[3px]">
       {/* Banner */}
-      <div className="group/banner relative h-36 overflow-hidden rounded-t-[28px] md:h-48">
+      <div className="group/banner relative h-16 overflow-hidden rounded-t-[22px]">
         <img src={banner} alt="" draggable={false} className="size-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/80" />
         <button
           type="button"
           onClick={() => bannerRef.current?.click()}
           disabled={trocarBanner.isPending}
-          className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[11.5px] font-medium text-white/85 opacity-80 backdrop-blur-md transition-opacity hover:opacity-100 md:opacity-0 md:group-hover/banner:opacity-100"
+          className="absolute right-2 top-2 flex items-center gap-1 rounded-full border border-white/15 bg-black/45 px-2 py-0.5 text-[10.5px] font-medium text-white/85 opacity-80 backdrop-blur-md transition-opacity hover:opacity-100 md:opacity-0 md:group-hover/banner:opacity-100"
         >
-          {trocarBanner.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+          {trocarBanner.isPending ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3" />}
           Trocar banner
         </button>
       </div>
 
-      <div className="relative px-5 pb-5 md:px-7 md:pb-6">
-        <div className="-mt-12 flex flex-wrap items-end gap-4 md:-mt-14">
+      <div className="relative px-4 pb-4">
+        <div className="-mt-7 flex items-end gap-3">
           {/* Foto */}
           <button
             type="button"
             onClick={() => fotoRef.current?.click()}
             disabled={trocarFoto.isPending}
             aria-label="Trocar foto"
-            className="group/foto relative size-24 shrink-0 overflow-hidden rounded-[24px] border border-white/15 bg-black ring-4 ring-black md:size-28"
+            className="group/foto relative size-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black ring-[3px] ring-black"
           >
             <img src={avatar} alt="" draggable={false} className="size-full object-cover" />
             <span className="absolute inset-0 grid place-items-center bg-black/55 opacity-0 transition-opacity group-hover/foto:opacity-100">
-              {trocarFoto.isPending ? <Loader2 className="size-5 animate-spin text-white" /> : <Camera className="size-5 text-white" />}
+              {trocarFoto.isPending ? <Loader2 className="size-4 animate-spin text-white" /> : <Camera className="size-4 text-white" />}
             </span>
           </button>
 
-          <div className="min-w-0 flex-1 pb-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate font-display text-2xl font-semibold tracking-tight md:text-[28px]">
+          <div className="min-w-0 flex-1 pb-0.5">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="truncate font-display text-[17px] font-semibold leading-tight tracking-tight">
                 {perfil?.username || "…"}
               </h2>
               <span
-                className="rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                className="shrink-0 rounded-full px-1.5 py-px text-[9.5px] font-bold"
                 style={{ background: selo.fundo, color: selo.texto }}
                 title="Nível do HOKI (HOST FAZENDAS)"
               >
                 HOKI Nv {nivel?.nivel ?? 1}
               </span>
             </div>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12.5px] text-muted-foreground">
-              <span>{ROLE_LABELS[role ?? "staff"]}</span>
-              {perfil?.host_id && (
-                <>
-                  <span className="text-ink-3">·</span>
-                  <span className="font-mono">ID Host {perfil.host_id}</span>
-                </>
-              )}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pb-1">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMudandoStatus((v) => !v)}
-                className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-3.5 py-2 text-[12.5px] transition-colors hover:bg-white/[0.09]"
-                title="Status do HOKI (o mesmo da praça)"
-              >
-                <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                {status || "Definir status"}
-              </button>
-              {mudandoStatus && (
-                <EditorStatus
-                  atual={status}
-                  onSalvar={(s) => {
-                    salvarStatus(s);
-                    setMudandoStatus(false);
-                  }}
-                  onClose={() => setMudandoStatus(false)}
-                />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setEditando(true)}
-              className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-black transition-opacity hover:opacity-90"
-            >
-              <Pencil className="size-3.5" /> Editar perfil
-            </button>
+            <p className="truncate text-[11.5px] text-muted-foreground">{ROLE_LABELS[role ?? "staff"]}</p>
           </div>
         </div>
 
-        {perfil?.bio && <p className="mt-4 max-w-3xl text-[13px] leading-relaxed text-muted-foreground">{perfil.bio}</p>}
+        {/* Status do HOKI e editar */}
+        <div className="mt-3 flex items-center gap-1.5">
+          <div className="relative min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setMudandoStatus((v) => !v)}
+              className="flex w-full min-w-0 items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1.5 text-left text-[11.5px] transition-colors hover:bg-white/[0.09]"
+              title="Status do HOKI (o mesmo da praça)"
+            >
+              <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              <span className="truncate">{status || "Definir status"}</span>
+            </button>
+            {mudandoStatus && (
+              <EditorStatus
+                atual={status}
+                onSalvar={(s) => {
+                  salvarStatus(s);
+                  setMudandoStatus(false);
+                }}
+                onClose={() => setMudandoStatus(false)}
+              />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditando(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-semibold text-black transition-opacity hover:opacity-90"
+          >
+            <Pencil className="size-3" /> Editar perfil
+          </button>
+        </div>
+
+        {perfil?.bio && (
+          <p className="mt-2.5 line-clamp-2 text-[12px] leading-snug text-muted-foreground" title={perfil.bio}>
+            {perfil.bio}
+          </p>
+        )}
 
         {/* Números */}
-        <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02] lg:grid-cols-4">
-          <div className="border-b border-r border-white/[0.06] p-4 lg:border-b-0">
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Sparkles className="size-3.5 text-amber-300" /> HOKI Level
+        <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]">
+          <div className="border-b border-r border-white/[0.06] p-2.5">
+            <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
+              <Sparkles className="size-3 text-amber-300" /> HOKI Level
             </p>
-            <p className="mt-1.5 font-display text-2xl font-semibold tabular-nums">{nivel?.nivel ?? 1}</p>
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]">
+            <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{nivel?.nivel ?? 1}</p>
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.08]">
               <div className="h-full rounded-full bg-gradient-to-r from-[#7a120c] to-[#ff4a3d]" style={{ width: `${prog.pct}%` }} />
             </div>
-            <p className="mt-1 text-[10.5px] text-ink-3">
-              {prog.maximo ? "Nível máximo" : `${prog.noNivel}/${prog.paraSubir} XP para o próximo`}
+            <p className="mt-1 text-[10px] text-ink-3" title={prog.maximo ? undefined : "XP para o próximo nível"}>
+              {prog.maximo ? "Nível máximo" : `${prog.noNivel}/${prog.paraSubir} XP`}
             </p>
           </div>
-          <div className="border-b border-white/[0.06] p-4 lg:border-b-0 lg:border-r">
-            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="text-[13px] leading-none">💰</span> Staff Coins
+          <div className="border-b border-white/[0.06] p-2.5">
+            <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
+              <span className="text-[12px] leading-none">💰</span> Staff Coins
             </p>
-            <p className="mt-1.5 font-display text-2xl font-semibold tabular-nums">{coins.toLocaleString("pt-BR")}</p>
-            <p className="mt-2 text-[10.5px] leading-snug text-ink-3">
-              Tarefa recebida concluída: +10 · Sua própria tarefa: +1
+            <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{coins.toLocaleString("pt-BR")}</p>
+            <p className="mt-1.5 text-[10px] leading-snug text-ink-3" title="Tarefa recebida concluída: +10 · Sua própria tarefa: +1">
+              +10 tarefa recebida · +1 a sua
             </p>
           </div>
-          <div className="border-r border-white/[0.06] p-4">
+          <div className="col-span-2 border-b border-white/[0.06] p-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[11px] text-muted-foreground" title="Emojis que você recebeu hoje">
-                <Heart className="size-3.5 shrink-0 text-primary" /> Queridômetro
+              <p
+                className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-muted-foreground"
+                title="Emojis que você recebeu hoje, nesta semana (desde segunda) e neste mês (desde o dia 1)"
+              >
+                <Heart className="size-3 shrink-0 text-primary" /> Queridômetro
               </p>
               <button
                 type="button"
                 onClick={() => setQuadroAberto(true)}
-                className="shrink-0 whitespace-nowrap rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-muted-foreground transition-colors hover:text-foreground"
+                className="shrink-0 whitespace-nowrap rounded-full border border-white/10 px-2 py-px text-[10px] text-muted-foreground transition-colors hover:text-foreground"
               >
                 Entregar{pendentes > 0 ? ` (${pendentes})` : ""}
               </button>
             </div>
-            <div className="mt-2 grid grid-cols-6 gap-1">
-              {QUERIDOMETRO.map((e, i) => (
-                <span key={e.emoji} title={e.nome} className="flex flex-col items-center rounded-lg bg-white/[0.03] py-1">
-                  <span className="text-[15px] leading-none">{e.emoji}</span>
-                  <span className="mt-1 text-[10.5px] font-semibold tabular-nums text-muted-foreground">
-                    {meuQuadro?.contagem[i] ?? 0}
-                  </span>
-                </span>
-              ))}
-            </div>
+            {/* hoje, semana (desde segunda) e mês (desde o dia 1), lado a lado */}
+            <table className="mt-1.5 w-full table-fixed text-center text-[10.5px] tabular-nums">
+              <thead>
+                <tr>
+                  <th className="w-[46px]" aria-label="Período" />
+                  {QUERIDOMETRO.map((e) => (
+                    <th key={e.emoji} title={e.nome} className="pb-1 text-[13px] font-normal leading-none">
+                      {e.emoji}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {PERIODOS.map((p) => (
+                  <tr key={p.id} className="border-t border-white/[0.05]">
+                    <td className="py-[3px] text-left text-[10px] text-ink-3">{p.rotulo}</td>
+                    {minhaContagem(p.id).map((n, i) => (
+                      <td
+                        key={i}
+                        className={cn(
+                          "py-[3px] font-semibold",
+                          n ? "text-foreground" : "text-ink-3",
+                          p.id !== "hoje" && somandoPeriodos && "animate-pulse",
+                        )}
+                      >
+                        {n}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="p-4">
-            <p className="text-[11px] text-muted-foreground">Identificação</p>
-            <div className="mt-1.5 space-y-1.5 text-[12.5px]">
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-ink-3">ID Host</span>
-                <span className="flex items-center gap-0.5 font-mono">
-                  {perfil?.host_id || <span className="text-ink-3">—</span>}
-                  <Copiar valor={perfil?.host_id ?? ""} rotulo="ID Host" />
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="text-ink-3">Discord</span>
-                <span className="flex min-w-0 items-center gap-0.5 font-mono">
-                  <span className="truncate">{perfil?.discord_id || <span className="text-ink-3">—</span>}</span>
-                  <Copiar valor={perfil?.discord_id ?? ""} rotulo="ID Discord" />
-                </span>
-              </p>
-            </div>
+          <div className="col-span-2 space-y-0.5 px-2.5 py-2 text-[11.5px]">
+            <p className="flex items-center justify-between gap-2">
+              <span className="text-ink-3">ID Host</span>
+              <span className="flex min-w-0 items-center gap-0.5 font-mono">
+                <span className="truncate">{perfil?.host_id || <span className="text-ink-3">—</span>}</span>
+                <Copiar valor={perfil?.host_id ?? ""} rotulo="ID Host" />
+              </span>
+            </p>
+            <p className="flex items-center justify-between gap-2">
+              <span className="text-ink-3">Discord</span>
+              <span className="flex min-w-0 items-center gap-0.5 font-mono">
+                <span className="truncate">{perfil?.discord_id || <span className="text-ink-3">—</span>}</span>
+                <Copiar valor={perfil?.discord_id ?? ""} rotulo="ID Discord" />
+              </span>
+            </p>
           </div>
         </div>
       </div>

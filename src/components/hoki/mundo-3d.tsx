@@ -30,6 +30,8 @@ import {
   ILHA_FAZENDAS,
   frenteDoBanco,
   planejar,
+  beiraDaFonte,
+  naFonte,
   TERMOMETRO,
   TOP3,
   vagaDoBerco,
@@ -994,7 +996,8 @@ function criarMotor(
       }
     }
     const chao = noChao();
-    const destino = chao && ajustar(chao);
+    // clicou na fonte: vai até a beira da água pela passagem do canteiro mais perto
+    const destino = chao && (naFonte(chao) ? beiraDaFonte(chao) : ajustar(chao));
     if (!destino) return;
     marca.position.set(destino.x, alturaDoChao(destino.x, destino.z) + 0.03, destino.z);
     marca.visible = true;

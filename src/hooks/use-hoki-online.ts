@@ -13,6 +13,7 @@ import {
 } from "@/lib/hoki-presenca";
 import { playSfx } from "@/lib/sfx";
 import { item } from "@/lib/hoki-itens";
+import { alertaDeLadrao } from "@/components/hoki/fazenda/alerta-ladrao";
 import { useMyRole } from "@/lib/permissions";
 import { ROLE_TAG } from "@/lib/roles";
 import { useSouVisita } from "@/lib/hoki-visita";
@@ -192,19 +193,19 @@ export function useHokiOnline() {
       ouvirNaPraca("fazenda-visita", (m) => {
         if (m.para !== meuIdNaPraca() || typeof m.de !== "string") return;
         const nome = String(m.nome ?? "Alguém").slice(0, 24);
-        playSfx("pop");
-        // roubo: quem roubou e o que levou (o detalhe também fica no Correio da fazenda)
+        // roubo: alarme de 4 segundos, quem roubou e o que levou (o detalhe também fica no Correio da fazenda)
         if (m.tipo === "roubo") {
-          toast(`${nome} roubou a sua fazenda!`, {
-            icon: "🦹",
-            description:
-              typeof m.texto === "string" && m.texto
-                ? `${nome} ${m.texto.slice(0, 140)}. Veja no Correio da fazenda.`
-                : "Veja o que sumiu no Correio da fazenda.",
-            duration: 10_000,
-          });
+          const texto = typeof m.texto === "string" ? m.texto.slice(0, 140) : "";
+          alertaDeLadrao(
+            texto
+              ? `${nome} roubou a sua fazenda: ${texto}. Veja no Correio da fazenda.`
+              : `${nome} roubou a sua fazenda. Veja o que sumiu no Correio da fazenda.`,
+            10_000,
+          );
+          piscarTitulo("⚠ Ladrãozinho na sua fazenda!");
           return;
         }
+        playSfx("pop");
         toast(`${nome} entrou na sua fazenda`, {
           icon: "🌾",
           description: "Visita na HOST FAZENDAS.",

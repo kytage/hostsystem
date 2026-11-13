@@ -83,7 +83,9 @@ function sopro(dur: number, de: number, ate: number, gain = 0.012) {
 
 export type Sfx = "check" | "uncheck" | "complete" | "add" | "remove" | "click" | "tap" | "hover" | "nav" | "open" | "close" | "toggle" | "success" | "error" | "pop" | "toc"
   // eventos da praça do HOKI
-  | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito" | "sino";
+  | "trovao" | "splash" | "fogos" | "explosao" | "aviao" | "tique" | "gelo" | "vitoria" | "apito" | "sino"
+  // HOST FAZENDAS: alarme de roubo (4 segundos)
+  | "alarme";
 
 /**
  * Ruído filtrado com ataque e queda: a base do trovão, do mergulho, dos fogos e
@@ -118,6 +120,41 @@ function ruido(
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   fonte.connect(filtro).connect(g).connect(saida);
   fonte.start(t);
+}
+
+/**
+ * Sirene de alarme contínua por `dur` segundos: sobe de 650 a 1250 Hz e desce, a cada meio segundo.
+ * Duas ondas (quadrada e uma triangular uma oitava acima, mais baixa) para soar como alarme de verdade.
+ */
+function sirene(dur: number, gain = 0.045) {
+  const ac = audio();
+  if (!ac || !saida) return;
+  const t = ac.currentTime;
+  const volume = ac.createGain();
+  volume.gain.setValueAtTime(0.0001, t);
+  volume.gain.exponentialRampToValueAtTime(gain, t + 0.06);
+  volume.gain.setValueAtTime(gain, t + dur - 0.25);
+  volume.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  volume.connect(saida);
+  const CICLO = 0.5;
+  for (const [tipo, oitava, peso] of [
+    ["square", 1, 0.6],
+    ["triangle", 2, 0.35],
+  ] as const) {
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    g.gain.value = peso;
+    osc.type = tipo;
+    for (let c = 0; c * CICLO < dur; c++) {
+      const t0 = t + c * CICLO;
+      osc.frequency.setValueAtTime(650 * oitava, t0);
+      osc.frequency.linearRampToValueAtTime(1250 * oitava, t0 + CICLO * 0.55);
+      osc.frequency.linearRampToValueAtTime(650 * oitava, t0 + CICLO);
+    }
+    osc.connect(g).connect(volume);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
 }
 
 let ultimoToque = 0;
@@ -225,6 +262,10 @@ export function playSfx(kind: Sfx) {
         // "piuí" do trenzinho
         tone(1180, 0, 0.18, 0.05, "square", 1320);
         tone(1320, 0.22, 0.34, 0.05, "square", 1180);
+        break;
+      case "alarme":
+        // alarme de roubo da fazenda: 4 segundos de sirene
+        sirene(4);
         break;
       case "check":
         tone(880, 0, 0.09, 0.06, "triangle", 1320);

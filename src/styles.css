@@ -1334,3 +1334,12 @@ button.inv-ico-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: 
 /* Comandos Staffs: fundo totalmente preto, só a malha de holograma */
 .comandos-fundo .inv-fundo-base { background: #000; }
 .cmd-tile:focus-visible { outline: none; border-color: rgba(229, 35, 27, 0.55); box-shadow: 0 0 0 3px rgba(229, 35, 27, 0.18); }
+
+/* HOST FAZENDAS: alerta de roubo (pisca e balança junto com a sirene de 4 segundos) */
+@keyframes alerta-pisca { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes alerta-balanca { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+.alerta-pisca { animation: alerta-pisca 0.5s ease-in-out 8; }
+.alerta-balanca { animation: alerta-balanca 0.5s ease-in-out 8; }
+@media (prefers-reduced-motion: reduce) {
+  .alerta-pisca, .alerta-balanca { animation: none !important; }
+}
