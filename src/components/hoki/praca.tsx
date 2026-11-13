@@ -39,6 +39,7 @@ import { Hoki2D } from "./hoki-2d";
 import { ControlesDeToque } from "./controles-toque";
 import { INTERACOES_BONECO } from "./boneco";
 import { RodaDeAnimacoes } from "./roda-animacoes";
+import { CENTRO_BREEZE, CREDITO_BREEZE, noMapaBreeze } from "./mapa-breeze";
 import {
   abrirMovimento,
   definirLugar,
@@ -1343,6 +1344,18 @@ export function Praca({
     // Enter com o campo vazio só fecha a barra
     if (!t) setFalando(false);
     if (!t || !dentro || Date.now() - ultimaFala.current < 700) return;
+    // comandos (não vão para o chat): /sg leva ao centro do mapa Breeze Island, /praca volta
+    const comando = t.toLowerCase();
+    if (comando === "/sg" || comando === "/praca" || comando === "/praça") {
+      setTexto("");
+      setFalando(false);
+      const destino = comando === "/sg" ? CENTRO_BREEZE : { x: 0, z: 14 };
+      if (mundo.current?.teleportar(destino.x, destino.z)) {
+        playSfx("toggle");
+        toast.success(comando === "/sg" ? "Indo para a Breeze Island…" : "De volta à praça.");
+      } else toast.info("Acorde o seu HOKI primeiro.");
+      return;
+    }
     ultimaFala.current = Date.now();
     setTexto("");
     setFalando(false);
@@ -1545,6 +1558,12 @@ export function Praca({
         onSocar={() => mundo.current?.socar()}
       />
       <DicaDeTeclas ativo={dentro && !vistaRanking && !fazenda} />
+      {/* crédito do mapa (a licença CC-BY pede) quando o jogador está nele */}
+      {dentro && noMapaBreeze(eu.x, eu.z) && (
+        <p className="pointer-events-none absolute bottom-[60px] right-3 z-10 rounded-md bg-black/55 px-2 py-0.5 text-[10px] text-white/70 backdrop-blur-sm">
+          {CREDITO_BREEZE} · /praca volta
+        </p>
+      )}
       {/* B: roda de animações */}
       <RodaDeAnimacoes
         ativo={dentro && !vistaRanking && !fazenda}

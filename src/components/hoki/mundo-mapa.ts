@@ -187,7 +187,22 @@ export const naIlhaFazendas = (x: number, z: number, folga = 0) =>
       ),
   );
 /** Altura do chão: a ilha central fica em 0; as escadarias sobem até as ilhas altas. */
+/**
+ * Terrenos extras (mapas importados, longe da ilha): quando o ponto cai dentro de um,
+ * é ele quem diz a altura do chão e onde dá para andar.
+ */
+export interface TerrenoExtra {
+  contem(x: number, z: number): boolean;
+  chao(x: number, z: number): number;
+  livre(x: number, z: number): boolean;
+}
+const TERRENOS: TerrenoExtra[] = [];
+export function registrarTerreno(t: TerrenoExtra) {
+  TERRENOS.push(t);
+}
+
 export function alturaDoChao(x: number, z: number) {
+  for (const t of TERRENOS) if (t.contem(x, z)) return t.chao(x, z);
   for (const { ilha: I } of ILHAS_ALTAS)
     if (z <= I.z1 && x > I.x0 - 0.6 && x < I.x1 + 0.6 && z > I.z0 - 0.6) return I.y;
   for (const e of ESCADARIAS) {
@@ -609,6 +624,7 @@ export const noAnexo = (x: number, z: number, folga = 0) =>
 
 /** Dá para um HOKI ficar neste ponto? (dentro da ilha ou de um anexo, fora da água e dos obstáculos) */
 export function livre(x: number, z: number) {
+  for (const t of TERRENOS) if (t.contem(x, z)) return t.livre(x, z);
   if (!noAnexo(x, z)) {
     if (!dentroDaIlha(x, z, 0.9)) return false;
     if (naAgua(x, z, CORPO) && !naPonte(x, z)) return false;

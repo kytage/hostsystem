@@ -31,6 +31,7 @@ import {
   type UltimoEnvio,
 } from "@/lib/hoki-fluxo";
 import { ASSENTO, criarMundo } from "./mundo-cena";
+import { corpoNoMapa, criarMapaBreeze } from "./mapa-breeze";
 import {
   ajustar,
   avancar,
@@ -115,6 +116,8 @@ export interface Mundo3DRef {
   pular(): void;
   /** Soco (botão direito ou botão de soco no celular). Ainda sem dano. */
   socar(): void;
+  /** Leva o meu boneco direto para (x, z). Falso se ele estiver dormindo. */
+  teleportar(x: number, z: number): boolean;
   /** Uma amostra do movimento contínuo de outra pessoa (andar com o teclado, correr, pular). */
   movimento(id: string, amostra: AmostraMovimento): void;
 }
@@ -293,6 +296,9 @@ function criarMotor(
 
   const mundo = criarMundo(THREE);
   cena.add(mundo.grupo);
+  // mapa Breeze Island (longe da ilha; chega-se com /sg)
+  const breeze = criarMapaBreeze(THREE);
+  cena.add(breeze.grupo);
   let espia: number[] | null = null;
 
   // ---------------- noite: de tempos em tempos escurece, com estrelas e uma lua grande e clara ----------------
@@ -1611,6 +1617,7 @@ function criarMotor(
           eventos.onMover?.(p);
         }
         if (a.corpo) {
+          corpoNoMapa.y = a.corpo.y;
           const r = passo(a.corpo, ent, giroSuave, dt, MAPA_MOV, a.lento, PROPORCAO);
           vel = r.velocidade;
           if (r.aterrissou) a.pouso = 0.28;
@@ -1839,6 +1846,7 @@ function criarMotor(
     );
     // de perto a vista fica colada no HOKI (correndo não fica para trás); de longe ela desliza
     olhar.lerp(vetor, 1 - Math.exp(-dt * (dentro && zoom < 0.6 ? 14 : 5)));
+    breeze.atualizar(olhar, t);
     // o sol (e a área das sombras) vai junto com a vista, em passos, para a fazenda e o escritório também terem sombra
     const solX = Math.round(olhar.x / 6) * 6;
     const solZ = Math.round(olhar.z / 6) * 6;
@@ -2078,6 +2086,30 @@ function criarMotor(
     socar() {
       socar();
     },
+    teleportar(x: number, z: number) {
+      for (const a of avatares.values()) {
+        if (!a.souEu || a.dorme || a.acorda !== null) continue;
+        const y = alturaDoChao(x, z);
+        a.par = null;
+        a.rota = [];
+        a.sentado = false;
+        a.truque = null;
+        a.pos = { x, z };
+        a.mostra.x = x;
+        a.mostra.y = y;
+        a.mostra.z = z;
+        a.corpo = null;
+        a.fluxo = null;
+        a.alvo = { x, z, banco: null };
+        // a câmera vai junto na hora (não atravessa o céu deslizando)
+        olhar.set(x, y + 0.9, z);
+        eventos.onMover?.({ x, z });
+        enviarMovimento(a, "para", true);
+        eventos.onParou({ x, z });
+        return true;
+      }
+      return false;
+    },
     /** Uma amostra do movimento contínuo de outra pessoa (descarta a atrasada e a de quem dorme). */
     movimento(id: string, amostra: AmostraMovimento) {
       const a = avatares.get(id);
@@ -2124,6 +2156,7 @@ function criarMotor(
       mEstrelas.dispose();
       mCorda.dispose();
       mundo.descartar();
+      breeze.descartar();
       texCeu.dispose();
       tSombra.dispose();
       gSombra.dispose();
@@ -2241,6 +2274,7 @@ export const Mundo3D = forwardRef<
       joystick: (lado, frente, correr) => motor.current?.joystick(lado, frente, correr),
       pular: () => motor.current?.pular(),
       socar: () => motor.current?.socar(),
+      teleportar: (x, z) => motor.current?.teleportar(x, z) ?? false,
       movimento: (id, amostra) => motor.current?.movimento(id, amostra),
     }),
     [],
