@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   Apple,
+  ChevronDown,
   Droplet,
   Heart,
   LogOut,
@@ -26,7 +27,6 @@ import { useSouVisita } from "@/lib/hoki-visita";
 import type { SeloDaPlaquinha } from "@/lib/fazenda/selos";
 import { BANNER_PADRAO, useMeuPerfil } from "@/components/perfil/perfil-cartao";
 import { Hoki2D } from "./hoki-2d";
-import { Quadro, TONS } from "./hud-jogador";
 import {
   ABAS_ONLINE,
   naAbaOnline,
@@ -114,7 +114,7 @@ export function InicioDoHoki({
     };
   }, [mostrar]);
 
-  // rolagem da página: de 0 (no topo) a 1 (a parte de cima já saiu)
+  // rolagem da página: de 0 (a parte de cima ainda inteira na janela) a 1 (ela já saiu por cima)
   useEffect(() => {
     const el = raiz.current;
     const alto = heroi.current;
@@ -123,7 +123,9 @@ export function InicioDoHoki({
     let quadro = 0;
     const medir = () => {
       quadro = 0;
-      const p = Math.max(0, Math.min(1, rolo.scrollTop / ((alto.offsetHeight || 1) * 0.85)));
+      // (medido pela posição da própria seção: na tela inicial ela não começa no topo da página)
+      const passou = rolo.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      const p = Math.max(0, Math.min(1, passou / ((alto.offsetHeight || 1) * 0.85)));
       el.style.setProperty("--rol", p.toFixed(3));
       nomeRef.current?.rolagem(p);
     };
@@ -171,7 +173,42 @@ export function InicioDoHoki({
     el.removeAttribute("data-inclinado");
   };
 
-  const barras = Math.round(Math.max(0, Math.min(100, vida)) / 10);
+  const cheio = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+  /** As quatro necessidades do HOKI (tocar numa das três primeiras cuida dela). */
+  const necessidades = [
+    {
+      nome: "Fome",
+      valor: cheio(fome),
+      cor: "#7ccf5a",
+      Icone: Apple,
+      acao: onComer,
+      dica: "Fome (tocar: comer)",
+    },
+    {
+      nome: "Sede",
+      valor: cheio(sede),
+      cor: "#5fb4e6",
+      Icone: Droplet,
+      acao: onBeber,
+      dica: "Sede (tocar: beber)",
+    },
+    {
+      nome: "Energia",
+      valor: cheio(energia),
+      cor: "#a898ff",
+      Icone: Zap,
+      acao: onDescansar,
+      dica: "Energia (tocar: soneca)",
+    },
+    {
+      nome: "Higiene",
+      valor: cheio(higiene),
+      cor: "#6ea2ee",
+      Icone: Shield,
+      acao: undefined,
+      dica: "Higiene",
+    },
+  ];
   return (
     <div
       ref={raiz}
@@ -211,28 +248,17 @@ export function InicioDoHoki({
             onPointerMove={inclinar}
             onPointerLeave={soltar}
           >
-            <div className="relative h-[64px] overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
               <img
                 src={perfil?.banner_url || BANNER_PADRAO}
                 alt=""
                 draggable={false}
                 className="size-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/15 to-black/80" />
-              {visita && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    void supabase.auth.signOut().then(() => window.location.assign("/auth"))
-                  }
-                  className="absolute right-2 top-2 flex h-7 items-center gap-1.5 rounded-full bg-black/60 px-2.5 text-[11px] font-medium text-white/85 backdrop-blur-md transition-colors hover:bg-black/80 hover:text-white"
-                >
-                  <LogOut className="size-3" /> Sair
-                </button>
-              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/60" />
             </div>
-            <div className="relative flex items-end gap-3 px-3.5 pb-3">
-              <span className="relative -mt-6 block size-12 shrink-0 overflow-hidden rounded-2xl bg-black ring-[3px] ring-black/60">
+            <div className="relative flex items-center gap-3 px-3 py-2.5">
+              <span className="relative block size-10 shrink-0 overflow-hidden rounded-xl bg-black ring-2 ring-black/50">
                 <img
                   src={perfil?.avatar_url || DEFAULT_AVATAR_URL}
                   alt=""
@@ -240,87 +266,102 @@ export function InicioDoHoki({
                   className="size-full object-cover"
                 />
               </span>
-              <div className="min-w-0 flex-1 pb-0.5">
+              <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <h2 className="truncate font-display text-[16px] font-semibold leading-tight tracking-tight">
                     {perfil?.username || "…"}
                   </h2>
-                  <span
-                    className="shrink-0 rounded-full px-1.5 py-px text-[9.5px] font-bold"
-                    style={{ background: corNivel.fundo, color: corNivel.texto }}
-                    title="Nível do HOKI (HOST FAZENDAS)"
-                  >
-                    HOKI Nv {nivel}
-                  </span>
                 </div>
                 <p className="truncate text-[11.5px] text-muted-foreground">
                   {visita ? "Visita" : ROLE_LABELS[cargo ?? "staff"]}
                 </p>
               </div>
-              <span
-                className="mb-1 flex shrink-0 items-center gap-1.5 text-[10.5px] text-white/55"
-                title="Seu HOKI está dormindo no berço"
-              >
-                <span className="size-1.5 rounded-full bg-white/30" />
-                <span className="hidden min-[430px]:inline">dormindo</span>
-              </span>
+              {visita ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    void supabase.auth.signOut().then(() => window.location.assign("/auth"))
+                  }
+                  className="shrink-0 flex h-7 items-center gap-1.5 rounded-full bg-black/60 px-2.5 text-[11px] font-medium text-white/85 backdrop-blur-md transition-colors hover:bg-black/80 hover:text-white"
+                >
+                  <LogOut className="size-3" /> Sair
+                </button>
+              ) : (
+                <span
+                  className="flex shrink-0 items-center gap-1.5 text-[10.5px] text-white/55"
+                  title="Seu HOKI está dormindo no berço"
+                >
+                  <span className="size-1.5 rounded-full bg-white/30" />
+                  <span className="hidden min-[430px]:inline">dormindo</span>
+                </span>
+              )}
             </div>
             <span aria-hidden className="hoki-cartao-brilho" />
           </div>
 
-          <button type="button" onClick={aoEntrar} className="hoki-acordar hoki-some">
-            <span aria-hidden className="hoki-acordar-brilho" />
-            <Sunrise className="size-[18px]" strokeWidth={2} />
-            <span>Acordar agora</span>
-          </button>
-
-          <div className="hoki-some flex flex-col items-end gap-1.5">
-            <div className="flex items-center gap-1 pr-[5px]">
-              <Quadro tom={TONS.maca} valor={fome} titulo="Fome (tocar: comer)" onClick={onComer}>
-                <Apple className="size-[18px]" fill="currentColor" strokeWidth={1.4} />
-              </Quadro>
-              <Quadro tom={TONS.gota} valor={sede} titulo="Sede (tocar: beber)" onClick={onBeber}>
-                <Droplet className="size-[17px]" fill="currentColor" strokeWidth={0} />
-              </Quadro>
-              <Quadro
-                tom={TONS.raio}
-                valor={energia}
-                titulo="Energia (tocar: soneca)"
-                onClick={onDescansar}
+          {/* o meu HOKI num cartão só: o nível, a vida e as quatro necessidades */}
+          <div className="hoki-estado glass hc hoki-some">
+            <div className="hoki-estado-topo">
+              <span
+                className="hoki-estado-nivel"
+                style={{ background: corNivel.fundo, color: corNivel.texto }}
+                title="Nível do HOKI (HOST FAZENDAS)"
               >
-                <Zap className="size-[18px]" fill="currentColor" strokeWidth={0} />
-              </Quadro>
-              <Quadro tom={TONS.escudo} valor={higiene} titulo="Higiene">
-                <Shield className="size-[18px]" fill="currentColor" strokeWidth={0} />
-              </Quadro>
+                Nv {nivel}
+              </span>
+              <span className="hoki-estado-rotulo">Meu HOKI</span>
+              <span className="hoki-estado-vida" title="Vida">
+                <Heart fill="currentColor" strokeWidth={0} />
+                {cheio(vida)}%
+              </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div
-                className="flex items-center gap-[3px]"
-                role="meter"
-                aria-label="Vida"
-                aria-valuenow={vida}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                {Array.from({ length: 10 }, (_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "hoki-barra h-[22px] w-[14px] -skew-x-[10deg] rounded-[3px] transition-colors duration-500",
-                      i < barras
-                        ? "bg-gradient-to-b from-[#e53941] to-[#b51a22] shadow-[0_0_8px_rgba(230,50,60,0.45),inset_0_1px_0_rgba(255,255,255,0.25)]"
-                        : "bg-[#5a3a3f]/55",
-                    )}
-                    style={{ "--n": i } as CSSProperties}
-                  />
-                ))}
-              </div>
-              <Quadro tom={TONS.vida} valor={vida} titulo="Vida" grande>
-                <Heart className="size-5" fill="currentColor" strokeWidth={0} />
-              </Quadro>
+            <div
+              className="hoki-medidor hoki-medidor-vida"
+              role="meter"
+              aria-label="Vida"
+              aria-valuenow={cheio(vida)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <i style={{ "--v": cheio(vida) / 100 } as CSSProperties} />
+            </div>
+            <div className="hoki-necessidades">
+              {necessidades.map(({ nome, valor, cor, Icone, acao, dica }) => {
+                const miolo = (
+                  <>
+                    <Icone fill="currentColor" strokeWidth={0} />
+                    <span className="sr-only">{nome}</span>
+                    <b>{valor}%</b>
+                    <span className="hoki-medidor" aria-hidden>
+                      <i style={{ "--v": valor / 100 } as CSSProperties} />
+                    </span>
+                  </>
+                );
+                const estilo = { "--cor": cor } as CSSProperties;
+                return acao ? (
+                  <button
+                    key={nome}
+                    type="button"
+                    onClick={acao}
+                    title={dica}
+                    className="hoki-necessidade"
+                    style={estilo}
+                  >
+                    {miolo}
+                  </button>
+                ) : (
+                  <div key={nome} title={dica} className="hoki-necessidade" style={estilo}>
+                    {miolo}
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          <button type="button" onClick={aoEntrar} className="hoki-acordar hoki-some">
+            <Sunrise className="size-[17px]" strokeWidth={2} />
+            <span>Acordar agora</span>
+          </button>
         </div>
       )}
 
@@ -344,6 +385,8 @@ function CelulasOnline({
   onPessoa: (id: string) => void;
 }) {
   const [aba, setAba] = useState<AbaOnline>("online");
+  /** As pessoas só aparecem depois de um clique (no título ou numa aba); outro clique recolhe. */
+  const [aberto, setAberto] = useState(false);
   const abas = useRef<HTMLDivElement>(null);
   const [marca, setMarca] = useState<{ x: number; w: number } | null>(null);
   // a pílula branca desliza até a aba escolhida
@@ -352,13 +395,13 @@ function CelulasOnline({
     if (!caixa) return;
     const medir = () => {
       const el = caixa.querySelector<HTMLElement>('[aria-selected="true"]');
-      if (el) setMarca({ x: el.offsetLeft, w: el.offsetWidth });
+      setMarca(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
     };
     medir();
     const o = new ResizeObserver(medir);
     o.observe(caixa);
     return () => o.disconnect();
-  }, [aba, pessoas.length]);
+  }, [aba, aberto, pessoas.length]);
 
   const lista = useMemo(
     () =>
@@ -385,9 +428,18 @@ function CelulasOnline({
   return (
     <section className="hoki-online" aria-label="Quem está online agora">
       <header className="hoki-online-topo">
-        <h2 className="hoki-online-titulo">
-          <span className="hoki-online-vivo" aria-hidden />
-          Online agora <span className="font-normal text-white/50">· {pessoas.length}</span>
+        <h2 className="contents">
+          <button
+            type="button"
+            className="hoki-online-titulo"
+            aria-expanded={aberto}
+            onClick={() => setAberto((v) => !v)}
+            title={aberto ? "Recolher" : "Ver quem está online"}
+          >
+            <span className="hoki-online-vivo" aria-hidden />
+            Online agora <span className="font-normal text-white/50">· {pessoas.length}</span>
+            <ChevronDown className="hoki-online-seta" strokeWidth={2} aria-hidden />
+          </button>
         </h2>
         <div ref={abas} className="hoki-abas" role="tablist" aria-label="Onde estão">
           {marca && (
@@ -404,8 +456,15 @@ function CelulasOnline({
                 key={a.id}
                 type="button"
                 role="tab"
-                aria-selected={aba === a.id}
-                onClick={() => setAba(a.id)}
+                aria-selected={aberto && aba === a.id}
+                onClick={() => {
+                  // tocar de novo na aba aberta recolhe a lista
+                  if (aberto && aba === a.id) setAberto(false);
+                  else {
+                    setAba(a.id);
+                    setAberto(true);
+                  }
+                }}
                 className="hoki-aba"
               >
                 <b className="tabular-nums">{n}</b>
@@ -415,58 +474,62 @@ function CelulasOnline({
           })}
         </div>
       </header>
-      {/* a chave refaz a entrada em fila sempre que a aba muda */}
-      <div key={aba} className="hoki-celulas" onPointerMove={luz}>
-        {lista.map((p, i) => {
-          const selo = selos?.[p.id];
-          const estado = p.dorme ? "dorme" : p.naFazenda ? "fazenda" : "lobby";
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onPessoa(p.id)}
-              title={`Ver o HOKI de ${p.nome}`}
-              className="hoki-celula"
-              data-estado={estado}
-              style={{ "--i": Math.min(i, 14) } as CSSProperties}
-            >
-              <span className="hoki-celula-foto">
-                <span className="hoki-celula-rosto">
-                  <Hoki2D visual={p.visual} busto />
-                </span>
-                {p.dorme && (
-                  <span className="hoki-celula-zz" aria-hidden>
-                    z<i>z</i>
-                  </span>
-                )}
-              </span>
-              <span className="min-w-0 flex-1 leading-tight">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  {p.tag && <span className="hoki-celula-tag">{p.tag}</span>}
-                  <span className="truncate text-[13px] font-semibold">{p.nome}</span>
-                  {p.souEu && <span className="shrink-0 text-[10.5px] text-white/45">(você)</span>}
-                </span>
-                <span className="hoki-celula-onde">
-                  <i aria-hidden />
-                  <span className="truncate">{ondeEstaOnline(p)}</span>
-                </span>
-              </span>
-              <span
-                className="hoki-celula-nivel"
-                title={selo ? `Nível ${selo.nivel} (HOST FAZENDAS)` : "Ainda sem fazenda"}
-                style={
-                  selo
-                    ? { background: selo.fundo, color: selo.texto }
-                    : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
-                }
+      {/* (a chave refaz a entrada em fila sempre que a aba muda) */}
+      {aberto && (
+        <div key={aba} className="hoki-celulas" onPointerMove={luz}>
+          {lista.map((p, i) => {
+            const selo = selos?.[p.id];
+            const estado = p.dorme ? "dorme" : p.naFazenda ? "fazenda" : "lobby";
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPessoa(p.id)}
+                title={`Ver o HOKI de ${p.nome}`}
+                className="hoki-celula"
+                data-estado={estado}
+                style={{ "--i": Math.min(i, 14) } as CSSProperties}
               >
-                {selo ? `Nv ${selo.nivel}` : "Nv –"}
-              </span>
-            </button>
-          );
-        })}
-        {lista.length === 0 && <p className="hoki-celulas-vazio">Ninguém aqui agora.</p>}
-      </div>
+                <span className="hoki-celula-foto">
+                  <span className="hoki-celula-rosto">
+                    <Hoki2D visual={p.visual} busto />
+                  </span>
+                  {p.dorme && (
+                    <span className="hoki-celula-zz" aria-hidden>
+                      z<i>z</i>
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {p.tag && <span className="hoki-celula-tag">{p.tag}</span>}
+                    <span className="truncate text-[13px] font-semibold">{p.nome}</span>
+                    {p.souEu && (
+                      <span className="shrink-0 text-[10.5px] text-white/45">(você)</span>
+                    )}
+                  </span>
+                  <span className="hoki-celula-onde">
+                    <i aria-hidden />
+                    <span className="truncate">{ondeEstaOnline(p)}</span>
+                  </span>
+                </span>
+                <span
+                  className="hoki-celula-nivel"
+                  title={selo ? `Nível ${selo.nivel} (HOST FAZENDAS)` : "Ainda sem fazenda"}
+                  style={
+                    selo
+                      ? { background: selo.fundo, color: selo.texto }
+                      : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
+                  }
+                >
+                  {selo ? `Nv ${selo.nivel}` : "Nv –"}
+                </span>
+              </button>
+            );
+          })}
+          {lista.length === 0 && <p className="hoki-celulas-vazio">Ninguém aqui agora.</p>}
+        </div>
+      )}
     </section>
   );
 }

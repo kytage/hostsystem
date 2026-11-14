@@ -147,7 +147,8 @@ export function HokiCard({
   const entrarNaPraca = () => {
     if (naPraca || transicao) return;
     iris.current = medirIris();
-    secao.current?.closest<HTMLElement>(".page-main")?.scrollTo({ top: 0, behavior: "smooth" });
+    // a praça ocupa a seção inteira: ela encosta no alto da janela (na tela inicial a seção fica no meio da página)
+    secao.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     playSfx("click");
     setTransicao("entrando");
     setNaPraca(true);
@@ -642,7 +643,7 @@ export function HokiCard({
         telaCheia
           ? "fixed inset-0 z-40 !m-0 overflow-y-auto bg-black p-3 !animate-none"
           : cabecalho
-            ? "hoki-tela animate-rise"
+            ? cn("hoki-tela animate-rise", naPraca && "hoki-tela-jogo")
             : "animate-rise mt-4",
       )}
     >

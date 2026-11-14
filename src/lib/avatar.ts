@@ -1,7 +1,8 @@
-import hostLogo from "@/assets/host-logo.png.asset.json";
-
-/** Avatar padrão de todos os usuários (logo da Host) */
-export const DEFAULT_AVATAR_URL: string = hostLogo.url;
+/**
+ * Foto padrão de todos os usuários, até cada um trocar a sua (o rosto do boneco do HOST).
+ * O arquivo fica em public/perfil/avatar-padrao.webp.
+ */
+export const DEFAULT_AVATAR_URL: string = "/perfil/avatar-padrao.webp";
 
 /**
  * Redimensiona uma imagem para no máximo `size`px (quadrado central)

@@ -365,11 +365,12 @@ function Dashboard() {
             </section>
           )}
 
-          {/* O HOKI, como sempre foi na tela inicial (src/lib/hoki-lugar.ts) */}
+          {/* O HOKI na tela inicial (src/lib/hoki-lugar.ts), com a mesma tela de entrada da aba dele:
+              a ilha flutuando, o perfil com "Acordar agora" e quem está online; a praça só abre ao acordar */}
           {HokiNaHome && (
             <div className="md:col-span-6 xl:col-span-12">
               <Suspense fallback={null}>
-                <HokiNaHome />
+                <HokiNaHome cabecalho />
               </Suspense>
             </div>
           )}
