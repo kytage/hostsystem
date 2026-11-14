@@ -13,6 +13,7 @@ import { VIP_BLACK } from "./boneco-vip";
  * mesmas animações. Arquivos em public/hoki/boneco/:
  * - padrao.glb e feminino.glb: só a malha e o esqueleto (sem animações);
  * - animacoes-2.glb: as 43 animações da "Universal Animation Library 2";
+ * - animacoes-extra.glb (opcional): danças convertidas de fora (hoje, o "Passinho do Jamal");
  * - animacoes-1.glb (opcional): o pacote 1, com andar, correr, sentar e dançar
  *   comuns. Quando existir, entra sozinho no lugar dos "quebra-galhos" abaixo.
  *
@@ -31,7 +32,11 @@ const ARQUIVO: Record<Corpo, string> = {
   padrao: "/hoki/boneco/padrao.glb",
   feminino: "/hoki/boneco/feminino.glb",
 };
-const ANIMACOES = ["/hoki/boneco/animacoes-2.glb", "/hoki/boneco/animacoes-1.glb"];
+const ANIMACOES = [
+  "/hoki/boneco/animacoes-2.glb",
+  "/hoki/boneco/animacoes-1.glb",
+  "/hoki/boneco/animacoes-extra.glb",
+];
 
 /**
  * Ritmo das pernas do pacote 1, para o pé não patinar: a passada natural do trote
@@ -116,6 +121,8 @@ const REACOES: Record<string, { clipes: readonly string[]; repete?: boolean; rit
   cair: { clipes: ["Death01"] },
   magia: { clipes: ["Spell_Simple_Shoot"], ritmo: 0.9 },
   consertar: { clipes: ["Fixing_Kneeling"] },
+  // convertida de uma animação de FiveM (animacoes-extra.glb): repete sem tranco
+  passinho: { clipes: ["Passinho_Jamal_Loop"], repete: true },
 };
 
 /** Quanto dura cada reação (s), para a praça saber quando repetir ou acabar. */
@@ -166,6 +173,8 @@ export const DURACAO_REACAO: Partial<Record<Reacao, number>> = {
   cair: 2.4,
   magia: 0.56,
   consertar: 5.2,
+  // o tempo exato do clipe, para o recomeço cair junto com a repetição dele
+  passinho: 7.833,
 };
 
 /** O menu de interações da praça (e do cartão): nome no botão e a reação. */
@@ -184,6 +193,7 @@ export const INTERACOES_BONECO: { id: Reacao; nome: string; grupo: string }[] = 
   { id: "tombo", nome: "Tombo", grupo: "Diversão" },
   { id: "levantar", nome: "Levantar do chão", grupo: "Diversão" },
   { id: "dancar", nome: "Dançar", grupo: "Diversão" },
+  { id: "passinho", nome: "Passinho do Jamal", grupo: "Diversão" },
   { id: "conversar", nome: "Conversando", grupo: "Gestos" },
   { id: "agachar", nome: "Agachar", grupo: "Gestos" },
   { id: "cambalhota", nome: "Cambalhota", grupo: "Diversão" },

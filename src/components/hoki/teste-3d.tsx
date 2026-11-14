@@ -53,6 +53,11 @@ export const LISTA_BONECOS = Object.entries(BONECOS).map(([id, b]) => ({
 /** As animações do pacote, agrupadas para o painel. */
 export const GRUPOS_ANIMACAO: { nome: string; itens: [string, string][] }[] = [
   {
+    // convertidas de fora (public/hoki/boneco/animacoes-extra.glb)
+    nome: "Convertidas",
+    itens: [["Passinho_Jamal_Loop", "Passinho do Jamal"]],
+  },
+  {
     nome: "Pacote 1",
     itens: [
       ["Idle_Loop", "Parado"],
@@ -409,13 +414,14 @@ async function criarMotor(
   let provando: Provando = { ...NADA };
   let qualAtual: QualBoneco = "padrao";
   const montarBoneco = async (qual: QualBoneco) => {
-    const [base, pacote1, modelo] = await Promise.all([
+    const [base, pacote1, extra, modelo] = await Promise.all([
       baixar("/hoki/boneco/animacoes-2.glb"),
       baixar("/hoki/boneco/animacoes-1.glb").catch(() => null),
+      baixar("/hoki/boneco/animacoes-extra.glb").catch(() => null),
       baixar(BONECOS[qual].url),
     ]);
     if (!vivo) return;
-    clipes = [...base.animations, ...(pacote1?.animations ?? [])];
+    clipes = [...base.animations, ...(pacote1?.animations ?? []), ...(extra?.animations ?? [])];
     const tem = (n: string) => clipes.some((c) => c.name === n);
     if (tem("Idle_Loop")) ANIM.parado = "Idle_Loop";
     if (tem("Jog_Fwd_Loop")) ANIM.andar = "Jog_Fwd_Loop";
@@ -620,7 +626,8 @@ async function criarMotor(
     renderer.render(cena, camera);
   };
   quadro = requestAnimationFrame(laco);
-  // só em desenvolvimento: câmera pelo console (giro, inclinação, distância)
+  // só em desenvolvimento: câmera pelo console (giro, inclinação, distância) e a animação que
+  // está tocando (para parar num instante: __teste.acao().paused = true; __teste.acao().time = 2)
   if (import.meta.env.DEV)
     (window as unknown as { __teste?: unknown }).__teste = {
       camera: (g: number, i: number, d: number) => {
@@ -628,6 +635,7 @@ async function criarMotor(
         inclina = i;
         distancia = d;
       },
+      acao: () => atual,
     };
 
   return {

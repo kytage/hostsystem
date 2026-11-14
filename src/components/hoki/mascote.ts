@@ -71,6 +71,8 @@ export type Reacao =
   | "cair"
   | "magia"
   | "consertar"
+  // dança convertida de fora (animacoes-extra.glb)
+  | "passinho"
   // ataques do HOST SIEGE (um por kit)
   | "atkEspada"
   | "atkArco"

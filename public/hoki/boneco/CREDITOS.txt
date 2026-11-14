@@ -3,3 +3,8 @@ padrao.glb, feminino.glb, animacoes-2.glb (Universal Animation Library 2) e anim
 Licença: CC0 1.0 (domínio público). Uso livre, inclusive comercial, sem necessidade de crédito.
 "Universal Animation Library [Standard]" (versão 1), por Quaternius - https://quaternius.com
 Licença: CC0 1.0 (domínio público). Uso livre, inclusive comercial, sem necessidade de crédito.
+
+animacoes-extra.glb: dança "Passinho do Jamal" (clipe Passinho_Jamal_Loop), convertida em 13/11/2026 da animação de FiveM
+passinhodojamal@animation.ycd, do servidor, para o esqueleto da Universal Animation Library
+(conversor em scripts/animacao-gta/converter.py; o esqueleto do GTA foi lido de um personagem do próprio servidor).
+Autor e licença da animação original: não informados. Conferir se ela pode ser usada fora do servidor de FiveM.
