@@ -2,6 +2,7 @@ import { Children, type CSSProperties, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Contagem } from "@/components/contagem";
 
 export interface IndiceProps {
   /** O número (ou valor já formatado, como "R$ 1.500,00"). */
@@ -50,7 +51,9 @@ export function Indice({
   const seta = Boolean(to) || (Boolean(onClick) && ativo === undefined);
   const miolo = (
     <>
-      <span className="hc-indice-valor">{valor}</span>
+      <span className="hc-indice-valor">
+        <Contagem valor={valor} />
+      </span>
       {Icone && (
         <span className="hc-indice-icone" aria-hidden>
           <Icone strokeWidth={1.75} />

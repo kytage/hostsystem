@@ -28,6 +28,7 @@ import { CalendarMonth, dayKey } from "@/components/calendar-month";
 import { TarefasPreview } from "@/components/home-pessoal";
 import { HOKI_NA_HOME } from "@/lib/hoki-lugar";
 import { AtalhosCard } from "@/components/atalhos-card";
+import { Contagem } from "@/components/contagem";
 import { AvisosHero } from "@/components/avisos-hero";
 import { OrganizacoesDestaque } from "@/components/organizacoes-destaque";
 import { CartaoAndamento, CartaoMovimento } from "@/components/home-graficos";
@@ -277,7 +278,9 @@ function Dashboard() {
                   className="hc-indice"
                   data-alerta={q.alerta && q.valor > 0 ? "" : undefined}
                 >
-                  <span className="hc-indice-valor">{q.valor}</span>
+                  <span className="hc-indice-valor">
+                    <Contagem valor={q.valor} />
+                  </span>
                   {/* o ícone do índice; ao passar o mouse, vira a seta de "abrir" */}
                   <span className="hc-indice-icone" aria-hidden>
                     <q.icon strokeWidth={1.75} />

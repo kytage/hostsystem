@@ -97,6 +97,10 @@ function Copiar({ valor, rotulo }: { valor: string; rotulo: string }) {
   );
 }
 
+/** O meu perfil (foto, banner e nome), com o mesmo cache do cartão: para mostrar em outras telas. */
+export const useMeuPerfil = () =>
+  useQuery({ queryKey: CHAVE_PERFIL, queryFn: buscarPerfil, staleTime: 30_000 });
+
 /** Topo do Perfil & Agenda: banner, foto, nome, nível do HOKI, status, queridômetro e Staff Coins. */
 export function PerfilCartao() {
   const qc = useQueryClient();

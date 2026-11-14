@@ -286,7 +286,9 @@ function criarMotor(
   modelo: Modelo | undefined,
   eventos: Eventos,
 ) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  // (com transparência: na vitrine da tela do HOKI só a ilha aparece, por cima da página)
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
   // resolução que se ajusta sozinha ao FPS (começa em até 1,5x e vai até 1,75x se sobrar desempenho)
   const PR_MAXIMO = Math.min(1.75, window.devicePixelRatio || 1);
   let pixelRatio = Math.min(1.5, PR_MAXIMO);
@@ -299,6 +301,10 @@ function criarMotor(
   const texCeu = ceu(THREE);
   cena.background = texCeu;
   cena.fog = new THREE.Fog(COR_NEVOA, 70, 190);
+  // vitrine (tela do HOKI antes de acordar): só a ilha, flutuando sobre a página — sem céu,
+  // nuvens, lua nem nomes; a névoa de baixo da ilha some no escuro da página
+  let vitrine = false;
+  const corDaVitrine = new THREE.Color(0x060606);
   const FOV = 40;
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 260);
 
@@ -516,12 +522,15 @@ function criarMotor(
     for (const l of lampioes) l.luz.intensity = v * 26 * l.forca;
     mClarao.opacity = v * 0.5;
     claroes.visible = v > 0.02;
-    if (cena.fog) cena.fog.color.copy(corDaNevoa.dia).lerp(corDaNevoa.noite, v);
+    if (cena.fog) {
+      if (vitrine) cena.fog.color.copy(corDaVitrine);
+      else cena.fog.color.copy(corDaNevoa.dia).lerp(corDaNevoa.noite, v);
+    }
     anoitecerLuzes(luzes, v);
     mLua.opacity = v;
     mHalo.opacity = v * 0.95;
     mEstrelas.opacity = v * 0.9;
-    lua.visible = halo.visible = estrelas.visible = v > 0.01;
+    lua.visible = halo.visible = estrelas.visible = v > 0.01 && !vitrine;
     mundo.noite(v);
   };
 
@@ -948,7 +957,9 @@ function criarMotor(
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     // de longe, a ilha inteira precisa caber na largura
-    distMax = Math.max(66, 44 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect));
+    // (na vitrine ela fica mais longe: a ilha inteira aparece solta, sem encostar nas beiradas)
+    distMax =
+      Math.max(66, 44 / (Math.tan((FOV * Math.PI) / 360) * camera.aspect)) * (vitrine ? 1.32 : 1);
   };
   const observador = new ResizeObserver(medir);
   observador.observe(el);
@@ -1656,7 +1667,8 @@ function criarMotor(
     antes = agora;
     if (!visivel || document.hidden || mundoPausado()) return;
     const t = agora / 1000;
-    anoitecer(nivelDaNoite());
+    // (na vitrine a noite fica só um entardecer: a ilha precisa aparecer no fundo escuro)
+    anoitecer(vitrine ? Math.min(nivelDaNoite(), 0.35) : nivelDaNoite());
     regar(agora);
     mundo.atualizar(t);
     shows.quadro(agora, dt);
@@ -2189,6 +2201,21 @@ function criarMotor(
       dentro = v;
       if (!v) marca.visible = false;
     },
+    /** Liga ou desliga a vitrine: fundo transparente, sem nuvens, lua nem nomes. */
+    setVitrine(v: boolean) {
+      if (v === vitrine) return;
+      vitrine = v;
+      cena.background = v ? null : texCeu;
+      for (const n of mundo.nuvens) n.visible = !v;
+      camada.style.visibility = v ? "hidden" : "";
+      const nevoa = cena.fog as TH.Fog | null;
+      if (nevoa) {
+        nevoa.near = v ? 900 : 70;
+        nevoa.far = v ? 2400 : 190;
+      }
+      noiteAtual = -1; // refaz a cor da névoa, a lua e as luzes na próxima volta
+      medir(); // a distância da câmera muda com a vitrine
+    },
     truque(id: string, tipo: Reacao) {
       const a = avatares.get(id);
       if (a && !a.sentado && !a.dorme && a.acorda === null)
@@ -2315,6 +2342,8 @@ export const Mundo3D = forwardRef<
     ranking?: QuadroRanking | null;
     /** Câmera em primeira pessoa, de frente para o arco do RANKING. */
     vistaRanking?: boolean;
+    /** Vitrine: só a ilha, com o fundo transparente (tela do HOKI antes de acordar). */
+    vitrine?: boolean;
     className?: string;
   } & Eventos
 >(function Mundo3D(props, ref) {
@@ -2359,6 +2388,7 @@ export const Mundo3D = forwardRef<
         motor.current = m;
         // em desenvolvimento, o motor fica à mão no console para testes
         if (import.meta.env.DEV) (window as unknown as { __mundo?: typeof m }).__mundo = m;
+        m.setVitrine(!!atual.current.vitrine);
         m.setDentro(atual.current.dentro);
         m.setPessoas(atual.current.pessoas);
         m.setFalas(atual.current.falas);
@@ -2381,6 +2411,7 @@ export const Mundo3D = forwardRef<
   useEffect(() => motor.current?.setPessoas(props.pessoas), [props.pessoas]);
   useEffect(() => motor.current?.setFalas(props.falas), [props.falas, props.pessoas]);
   useEffect(() => motor.current?.setDentro(props.dentro), [props.dentro]);
+  useEffect(() => motor.current?.setVitrine(!!props.vitrine), [props.vitrine]);
   useEffect(() => motor.current?.setPendentes(props.pendentes ?? 0), [props.pendentes]);
   useEffect(() => motor.current?.setColheitas(props.colheitas ?? {}), [props.colheitas]);
   useEffect(() => motor.current?.setCartas(props.cartas ?? 0), [props.cartas]);
@@ -2412,7 +2443,8 @@ export const Mundo3D = forwardRef<
   return (
     <div
       className={cn(
-        "relative overflow-hidden bg-[#6fb8f7]",
+        "relative overflow-hidden",
+        props.vitrine ? "bg-transparent" : "bg-[#6fb8f7]",
         props.dentro && "cursor-grab touch-none active:cursor-grabbing",
         props.className,
       )}

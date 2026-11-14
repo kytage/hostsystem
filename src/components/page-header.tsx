@@ -32,7 +32,12 @@ export function PageHeader({ kicker, title, subtitle, actions }: PageHeaderProps
         {typeof title === "string" ? (
           <>
             <p className="hc-sobre">{rotulo}</p>
-            <h1 className="pagina-titulo">{title}</h1>
+            <h1 className="pagina-titulo">
+              {/* na entrada da página o título sobe de trás desta máscara (src/styles.css, "Movimento do site") */}
+              <span className="pagina-titulo-mascara">
+                <span className="pagina-titulo-sobe">{title}</span>
+              </span>
+            </h1>
           </>
         ) : (
           <h1 className="inline-block">{title}</h1>

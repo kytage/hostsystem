@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
  */
 
 type Tom = { de: string; ate: string; brilho: string };
-const TONS = {
+export const TONS = {
   escudo: { de: "#3468a8", ate: "#1d3b66", brilho: "rgba(80,140,230,0.55)" },
   raio: { de: "#4f4396", ate: "#2a2459", brilho: "rgba(140,120,240,0.5)" },
   gota: { de: "#336b8f", ate: "#1c3f57", brilho: "rgba(90,170,220,0.5)" },
@@ -35,7 +35,7 @@ const TONS = {
 } satisfies Record<string, Tom>;
 
 /** Um quadradinho inclinado com o anel de brilho, como no Figma. */
-function Quadro({
+export function Quadro({
   tom,
   valor,
   titulo,

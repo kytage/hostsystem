@@ -2444,6 +2444,8 @@ export function criarMundo(THREE: typeof TH) {
 
   return {
     grupo,
+    /** As nuvens do céu e o mar de nuvens embaixo da ilha (a vitrine da tela do HOKI esconde). */
+    nuvens: [...ceu.nuvens, ...mar.nuvens].map((n) => n.malha),
     /** Arco do RANKING: `definir` troca o que está escrito no vão. */
     ranking: arcoDoRanking,
     atualizar(t: number) {

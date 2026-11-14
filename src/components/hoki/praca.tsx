@@ -188,6 +188,7 @@ export function Praca({
   salvando,
   telaCheia,
   aoTelaCheia,
+  vitrine = false,
 }: {
   pet: HokiPet;
   dentro: boolean;
@@ -206,6 +207,8 @@ export function Praca({
   /** O HOKI está ocupando a tela inteira? E o botão que alterna. */
   telaCheia: boolean;
   aoTelaCheia: () => void;
+  /** Vitrine (tela do HOKI antes de acordar): só a ilha flutuando, sem botões nem avisos por cima. */
+  vitrine?: boolean;
 }) {
   const { data: cargo } = useMyRole();
   const souVisita = useSouVisita();
@@ -1576,9 +1579,13 @@ export function Praca({
   ) : null;
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden">
+    <div
+      className="praca-raiz relative h-full min-h-[420px] overflow-hidden"
+      data-vitrine={vitrine ? "" : undefined}
+    >
       <Mundo3D
         ref={mundo}
+        vitrine={vitrine}
         pessoas={pessoas}
         falas={baloes}
         dentro={dentro}
@@ -1660,7 +1667,7 @@ export function Praca({
             setQueridometro(true);
           }
         }}
-        className="absolute inset-0"
+        className="praca-mundo absolute inset-0"
       />
       {/* no celular: joystick para andar (e correr) e botão de pular */}
       <ControlesDeToque

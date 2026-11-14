@@ -15,14 +15,15 @@ export interface PessoaOnlineAgora {
   naFazenda: boolean;
   souEu?: boolean;
 }
-type Aba = "online" | "dormindo" | "lobby" | "fazenda";
-const ABAS: { id: Aba; nome: string }[] = [
+export type AbaOnline = "online" | "dormindo" | "lobby" | "fazenda";
+type Aba = AbaOnline;
+export const ABAS_ONLINE: { id: Aba; nome: string }[] = [
   { id: "online", nome: "Online" },
   { id: "dormindo", nome: "Dormindo" },
   { id: "lobby", nome: "Lobby" },
   { id: "fazenda", nome: "HOST Fazenda" },
 ];
-const naAba = (p: PessoaOnlineAgora, aba: Aba) =>
+export const naAbaOnline = (p: PessoaOnlineAgora, aba: Aba) =>
   aba === "online"
     ? true
     : aba === "dormindo"
@@ -30,8 +31,108 @@ const naAba = (p: PessoaOnlineAgora, aba: Aba) =>
       : aba === "fazenda"
         ? !p.dorme && p.naFazenda
         : !p.dorme && !p.naFazenda;
-const ondeEsta = (p: PessoaOnlineAgora) =>
+export const ondeEstaOnline = (p: PessoaOnlineAgora) =>
   p.dorme ? "dormindo no berço" : p.naFazenda ? "na HOST FAZENDAS" : "no lobby";
+
+/** As abas (online, dormindo, lobby e HOST FAZENDAS) e a lista de quem está em cada uma. */
+export function ListaOnline({
+  pessoas,
+  selos,
+  onPessoa,
+  classeDaLista,
+}: {
+  pessoas: PessoaOnlineAgora[];
+  selos: Record<string, SeloDaPlaquinha> | undefined;
+  onPessoa: (id: string) => void;
+  /** Altura da lista (o padrão é a do menu da pílula). */
+  classeDaLista?: string;
+}) {
+  const [aba, setAba] = useState<Aba>("online");
+  const lista = pessoas
+    .filter((p) => naAbaOnline(p, aba))
+    .sort(
+      (a, b) =>
+        Number(!!b.souEu) - Number(!!a.souEu) ||
+        (selos?.[b.id]?.nivel ?? 0) - (selos?.[a.id]?.nivel ?? 0) ||
+        a.nome.localeCompare(b.nome),
+    );
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-1" role="tablist" aria-label="Onde estão">
+        {ABAS_ONLINE.map((a) => {
+          const n = pessoas.filter((p) => naAbaOnline(p, a.id)).length;
+          return (
+            <button
+              key={a.id}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.id}
+              onClick={() => setAba(a.id)}
+              className={cn(
+                "flex flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold uppercase leading-tight tracking-wide transition-colors",
+                aba === a.id
+                  ? "bg-white text-black"
+                  : "bg-white/[0.05] text-white/60 hover:bg-white/[0.1] hover:text-white",
+              )}
+            >
+              <span className="text-[14px] tabular-nums">{n}</span>
+              <span className="truncate">{a.nome}</span>
+            </button>
+          );
+        })}
+      </div>
+      <ul
+        className={cn("mt-2 space-y-0.5 overflow-y-auto pr-0.5", classeDaLista ?? "max-h-[240px]")}
+      >
+        {lista.map((p) => {
+          const selo = selos?.[p.id];
+          return (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => onPessoa(p.id)}
+                title={`Ver o HOKI de ${p.nome}`}
+                className="group/linha flex w-full items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-[background-color,transform] duration-200 hover:translate-x-0.5 hover:bg-white/[0.07]"
+              >
+                <span className="block size-8 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50 transition-transform duration-200 group-hover/linha:scale-110">
+                  <Hoki2D visual={p.visual} busto />
+                </span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="flex items-center gap-1.5">
+                    {p.tag && (
+                      <span className="shrink-0 rounded bg-[#ce0e0e] px-1 text-[8.5px] font-bold leading-[13px]">
+                        {p.tag}
+                      </span>
+                    )}
+                    <span className="truncate text-[12.5px] font-medium">{p.nome}</span>
+                    {p.souEu && <span className="text-[10.5px] text-white/45">(você)</span>}
+                  </span>
+                  <span className="block truncate text-[10.5px] text-white/45">
+                    {ondeEstaOnline(p)}
+                  </span>
+                </span>
+                <span
+                  className="shrink-0 rounded-full px-1.5 text-[10.5px] font-extrabold leading-[17px] tabular-nums"
+                  title={selo ? `Nível ${selo.nivel} (HOST FAZENDAS)` : "Ainda sem fazenda"}
+                  style={
+                    selo
+                      ? { background: selo.fundo, color: selo.texto }
+                      : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
+                  }
+                >
+                  {selo ? `Nv ${selo.nivel}` : "Nv –"}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+        {lista.length === 0 && (
+          <li className="py-6 text-center text-[11.5px] text-white/45">Ninguém aqui agora.</li>
+        )}
+      </ul>
+    </>
+  );
+}
 
 /**
  * Online agora: a pílula mostra o total de gente com o HOKI aberto; ao clicar, abre um
@@ -54,7 +155,6 @@ export function OnlineAgora({
   className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
-  const [aba, setAba] = useState<Aba>("online");
   const caixa = useRef<HTMLDivElement>(null);
   // clicar fora ou apertar Esc fecha o menu
   useEffect(() => {
@@ -77,14 +177,6 @@ export function OnlineAgora({
   }, [aberto]);
 
   const total = pessoas.length;
-  const lista = pessoas
-    .filter((p) => naAba(p, aba))
-    .sort(
-      (a, b) =>
-        Number(!!b.souEu) - Number(!!a.souEu) ||
-        (selos?.[b.id]?.nivel ?? 0) - (selos?.[a.id]?.nivel ?? 0) ||
-        a.nome.localeCompare(b.nome),
-    );
   return (
     <div ref={caixa} className={cn("relative shrink-0", className)}>
       <button
@@ -131,79 +223,14 @@ export function OnlineAgora({
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-1" role="tablist" aria-label="Onde estão">
-            {ABAS.map((a) => {
-              const n = pessoas.filter((p) => naAba(p, a.id)).length;
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={aba === a.id}
-                  onClick={() => setAba(a.id)}
-                  className={cn(
-                    "flex flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold uppercase leading-tight tracking-wide transition-colors",
-                    aba === a.id
-                      ? "bg-white text-black"
-                      : "bg-white/[0.05] text-white/60 hover:bg-white/[0.1] hover:text-white",
-                  )}
-                >
-                  <span className="text-[14px] tabular-nums">{n}</span>
-                  <span className="truncate">{a.nome}</span>
-                </button>
-              );
-            })}
-          </div>
-          <ul className="mt-2 max-h-[240px] space-y-0.5 overflow-y-auto pr-0.5">
-            {lista.map((p) => {
-              const selo = selos?.[p.id];
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAberto(false);
-                      onPessoa(p.id);
-                    }}
-                    title={`Ver o HOKI de ${p.nome}`}
-                    className="flex w-full items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-white/[0.07]"
-                  >
-                    <span className="block size-8 shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/50">
-                      <Hoki2D visual={p.visual} busto />
-                    </span>
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <span className="flex items-center gap-1.5">
-                        {p.tag && (
-                          <span className="shrink-0 rounded bg-[#ce0e0e] px-1 text-[8.5px] font-bold leading-[13px]">
-                            {p.tag}
-                          </span>
-                        )}
-                        <span className="truncate text-[12.5px] font-medium">{p.nome}</span>
-                        {p.souEu && <span className="text-[10.5px] text-white/45">(você)</span>}
-                      </span>
-                      <span className="block truncate text-[10.5px] text-white/45">
-                        {ondeEsta(p)}
-                      </span>
-                    </span>
-                    <span
-                      className="shrink-0 rounded-full px-1.5 text-[10.5px] font-extrabold leading-[17px] tabular-nums"
-                      title={selo ? `Nível ${selo.nivel} (HOST FAZENDAS)` : "Ainda sem fazenda"}
-                      style={
-                        selo
-                          ? { background: selo.fundo, color: selo.texto }
-                          : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }
-                      }
-                    >
-                      {selo ? `Nv ${selo.nivel}` : "Nv –"}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-            {lista.length === 0 && (
-              <li className="py-6 text-center text-[11.5px] text-white/45">Ninguém aqui agora.</li>
-            )}
-          </ul>
+          <ListaOnline
+            pessoas={pessoas}
+            selos={selos}
+            onPessoa={(id) => {
+              setAberto(false);
+              onPessoa(id);
+            }}
+          />
         </div>
       )}
     </div>

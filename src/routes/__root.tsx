@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppSidebar } from "@/components/app-sidebar";
 import { instalarRolagemSuave } from "@/lib/rolagem-suave";
+import { instalarMovimento } from "@/lib/movimento";
 import { instalarFundoPontilhado } from "@/lib/fundo-pontilhado";
 import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
@@ -145,6 +146,27 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * A área das páginas. No primeiro segundo de cada página ela leva `data-entrando`: é só nesse
+ * intervalo que os blocos fazem a entrada (src/styles.css, "Movimento do site"). Depois, o que
+ * surgir na tela aparece direto, sem atraso.
+ */
+function AreaDaPagina({ children }: { children: ReactNode }) {
+  const [entrando, setEntrando] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(() => setEntrando(false), 1000);
+    return () => window.clearTimeout(t);
+  }, []);
+  return (
+    <main
+      className="page-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+      data-entrando={entrando ? "" : undefined}
+    >
+      {children}
+    </main>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
@@ -193,6 +215,8 @@ function RootComponent() {
   useEffect(() => instalarRolagemSuave(), []);
   // fundo pontilhado com o feixe de luz (feito uma vez só)
   useEffect(() => instalarFundoPontilhado(), []);
+  // os marcadores que viajam: a pílula das abas e o traço da página atual no menu
+  useEffect(() => instalarMovimento(), []);
 
   if (isAuthPage) {
     return (
@@ -219,11 +243,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="moldura relative z-10 flex h-screen w-full overflow-hidden">
         {!visita && <AppSidebar />}
-        <main key={pathname} className="page-main min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <AreaDaPagina key={pathname}>
           {/* a luz de fundo do topo, a mesma em todas as páginas (src/styles.css, .pagina-luz) */}
           <div aria-hidden className="pagina-luz" />
           <Outlet />
-        </main>
+        </AreaDaPagina>
       </div>
       <Toaster />
     </QueryClientProvider>

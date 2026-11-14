@@ -961,16 +961,7 @@ img.foto-metal[src$="curvas.jpg"] { filter: grayscale(1) invert(1) contrast(1.2)
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); background-clip: padding-box; }
 .dark ::-webkit-scrollbar-track { background: transparent; }
 
-/* HOKI flutuante (fora da tela inicial): surge do desfoque, boia de leve e tem um brilho pulsando atrás */
-@keyframes hoki-surge { from { opacity: 0; transform: translateY(22px) scale(0.5); filter: blur(12px); } to { opacity: 1; transform: none; filter: blur(0); } }
-@keyframes hoki-boia { 0%, 100% { transform: translateY(0) rotate(-2.5deg); } 50% { transform: translateY(-7px) rotate(2.5deg); } }
-@keyframes hoki-halo { 0%, 100% { opacity: 0.5; transform: scale(0.96); } 50% { opacity: 0.95; transform: scale(1.2); } }
-.hoki-flutuante { animation: hoki-surge 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-.hoki-flutuante .hoki-boia { animation: hoki-boia 3.6s ease-in-out infinite; }
-.hoki-flutuante .hoki-halo { animation: hoki-halo 2.8s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .hoki-flutuante, .hoki-flutuante .hoki-boia, .hoki-flutuante .hoki-halo { animation: none; }
-}
+/* HOKI flutuante (fora da tela inicial): o visual está no bloco "Movimento do site" */
 
 /* ------------------------------------------------------------------ *
  * Inventário do player: palco escuro com malha de holograma que segue
@@ -1991,33 +1982,7 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 .pagina-topo { padding: 8px 4px 2px; }
 
 /* ---------- movimento ---------- */
-/* transições curtas e macias em tudo o que reage ao mouse */
-.dark :is(.hc, .glass, .hc-dentro, .hc-indice, .hc-seta, .hc-pilula, .hc-selo, .menu-item, .menu-busca, .segmentos button) {
-  transition:
-    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    color 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.dark :is(a, button):is(.hc-dentro, .hc-indice):hover,
-.dark a.glass:hover,
-.dark a.hc:hover { transform: translateY(-1px); }
-.dark :is(a, button):is(.hc-dentro, .hc-indice):active { transform: translateY(0) scale(0.995); }
-/* entrada das páginas: sem desfoque (mais leve), subindo de leve; os blocos entram um depois do outro */
-.page-main > * { animation: page-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-}
-.home-grade > * { animation-duration: 460ms; }
-.page-main :is(section.glass, section.hc, .glass.hc) { animation: entra 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(2) { animation-delay: 40ms; }
-.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(3) { animation-delay: 80ms; }
-.page-main :is(section.glass, section.hc, .glass.hc):nth-of-type(n + 4) { animation-delay: 120ms; }
-@media (prefers-reduced-motion: reduce) {
-  .page-main > *,
-  .page-main :is(section.glass, section.hc, .glass.hc) { animation: none !important; }
-}
+/* (o movimento do painel está no bloco "Movimento do site", logo abaixo deste) */
 
 /* ---------- rolagem ---------- */
 /* barra fina e discreta; a rolagem macia da roda do mouse é feita em src/lib/rolagem-suave.ts */
@@ -2030,3 +1995,777 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
   background: rgba(255, 255, 255, 0.1) padding-box;
 }
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22) padding-box; }
+
+/* ================================================================== */
+/* Movimento do site (14/11/2026)                                      */
+/* Segue as regras de movimento da skill design-taste-frontend         */
+/* (tasteskill 2.5, references/motion.md). O painel se move em três    */
+/* lugares e em mais nenhum:                                           */
+/*   1. a entrada de cada página, uma vez só;                          */
+/*   2. o momento da tela (no HOKI: a ilha e o nome em pontinhos);     */
+/*   3. a resposta ao mouse e ao clique em tudo o que é clicável.      */
+/* Rolar a página não faz nada aparecer nem sumir. Nada passa do ponto */
+/* (sem quique). Só se movem transform e opacidade (as cores mudam).   */
+/* Os marcadores que viajam (abas e menu): src/lib/movimento.ts.       */
+/* A contagem dos números: src/components/contagem.tsx.                */
+/* ================================================================== */
+:root {
+  --mv-in: 150ms; /* o mouse chegou */
+  --mv-out: 120ms; /* o mouse saiu */
+  --mv-press: 90ms; /* o clique */
+  --mv-panel: 200ms; /* um menu abrindo */
+  --mv-close: 120ms; /* ...e fechando */
+  --mv-slide: 240ms; /* um marcador viajando de um item a outro */
+  --mv-ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* a curva de tudo o que responde: sai rápido, pousa macio */
+  --mv-ease-io: cubic-bezier(0.65, 0, 0.35, 1); /* só para viagens: sai e chega devagar */
+  --mv-ease-enter: cubic-bezier(0.22, 1, 0.36, 1); /* uma entrada assentando, sem passar do ponto */
+}
+
+/* ---------- 1. a entrada da página ---------- */
+/* (sem o quadro final: cada um termina na sua própria opacidade e posição) */
+@keyframes mv-sobe { from { opacity: 0; transform: translateY(12px); } }
+@keyframes mv-sobe-firme { from { transform: translateY(12px); } }
+@keyframes mv-aparece { from { opacity: 0; } }
+@keyframes mv-titulo { from { transform: translateY(112%); } }
+
+/* as regras antigas animavam estes blocos a qualquer hora (um cartão que surgia depois entrava
+   atrasado); agora a entrada só acontece no primeiro segundo da página */
+.pagina > *,
+.home-grade > * { animation: none; }
+:is(.pagina, .home-grade) > :nth-child(n) { animation-delay: 0ms; }
+/* o título vive dentro de uma máscara (src/components/page-header.tsx); a folga é para acentos e "g", "p", "ç" */
+.pagina-titulo-mascara { display: block; overflow: hidden; margin: -0.1em -0.06em -0.18em; padding: 0.1em 0.06em 0.18em; }
+.pagina-titulo-sobe { display: block; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* pedir a entrada num elemento, a qualquer hora (um painel que abre, por exemplo): sobe 12 px e aparece */
+  .animate-rise { animation: mv-sobe 520ms var(--mv-ease-enter) backwards; }
+  /* quem guarda vidro não muda de opacidade: isso desligaria o desfoque dos cartões de dentro até
+     o fim da entrada (o fundo pontilhado apareceria nítido e "pularia" para o desfocado). Só sobe. */
+  .animate-rise:not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) { animation-name: mv-sobe-firme; }
+
+  /* no primeiro segundo da página (data-entrando, em src/routes/__root.tsx): os blocos sobem 12 px
+     e aparecem, um a cada 60 ms */
+  .page-main[data-entrando] :is(.pagina, .home-grade) > * {
+    animation: mv-sobe 520ms var(--mv-ease-enter) backwards;
+    animation-delay: var(--mv-atraso, 0ms);
+  }
+  .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(2) { --mv-atraso: 60ms; }
+  .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(3) { --mv-atraso: 120ms; }
+  .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(4) { --mv-atraso: 180ms; }
+  .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(5) { --mv-atraso: 240ms; }
+  .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(n + 6) { --mv-atraso: 300ms; }
+  /* um bloco que só guarda cartões de vidro sobe sem mudar de opacidade; quem esmaece são os
+     cartões (cada um na sua própria opacidade, com o desfoque ligado) e o que não tem vidro */
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) { animation-name: mv-sobe-firme; }
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) :is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) *),
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) > :not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"])) {
+    animation: mv-aparece 520ms var(--mv-ease-enter) backwards;
+    animation-delay: var(--mv-atraso, 0ms);
+  }
+  /* a tela de entrada do HOKI tem a entrada dela (a ilha, o cartão, as células) */
+  .page-main[data-entrando] :is(.pagina, .home-grade) > .hoki-tela,
+  .hoki-tela.animate-rise { animation: none; }
+
+  /* o cabeçalho da página: o título sobe de trás da máscara (700 ms) e o rótulo vem junto; a frase
+     e os botões sobem em seguida. O cabeçalho em si fica parado. */
+  .page-main[data-entrando] .pagina-topo:has(.pagina-titulo-mascara) { animation: none; }
+  .page-main[data-entrando] .pagina-topo .pagina-titulo-sobe { animation: mv-titulo 700ms var(--mv-ease-enter) backwards; }
+  .page-main[data-entrando] .pagina-topo:has(.pagina-titulo-mascara) :is(.hc-sobre, .pagina-sub, .pagina-acoes > *) { animation: mv-sobe 520ms var(--mv-ease-enter) backwards; }
+  .page-main[data-entrando] .pagina-topo:has(.pagina-titulo-mascara) .hc-sobre { animation-name: mv-aparece; }
+  .page-main[data-entrando] .pagina-topo:has(.pagina-titulo-mascara) .pagina-sub { animation-delay: 120ms; }
+  .page-main[data-entrando] .pagina-topo:has(.pagina-titulo-mascara) .pagina-acoes > * { animation-delay: 180ms; }
+}
+
+/* ---------- 3. a resposta ao mouse e ao clique ---------- */
+/* cores: 150 ms quando o mouse chega, 120 quando sai, 90 no clique. O anel de foco não tem transição. */
+
+/* menu lateral: só o véu; o traço vermelho da página atual viaja entre os itens (movimento.ts) */
+.dark :is(.menu-item, .menu-busca, .menu-botao) {
+  transition:
+    background-color var(--mv-out) var(--mv-ease),
+    color var(--mv-out) var(--mv-ease),
+    border-color var(--mv-out) var(--mv-ease);
+}
+.dark :is(.menu-item, .menu-busca, .menu-botao):hover { transition-duration: var(--mv-in); }
+.menu-item-icone { transition: color var(--mv-out) var(--mv-ease); }
+
+/* botões (com especificidade zero: qualquer regra própria de um botão vale mais que esta) */
+:where(button, [role="button"], a.pilula, a.hc-pilula):where(:not([role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], :disabled, [aria-disabled="true"], .segmentos > *, .menu-item, .menu-busca, .menu-botao, [data-sem-movimento], [data-sem-movimento] *)) {
+  transition:
+    background-color var(--mv-out) var(--mv-ease),
+    color var(--mv-out) var(--mv-ease),
+    border-color var(--mv-out) var(--mv-ease),
+    box-shadow var(--mv-out) var(--mv-ease),
+    opacity var(--mv-out) var(--mv-ease),
+    fill var(--mv-out) var(--mv-ease),
+    stroke var(--mv-out) var(--mv-ease),
+    filter var(--mv-out) var(--mv-ease),
+    transform var(--mv-press) var(--mv-ease),
+    translate var(--mv-press) var(--mv-ease),
+    scale var(--mv-press) var(--mv-ease),
+    rotate var(--mv-press) var(--mv-ease);
+}
+:where(button, [role="button"], a.pilula, a.hc-pilula):where(:hover):where(:not([role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], :disabled, [aria-disabled="true"], .segmentos > *, .menu-item, .menu-busca, .menu-botao, [data-sem-movimento], [data-sem-movimento] *)) {
+  transition-duration: var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-press), var(--mv-press), var(--mv-press), var(--mv-press);
+}
+/* a pílula (o botão mais usado do painel) tinha a sua própria transição */
+:is(a, button).pilula {
+  transition:
+    background-color var(--mv-out) var(--mv-ease),
+    color var(--mv-out) var(--mv-ease),
+    border-color var(--mv-out) var(--mv-ease),
+    box-shadow var(--mv-out) var(--mv-ease),
+    transform var(--mv-press) var(--mv-ease);
+}
+:is(a, button).pilula:hover { transition-duration: var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-press); }
+
+/* cartões que levam a algum lugar */
+:is(.hc, .glass, .glass-elevated, .hc-dentro, .hc-indice):is(a, button, [role="button"], .cursor-pointer) {
+  transition:
+    background-color var(--mv-out) var(--mv-ease),
+    border-color var(--mv-out) var(--mv-ease),
+    color var(--mv-out) var(--mv-ease),
+    box-shadow var(--mv-out) var(--mv-ease),
+    transform var(--mv-out) var(--mv-ease);
+}
+.dark .page-main :is(.hc, .glass, .glass-elevated):is(a, button, [role="button"], .cursor-pointer):hover { border-color: rgba(255, 255, 255, 0.1); }
+
+/* setas: a transição (o passo de 3 px está mais abaixo) */
+:is(a, button) :is(svg.lucide-arrow-right, svg.lucide-chevron-right, svg.lucide-arrow-up-right):not(.hc-indice-icone > svg) { transition: transform var(--mv-out) var(--mv-ease); }
+
+/* links de texto: a linha se desenha da esquerda para a direita e sai pela direita */
+:is(a, button)[class~="hover:underline"] {
+  text-decoration-line: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  background-position: right 0 bottom 0;
+  transition:
+    background-size var(--mv-out) var(--mv-ease),
+    color var(--mv-out) var(--mv-ease);
+}
+:is(a, button)[class~="hover:underline"]:is(:hover, :focus-visible) {
+  background-size: 100% 1px;
+  background-position: left 0 bottom 0;
+  transition-duration: var(--mv-in);
+}
+
+/* campos: a borda e o anel macio chegam em 140 ms */
+:is(input, textarea, select):not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]),
+.campo-busca {
+  transition:
+    border-color 140ms var(--mv-ease),
+    box-shadow 140ms var(--mv-ease),
+    background-color 140ms var(--mv-ease);
+}
+
+/* abas (.segmentos): a pílula da aba escolhida é desenhada atrás dela e desliza para a nova aba
+   (movimento.ts leva a pílula do lugar antigo para o novo só com transform, em 240 ms) */
+.segmentos > :is(button, a) { position: relative; isolation: isolate; }
+.dark .segmentos > :is(button, a),
+:root:not(.dark) .segmentos > :is(button, a) { transition: color var(--mv-slide) var(--mv-ease-io); }
+:root .segmentos > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], [data-ativo="true"], [data-state="active"]),
+:root:not(.dark) .segmentos > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], [data-ativo="true"], [data-state="active"]) { background: transparent; box-shadow: none; }
+.segmentos > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], [data-ativo="true"], [data-state="active"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: #f4f4f5;
+  box-shadow: 0 8px 18px -8px rgba(255, 255, 255, 0.4);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+:root:not(.dark) .segmentos > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], [data-ativo="true"], [data-state="active"])::before { background: #111113; box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.45); }
+/* o traço vermelho do menu também viaja só por transform */
+.menu-item[data-ativo]::before { transform-origin: 0 50%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* um botão sobe 1 px com o mouse; no clique desce 1 px e encolhe 1,5% */
+  @media (hover: hover) and (pointer: fine) {
+    :where(button, [role="button"], a.pilula, a.hc-pilula):where(:hover):where(:not([role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], :disabled, [aria-disabled="true"], .segmentos > *, .menu-item, .menu-busca, .menu-botao, [data-sem-movimento], [data-sem-movimento] *)) { transform: translateY(-1px); }
+    :is(a, button).pilula:hover { transform: translateY(-1px); }
+    /* um cartão que leva a algum lugar sobe 2 px (180 ms; volta em 120) */
+    :is(.hc, .glass, .glass-elevated, .hc-dentro, .hc-indice):is(a, button, [role="button"], .cursor-pointer):hover { transform: translateY(-2px); transition-duration: 180ms; }
+    /* a seta anda 3 px na direção dela */
+    :is(a, button):hover :is(svg.lucide-arrow-right, svg.lucide-chevron-right):not(.hc-indice-icone > svg) { transform: translateX(3px); transition-duration: var(--mv-in); }
+    :is(a, button):hover svg.lucide-arrow-up-right:not(.hc-indice-icone > svg) { transform: translate(2px, -2px); transition-duration: var(--mv-in); }
+  }
+  :where(button, [role="button"], a.pilula, a.hc-pilula):where(:active):where(:not([role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], :disabled, [aria-disabled="true"], .segmentos > *, .menu-item, .menu-busca, .menu-botao, [data-sem-movimento], [data-sem-movimento] *)) { transform: translateY(1px) scale(0.985); }
+  :is(a, button).pilula:active { transform: translateY(1px) scale(0.985); }
+  :is(.hc, .glass, .glass-elevated, .hc-dentro, .hc-indice):is(a, button, [role="button"], .cursor-pointer):active { transform: none; transition-duration: var(--mv-press); }
+
+  /* menus, seletores e dicas: aparecem em 200 ms descendo 6 px, sem zoom; somem em 120 ms */
+  [data-radix-popper-content-wrapper] > [data-state] {
+    animation-duration: var(--mv-panel);
+    animation-timing-function: var(--mv-ease);
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: -6px;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+  }
+  [data-radix-popper-content-wrapper] > [data-side="top"] { --tw-enter-translate-y: 6px; }
+  [data-radix-popper-content-wrapper] > [data-side="left"] { --tw-enter-translate-x: 6px; --tw-enter-translate-y: 0; }
+  [data-radix-popper-content-wrapper] > [data-side="right"] { --tw-enter-translate-x: -6px; --tw-enter-translate-y: 0; }
+  [data-radix-popper-content-wrapper] > [data-state="closed"] { animation-duration: var(--mv-close); }
+
+  /* janelas (as que usam a entrada padrão): aparecem em 240 ms subindo 10 px; somem em 120 ms */
+  :is([role="dialog"], [role="alertdialog"])[class~="data-[state=open]:zoom-in-95"][data-state="open"] {
+    animation-duration: 240ms;
+    animation-timing-function: var(--mv-ease-enter);
+    --tw-enter-scale: 0.985;
+    --tw-enter-translate-y: 10px;
+  }
+  :is([role="dialog"], [role="alertdialog"])[class~="data-[state=open]:zoom-in-95"][data-state="closed"] {
+    animation-duration: var(--mv-close);
+    animation-timing-function: var(--mv-ease);
+    --tw-exit-scale: 1;
+    --tw-exit-translate-y: 4px;
+  }
+}
+
+/* botão principal (branco): mesmas medidas dos outros */
+.dark :is(button, a).bg-primary {
+  transition:
+    background-color var(--mv-out) var(--mv-ease),
+    filter var(--mv-out) var(--mv-ease),
+    box-shadow var(--mv-out) var(--mv-ease),
+    transform var(--mv-press) var(--mv-ease);
+}
+.dark :is(button, a).bg-primary:hover { transition-duration: var(--mv-in), var(--mv-in), var(--mv-in), var(--mv-press); }
+
+/* janelas feitas à mão (um véu "fixed inset-0 bg-black/…" com a janela dentro): o véu aparece em
+   200 ms e a janela sobe 10 px em 240 ms. Especificidade zero: quem já tem a sua entrada fica com ela. */
+@keyframes mv-janela { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
+@media (prefers-reduced-motion: no-preference) {
+  .dark :is(button, a).bg-primary:active { transform: translateY(1px) scale(0.985); }
+  /* (o véu costuma ser filho direto de .pagina, que zera a animação: por isso esta regra tem peso) */
+  .fixed.inset-0[class*="bg-black/"]:not([data-state], .pf-fade, [class*="animate-"]) { animation: mv-aparece var(--mv-panel) var(--mv-ease) backwards; }
+  :where(.fixed.inset-0[class*="bg-black/"]):where(:not([data-state], .pf-fade, [class*="animate-"])) > :where(:not([class*="animate-"])) { animation: mv-janela 240ms var(--mv-ease-enter) backwards; }
+}
+
+/* ---------- o atalho do HOKI (src/components/hoki/hoki-flutuante.tsx) ---------- */
+/* um botão redondo de vidro, igual aos cartões, só com a ilha em branco; sem brilho atrás e sem boiar */
+.hoki-flutuante {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(155deg, rgba(54, 52, 54, 0.55) 0%, rgba(21, 20, 21, 0.86) 55%, rgba(13, 13, 14, 0.92) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+  transition:
+    border-color var(--mv-out) var(--mv-ease),
+    transform var(--mv-out) var(--mv-ease);
+}
+.hoki-flutuante-ilha { width: 19px; height: 19px; color: #ffffff; }
+.hoki-flutuante-conta {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid #0b0b0c;
+  background: #f4f4f5;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #09090a;
+}
+.hoki-flutuante:hover { border-color: rgba(255, 255, 255, 0.16); transition-duration: var(--mv-in); }
+@media (prefers-reduced-motion: no-preference) {
+  .hoki-flutuante { animation: mv-sobe 520ms var(--mv-ease-enter) backwards; }
+  @media (hover: hover) and (pointer: fine) { .hoki-flutuante:hover { transform: translateY(-2px); } }
+  .hoki-flutuante:active { transform: translateY(1px) scale(0.985); transition-duration: var(--mv-press); }
+}
+
+/* ================================================================== */
+/* Tela de entrada do HOKI (src/components/hoki/inicio-hoki.tsx): em   */
+/* cima a ilha de verdade flutuando (o motor da praça em "vitrine") na */
+/* frente do nome em pontinhos; ao lado o perfil com o "Acordar agora";*/
+/* embaixo quem está online, em células. A praça abre por cima disso.  */
+/* --rol: 0 no topo da página, 1 quando a parte de cima já saiu.       */
+/* --hx/--hy: onde o ponteiro está sobre a ilha (de -0,5 a 0,5).       */
+/* ================================================================== */
+.hoki-tela {
+  position: relative;
+  min-height: calc(100svh - 32px);
+}
+.hoki-inicio {
+  --rol: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1024px) {
+  .hoki-inicio {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    grid-template-rows: clamp(360px, 58svh, 620px) auto;
+    column-gap: 18px;
+  }
+  .hoki-online { grid-column: 1 / -1; }
+}
+/* com a praça aberta sobra só o palco, que passa a se comportar como filho direto da seção */
+.hoki-inicio-jogo,
+.hoki-inicio-jogo > .hoki-heroi { display: contents; }
+
+/* ---------- a ilha ---------- */
+/* (sem transformação aqui: o palco, quando abre, precisa medir pela seção inteira) */
+.hoki-heroi {
+  --hx: 0;
+  --hy: 0;
+  position: relative;
+  height: 300px;
+}
+@media (min-width: 1024px) {
+  .hoki-heroi { height: auto; }
+}
+.hoki-heroi-solto { position: static; }
+.hoki-heroi-fundo {
+  position: relative;
+  height: 100%;
+  animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+/* brasa vermelha embaixo da ilha (o vermelho do fundo, bem fraco) */
+.hoki-heroi-fundo::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  width: 46%;
+  height: 22%;
+  translate: -50% 0;
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, rgba(206, 14, 14, 0.26), rgba(206, 14, 14, 0));
+  opacity: calc(1 - var(--rol) * 1.4);
+}
+/* o nome anda ao contrário da ilha (dá profundidade) */
+.hoki-heroi-nome {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(calc(var(--hx) * -18px), calc(var(--hy) * -10px + var(--rol) * 26px), 0);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hoki-heroi-entrar {
+  position: absolute;
+  z-index: 4;
+  inset: 16% 4% 3%;
+  border-radius: 45%;
+  cursor: pointer;
+}
+.hoki-heroi-dica {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 0;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 11px;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(17, 16, 17, 0.6);
+  opacity: calc(0.85 - var(--rol) * 3);
+  transition:
+    color 220ms,
+    background-color 220ms,
+    translate 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hoki-heroi-fundo:has(.hoki-heroi-entrar:hover) .hoki-heroi-dica {
+  color: #fff;
+  background: rgba(168, 21, 18, 0.9);
+  translate: -50% -4px;
+}
+
+/* ---------- o palco (o quadro da praça) ---------- */
+.hoki-palco {
+  position: absolute;
+  z-index: 3;
+}
+/* vitrine: só a ilha, inclinando com o ponteiro e afundando com a rolagem */
+.hoki-palco-vitrine {
+  inset: 16% 0 0 0;
+  pointer-events: none;
+  opacity: calc(1.1 - var(--rol) * 1.4);
+  transform: perspective(1400px) rotateY(calc(var(--hx) * 5deg)) rotateX(calc(var(--hy) * -3.5deg))
+    translate3d(calc(var(--hx) * 12px), calc(var(--hy) * 8px + var(--rol) * 44px), 0);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: hoki-surge 760ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  /* as beiradas somem aos poucos (quando a câmera ainda está perto, logo depois de dormir,
+     a praça não aparece cortada num retângulo) */
+  -webkit-mask-image: radial-gradient(ellipse 62% 72% at 50% 48%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(ellipse 62% 72% at 50% 48%, #000 72%, transparent 100%);
+}
+@keyframes hoki-surge {
+  from { opacity: 0; scale: 0.9; }
+}
+/* com o mouse em cima a ilha chega mais perto; apertando, ela afunda um pouco */
+.hoki-heroi:has(.hoki-heroi-entrar:hover) .hoki-palco-vitrine { scale: 1.04; }
+.hoki-heroi:has(.hoki-heroi-entrar:active) .hoki-palco-vitrine { scale: 0.985; }
+/* praça aberta: a tela toda (por cima da tela de entrada enquanto abre e fecha) */
+.hoki-palco-jogo {
+  inset: 0;
+  z-index: 6;
+}
+/* na vitrine somem os botões, os avisos e a HUD que ficam por cima da praça */
+.praca-raiz[data-vitrine] { min-height: 0; }
+.praca-raiz[data-vitrine] > :not(.praca-mundo),
+.hoki-quadro[data-vitrine] > :not(.praca-raiz) { display: none !important; }
+
+/* ---------- eu: perfil, acordar e as barras ---------- */
+.hoki-lado {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  transform: translate3d(0, calc(var(--rol) * -18px), 0);
+}
+.hoki-lado > * { animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.hoki-lado > *:nth-child(1) { animation-delay: 80ms; }
+.hoki-lado > *:nth-child(2) { animation-delay: 150ms; }
+.hoki-lado > *:nth-child(3) { animation-delay: 220ms; }
+/* o que some rolando a página (a opacidade vai em cada peça de vidro, e não na coluna,
+   para o desfoque de trás continuar valendo) */
+.hoki-some { opacity: calc(1 - var(--rol) * 1.2); }
+.hoki-inicio .hoki-cartao {
+  --ix: 0;
+  --iy: 0;
+  --bx: 50%;
+  --by: 50%;
+  position: relative;
+  overflow: hidden;
+  transform: perspective(900px) rotateX(calc(var(--iy) * -9deg)) rotateY(calc(var(--ix) * 11deg));
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.hoki-inicio .hoki-cartao[data-inclinado] { transition: transform 90ms linear; }
+.hoki-cartao-brilho {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms;
+  background: radial-gradient(230px circle at var(--bx) var(--by), rgba(255, 255, 255, 0.15), transparent 62%);
+}
+.hoki-cartao[data-inclinado] .hoki-cartao-brilho { opacity: 1; }
+
+/* botão de acordar: vermelho fundo, com um brilho que varre ao passar o mouse */
+.hoki-acordar {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  border-radius: 14px;
+  font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: linear-gradient(180deg, #a81512 0%, #7a0d0b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 16px 32px -18px rgba(206, 14, 14, 0.95);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 240ms,
+    filter 240ms;
+}
+.hoki-lado > .hoki-acordar {
+  animation:
+    entra 620ms cubic-bezier(0.16, 1, 0.3, 1) 150ms backwards,
+    hoki-chama 2.8s ease-in-out 800ms infinite;
+}
+.hoki-acordar:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 20px 38px -16px rgba(206, 14, 14, 1);
+}
+.hoki-acordar:active { transform: translateY(0) scale(0.985); }
+.hoki-acordar > :not(.hoki-acordar-brilho) { position: relative; }
+.hoki-acordar svg { transition: translate 300ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.hoki-acordar:hover svg { translate: 0 -2px; }
+.hoki-acordar-brilho {
+  position: absolute;
+  inset: 0;
+  translate: -120% 0;
+  background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, 0.3) 50%, transparent 64%);
+}
+.hoki-acordar:hover .hoki-acordar-brilho { animation: hoki-varre 850ms ease-out; }
+@keyframes hoki-varre {
+  to { translate: 120% 0; }
+}
+@keyframes hoki-chama {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 16px 32px -18px rgba(206, 14, 14, 0.95); }
+  50% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 16px 40px -12px rgba(206, 14, 14, 1); }
+}
+/* as barrinhas de vida acendem em fila quando o mouse passa por elas */
+.hoki-inicio [role="meter"]:hover .hoki-barra {
+  animation: hoki-pisca 700ms ease-out both;
+  animation-delay: calc(var(--n) * 45ms);
+}
+@keyframes hoki-pisca {
+  40% { filter: brightness(1.7); translate: 0 -2px; }
+}
+
+/* ---------- quem está online, em células ---------- */
+.hoki-online {
+  min-width: 0;
+  animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) 240ms backwards;
+}
+.hoki-online-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.hoki-online-titulo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.hoki-online-vivo,
+.hoki-celula[data-estado="lobby"] .hoki-celula-onde > i {
+  animation: hoki-pulso 1.9s ease-out infinite;
+}
+.hoki-online-vivo {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #34d399;
+}
+@keyframes hoki-pulso {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  100% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+}
+/* abas: a pílula branca desliza até a escolhida */
+.hoki-abas {
+  position: relative;
+  display: flex;
+  max-width: 100%;
+  gap: 2px;
+  overflow-x: auto;
+  border-radius: 999px;
+  padding: 3px;
+  background: rgba(17, 16, 17, 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+  scrollbar-width: none;
+}
+.hoki-abas-marca {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 999px;
+  background: #f4f4f5;
+  transition:
+    translate 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hoki-aba {
+  position: relative;
+  display: flex;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 240ms;
+}
+.hoki-aba b { font-size: 13px; }
+.hoki-aba:hover { color: #fff; }
+.hoki-aba[aria-selected="true"] { color: #0b0b0c; }
+
+.hoki-celulas {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+}
+.hoki-celula {
+  --lx: -300px;
+  --ly: -300px;
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--gf-tx-1);
+  /* brilho que segue o ponteiro, por cima do vidro escuro */
+  background:
+    radial-gradient(190px circle at var(--lx) var(--ly), rgba(255, 255, 255, 0.1), transparent 66%),
+    rgba(21, 20, 21, 0.8);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms,
+    box-shadow 280ms;
+  animation: hoki-celula-entra 560ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i) * 45ms);
+}
+@keyframes hoki-celula-entra {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+}
+.hoki-celula:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 18px 30px -22px rgba(0, 0, 0, 0.95);
+}
+.hoki-celula:active { transform: translateY(-1px) scale(0.985); }
+.hoki-celula-foto {
+  position: relative;
+  display: block;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+  transition:
+    transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 300ms;
+}
+.hoki-celula-rosto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+}
+.hoki-celula:hover .hoki-celula-foto { transform: scale(1.1) rotate(-4deg); }
+/* acordado no lobby: aro verde aceso; na fazenda: aro âmbar; dormindo: apagado */
+.hoki-celula[data-estado="lobby"] .hoki-celula-foto {
+  box-shadow:
+    0 0 0 2px rgba(52, 211, 153, 0.6),
+    0 0 16px -2px rgba(52, 211, 153, 0.5);
+}
+.hoki-celula[data-estado="fazenda"] .hoki-celula-foto { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55); }
+.hoki-celula[data-estado="dorme"] .hoki-celula-rosto { filter: saturate(0.5) brightness(0.78); }
+.hoki-celula-tag {
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: #ce0e0e;
+  padding: 0 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 13px;
+  color: #fff;
+}
+.hoki-celula-onde {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.hoki-celula-onde > i {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+.hoki-celula[data-estado="lobby"] .hoki-celula-onde > i { background: #34d399; }
+.hoki-celula[data-estado="fazenda"] .hoki-celula-onde > i { background: #fbbf24; }
+.hoki-celula-nivel {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hoki-celula:hover .hoki-celula-nivel { transform: scale(1.12); }
+/* dormindo: os "z z" sobem do canto da foto */
+.hoki-celula-zz {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.75);
+  animation: hoki-zz 2.6s ease-in-out infinite;
+}
+.hoki-celula-zz i {
+  margin-left: 1px;
+  font-size: 7.5px;
+  font-style: normal;
+}
+@keyframes hoki-zz {
+  0% { opacity: 0; translate: -2px 5px; }
+  30% { opacity: 1; }
+  100% { opacity: 0; translate: 5px -8px; }
+}
+.hoki-celulas-vazio {
+  grid-column: 1 / -1;
+  padding: 28px 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hoki-heroi-fundo,
+  .hoki-palco-vitrine,
+  .hoki-lado > *,
+  .hoki-online,
+  .hoki-celula,
+  .hoki-celula-zz,
+  .hoki-online-vivo,
+  .hoki-celula-onde > i { animation: none !important; }
+  .hoki-heroi-nome,
+  .hoki-palco-vitrine,
+  .hoki-lado { transform: none; }
+}
