@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Dices, Loader2, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { HOKI_EM_MANUTENCAO } from "@/lib/hoki-lugar";
 import { meuLugar, usePresencaHoki } from "@/lib/hoki-presenca";
 import {
   aoVivo,
@@ -145,7 +146,8 @@ export function HokiCard({
   };
   /** Acorda: a praça abre por cima da tela de entrada. */
   const entrarNaPraca = () => {
-    if (naPraca || transicao) return;
+    // em manutenção ninguém entra na praça (src/lib/hoki-lugar.ts)
+    if (naPraca || transicao || HOKI_EM_MANUTENCAO) return;
     iris.current = medirIris();
     // a praça ocupa a seção inteira: ela encosta no alto da janela (na tela inicial a seção fica no meio da página)
     secao.current?.scrollIntoView({ block: "start", behavior: "smooth" });

@@ -17,9 +17,11 @@ import {
   MousePointerClick,
   Shield,
   Sunrise,
+  Wrench,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AVISO_DE_MANUTENCAO, HOKI_EM_MANUTENCAO } from "@/lib/hoki-lugar";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { ROLE_LABELS, useMyRole } from "@/lib/permissions";
@@ -226,15 +228,21 @@ export function InicioDoHoki({
           <div className="hoki-heroi-fundo">
             <h1 className="sr-only">HOKI</h1>
             <div ref={caixaDoNome} className="hoki-heroi-nome" />
-            <button
-              type="button"
-              onClick={aoEntrar}
-              className="hoki-heroi-entrar"
-              aria-label="Acordar e entrar na praça"
-            />
-            <p className="hoki-heroi-dica" aria-hidden>
-              <MousePointerClick className="size-3.5" strokeWidth={2} /> clique na ilha para entrar
-            </p>
+            {/* em manutenção a ilha não abre ao clicar (src/lib/hoki-lugar.ts) */}
+            {!HOKI_EM_MANUTENCAO && (
+              <>
+                <button
+                  type="button"
+                  onClick={aoEntrar}
+                  className="hoki-heroi-entrar"
+                  aria-label="Acordar e entrar na praça"
+                />
+                <p className="hoki-heroi-dica" aria-hidden>
+                  <MousePointerClick className="size-3.5" strokeWidth={2} /> clique na ilha para
+                  entrar
+                </p>
+              </>
+            )}
           </div>
         ) : null}
         {palco}
@@ -358,10 +366,22 @@ export function InicioDoHoki({
             </div>
           </div>
 
-          <button type="button" onClick={aoEntrar} className="hoki-acordar hoki-some">
-            <Sunrise className="size-[17px]" strokeWidth={2} />
-            <span>Acordar agora</span>
-          </button>
+          {HOKI_EM_MANUTENCAO ? (
+            <button
+              type="button"
+              disabled
+              className="hoki-acordar hoki-manutencao hoki-some"
+              title="O HOKI está fechado por enquanto"
+            >
+              <Wrench className="size-[16px]" strokeWidth={2} />
+              <span>{AVISO_DE_MANUTENCAO}</span>
+            </button>
+          ) : (
+            <button type="button" onClick={aoEntrar} className="hoki-acordar hoki-some">
+              <Sunrise className="size-[17px]" strokeWidth={2} />
+              <span>Acordar agora</span>
+            </button>
+          )}
         </div>
       )}
 
