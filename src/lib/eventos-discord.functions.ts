@@ -8,20 +8,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const staffRefSchema = z.object({ id: z.string(), username: z.string() });
+const staffRefSchema = z.object({ id: z.string().max(64), username: z.string().max(60) });
 
 const eventoSchema = z.object({
   id: z.string().uuid(),
   nome: z.string().trim().min(1).max(256),
-  equipeLabel: z.string(),
-  equipeEmoji: z.string(),
-  staff: z.array(staffRefSchema),
+  equipeLabel: z.string().max(60),
+  equipeEmoji: z.string().max(16),
+  staff: z.array(staffRefSchema).max(60),
   todosDaArea: z.boolean(),
-  data: z.string(), // YYYY-MM-DD
-  horario: z.string(), // HH:MM
-  premiacao: z.string(),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
+  horario: z.string().max(10), // HH:MM
+  premiacao: z.string().max(300),
   informacoes: z.string().max(3_200),
-  bannerUrl: z.string(),
+  // data URL de imagem (até ~10 MB) ou link https
+  bannerUrl: z.string().max(14_000_000),
 });
 
 interface DiscordAttachment {
@@ -64,6 +65,8 @@ export const publicarEventoDiscord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => eventoSchema.parse(input))
   .handler(async ({ data: ev, context }) => {
+    const { exigirEventoEditavel } = await import("./seguranca.server");
+    await exigirEventoEditavel(context.userId, ev.id);
     const webhook = process.env["DISCORD_WEBHOOK_EVENTOS_URL"];
     if (!webhook) throw new Error("Webhook do Discord não configurado");
 

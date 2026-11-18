@@ -44,12 +44,28 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/** Cabeçalhos de segurança em todas as respostas (sem bloquear a prévia do Lovable em iframe). */
+const CABECALHOS_SEGURANCA: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+};
+
+function comCabecalhos(response: Response): Response {
+  const r = new Response(response.body, response);
+  for (const [k, v] of Object.entries(CABECALHOS_SEGURANCA)) {
+    if (!r.headers.has(k)) r.headers.set(k, v);
+  }
+  return r;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return comCabecalhos(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

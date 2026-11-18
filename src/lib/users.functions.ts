@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ROLE_ORDER, type AppRole } from "@/lib/roles";
+import { ROLE_ORDER, roleRank, type AppRole } from "@/lib/roles";
 type AdminClient = (typeof import("@/integrations/supabase/client.server"))["supabaseAdmin"];
 
 const roleSchema = z.enum(ROLE_ORDER);
@@ -46,6 +46,8 @@ async function assertManager(
     .eq("user_id", context.userId);
   const myRoles = ((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role);
 
+  // Sem cargo (visita do HOKI, conta criada fora do painel): nunca gerencia usuários.
+  if (myRoles.length === 0) throw new Error("Sem permissão para gerenciar usuários");
   if (myRoles.includes("founder")) return true;
   if (myRoles.includes("c_level")) return false;
 
@@ -104,16 +106,44 @@ async function assertManager(
   return false;
 }
 
-/** Garante que o chamador pode agir sobre o alvo (só founder mexe em founder) */
+/**
+ * Garante que o chamador pode agir sobre o alvo. O FOUNDER mexe em todos; os outros gestores
+ * só em quem tem cargo ABAIXO do seu, e nunca na própria conta (senão daria para se promover,
+ * se dar áreas ou pegar a senha de um superior).
+ */
 async function assertTargetAllowed(
   admin: AdminClient,
   actorIsFounder: boolean,
   targetUserId: string,
+  actorId: string,
 ) {
   const roles = await getRoles(admin);
-  const targetRole = highestRole(roles.get(targetUserId));
-  if (targetRole === "founder" && !actorIsFounder) {
+  const targetRoles = roles.get(targetUserId) ?? [];
+  if (targetRoles.includes("founder") && !actorIsFounder) {
     throw new Error("Apenas o FOUNDER pode gerenciar outro FOUNDER");
+  }
+  if (actorIsFounder) return;
+  if (targetUserId === actorId) {
+    throw new Error("Peça a um superior para alterar a sua própria conta");
+  }
+  const actorRank = roleRank(highestRole(roles.get(actorId)));
+  const targetRank = targetRoles.length ? roleRank(highestRole(targetRoles)) : ROLE_ORDER.length;
+  if (targetRank <= actorRank) {
+    throw new Error("Você só pode gerenciar quem tem cargo abaixo do seu");
+  }
+}
+
+/** Gestor que não é FOUNDER só dá cargos abaixo do próprio. */
+async function assertRoleAllowed(
+  admin: AdminClient,
+  actorIsFounder: boolean,
+  actorId: string,
+  role: AppRole,
+) {
+  if (actorIsFounder) return;
+  const roles = await getRoles(admin);
+  if (roleRank(role) <= roleRank(highestRole(roles.get(actorId)))) {
+    throw new Error("Você só pode dar cargos abaixo do seu");
   }
 }
 
@@ -192,7 +222,7 @@ export const setUserIdentifiers = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
     const { error } = await supabaseAdmin
       .from("profiles")
       .update({ discord_id: data.discord_id, host_id: data.host_id })
@@ -204,7 +234,9 @@ export const setUserIdentifiers = createServerFn({ method: "POST" })
 /** Lista simples de usuários (id + username) para designar tarefas — qualquer autenticado */
 export const listStaffSimple = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async ({ context }) => {
+    const { exigirEquipe } = await import("@/lib/seguranca.server");
+    await exigirEquipe(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profiles, error } = await supabaseAdmin
       .from("profiles")
@@ -217,7 +249,9 @@ export const listStaffSimple = createServerFn({ method: "GET" })
 /** Lista usuários com cargo Coordinator ou superior (para destinatários de solicitações) */
 export const listCoordinatorPlus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async ({ context }) => {
+    const { exigirEquipe } = await import("@/lib/seguranca.server");
+    await exigirEquipe(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const roles = await getRoles(supabaseAdmin);
     const allowed = new Set<AppRole>(["founder", "c_level", "direcao", "coordinator"]);
@@ -249,7 +283,7 @@ export const setUserAreas = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
     const uniqueAreas = Array.from(new Set(data.areas.map((area) => area.trim()).filter(Boolean)));
     const lideres = new Set((data.lideres ?? []).map((area) => area.trim()).filter(Boolean));
 
@@ -295,6 +329,7 @@ export const createUser = createServerFn({ method: "POST" })
       throw new Error("Apenas o FOUNDER pode criar outro FOUNDER");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertRoleAllowed(supabaseAdmin, actorIsFounder, context.userId, data.role);
 
     const token = generateToken();
     const email = `${data.username}@host.local`;
@@ -327,7 +362,7 @@ export const deleteUser = createServerFn({ method: "POST" })
     const actorIsFounder = await assertManager(context, "delete");
     if (data.userId === context.userId) throw new Error("Você não pode excluir a própria conta");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
@@ -340,7 +375,7 @@ export const resetUserPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
 
     const token = generateToken();
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
@@ -372,6 +407,16 @@ export const definirMinhaSenha = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Só vale quando a conta está marcada para trocar a senha (primeiro acesso ou reset).
+    // Assim, um login roubado não vira troca de senha definitiva.
+    const { data: perfil } = await supabaseAdmin
+      .from("profiles")
+      .select("deve_trocar_senha")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (!perfil?.deve_trocar_senha) {
+      throw new Error("Esta conta não está liberada para criar senha. Peça um reset a um gestor.");
+    }
     const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, {
       password: data.password,
     });
@@ -394,10 +439,11 @@ export const updateUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
     if (data.role === "founder" && !actorIsFounder) {
       throw new Error("Apenas o FOUNDER pode promover a FOUNDER");
     }
+    await assertRoleAllowed(supabaseAdmin, actorIsFounder, context.userId, data.role);
     if (data.userId === context.userId && actorIsFounder && data.role !== "founder") {
       throw new Error("O FOUNDER não pode rebaixar a si mesmo");
     }
@@ -626,7 +672,7 @@ export const renameUser = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId);
+    await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
 
     const username = data.username.trim().toLowerCase();
 

@@ -7,7 +7,9 @@ export type { StaffSheetData };
 /** Busca os dados atuais da planilha pública HOST - STAFF (requer login) */
 export const getStaffSheet = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<StaffSheetData> => {
+  .handler(async ({ context }): Promise<StaffSheetData> => {
+    const { exigirEquipe } = await import("@/lib/seguranca.server");
+    await exigirEquipe(context.userId);
     const { fetchStaffSheet } = await import("@/lib/staff-sheet.server");
     return fetchStaffSheet();
   });

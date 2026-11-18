@@ -895,14 +895,16 @@ export function criarCenaDaFazenda(THREE: typeof TH, el: HTMLDivElement, eventos
         avatares.set(p.id, a);
       }
       if (!p.souEu) a.alvo = { x: p.x, z: p.z };
-      // plaquinha: [nível] nick [cargo]
+      // plaquinha: [nível] nick [cargo]. Tudo que vem dos outros jogadores (presença do canal)
+      // passa por escapar(): ninguém consegue injetar HTML/script na tela de quem está na ilha.
+      const cor = (c: unknown) => (/^#[0-9a-f]{3,8}$/i.test(String(c)) ? String(c) : "#444");
       const selo = p.selo
-        ? `<span style="background:${p.selo.fundo};color:${p.selo.texto}" class="mr-1 rounded-full px-1.5 text-[9.5px] font-extrabold leading-[15px]">${p.selo.nivel}</span>`
+        ? `<span style="background:${cor(p.selo.fundo)};color:${cor(p.selo.texto)}" class="mr-1 rounded-full px-1.5 text-[9.5px] font-extrabold leading-[15px]">${escapar(String(p.selo.nivel))}</span>`
         : "";
       const tag = p.tag
-        ? `<span class="ml-1 rounded-full bg-[#ce0e0e] px-1 text-[8.5px] font-bold leading-[13px] text-white">${p.tag}</span>`
+        ? `<span class="ml-1 rounded-full bg-[#ce0e0e] px-1 text-[8.5px] font-bold leading-[13px] text-white">${escapar(String(p.tag).slice(0, 24))}</span>`
         : "";
-      a.rotulo.innerHTML = `<div class="-translate-x-1/2 -translate-y-full flex items-center whitespace-nowrap rounded-full bg-black/60 py-px pl-0.5 pr-1.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">${selo}${escapar(p.nome)}${tag}</div>`;
+      a.rotulo.innerHTML = `<div class="-translate-x-1/2 -translate-y-full flex items-center whitespace-nowrap rounded-full bg-black/60 py-px pl-0.5 pr-1.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">${selo}${escapar(String(p.nome ?? ""))}${tag}</div>`;
     }
   }
   const escapar = (s: string) =>

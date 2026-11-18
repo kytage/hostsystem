@@ -1,3 +1,4 @@
+import { tokenIgual } from "@/lib/webhook-seguro";
 /**
  * Logs do servidor, lado do servidor do site: o token de quem pode mandar logs e de qual canal do
  * site é cada webhook do Discord. Usado pelos endereços /api/public/webhook/logs*.
@@ -21,12 +22,9 @@ export async function tokenDasLogs(admin: Admin) {
   return valor;
 }
 
-/** Compara sem dar pista pelo tempo de resposta. */
+/** Compara sem dar pista pelo tempo de resposta nem pelo tamanho do token. */
 export function tokenConfere(recebido: string | null, esperado: string | null) {
-  if (!recebido || !esperado || recebido.length !== esperado.length) return false;
-  let d = 0;
-  for (let i = 0; i < esperado.length; i++) d |= recebido.charCodeAt(i) ^ esperado.charCodeAt(i);
-  return d === 0;
+  return tokenIgual(recebido, esperado);
 }
 
 const webhooksGuardados = new Map<string, string | null>();

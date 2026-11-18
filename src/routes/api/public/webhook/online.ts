@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
+import { lerJsonLimitado, tokenIgual } from '@/lib/webhook-seguro'
 
 // Validação do payload enviado pelo script do FiveM
 const registroSchema = z.object({
@@ -21,17 +22,14 @@ export const Route = createFileRoute('/api/public/webhook/online')({
         // 1) Autenticação por token secreto
         const token = request.headers.get('x-webhook-token')
         const esperado = process.env['ONLINE_WEBHOOK_TOKEN']
-        if (!esperado || !token || token !== esperado) {
+        if (!(await tokenIgual(token, esperado))) {
           return new Response('Não autorizado', { status: 401 })
         }
 
         // 2) Validação do corpo
-        let body: unknown
-        try {
-          body = await request.json()
-        } catch {
-          return Response.json({ error: 'JSON inválido' }, { status: 400 })
-        }
+        const lido = await lerJsonLimitado(request, 512_000)
+        if (!lido.ok) return lido.resposta
+        const body = lido.body
         const parsed = bodySchema.safeParse(body)
         if (!parsed.success) {
           return Response.json({ error: 'Payload inválido', detalhes: parsed.error.issues }, { status: 400 })

@@ -26,16 +26,14 @@ export const Route = createFileRoute("/api/public/webhook/logs-discord")({
         const { tokenDasLogs, tokenConfere, canalDoWebhook, lerMensagemDoDiscord } =
           await import("@/lib/logs-servidor.server");
         if (
-          !tokenConfere(request.headers.get("x-webhook-token"), await tokenDasLogs(supabaseAdmin))
+          !(await tokenConfere(request.headers.get("x-webhook-token"), await tokenDasLogs(supabaseAdmin)))
         ) {
           return new Response("Não autorizado", { status: 401 });
         }
-        let body: unknown;
-        try {
-          body = await request.json();
-        } catch {
-          return Response.json({ error: "JSON inválido" }, { status: 400 });
-        }
+        const { lerJsonLimitado } = await import("@/lib/webhook-seguro");
+        const leitura = await lerJsonLimitado(request, 1_000_000);
+        if (!leitura.ok) return leitura.resposta;
+        const body = leitura.body;
         const lido = corpoSchema.safeParse(body);
         if (!lido.success) return Response.json({ error: "Log inválida" }, { status: 400 });
 

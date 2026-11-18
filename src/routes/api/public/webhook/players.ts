@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
+import { lerJsonLimitado, tokenIgual } from '@/lib/webhook-seguro'
 
 /**
  * Integração FiveM → painel Players.
@@ -63,16 +64,13 @@ export const Route = createFileRoute('/api/public/webhook/players')({
       POST: async ({ request }) => {
         const token = request.headers.get('x-webhook-token')
         const esperado = process.env['PLAYERS_WEBHOOK_TOKEN']
-        if (!esperado || !token || token !== esperado) {
+        if (!(await tokenIgual(token, esperado))) {
           return new Response('Não autorizado', { status: 401 })
         }
 
-        let body: unknown
-        try {
-          body = await request.json()
-        } catch {
-          return Response.json({ error: 'JSON inválido' }, { status: 400 })
-        }
+        const lido = await lerJsonLimitado(request, 5_000_000)
+        if (!lido.ok) return lido.resposta
+        const body = lido.body
         const parsed = bodySchema.safeParse(body)
         if (!parsed.success) {
           return Response.json({ error: 'Payload inválido', detalhes: parsed.error.issues }, { status: 400 })
@@ -115,12 +113,17 @@ export const Route = createFileRoute('/api/public/webhook/players')({
         }
 
         if (parsed.data.marcar_offline_ausentes) {
-          const licencas = rows.map((r) => r['license'] as string)
-          await supabaseAdmin
-            .from('players')
-            .update({ online: false })
-            .eq('online', true)
-            .not('license', 'in', `(${licencas.map((l) => `"${l.replace(/"/g, '')}"`).join(',')})`)
+          const presentes = new Set(rows.map((r) => r['license'] as string))
+          const { data: online } = await supabaseAdmin.from('players').select('license').eq('online', true)
+          const ausentes = ((online ?? []) as { license: string }[])
+            .map((p) => p.license)
+            .filter((l) => !presentes.has(l))
+          for (let i = 0; i < ausentes.length; i += 200) {
+            await supabaseAdmin
+              .from('players')
+              .update({ online: false } as never)
+              .in('license', ausentes.slice(i, i + 200))
+          }
         }
         return Response.json({ ok: true, atualizados: rows.length })
       },

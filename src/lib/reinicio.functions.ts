@@ -68,5 +68,6 @@ export const conferirAvisoReinicio = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (Math.abs(Date.now() - data.em) > 2 * 60_000) return { valido: false };
     const certa = await assinar(`${data.id}.${data.em}`);
-    return { valido: certa === data.assinatura };
+    const { tokenIgual } = await import("@/lib/webhook-seguro");
+    return { valido: await tokenIgual(certa, data.assinatura) };
   });

@@ -9,6 +9,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const eventoSchema = z.object({
   /** ID do evento no painel — usado pelo site para atualizar em vez de duplicar. */
@@ -83,18 +84,24 @@ async function enviar(body: unknown): Promise<{ id: string }> {
 
 /** Cria ou atualiza o evento na agenda pública do site. */
 export const publicarEventoNoSite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => eventoSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { exigirEventoEditavel } = await import("./seguranca.server");
+    await exigirEventoEditavel(context.userId, data.externalId);
     const { id } = await enviar({ acao: "publicar", evento: data });
     return { ok: true as const, siteEventId: id };
   });
 
 /** Remove o evento da agenda pública do site. */
 export const removerEventoDoSite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({ externalId: z.string().trim().min(1).max(64) }).parse(input)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { exigirEventoEditavel } = await import("./seguranca.server");
+    await exigirEventoEditavel(context.userId, data.externalId);
     await enviar({ acao: "remover", evento: { externalId: data.externalId } });
     return { ok: true as const };
   });
