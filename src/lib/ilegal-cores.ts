@@ -6,8 +6,7 @@ export const HEX_CATEGORIA: Record<string, string> = {
   armas: "#ef4444",
   municao: "#f97316",
   lavagem: "#10b981",
-  garagem: "#0ea5e9",
-  drogas: "#8b5cf6",
+  central: "#0ea5e9",
   hpi: "#ec4899",
   a_definir: "#71717a",
 };

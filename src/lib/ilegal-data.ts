@@ -33,8 +33,7 @@ export const CATEGORIAS_META: { id: string; nome: string }[] = [
   { id: "armas", nome: "Armas" },
   { id: "municao", nome: "Munição" },
   { id: "lavagem", nome: "Lavagem" },
-  { id: "garagem", nome: "Garagem" },
-  { id: "drogas", nome: "Drogas" },
+  { id: "central", nome: "Central" },
   { id: "hpi", nome: "HPI" },
   // Locais cadastrados sem tipo definido: aparecem aqui até alguém escolher a categoria.
   { id: "a_definir", nome: "A definir" },

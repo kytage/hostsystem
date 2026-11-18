@@ -96,7 +96,7 @@ export const Route = createFileRoute("/_authenticated/ilegal")({
       {
         name: "description",
         content:
-          "Controle das organizações ilegais por categoria: armas, munição, lavagem, garagem, drogas e HPI.",
+          "Controle das organizações ilegais por categoria: armas, munição, lavagem, central e HPI.",
       },
       { property: "og:title", content: "Ilegal — FiveM Host" },
       { property: "og:type", content: "website" },
@@ -104,7 +104,7 @@ export const Route = createFileRoute("/_authenticated/ilegal")({
       {
         property: "og:description",
         content:
-          "Controle das organizações ilegais por categoria: armas, munição, lavagem, garagem, drogas e HPI.",
+          "Controle das organizações ilegais por categoria: armas, munição, lavagem, central e HPI.",
       },
     ],
   }),
@@ -409,7 +409,6 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
 interface DetalhesModalProps {
   org: IlegalOrg;
   categoriaNome: string;
-  isGaragem: boolean;
   /** Coordinator+ edita; demais cargos apenas visualizam. */
   canEdit: boolean;
   onClose: () => void;
@@ -418,7 +417,6 @@ interface DetalhesModalProps {
 function DetalhesModal({
   org,
   categoriaNome,
-  isGaragem,
   canEdit,
   onClose,
 }: DetalhesModalProps) {
@@ -805,12 +803,6 @@ function DetalhesModal({
               {field("Cor do veículo registrada", "corVeiculo", {
                 placeholder: "Ex: Preto fosco",
               })}
-
-              {isGaragem &&
-                field("CD's Blip Desmanche", "cdsBlipDesmanche", {
-                  mono: true,
-                  span: true,
-                })}
             </div>
 
             {/* VIP FAC */}
@@ -1083,7 +1075,6 @@ function IlegalDashboard() {
   const [detalhes, setDetalhes] = useState<{
     org: IlegalOrg;
     categoriaNome: string;
-    isGaragem: boolean;
   } | null>(null);
   const [juridico, setJuridico] = useState<{
     setagem: string;
@@ -1377,7 +1368,7 @@ function IlegalDashboard() {
                   medias={mediasOnline}
                   coroas={coroasSemana}
                   canEdit={canEdit}
-                  onAbrir={(o, cat) => setDetalhes({ org: o, categoriaNome: cat.nome, isGaragem: cat.id === "garagem" })}
+                  onAbrir={(o, cat) => setDetalhes({ org: o, categoriaNome: cat.nome })}
                   onEditar={(o, cat) => setEditando({ org: o, categoriaNome: cat.nome, isNew: false })}
                   onExcluir={(o) => setExcluindo(o)}
                   onCoroas={(o) => setCoroas({ setagem: o.setagem, organizacao: o.organizacao })}
@@ -1409,7 +1400,6 @@ function IlegalDashboard() {
         <DetalhesModal
           org={detalhes.org}
           categoriaNome={detalhes.categoriaNome}
-          isGaragem={detalhes.isGaragem}
           canEdit={canEdit}
           onClose={() => setDetalhes(null)}
         />
