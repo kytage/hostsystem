@@ -1989,6 +1989,81 @@ export type Database = {
         }
         Relationships: []
       }
+      server_log_webhooks: {
+        Row: {
+          atualizado_em: string
+          canal: string | null
+          canal_discord: string | null
+          nome: string | null
+          servidor_discord: string | null
+          webhook_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          canal?: string | null
+          canal_discord?: string | null
+          nome?: string | null
+          servidor_discord?: string | null
+          webhook_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          canal?: string | null
+          canal_discord?: string | null
+          nome?: string | null
+          servidor_discord?: string | null
+          webhook_id?: string
+        }
+        Relationships: []
+      }
+      server_logs_config: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          valor: string
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          valor: string
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      server_logs: {
+        Row: {
+          canal: string
+          criado_em: string
+          dados: Json
+          id: number
+          jogador_id: string | null
+          jogador_nome: string | null
+          mensagem: string
+        }
+        Insert: {
+          canal: string
+          criado_em?: string
+          dados?: Json
+          id?: never
+          jogador_id?: string | null
+          jogador_nome?: string | null
+          mensagem: string
+        }
+        Update: {
+          canal?: string
+          criado_em?: string
+          dados?: Json
+          id?: never
+          jogador_id?: string | null
+          jogador_nome?: string | null
+          mensagem?: string
+        }
+        Relationships: []
+      }
       set_online_log: {
         Row: {
           amount: number

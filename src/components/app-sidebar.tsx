@@ -17,6 +17,7 @@ import {
   CircleUserRound,
   Wallet,
   FlaskConical,
+  ScrollText,
   Contact,
   Clapperboard,
   Map as MapIcon,
@@ -100,6 +101,7 @@ const nav: NavEntry[] = [
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
 const founderOnly: NavEntry[] = [
   { title: "Financeiro", icon: Wallet, url: "/financeiro" },
+  { title: "Logs", icon: ScrollText, url: "/logs" },
   { title: "TESTE", icon: FlaskConical, url: "/teste" },
 ];
 
@@ -110,7 +112,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
   { nome: "Geral", itens: ["Home", "Perfil & Agenda", "Áreas", "Eventos e Cronograma"] },
   {
     nome: "Operação",
-    itens: ["Comandos Staffs", "Ilegal", "Captações", "Peds", "Players", "Punições"],
+    itens: ["Comandos Staffs", "Logs", "Ilegal", "Captações", "Peds", "Players", "Punições"],
   },
   {
     nome: "Gestão",

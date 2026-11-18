@@ -24,6 +24,7 @@ import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedHokiRouteImport } from './routes/_authenticated/hoki'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
+import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated/logs'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedOrganizacoesRouteImport } from './routes/_authenticated/organizacoes'
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
@@ -39,6 +40,8 @@ import { Route as VisitaIndexRouteImport } from './routes/visita.index'
 import { Route as VisitaTokenRouteImport } from './routes/visita.$token'
 import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
 import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
+import { Route as ApiPublicWebhookLogsRouteImport } from './routes/api/public/webhook/logs'
+import { Route as ApiPublicWebhookLogsDiscordRouteImport } from './routes/api/public/webhook/logs-discord'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
 import { Route as ApiPublicWebhookPlayersRouteImport } from './routes/api/public/webhook/players'
 
@@ -119,6 +122,11 @@ const AuthenticatedIlegalRoute = AuthenticatedIlegalRouteImport.update({
   path: '/ilegal',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLogsRoute = AuthenticatedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
   id: '/marketing',
   path: '/marketing',
@@ -195,6 +203,17 @@ const AuthenticatedAreasAreaRoute = AuthenticatedAreasAreaRouteImport.update({
   path: '/areas/$area',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicWebhookLogsRoute = ApiPublicWebhookLogsRouteImport.update({
+  id: '/api/public/webhook/logs',
+  path: '/api/public/webhook/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhookLogsDiscordRoute =
+  ApiPublicWebhookLogsDiscordRouteImport.update({
+    id: '/api/public/webhook/logs-discord',
+    path: '/api/public/webhook/logs-discord',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhookOnlineRoute = ApiPublicWebhookOnlineRouteImport.update({
   id: '/api/public/webhook/online',
   path: '/api/public/webhook/online',
@@ -221,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
+  '/logs': typeof AuthenticatedLogsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
@@ -236,6 +256,8 @@ export interface FileRoutesByFullPath {
   '/visita/': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas/': typeof AuthenticatedAreasIndexRoute
+  '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
+  '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -253,6 +275,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
+  '/logs': typeof AuthenticatedLogsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
   '/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/peds': typeof AuthenticatedPedsRoute
@@ -269,6 +292,8 @@ export interface FileRoutesByTo {
   '/visita': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas': typeof AuthenticatedAreasIndexRoute
+  '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
+  '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -288,6 +313,7 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/hoki': typeof AuthenticatedHokiRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
+  '/_authenticated/logs': typeof AuthenticatedLogsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
   '/_authenticated/organizacoes': typeof AuthenticatedOrganizacoesRoute
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
@@ -304,6 +330,8 @@ export interface FileRoutesById {
   '/visita/': typeof VisitaIndexRoute
   '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
+  '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
+  '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
   '/api/public/webhook/players': typeof ApiPublicWebhookPlayersRoute
 }
@@ -324,6 +352,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/hoki'
     | '/ilegal'
+    | '/logs'
     | '/marketing'
     | '/organizacoes'
     | '/peds'
@@ -339,6 +368,8 @@ export interface FileRouteTypes {
     | '/visita/'
     | '/areas/$area'
     | '/areas/'
+    | '/api/public/webhook/logs'
+    | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   fileRoutesByTo: FileRoutesByTo
@@ -356,6 +387,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/hoki'
     | '/ilegal'
+    | '/logs'
     | '/marketing'
     | '/organizacoes'
     | '/peds'
@@ -372,6 +404,8 @@ export interface FileRouteTypes {
     | '/visita'
     | '/areas/$area'
     | '/areas'
+    | '/api/public/webhook/logs'
+    | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   id:
@@ -390,6 +424,7 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/hoki'
     | '/_authenticated/ilegal'
+    | '/_authenticated/logs'
     | '/_authenticated/marketing'
     | '/_authenticated/organizacoes'
     | '/_authenticated/peds'
@@ -406,6 +441,8 @@ export interface FileRouteTypes {
     | '/visita/'
     | '/_authenticated/areas/$area'
     | '/_authenticated/areas/'
+    | '/api/public/webhook/logs'
+    | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
     | '/api/public/webhook/players'
   fileRoutesById: FileRoutesById
@@ -418,6 +455,8 @@ export interface RootRouteChildren {
   ConviteSlugRoute: typeof ConviteSlugRoute
   VisitaTokenRoute: typeof VisitaTokenRoute
   VisitaIndexRoute: typeof VisitaIndexRoute
+  ApiPublicWebhookLogsRoute: typeof ApiPublicWebhookLogsRoute
+  ApiPublicWebhookLogsDiscordRoute: typeof ApiPublicWebhookLogsDiscordRoute
   ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
   ApiPublicWebhookPlayersRoute: typeof ApiPublicWebhookPlayersRoute
 }
@@ -529,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIlegalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/logs': {
+      id: '/_authenticated/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AuthenticatedLogsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/marketing': {
       id: '/_authenticated/marketing'
       path: '/marketing'
@@ -634,6 +680,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAreasAreaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/webhook/logs': {
+      id: '/api/public/webhook/logs'
+      path: '/api/public/webhook/logs'
+      fullPath: '/api/public/webhook/logs'
+      preLoaderRoute: typeof ApiPublicWebhookLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhook/logs-discord': {
+      id: '/api/public/webhook/logs-discord'
+      path: '/api/public/webhook/logs-discord'
+      fullPath: '/api/public/webhook/logs-discord'
+      preLoaderRoute: typeof ApiPublicWebhookLogsDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhook/online': {
       id: '/api/public/webhook/online'
       path: '/api/public/webhook/online'
@@ -662,6 +722,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedHokiRoute: typeof AuthenticatedHokiRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
+  AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
   AuthenticatedOrganizacoesRoute: typeof AuthenticatedOrganizacoesRoute
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
@@ -688,6 +749,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedHokiRoute: AuthenticatedHokiRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
+  AuthenticatedLogsRoute: AuthenticatedLogsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
   AuthenticatedOrganizacoesRoute: AuthenticatedOrganizacoesRoute,
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
@@ -714,6 +776,8 @@ const rootRouteChildren: RootRouteChildren = {
   ConviteSlugRoute: ConviteSlugRoute,
   VisitaTokenRoute: VisitaTokenRoute,
   VisitaIndexRoute: VisitaIndexRoute,
+  ApiPublicWebhookLogsRoute: ApiPublicWebhookLogsRoute,
+  ApiPublicWebhookLogsDiscordRoute: ApiPublicWebhookLogsDiscordRoute,
   ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,
   ApiPublicWebhookPlayersRoute: ApiPublicWebhookPlayersRoute,
 }

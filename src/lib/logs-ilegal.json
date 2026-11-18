@@ -1,0 +1,992 @@
+[
+ {
+  "id": "fac-armas01",
+  "nome": "Armas01",
+  "canais": [
+   {
+    "id": "fac-armas01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-armas01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-armas01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-armas02",
+  "nome": "Armas02",
+  "canais": [
+   {
+    "id": "fac-armas02/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-armas02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-armas02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-armas03",
+  "nome": "Armas03",
+  "canais": [
+   {
+    "id": "fac-armas03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-armas03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-armas03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-armas04",
+  "nome": "Armas04",
+  "canais": [
+   {
+    "id": "fac-armas04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-armas04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-armas04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-armas05",
+  "nome": "Armas05",
+  "canais": [
+   {
+    "id": "fac-armas05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-armas05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-armas05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao01",
+  "nome": "Muniçao01",
+  "canais": [
+   {
+    "id": "fac-municao01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-municao01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao02",
+  "nome": "Muniçao02",
+  "canais": [
+   {
+    "id": "fac-municao02/log-rotas",
+    "nome": "log-rotas"
+   },
+   {
+    "id": "fac-municao02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao03",
+  "nome": "Muniçao03",
+  "canais": [
+   {
+    "id": "fac-municao03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-municao03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao04",
+  "nome": "Muniçao04",
+  "canais": [
+   {
+    "id": "fac-municao04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-municao04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao05",
+  "nome": "Muniçao05",
+  "canais": [
+   {
+    "id": "fac-municao05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-municao05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-municao06",
+  "nome": "Muniçao06",
+  "canais": [
+   {
+    "id": "fac-municao06/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-municao06/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-municao06/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-lavagem01",
+  "nome": "Lavagem01",
+  "canais": [
+   {
+    "id": "fac-lavagem01/log-rotas",
+    "nome": "log-rotas"
+   },
+   {
+    "id": "fac-lavagem01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-lavagem01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-lavagem01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-lavagem02",
+  "nome": "Lavagem02",
+  "canais": [
+   {
+    "id": "fac-lavagem02/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-lavagem02/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-lavagem02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-lavagem02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-lavagem03",
+  "nome": "Lavagem03",
+  "canais": [
+   {
+    "id": "fac-lavagem03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-lavagem03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-lavagem03/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-lavagem03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-lavagem04",
+  "nome": "Lavagem04",
+  "canais": [
+   {
+    "id": "fac-lavagem04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-lavagem04/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-lavagem04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-lavagem04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-lavagem05",
+  "nome": "Lavagem05",
+  "canais": [
+   {
+    "id": "fac-lavagem05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-lavagem05/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-lavagem05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-lavagem05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando01",
+  "nome": "Contrabando01",
+  "canais": [
+   {
+    "id": "fac-contrabando01/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando02",
+  "nome": "Contrabando02",
+  "canais": [
+   {
+    "id": "fac-contrabando02/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando02/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando03",
+  "nome": "Contrabando03",
+  "canais": [
+   {
+    "id": "fac-contrabando03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando03/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando04",
+  "nome": "Contrabando04",
+  "canais": [
+   {
+    "id": "fac-contrabando04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando04/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando05",
+  "nome": "Contrabando05",
+  "canais": [
+   {
+    "id": "fac-contrabando05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando05/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando06",
+  "nome": "Contrabando06",
+  "canais": [
+   {
+    "id": "fac-contrabando06/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando06/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando06/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando06/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando07",
+  "nome": "Contrabando07",
+  "canais": [
+   {
+    "id": "fac-contrabando07/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando07/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando07/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando07/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-contrabando08",
+  "nome": "Contrabando08",
+  "canais": [
+   {
+    "id": "fac-contrabando08/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-contrabando08/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-contrabando08/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-contrabando08/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga01",
+  "nome": "Droga01",
+  "canais": [
+   {
+    "id": "fac-droga01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga01/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga02",
+  "nome": "Droga02",
+  "canais": [
+   {
+    "id": "fac-droga02/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga02/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga03",
+  "nome": "Droga03",
+  "canais": [
+   {
+    "id": "fac-droga03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga03/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga04",
+  "nome": "Droga04",
+  "canais": [
+   {
+    "id": "fac-droga04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga04/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga05",
+  "nome": "Droga05",
+  "canais": [
+   {
+    "id": "fac-droga05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga05/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga06",
+  "nome": "Droga06",
+  "canais": [
+   {
+    "id": "fac-droga06/log-rotas",
+    "nome": "log-rotas"
+   },
+   {
+    "id": "fac-droga06/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga06/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga06/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga07",
+  "nome": "Droga07",
+  "canais": [
+   {
+    "id": "fac-droga07/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga07/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga07/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga07/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga08",
+  "nome": "Droga08",
+  "canais": [
+   {
+    "id": "fac-droga08/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga08/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga08/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga08/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga09",
+  "nome": "Droga09",
+  "canais": [
+   {
+    "id": "fac-droga09/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga09/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga09/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga09/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga10",
+  "nome": "Droga10",
+  "canais": [
+   {
+    "id": "fac-droga10/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga10/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga10/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga10/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-droga11",
+  "nome": "Droga11",
+  "canais": [
+   {
+    "id": "fac-droga11/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-droga11/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-droga11/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-droga11/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-drogas12",
+  "nome": "Drogas12",
+  "canais": [
+   {
+    "id": "fac-drogas12/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-drogas12/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-drogas12/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-drogas12/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-drogas13",
+  "nome": "Drogas13",
+  "canais": [
+   {
+    "id": "fac-drogas13/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-drogas13/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-drogas13/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-drogas13/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-drogas14",
+  "nome": "Drogas14",
+  "canais": [
+   {
+    "id": "fac-drogas14/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-drogas14/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-drogas14/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-drogas14/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem01",
+  "nome": "Garagem01",
+  "canais": [
+   {
+    "id": "fac-garagem01/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem01/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem01/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem01/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem02",
+  "nome": "Garagem02",
+  "canais": [
+   {
+    "id": "fac-garagem02/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem02/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem02/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem02/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem03",
+  "nome": "Garagem03",
+  "canais": [
+   {
+    "id": "fac-garagem03/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem03/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem03/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem03/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem04",
+  "nome": "Garagem04",
+  "canais": [
+   {
+    "id": "fac-garagem04/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem04/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem04/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem04/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem05",
+  "nome": "Garagem05",
+  "canais": [
+   {
+    "id": "fac-garagem05/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem05/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem05/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem05/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem06",
+  "nome": "Garagem06",
+  "canais": [
+   {
+    "id": "fac-garagem06/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem06/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem06/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem06/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem07",
+  "nome": "Garagem07",
+  "canais": [
+   {
+    "id": "fac-garagem07/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem07/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem07/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem07/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-garagem08",
+  "nome": "Garagem08",
+  "canais": [
+   {
+    "id": "fac-garagem08/log-craft",
+    "nome": "log-craft"
+   },
+   {
+    "id": "fac-garagem08/log-rota",
+    "nome": "log-rota"
+   },
+   {
+    "id": "fac-garagem08/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-garagem08/log-bau-geral",
+    "nome": "log-bau-geral"
+   }
+  ]
+ },
+ {
+  "id": "fac-hpi",
+  "nome": "HPI",
+  "canais": [
+   {
+    "id": "fac-hpi/log-bau-lider",
+    "nome": "log-bau-lider"
+   },
+   {
+    "id": "fac-hpi/log-bau-geral",
+    "nome": "log-bau-geral"
+   },
+   {
+    "id": "fac-hpi/log-loja",
+    "nome": "log-loja"
+   },
+   {
+    "id": "fac-hpi/log-rotas",
+    "nome": "log-rotas"
+   }
+  ]
+ }
+]

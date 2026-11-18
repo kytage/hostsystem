@@ -2796,3 +2796,61 @@ button.hoki-online-titulo { cursor: pointer; border-radius: 8px; }
   .hoki-palco-vitrine,
   .hoki-lado { transform: none; }
 }
+
+/* ================================================================== */
+/* Logs do servidor (src/routes/_authenticated/logs.tsx): à esquerda   */
+/* as categorias do Discord com os canais; à direita, as logs do canal */
+/* ================================================================== */
+.logs-grade { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) {
+  .logs-grade { grid-template-columns: 290px minmax(0, 1fr); align-items: start; }
+  .logs-lista { position: sticky; top: 10px; max-height: calc(100svh - 20px); }
+}
+.logs-lista { display: flex; min-height: 0; flex-direction: column; gap: 10px; padding: 12px; }
+.logs-categorias { min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; }
+@media (max-width: 1023px) { .logs-categorias { max-height: 340px; } }
+.logs-categoria + .logs-categoria { margin-top: 2px; }
+.logs-categoria-botao {
+  display: flex; width: 100%; align-items: center; gap: 9px; height: 34px; padding: 0 9px;
+  border-radius: 10px; font-size: 13px; font-weight: 500; text-align: left; color: rgba(255, 255, 255, 0.72);
+  transition: background-color var(--mv-out) var(--mv-ease), color var(--mv-out) var(--mv-ease);
+}
+.logs-categoria-botao:hover { background: rgba(255, 255, 255, 0.05); color: #fff; transition-duration: var(--mv-in); }
+.logs-categoria-emoji { display: grid; width: 20px; flex-shrink: 0; place-items: center; font-size: 14px; line-height: 1; }
+.logs-categoria-conta { flex-shrink: 0; font-size: 11px; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, 0.35); }
+.logs-categoria-seta { width: 14px; height: 14px; flex-shrink: 0; color: rgba(255, 255, 255, 0.35); transition: transform var(--mv-in) var(--mv-ease); }
+.logs-categoria[data-aberta] .logs-categoria-seta { transform: rotate(180deg); }
+.logs-canais { margin: 2px 0 6px 19px; padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, 0.07); }
+.logs-canal {
+  display: flex; width: 100%; align-items: center; gap: 6px; height: 30px; padding: 0 8px;
+  border-radius: 8px; font-size: 12.5px; text-align: left; color: rgba(255, 255, 255, 0.55);
+  transition: background-color var(--mv-out) var(--mv-ease), color var(--mv-out) var(--mv-ease);
+}
+.logs-canal:hover { background: rgba(255, 255, 255, 0.045); color: #fff; transition-duration: var(--mv-in); }
+.logs-canal[aria-current] { background: rgba(255, 255, 255, 0.08); color: #fff; font-weight: 500; }
+.logs-canal[aria-current] svg { color: #e5484d; }
+
+.logs-painel { display: flex; min-width: 0; flex-direction: column; gap: 12px; padding: 16px; }
+.logs-painel-topo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.logs-painel-titulo {
+  display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 6px;
+  font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #fff;
+}
+.logs-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.logs-tabela { overflow: hidden; border-radius: 14px; background: rgba(255, 255, 255, 0.03); }
+.logs-linha { display: grid; grid-template-columns: 130px 180px minmax(0, 1fr); gap: 12px; padding: 10px 14px; font-size: 12.5px; }
+.logs-linha-cabeca {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.4);
+}
+@media (max-width: 640px) { .logs-linha { grid-template-columns: 90px minmax(0, 1fr); } .logs-linha > :nth-child(3) { grid-column: 1 / -1; } }
+.logs-vazio { display: flex; min-height: 300px; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; text-align: center; }
+.logs-canal-conta { flex-shrink: 0; min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(229, 72, 77, 0.18); font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; color: #ff9a9d; }
+.logs-linha-dado { align-items: start; border-top: 1px solid rgba(255, 255, 255, 0.04); line-height: 1.45; color: rgba(255, 255, 255, 0.85); }
+.logs-linha-dado:hover { background: rgba(255, 255, 255, 0.025); }
+.logs-mais { margin-left: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.45); text-decoration: underline; text-underline-offset: 2px; }
+.logs-mais:hover { color: #fff; }
+.logs-dados { margin-top: 8px; max-height: 260px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.35); font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: rgba(255, 255, 255, 0.75); white-space: pre-wrap; word-break: break-word; }
+.logs-servidores { display: flex; width: 100%; }
+.logs-servidores > button { flex: 1; justify-content: center; }
