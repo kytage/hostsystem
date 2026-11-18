@@ -1,3 +1,4 @@
+import { useAcessoLogs } from "@/lib/logs-acesso";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
@@ -101,7 +102,6 @@ const nav: NavEntry[] = [
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
 const founderOnly: NavEntry[] = [
   { title: "Financeiro", icon: Wallet, url: "/financeiro" },
-  { title: "Logs", icon: ScrollText, url: "/logs" },
   { title: "TESTE", icon: FlaskConical, url: "/teste" },
 ];
 
@@ -132,6 +132,8 @@ export function useMenu() {
   const { data: areaPerms } = useAreaPermissions();
   const { data: userPerms } = useMyUserPermissions();
   const { data: myAreas } = useMyAreas();
+  // Logs: Coordinator+ e quem tiver alguma categoria liberada (src/lib/logs-acesso.ts)
+  const logs = useAcessoLogs();
   const { data: profile } = useQuery({
     queryKey: ["my-username"],
     queryFn: async () => {
@@ -151,6 +153,7 @@ export function useMenu() {
     !i.category || canAccessCombined(role, myAreas, i.category, perms, areaPerms, userPerms);
   const todos: NavEntry[] = [
     ...nav.filter(pode),
+    ...(logs.temAcesso ? [{ title: "Logs", icon: ScrollText, url: "/logs" } satisfies NavEntry] : []),
     ...(role === "founder" ? founderOnly : []),
     ...ops.filter(pode),
     ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms, userPerms)

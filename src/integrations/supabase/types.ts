@@ -1989,6 +1989,66 @@ export type Database = {
         }
         Relationships: []
       }
+      server_log_permissoes: {
+        Row: {
+          areas: string[]
+          atualizado_em: string
+          atualizado_por: string | null
+          cargos: string[]
+          categoria: string
+        }
+        Insert: {
+          areas?: string[]
+          atualizado_em?: string
+          atualizado_por?: string | null
+          cargos?: string[]
+          categoria: string
+        }
+        Update: {
+          areas?: string[]
+          atualizado_em?: string
+          atualizado_por?: string | null
+          cargos?: string[]
+          categoria?: string
+        }
+        Relationships: []
+      }
+      server_log_suspeitos: {
+        Row: {
+          atualizado_em: string
+          criado_em: string
+          fim: string
+          id: number
+          inicio: string
+          jogador_id: string
+          jogador_nome: string | null
+          kills: number
+          logs: number[]
+        }
+        Insert: {
+          atualizado_em?: string
+          criado_em?: string
+          fim: string
+          id?: never
+          inicio: string
+          jogador_id: string
+          jogador_nome?: string | null
+          kills: number
+          logs?: number[]
+        }
+        Update: {
+          atualizado_em?: string
+          criado_em?: string
+          fim?: string
+          id?: never
+          inicio?: string
+          jogador_id?: string
+          jogador_nome?: string | null
+          kills?: number
+          logs?: number[]
+        }
+        Relationships: []
+      }
       server_log_webhooks: {
         Row: {
           atualizado_em: string

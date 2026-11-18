@@ -5,6 +5,7 @@ import { HokiFlutuante } from "@/components/hoki/hoki-flutuante";
 import { Abertura } from "@/components/abertura";
 import { useDevSolicitacaoNotify } from "@/hooks/use-dev-solicitacao-notify";
 import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
+import { useAvisoDeSuspeitos } from "@/lib/logs-suspeitos";
 import { useHokiOnline } from "@/hooks/use-hoki-online";
 import { useVersaoNova } from "@/hooks/use-versao-nova";
 import { OuvinteReinicio } from "@/components/reiniciar-site";
@@ -13,6 +14,8 @@ import { OuvinteReinicio } from "@/components/reiniciar-site";
 function SoDaEquipe() {
   useDevSolicitacaoNotify();
   useIlegalAvisoNotify();
+  // logs: aviso quando alguém faz 4+ kills em 60 segundos (src/lib/logs-suspeitos.ts)
+  useAvisoDeSuspeitos();
   // (o botão de mensagens saiu do canto; no lugar dele fica o HOKI flutuante)
   return <HokiFlutuante />;
 }
