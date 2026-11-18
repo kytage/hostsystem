@@ -29,7 +29,7 @@ import {
   Sun,
   Moon,
   ChevronsUpDown,
-  Settings,
+  FileClock,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -103,7 +103,11 @@ const nav: NavEntry[] = [
 const founderOnly: NavEntry[] = [
   { title: "Financeiro", icon: Wallet, url: "/financeiro" },
   { title: "TESTE", icon: FlaskConical, url: "/teste" },
+  { title: "Registro de autoria", icon: FileClock, url: "/autoria" },
 ];
+
+/** Estes não ficam no menu lateral: abrem pelo menu da conta (foto no rodapé). */
+export const NO_MENU_DA_CONTA = ["Usuários", "TESTE", "Registro de autoria"];
 
 const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" }];
 
@@ -118,7 +122,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
     nome: "Gestão",
     itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
   },
-  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "TESTE"] },
+  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "TESTE", "Registro de autoria"] },
 ];
 export const grupoDe = (titulo: string) =>
   GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
@@ -336,11 +340,14 @@ export function AppSidebar() {
   };
   const sair = () => void supabase.auth.signOut();
 
+  // Usuários, TESTE e Registro de autoria saem da lateral e vão para o menu da conta
+  const doMenuDaConta = todos.filter((i) => NO_MENU_DA_CONTA.includes(i.title));
+  const naLateral = todos.filter((i) => !NO_MENU_DA_CONTA.includes(i.title));
   const grupos = GRUPOS.map((g) => ({
     nome: g.nome,
-    itens: todos.filter((i) => g.itens.includes(i.title)),
+    itens: naLateral.filter((i) => g.itens.includes(i.title)),
   })).filter((g) => g.itens.length > 0);
-  const semGrupo = todos.filter((i) => !GRUPOS.some((g) => g.itens.includes(i.title)));
+  const semGrupo = naLateral.filter((i) => !GRUPOS.some((g) => g.itens.includes(i.title)));
   if (semGrupo.length) grupos.push({ nome: "Outros", itens: semGrupo });
   const paginas = todos.filter((i) => i.url);
   // dois itens podem levar à mesma tela: só o primeiro fica marcado
@@ -373,10 +380,8 @@ export function AppSidebar() {
             fechado ? "size-[38px] justify-center" : "min-w-0 flex-1 gap-2.5 p-1",
           )}
         >
-          {/* ícone de configurações no lugar da foto (que repetia o H do topo); a foto fica dentro do menu */}
-          <span className="menu-config" aria-hidden>
-            <Settings className="size-4" strokeWidth={1.75} />
-          </span>
+          {/* a foto de perfil abre o menu da conta */}
+          <img src={avatarUrl} alt="" aria-hidden className="menu-conta-foto" draggable={false} />
           {!fechado && (
             <>
               <span className="min-w-0 flex-1 leading-tight">
@@ -405,6 +410,23 @@ export function AppSidebar() {
           </div>
         </div>
         <DropdownMenuSeparator />
+        {doMenuDaConta.length > 0 && (
+          <>
+            {doMenuDaConta.map((i) => (
+              <DropdownMenuItem
+                key={i.title}
+                onSelect={() => {
+                  aoIr();
+                  void navigate({ to: i.url as string });
+                }}
+              >
+                <i.icon strokeWidth={1.6} /> {i.title === "TESTE" ? "Teste" : i.title}
+                {i.title === "Registro de autoria" && <span className="menu-novo">NEW</span>}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem
           data-sem-som
           onSelect={(e) => {

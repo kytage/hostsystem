@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { ehVisita, useSouVisita } from "@/lib/hoki-visita";
 import { getAuthUser } from "@/lib/auth-cache";
 import { HokiFlutuante } from "@/components/hoki/hoki-flutuante";
+import { ChatWidget } from "@/components/chat-widget";
 import { Abertura } from "@/components/abertura";
 import { useDevSolicitacaoNotify } from "@/hooks/use-dev-solicitacao-notify";
 import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
@@ -16,8 +17,13 @@ function SoDaEquipe() {
   useIlegalAvisoNotify();
   // logs: aviso quando alguém faz 4+ kills em 60 segundos (src/lib/logs-suspeitos.ts)
   useAvisoDeSuspeitos();
-  // (o botão de mensagens saiu do canto; no lugar dele fica o HOKI flutuante)
-  return <HokiFlutuante />;
+  // canto direito: o botão de mensagens (chat geral e da área) e, acima dele, o HOKI flutuante
+  return (
+    <>
+      <ChatWidget />
+      <HokiFlutuante />
+    </>
+  );
 }
 
 function AuthenticatedLayout() {

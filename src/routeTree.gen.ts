@@ -15,6 +15,7 @@ import { Route as LiderRouteImport } from './routes/lider'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAreaManagerRouteImport } from './routes/_authenticated/area-manager'
+import { Route as AuthenticatedAutoriaRouteImport } from './routes/_authenticated/autoria'
 import { Route as AuthenticatedAvisosRouteImport } from './routes/_authenticated/avisos'
 import { Route as AuthenticatedCaptacoesRouteImport } from './routes/_authenticated/captacoes'
 import { Route as AuthenticatedComandosRouteImport } from './routes/_authenticated/comandos'
@@ -75,6 +76,11 @@ const AuthenticatedAreaManagerRoute =
     path: '/area-manager',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAutoriaRoute = AuthenticatedAutoriaRouteImport.update({
+  id: '/autoria',
+  path: '/autoria',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAvisosRoute = AuthenticatedAvisosRouteImport.update({
   id: '/avisos',
   path: '/avisos',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/autoria': typeof AuthenticatedAutoriaRoute
   '/avisos': typeof AuthenticatedAvisosRoute
   '/captacoes': typeof AuthenticatedCaptacoesRoute
   '/comandos': typeof AuthenticatedComandosRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByTo {
   '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/autoria': typeof AuthenticatedAutoriaRoute
   '/avisos': typeof AuthenticatedAvisosRoute
   '/captacoes': typeof AuthenticatedCaptacoesRoute
   '/comandos': typeof AuthenticatedComandosRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/lider': typeof LiderRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/area-manager': typeof AuthenticatedAreaManagerRoute
+  '/_authenticated/autoria': typeof AuthenticatedAutoriaRoute
   '/_authenticated/avisos': typeof AuthenticatedAvisosRoute
   '/_authenticated/captacoes': typeof AuthenticatedCaptacoesRoute
   '/_authenticated/comandos': typeof AuthenticatedComandosRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/lider'
     | '/sitemap.xml'
     | '/area-manager'
+    | '/autoria'
     | '/avisos'
     | '/captacoes'
     | '/comandos'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/lider'
     | '/sitemap.xml'
     | '/area-manager'
+    | '/autoria'
     | '/avisos'
     | '/captacoes'
     | '/comandos'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/lider'
     | '/sitemap.xml'
     | '/_authenticated/area-manager'
+    | '/_authenticated/autoria'
     | '/_authenticated/avisos'
     | '/_authenticated/captacoes'
     | '/_authenticated/comandos'
@@ -503,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/area-manager'
       fullPath: '/area-manager'
       preLoaderRoute: typeof AuthenticatedAreaManagerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/autoria': {
+      id: '/_authenticated/autoria'
+      path: '/autoria'
+      fullPath: '/autoria'
+      preLoaderRoute: typeof AuthenticatedAutoriaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/avisos': {
@@ -713,6 +732,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAreaManagerRoute: typeof AuthenticatedAreaManagerRoute
+  AuthenticatedAutoriaRoute: typeof AuthenticatedAutoriaRoute
   AuthenticatedAvisosRoute: typeof AuthenticatedAvisosRoute
   AuthenticatedCaptacoesRoute: typeof AuthenticatedCaptacoesRoute
   AuthenticatedComandosRoute: typeof AuthenticatedComandosRoute
@@ -740,6 +760,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAreaManagerRoute: AuthenticatedAreaManagerRoute,
+  AuthenticatedAutoriaRoute: AuthenticatedAutoriaRoute,
   AuthenticatedAvisosRoute: AuthenticatedAvisosRoute,
   AuthenticatedCaptacoesRoute: AuthenticatedCaptacoesRoute,
   AuthenticatedComandosRoute: AuthenticatedComandosRoute,

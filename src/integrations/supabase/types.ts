@@ -432,6 +432,7 @@ export type Database = {
       chat_messages: {
         Row: {
           avatar_url: string
+          canal: string
           created_at: string
           id: string
           texto: string
@@ -440,6 +441,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string
+          canal?: string
           created_at?: string
           id?: string
           texto: string
@@ -448,6 +450,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string
+          canal?: string
           created_at?: string
           id?: string
           texto?: string
@@ -1965,6 +1968,45 @@ export type Database = {
         }
         Relationships: []
       }
+      registro_autoria: {
+        Row: {
+          acao: string
+          antes: Json | null
+          campos: string[]
+          criado_em: string
+          depois: Json | null
+          id: number
+          registro_id: string | null
+          tabela: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          acao: string
+          antes?: Json | null
+          campos?: string[]
+          criado_em?: string
+          depois?: Json | null
+          id?: never
+          registro_id?: string | null
+          tabela: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          acao?: string
+          antes?: Json | null
+          campos?: string[]
+          criado_em?: string
+          depois?: Json | null
+          id?: never
+          registro_id?: string | null
+          tabela?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           actions: string[]
@@ -2196,6 +2238,33 @@ export type Database = {
           status?: string
           titulo?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_anotacoes: {
+        Row: {
+          autor_id: string | null
+          autor_nome: string | null
+          criado_em: string
+          id: number
+          staff_id: string
+          texto: string
+        }
+        Insert: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          criado_em?: string
+          id?: never
+          staff_id: string
+          texto: string
+        }
+        Update: {
+          autor_id?: string | null
+          autor_nome?: string | null
+          criado_em?: string
+          id?: never
+          staff_id?: string
+          texto?: string
         }
         Relationships: []
       }

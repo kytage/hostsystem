@@ -67,6 +67,11 @@ import { PermissoesModal } from "@/components/permissoes-modal";
 import { PuxarCommit } from "@/components/puxar-commit";
 import { BotaoReiniciarSite } from "@/components/reiniciar-site";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
+import {
+  BotaoAnotacoes,
+  podeAnotar,
+  useStaffAnotacoes,
+} from "@/components/equipe/staff-anotacoes";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
@@ -183,6 +188,9 @@ function EquipePage() {
   const podeEditar = legacyManager || can("usuarios", "edit");
   const podeExcluir = legacyManager || can("usuarios", "delete");
   const isFounder = myRole === "founder";
+  // anotações sobre cada staff (Coordinator+)
+  const anota = podeAnotar(myRole);
+  const { data: anotacoes = [] } = useStaffAnotacoes(anota);
 
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ["users-list"],
@@ -700,7 +708,17 @@ function EquipePage() {
                       className="border-b border-white/[0.06] align-top last:border-0 hover:bg-white/[0.03]"
                     >
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {u.host_id || "—"}
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-[1.5rem]">{u.host_id || "—"}</span>
+                          {anota && (
+                            <BotaoAnotacoes
+                              staffId={u.id}
+                              staffNome={u.username}
+                              anotacoes={anotacoes}
+                              souFounder={isFounder}
+                            />
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">

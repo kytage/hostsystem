@@ -1,101 +1,164 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AtSign,
-  Crown,
-  Hand,
-  ImagePlus,
-  Loader2,
-  MessageCircle,
-  Send,
-  Smile,
-  Users,
-  X,
-} from "lucide-react";
+import { Hand, ImagePlus, Loader2, MessageCircle, Send, Smile, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
-import { ROLE_LABELS, ROLE_ORDER, type AppRole } from "@/lib/permissions";
+import { ROLE_LABELS, useAreas, type AppRole } from "@/lib/permissions";
+import { roleRank } from "@/lib/roles";
 import { pasteImageFromEvent } from "@/lib/clipboard-image";
 import { playPlim, type CutucadaPayload } from "@/lib/cutucar";
 import {
+  CANAL_GERAL,
+  STATUS_CONFIG,
+  areaDoCanal,
+  canalDaArea,
   fetchChatMessages,
   fetchChatProfiles,
   renderMentions,
   sendChatMessage,
   updateMyStatus,
-  STATUS_CONFIG,
+  type CanalChat,
   type ChatProfile,
   type PresenceStatus,
 } from "@/lib/chat";
+import { BANNER_PADRAO } from "@/components/perfil/perfil-cartao";
 import { cn } from "@/lib/utils";
 import { getAuthUserData } from "@/lib/auth-cache";
 
 const EMOJIS = [
-  "😀", "😂", "🤣", "😊", "😍", "🥰", "😎", "🤔", "😴", "😭",
-  "😡", "🥳", "🤝", "👍", "👎", "👏", "🙏", "💪", "🔥", "❤️",
-  "💯", "⭐", "🎉", "🚀", "🍀", "☕", "🍔", "⚽", "🏆", "💀",
+  "😀",
+  "😂",
+  "🤣",
+  "😊",
+  "😍",
+  "🥰",
+  "😎",
+  "🤔",
+  "😴",
+  "😭",
+  "😡",
+  "🥳",
+  "🤝",
+  "👍",
+  "👎",
+  "👏",
+  "🙏",
+  "💪",
+  "🔥",
+  "❤️",
+  "💯",
+  "⭐",
+  "🎉",
+  "🚀",
+  "🍀",
+  "☕",
+  "🍔",
+  "⚽",
+  "🏆",
+  "💀",
 ];
 
-function StatusDot({ status, className }: { status: string; className?: string }) {
-  const cfg = STATUS_CONFIG[(status as PresenceStatus) ?? "online"] ?? STATUS_CONFIG.online;
-  const isOffline = status === "offline" || status === "invisivel";
+const CHAVE_CANAL = "host-chat-canal";
+
+/** Status de quem está com o painel aberto agora (presença real), ou offline. */
+function statusEfetivo(p: ChatProfile, online: Set<string>): string {
+  if (!online.has(p.id) || p.status === "invisivel") return "offline";
+  return p.status || "online";
+}
+
+function Bolinha({ status, className }: { status: string; className?: string }) {
+  const cfg = STATUS_CONFIG[status as PresenceStatus] ?? STATUS_CONFIG.online;
   return (
     <span
       className={cn(
-        "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-black",
-        isOffline ? "bg-muted-foreground" : cfg.dot,
-        className
+        "chat-bolinha",
+        status === "offline" ? "bg-muted-foreground" : cfg.dot,
+        className,
       )}
     />
   );
 }
 
-function ProfilePop({
-  profile,
+/** Cartão de perfil (banner, foto, cargo, áreas e bio) ao clicar em alguém. */
+function CartaoPerfil({
+  perfil,
   status,
-  onClose,
+  areas,
+  onFechar,
   onCutucar,
 }: {
-  profile: ChatProfile;
+  perfil: ChatProfile;
   status: string;
-  onClose: () => void;
-  onCutucar: (profile: ChatProfile) => void;
+  areas: { key: string; label: string; emoji?: string | null }[];
+  onFechar: () => void;
+  onCutucar: (p: ChatProfile) => void;
 }) {
-  const isOffline = status === "offline" || status === "invisivel";
-  const cfg = STATUS_CONFIG[(status as PresenceStatus) ?? "online"] ?? STATUS_CONFIG.online;
+  const cfg = STATUS_CONFIG[status as PresenceStatus] ?? STATUS_CONFIG.online;
+  const suas = areas.filter((a) => perfil.areas.includes(a.key));
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && onFechar();
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [onFechar]);
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-72 overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
-        <div className="h-16 bg-gradient-to-r from-primary/60 to-primary/20" />
-        <div className="-mt-8 px-4 pb-4">
-          <div className="relative inline-block">
+    <div
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+      onClick={onFechar}
+    >
+      <div className="chat-cartao" onClick={(e) => e.stopPropagation()}>
+        <div className="chat-cartao-banner">
+          <img src={perfil.banner_url || BANNER_PADRAO} alt="" draggable={false} />
+          <button type="button" className="chat-cartao-fechar" onClick={onFechar} title="Fechar">
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className="px-4 pb-4">
+          <div className="relative -mt-9 inline-block">
             <img
-              src={profile.avatar_url || DEFAULT_AVATAR_URL}
-              alt={profile.username}
-              className="size-16 rounded-2xl border-4 border-black object-cover"
+              src={perfil.avatar_url || DEFAULT_AVATAR_URL}
+              alt={perfil.username}
+              className="size-[72px] rounded-[20px] border-4 border-[#0c0c0d] object-cover"
             />
-            <StatusDot status={status} className="size-4 -bottom-0 -right-0" />
+            <Bolinha status={status} className="!size-4 !border-[3px]" />
           </div>
-          <p className="mt-2 text-base font-semibold text-white">{profile.username}</p>
-          <p className="flex items-center gap-1.5 text-xs text-white/50">
-            <span className={cn("size-2 rounded-full", isOffline ? "bg-muted-foreground" : cfg.dot)} />
-            {isOffline ? "Offline" : cfg.label}
+          <p className="mt-1.5 text-[16px] font-semibold text-white">{perfil.username}</p>
+          <p className="flex items-center gap-2 text-[12px] text-white/55">
+            <span>{ROLE_LABELS[perfil.role as AppRole] ?? perfil.role}</span>
+            <span className="text-white/25">·</span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  status === "offline" ? "bg-muted-foreground" : cfg.dot,
+                )}
+              />
+              {status === "offline" ? "Offline" : cfg.label}
+            </span>
           </p>
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+          {suas.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-1">
+              {suas.map((a) => (
+                <span key={a.key} className="hc-selo !h-[22px] !text-[10.5px]">
+                  {a.emoji} {a.label}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-3 rounded-[14px] bg-white/[0.05] p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
               Sobre mim
             </p>
-            <p className="mt-1 whitespace-pre-line text-xs text-white/90">
-              {profile.bio || "Este usuário ainda não escreveu uma bio."}
+            <p className="mt-1 whitespace-pre-line text-[12.5px] text-white/85">
+              {perfil.bio || "Este usuário ainda não escreveu uma bio."}
             </p>
           </div>
           <button
-            onClick={() => onCutucar(profile)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            type="button"
+            onClick={() => onCutucar(perfil)}
+            className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-full bg-white text-[12.5px] font-semibold text-black transition-opacity hover:opacity-90"
           >
-            <Hand className="size-4" />
-            Cutucar 👉
+            <Hand className="size-4" /> Cutucar
           </button>
         </div>
       </div>
@@ -103,533 +166,500 @@ function ProfilePop({
   );
 }
 
+/**
+ * Chat da equipe: botão de mensagem no canto direito que abre uma janela com o CHAT GERAL e o
+ * CHAT DA ÁREA (só aparece para quem é da área; com mais de uma, escolhe qual). Ao lado, quem
+ * está online e offline naquele chat; clicar em alguém abre o perfil com o banner.
+ */
 export function ChatWidget() {
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [showMembers, setShowMembers] = useState(false);
-  const [texto, setTexto] = useState("");
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [viewProfile, setViewProfile] = useState<ChatProfile | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const cutucarChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-  const { data: messages = [] } = useQuery({
-    queryKey: ["chat-messages"],
-    queryFn: () => fetchChatMessages(),
+  const qc = useQueryClient();
+  const [aberto, setAberto] = useState(false);
+  const [canal, setCanal] = useState<CanalChat>(() => {
+    try {
+      return localStorage.getItem(CHAVE_CANAL) || CANAL_GERAL;
+    } catch {
+      return CANAL_GERAL;
+    }
   });
-  const { data: profiles = [] } = useQuery({
+  const [membrosNoCelular, setMembrosNoCelular] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [emojis, setEmojis] = useState(false);
+  const [verPerfil, setVerPerfil] = useState<ChatProfile | null>(null);
+  const [naoLidas, setNaoLidas] = useState(0);
+  const [online, setOnline] = useState<Set<string>>(new Set());
+  const lista = useRef<HTMLDivElement>(null);
+  const entrada = useRef<HTMLTextAreaElement>(null);
+  const canalCutucar = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const abertoRef = useRef(aberto);
+  abertoRef.current = aberto;
+
+  const { data: areasTodas = [] } = useAreas();
+  const { data: perfis = [] } = useQuery({
     queryKey: ["chat-profiles"],
     queryFn: fetchChatProfiles,
+    staleTime: 60_000,
   });
-
-  const { data: me } = useQuery({
+  const { data: eu } = useQuery({
     queryKey: ["chat-me"],
-    queryFn: async () => {
-      const auth = await getAuthUserData();
-      return auth.user?.id ?? null;
-    },
+    queryFn: async () => (await getAuthUserData()).user?.id ?? null,
   });
-  const myProfile = profiles.find((p) => p.id === me);
-  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
+  const meuPerfil = perfis.find((p) => p.id === eu);
+  const minhasAreas = useMemo(
+    () => areasTodas.filter((a) => meuPerfil?.areas.includes(a.key)),
+    [areasTodas, meuPerfil],
+  );
 
-  // Presença real (quem está com o app aberto agora)
+  // canal de uma área que a pessoa não tem mais: volta para o geral
+  const areaAtual = areaDoCanal(canal);
+  const canalValido =
+    !areaAtual || !meuPerfil || meuPerfil.areas.includes(areaAtual) ? canal : CANAL_GERAL;
+  const trocarCanal = (c: CanalChat) => {
+    setCanal(c);
+    try {
+      localStorage.setItem(CHAVE_CANAL, c);
+    } catch {
+      // sem armazenamento: só não lembra
+    }
+  };
+
+  const { data: mensagens = [], isLoading: carregando } = useQuery({
+    queryKey: ["chat-messages", canalValido],
+    queryFn: () => fetchChatMessages(canalValido),
+    enabled: aberto,
+  });
+
+  // presença real: quem está com o painel aberto agora
   useEffect(() => {
-    if (!me) return;
-    const channel = supabase.channel("chat-presence", {
-      config: { presence: { key: me } },
+    if (!eu) return;
+    const ch = supabase.channel("chat-presence", { config: { presence: { key: eu } } });
+    ch.on("presence", { event: "sync" }, () =>
+      setOnline(new Set(Object.keys(ch.presenceState()))),
+    ).subscribe(async (s) => {
+      if (s === "SUBSCRIBED") await ch.track({ user_id: eu, at: Date.now() });
     });
-    channel
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        setOnlineIds(new Set(Object.keys(state)));
-      })
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({ user_id: me, at: Date.now() });
-        }
-      });
     return () => {
-      void supabase.removeChannel(channel);
+      void supabase.removeChannel(ch);
     };
-  }, [me]);
+  }, [eu]);
 
-  // Realtime (mensagens + perfis)
+  // mensagens novas e perfis atualizados
   useEffect(() => {
-    const channel = supabase
-      .channel("chat-realtime")
+    if (!eu) return;
+    const ch = supabase
+      .channel(`chat-realtime-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages" },
-        () => void queryClient.invalidateQueries({ queryKey: ["chat-messages"] })
+        (e) => {
+          const m = e.new as { user_id: string; canal: string };
+          void qc.invalidateQueries({ queryKey: ["chat-messages", m.canal] });
+          if (m.user_id !== eu && !abertoRef.current) setNaoLidas((n) => n + 1);
+        },
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles" },
-        () => void queryClient.invalidateQueries({ queryKey: ["chat-profiles"] })
+        () => void qc.invalidateQueries({ queryKey: ["chat-profiles"] }),
       )
       .subscribe();
     return () => {
-      void supabase.removeChannel(channel);
+      void supabase.removeChannel(ch);
     };
-  }, [queryClient]);
+  }, [qc, eu]);
 
-  // Canal de cutucadas (broadcast)
+  // cutucadas
   useEffect(() => {
-    const channel = supabase
+    const ch = supabase
       .channel("cutucadas")
       .on("broadcast", { event: "cutucar" }, ({ payload }) => {
         const p = payload as CutucadaPayload;
-        if (myProfile && p.para === myProfile.username) {
+        if (meuPerfil && p.para === meuPerfil.username) {
           playPlim();
-          toast(`${p.de} cutucou você! 👉`, {
-            description: "Alguém está chamando sua atenção no chat.",
-            duration: 6000,
-          });
+          toast(`${p.de} cutucou você!`, { description: "Alguém está chamando você no chat." });
         }
       })
       .subscribe();
-    cutucarChannelRef.current = channel;
+    canalCutucar.current = ch;
     return () => {
-      cutucarChannelRef.current = null;
-      void supabase.removeChannel(channel);
+      canalCutucar.current = null;
+      void supabase.removeChannel(ch);
     };
-  }, [myProfile?.username]);
+  }, [meuPerfil?.username]);
 
-  // Scroll para o fim
   useEffect(() => {
-    if (open && listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, [messages.length, open]);
+    if (aberto) setNaoLidas(0);
+  }, [aberto]);
 
-  const sendMutation = useMutation({
-    mutationFn: sendChatMessage,
+  // Esc fecha a janela
+  useEffect(() => {
+    if (!aberto) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !verPerfil) setAberto(false);
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [aberto, verPerfil]);
+
+  useEffect(() => {
+    if (aberto && lista.current) lista.current.scrollTop = lista.current.scrollHeight;
+  }, [mensagens.length, aberto, canalValido]);
+
+  const enviar = useMutation({
+    mutationFn: (t: string) => sendChatMessage(t, canalValido),
     onSuccess: () => {
       setTexto("");
-      setMentionQuery(null);
-      void queryClient.invalidateQueries({ queryKey: ["chat-messages"] });
+      void qc.invalidateQueries({ queryKey: ["chat-messages", canalValido] });
     },
+    onError: () => toast.error("Não deu para enviar a mensagem."),
   });
-
-  const statusMutation = useMutation({
+  const mudarStatus = useMutation({
     mutationFn: updateMyStatus,
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["chat-profiles"] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["chat-profiles"] }),
   });
 
-  function handleChange(value: string) {
-    setTexto(value);
-    const match = value.match(/@([\w.+-]*)$/);
-    setMentionQuery(match ? (match[1] ?? "") : null);
-    // Auto-resize do textarea
-    const el = inputRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
-    }
-  }
-
-  function insertMention(username: string) {
-    setTexto((t) => t.replace(/@[\w.+-]*$/, `@${username} `));
-    setMentionQuery(null);
-    inputRef.current?.focus();
-  }
-
-  function handlePaste(e: React.ClipboardEvent) {
-    pasteImageFromEvent(e, (dataUrl) => {
-      void sendMutation.mutateAsync(dataUrl);
-    });
-  }
-
-  function submit() {
+  const submeter = () => {
     const t = texto.trim();
-    if (!t || sendMutation.isPending) return;
-    sendMutation.mutate(t);
-    setShowEmoji(false);
-    const el = inputRef.current;
-    if (el) el.style.height = "auto";
-  }
+    if (!t || enviar.isPending) return;
+    enviar.mutate(t);
+    setEmojis(false);
+    if (entrada.current) entrada.current.style.height = "auto";
+  };
 
-  function cutucar(profile: ChatProfile) {
-    if (!myProfile) return;
-    if (profile.id === me) {
-      toast("Você não pode cutucar a si mesmo 😅");
+  const cutucar = (p: ChatProfile) => {
+    if (!meuPerfil) return;
+    if (p.id === eu) {
+      toast("Você não pode cutucar a si mesmo.");
       return;
     }
-    void cutucarChannelRef.current?.send({
+    void canalCutucar.current?.send({
       type: "broadcast",
       event: "cutucar",
-      payload: { de: myProfile.username, para: profile.username } satisfies CutucadaPayload,
+      payload: { de: meuPerfil.username, para: p.username } satisfies CutucadaPayload,
     });
-    toast.success(`Você cutucou ${profile.username}! 👉`);
-  }
+    toast.success(`Você cutucou ${p.username}!`);
+  };
 
-  const mentionOptions = mentionQuery !== null
-    ? profiles.filter((p) =>
-        p.username.toLowerCase().startsWith(mentionQuery.toLowerCase())
-      )
-    : [];
+  // quem é deste chat: todos no geral, só os da área no chat da área
+  const membros = perfis
+    .filter((p) => !areaAtual || p.areas.includes(areaAtual))
+    .sort((a, b) => roleRank(a.role) - roleRank(b.role) || a.username.localeCompare(b.username));
+  const ligados = membros.filter((p) => statusEfetivo(p, online) !== "offline");
+  const desligados = membros.filter((p) => statusEfetivo(p, online) === "offline");
+  const areaInfo = areasTodas.find((a) => a.key === areaAtual);
+  const titulo = areaAtual ? `Chat · ${areaInfo?.label ?? areaAtual}` : "Chat geral";
 
-  /** Status efetivo: só fica online se estiver com o app aberto (presença real) */
-  function effectiveStatus(p: ChatProfile): string {
-    if (!onlineIds.has(p.id) || p.status === "invisivel") return "offline";
-    return p.status || "online";
-  }
-
-  const online = profiles.filter((p) => effectiveStatus(p) !== "offline");
-  const offline = profiles.filter((p) => effectiveStatus(p) === "offline");
-
-  /** Agrupa membros por cargo, como no Discord */
-  const roleGroups = ROLE_ORDER.map((role) => ({
-    role,
-    label: ROLE_LABELS[role as AppRole] ?? role,
-    members: profiles
-      .filter((p) => p.role === role)
-      .sort((a, b) => {
-        const ao = effectiveStatus(a) === "offline" ? 1 : 0;
-        const bo = effectiveStatus(b) === "offline" ? 1 : 0;
-        return ao - bo || a.username.localeCompare(b.username);
-      }),
-  })).filter((g) => g.members.length > 0);
-
-  function handleMemberClick(profile: ChatProfile) {
-    setViewProfile(profile);
-    setShowMembers(false);
-  }
+  const Pessoa = ({ p }: { p: ChatProfile }) => {
+    const st = statusEfetivo(p, online);
+    return (
+      <button
+        type="button"
+        className="chat-pessoa"
+        data-offline={st === "offline" ? "" : undefined}
+        onClick={() => setVerPerfil(p)}
+      >
+        <span className="relative shrink-0">
+          <img src={p.avatar_url || DEFAULT_AVATAR_URL} alt="" className="chat-pessoa-foto" />
+          <Bolinha status={st} />
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[12.5px] font-medium">{p.username}</span>
+          <span className="block truncate text-[10.5px] text-white/40">
+            {ROLE_LABELS[p.role as AppRole] ?? p.role}
+          </span>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <>
-      {/* Botão flutuante */}
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-5 right-5 z-[80] flex size-13 items-center justify-center rounded-full bg-primary p-3.5 text-primary-foreground shadow-lg transition-transform hover:scale-105"
-        aria-label={open ? "Fechar chat geral" : "Abrir chat geral"}
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        className="chat-flutuante"
+        aria-label={aberto ? "Fechar chat" : "Abrir chat"}
+        title={aberto ? "Fechar chat" : "Chat da equipe"}
+        data-aberto={aberto ? "" : undefined}
       >
-        {open ? <X className="size-5" /> : <MessageCircle className="size-5" />}
+        {aberto ? (
+          <X className="size-[18px]" strokeWidth={1.75} />
+        ) : (
+          <MessageCircle className="size-[18px]" strokeWidth={1.75} />
+        )}
+        {!aberto && naoLidas > 0 && (
+          <span className="chat-flutuante-conta">{naoLidas > 9 ? "9+" : naoLidas}</span>
+        )}
       </button>
 
-      {open && (
-        <div className="fixed inset-y-0 right-0 z-[60] flex h-full w-full max-w-[520px] flex-col border-l border-white/10 bg-black shadow-2xl sm:w-[460px] md:max-w-[560px]">
-          <div className="flex h-full min-h-0 flex-1">
-            {/* Coluna principal */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Chat Geral</h3>
-                  <p className="flex items-center gap-1.5 text-[11px] text-white/50">
-                    <span className="size-1.5 rounded-full bg-success" />
-                    {online.length} online · {offline.length} offline
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
+      {aberto && (
+        <div className="chat-janela" role="dialog" aria-label="Chat da equipe">
+          <aside className="chat-lado" data-celular-aberto={membrosNoCelular ? "" : undefined}>
+            <div className="chat-abas">
+              <button
+                type="button"
+                data-ativo={!areaAtual ? "" : undefined}
+                onClick={() => trocarCanal(CANAL_GERAL)}
+              >
+                Chat geral
+              </button>
+              <button
+                type="button"
+                data-ativo={areaAtual ? "" : undefined}
+                disabled={minhasAreas.length === 0}
+                title={minhasAreas.length === 0 ? "Você não tem área" : undefined}
+                onClick={() => minhasAreas[0] && trocarCanal(canalDaArea(minhasAreas[0].key))}
+              >
+                Chat área
+              </button>
+            </div>
+            {areaAtual && minhasAreas.length > 1 && (
+              <div className="chat-areas">
+                {minhasAreas.map((a) => (
                   <button
-                    onClick={() => setShowMembers((s) => !s)}
-                    title="Ver membros"
+                    key={a.key}
+                    type="button"
+                    data-ativo={a.key === areaAtual ? "" : undefined}
+                    onClick={() => trocarCanal(canalDaArea(a.key))}
+                  >
+                    {a.emoji} {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+              <p className="chat-grupo">Online — {ligados.length}</p>
+              {ligados.map((p) => (
+                <Pessoa key={p.id} p={p} />
+              ))}
+              <p className="chat-grupo">Offline — {desligados.length}</p>
+              {desligados.map((p) => (
+                <Pessoa key={p.id} p={p} />
+              ))}
+            </div>
+          </aside>
+
+          <section className="chat-conversa">
+            <header className="chat-topo">
+              <button
+                type="button"
+                className="chat-botao chat-so-celular"
+                onClick={() => setMembrosNoCelular((v) => !v)}
+                title="Membros"
+              >
+                <Users className="size-4" strokeWidth={1.75} />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-semibold text-white">{titulo}</p>
+                <p className="flex items-center gap-1.5 text-[11px] text-white/45">
+                  <span className="size-1.5 rounded-full bg-success" />
+                  {ligados.length} online · {desligados.length} offline
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5" title="Meu status">
+                {(["online", "ocupado", "ausente", "invisivel"] as PresenceStatus[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    title={STATUS_CONFIG[s].label}
+                    onClick={() => mudarStatus.mutate(s)}
                     className={cn(
-                      "flex size-8 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white",
-                      showMembers && "bg-white/10 text-white"
+                      "size-3 rounded-full transition-transform hover:scale-125",
+                      STATUS_CONFIG[s].dot,
+                      meuPerfil?.status === s
+                        ? "ring-2 ring-white/40 ring-offset-1 ring-offset-black"
+                        : "opacity-35",
                     )}
-                  >
-                    <Users className="size-4" />
-                  </button>
-                  <button
-                    onClick={() => setOpen(false)}
-                    title="Fechar"
-                    className="flex size-8 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    <X className="size-4" />
-                  </button>
-                  {/* Meu status */}
-                  <div className="flex items-center gap-2">
-                    {(["online", "ocupado", "ausente", "invisivel"] as PresenceStatus[]).map(
-                      (s) => (
-                        <button
-                          key={s}
-                          title={STATUS_CONFIG[s].label}
-                          onClick={() => statusMutation.mutate(s)}
-                          className={cn(
-                            "size-3.5 rounded-full transition-transform hover:scale-125",
-                            STATUS_CONFIG[s].dot,
-                            myProfile?.status === s
-                              ? "ring-2 ring-white/40 ring-offset-1 ring-offset-black"
-                              : "opacity-40"
-                          )}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-
-          {/* Mensagens */}
-          <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 scrollbar-thin">
-            {messages.length === 0 && (
-              <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-white/40">
-                Nenhuma mensagem ainda. Puxe assunto! 👋
-              </p>
-            )}
-            {messages.map((m) => {
-              const profile = profiles.find((p) => p.id === m.userId);
-              const isImage = m.texto.startsWith("data:image/");
-              const isMine = m.userId === me;
-              return (
-                <div key={m.id} className={cn("flex gap-2.5", isMine && "flex-row-reverse")}>
-                  <button
-                    onClick={() => profile && setViewProfile(profile)}
-                    className="relative shrink-0 self-start"
-                    title={`Ver perfil de ${m.username}`}
-                  >
-                    <img
-                      src={m.avatarUrl}
-                      alt={m.username}
-                      className="size-8 rounded-lg object-cover"
-                    />
-                    {profile && <StatusDot status={effectiveStatus(profile)} />}
-                  </button>
-                  <div className={cn("min-w-0 max-w-[75%]", isMine && "text-right")}>
-                    <p className="text-[11px] text-white/40">
-                      <span className="font-semibold text-white">{m.username}</span>
-                      {" · "}
-                      {new Date(m.createdAt).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    {isImage ? (
-                      <img
-                        src={m.texto}
-                        alt="Imagem enviada no chat"
-                        className="mt-1 max-h-44 cursor-zoom-in rounded-xl border border-white/10"
-                        onClick={() => window.open(m.texto, "_blank")}
-                      />
-                    ) : (
-                      <p
-                        className={cn(
-                          "mt-0.5 inline-block whitespace-pre-wrap break-words rounded-xl px-3 py-1.5 text-left text-[13px]",
-                          isMine
-                            ? "bg-white/[0.09] text-foreground ring-1 ring-white/10"
-                            : "bg-white/10 text-white"
-                        )}
-                      >
-                        {renderMentions(m.texto).map((part, i) =>
-                          part.mention ? (
-                            <span
-                              key={i}
-                              className={cn(
-                                "rounded px-0.5 font-semibold",
-                                part.text === "@everyone"
-                                  ? "bg-warning/30 text-warning"
-                                  : "bg-primary/25 text-primary",
-                                isMine && "bg-white/25 text-primary-foreground"
-                              )}
-                            >
-                              {part.text}
-                            </span>
-                          ) : (
-                            <span key={i}>{part.text}</span>
-                          )
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Autocomplete de menção */}
-          {mentionQuery !== null && (mentionOptions.length > 0 || "everyone".startsWith(mentionQuery.toLowerCase())) && (
-            <div className="mx-3 mb-1 max-h-36 overflow-y-auto rounded-xl border border-white/10 bg-neutral-950 p-1 shadow-lg scrollbar-thin">
-              {"everyone".startsWith(mentionQuery.toLowerCase()) && (
-                <button
-                  onClick={() => insertMention("everyone")}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-white/10"
-                >
-                  <AtSign className="size-3.5 text-warning" />
-                  <span className="font-semibold text-warning">everyone</span>
-                  <span className="text-white/40">— notifica todos</span>
-                </button>
-              )}
-              {mentionOptions.slice(0, 6).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => insertMention(p.username)}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-white/10"
-                >
-                  <img
-                    src={p.avatar_url || DEFAULT_AVATAR_URL}
-                    alt=""
-                    className="size-5 rounded object-cover"
                   />
-                  <span className="font-semibold text-white">{p.username}</span>
-                </button>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+              <button
+                type="button"
+                className="chat-botao"
+                onClick={() => setAberto(false)}
+                title="Fechar"
+              >
+                <X className="size-4" strokeWidth={1.75} />
+              </button>
+            </header>
 
-          {/* Emoji picker */}
-          {showEmoji && (
-            <div className="mx-3 mb-1 grid grid-cols-10 gap-0.5 rounded-xl border border-white/10 bg-neutral-950 p-2 shadow-lg">
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => {
-                    setTexto((t) => t + e);
-                    inputRef.current?.focus();
-                  }}
-                  className="rounded-md p-1 text-lg hover:bg-white/10"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input */}
-          <div className="flex items-end gap-1.5 border-t border-white/10 p-3">
-            <button
-              onClick={() => setShowEmoji((s) => !s)}
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-              title="Emojis"
-            >
-              <Smile className="size-4.5" />
-            </button>
-            <label
-              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-              title="Enviar imagem/GIF (ou Ctrl+V)"
-            >
-              <ImagePlus className="size-4.5" />
-              <input
-                type="file"
-                accept="image/*,.gif"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    if (typeof reader.result === "string")
-                      void sendMutation.mutateAsync(reader.result);
-                  };
-                  reader.readAsDataURL(f);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            <textarea
-              ref={inputRef}
-              value={texto}
-              onChange={(e) => handleChange(e.target.value)}
-              onPaste={(e) => void handlePaste(e)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-              rows={1}
-              placeholder="Mensagem..."
-              title="@ para mencionar · Ctrl+V cola imagem"
-              className="h-9 max-h-24 min-h-9 flex-1 resize-none overflow-y-auto rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[13px] text-white outline-none placeholder:text-white/30 focus:border-primary/50"
-            />
-            <button
-              onClick={submit}
-              disabled={!texto.trim() || sendMutation.isPending}
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
-              title="Enviar"
-            >
-              {sendMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+            <div ref={lista} className="chat-mensagens scrollbar-thin">
+              {carregando ? (
+                <div className="grid h-full place-items-center">
+                  <Loader2 className="size-5 animate-spin text-white/40" />
+                </div>
+              ) : mensagens.length === 0 ? (
+                <p className="m-auto max-w-[260px] text-center text-[12px] text-white/40">
+                  Nenhuma mensagem ainda neste chat. Puxe assunto!
+                </p>
               ) : (
-                <Send className="size-4" />
+                mensagens.map((m, i) => {
+                  const perfil = perfis.find((p) => p.id === m.userId);
+                  const minha = m.userId === eu;
+                  const imagem = m.texto.startsWith("data:image/");
+                  // a mesma pessoa falando de novo em menos de 5 minutos: junta com a de cima
+                  const anterior = mensagens[i - 1];
+                  const seguida =
+                    !!anterior &&
+                    anterior.userId === m.userId &&
+                    new Date(m.createdAt).getTime() - new Date(anterior.createdAt).getTime() <
+                      5 * 60_000;
+                  return (
+                    <div
+                      key={m.id}
+                      className={cn("chat-msg", minha && "chat-msg-minha", seguida && "!mt-0.5")}
+                    >
+                      {!seguida ? (
+                        <button
+                          type="button"
+                          className="relative shrink-0 self-end"
+                          onClick={() => perfil && setVerPerfil(perfil)}
+                          title={`Ver perfil de ${m.username}`}
+                        >
+                          <img
+                            src={perfil?.avatar_url || m.avatarUrl}
+                            alt=""
+                            className="size-7 rounded-full object-cover"
+                          />
+                        </button>
+                      ) : (
+                        <span className="w-7 shrink-0" />
+                      )}
+                      <div className="min-w-0 max-w-[75%]">
+                        {!seguida && !minha && (
+                          <p className="mb-0.5 px-1 text-[10.5px] text-white/40">{m.username}</p>
+                        )}
+                        {imagem ? (
+                          <img
+                            src={m.texto}
+                            alt="Imagem enviada no chat"
+                            className="max-h-44 cursor-zoom-in rounded-[14px]"
+                            onClick={() => window.open(m.texto, "_blank")}
+                          />
+                        ) : (
+                          <p className="chat-balao">
+                            {renderMentions(m.texto).map((part, k) =>
+                              part.mention ? (
+                                <span key={k} className="font-semibold text-[#ff8f85]">
+                                  {part.text}
+                                </span>
+                              ) : (
+                                <span key={k}>{part.text}</span>
+                              ),
+                            )}
+                          </p>
+                        )}
+                        <p
+                          className={cn(
+                            "mt-0.5 px-1 text-[10px] text-white/30",
+                            minha && "text-right",
+                          )}
+                        >
+                          {new Date(m.createdAt).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
               )}
-            </button>
-          </div>
             </div>
 
-            {/* Painel lateral de membros — estilo Discord (grupos por cargo) */}
-            {showMembers && (
-              <div className="flex w-60 shrink-0 flex-col border-l border-white/10 bg-neutral-950">
-                <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                    Membros — {profiles.length}
-                  </p>
+            {emojis && (
+              <div className="mx-3 mb-1 grid grid-cols-10 gap-0.5 rounded-[14px] bg-white/[0.05] p-2">
+                {EMOJIS.map((e) => (
                   <button
-                    onClick={() => setShowMembers(false)}
-                    className="text-white/40 hover:text-white"
-                    title="Fechar"
+                    key={e}
+                    type="button"
+                    onClick={() => {
+                      setTexto((t) => t + e);
+                      entrada.current?.focus();
+                    }}
+                    className="rounded-md p-1 text-lg hover:bg-white/10"
                   >
-                    <X className="size-3.5" />
+                    {e}
                   </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
-                  {roleGroups.map((group) => (
-                    <div key={group.role} className="pb-2">
-                      <p className="flex items-center gap-1 px-1 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-white/30">
-                        {group.role === "founder" && (
-                          <Crown className="size-3 text-warning" />
-                        )}
-                        {group.label} — {group.members.length}
-                      </p>
-                      {group.members.map((p) => {
-                        const st = effectiveStatus(p);
-                        const isOffline = st === "offline";
-                        const cfg =
-                          STATUS_CONFIG[(st as PresenceStatus) ?? "online"] ??
-                          STATUS_CONFIG.online;
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => handleMemberClick(p)}
-                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/10"
-                          >
-                            <div className="relative shrink-0">
-                              <img
-                                src={p.avatar_url || DEFAULT_AVATAR_URL}
-                                alt=""
-                                className={cn(
-                                  "size-7 rounded-full object-cover",
-                                  isOffline && "opacity-40 grayscale"
-                                )}
-                              />
-                              <span
-                                className={cn(
-                                  "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-neutral-950",
-                                  isOffline ? "bg-muted-foreground" : cfg.dot
-                                )}
-                              />
-                            </div>
-                            <span
-                              className={cn(
-                                "truncate text-xs font-medium",
-                                isOffline ? "text-white/35" : "text-white"
-                              )}
-                            >
-                              {p.username}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             )}
-          </div>
+
+            <div className="chat-entrada">
+              <button
+                type="button"
+                className="chat-botao"
+                onClick={() => setEmojis((v) => !v)}
+                title="Emojis"
+              >
+                <Smile className="size-4" strokeWidth={1.75} />
+              </button>
+              <label className="chat-botao cursor-pointer" title="Enviar imagem (ou Ctrl+V)">
+                <ImagePlus className="size-4" strokeWidth={1.75} />
+                <input
+                  type="file"
+                  accept="image/*,.gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const r = new FileReader();
+                    r.onload = () => {
+                      if (typeof r.result === "string") enviar.mutate(r.result);
+                    };
+                    r.readAsDataURL(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <textarea
+                ref={entrada}
+                value={texto}
+                onChange={(e) => {
+                  setTexto(e.target.value);
+                  const el = entrada.current;
+                  if (el) {
+                    el.style.height = "auto";
+                    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
+                  }
+                }}
+                onPaste={(e) => pasteImageFromEvent(e, (url) => enviar.mutate(url))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    submeter();
+                  }
+                }}
+                rows={1}
+                placeholder="Sua mensagem…"
+                className="chat-campo"
+              />
+              <button
+                type="button"
+                onClick={submeter}
+                disabled={!texto.trim() || enviar.isPending}
+                className="chat-enviar"
+                title="Enviar"
+              >
+                {enviar.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" strokeWidth={1.75} />
+                )}
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
-      {viewProfile && (
-        <ProfilePop
-          profile={viewProfile}
-          status={effectiveStatus(viewProfile)}
-          onClose={() => setViewProfile(null)}
+      {verPerfil && (
+        <CartaoPerfil
+          perfil={verPerfil}
+          status={statusEfetivo(verPerfil, online)}
+          areas={areasTodas}
+          onFechar={() => setVerPerfil(null)}
           onCutucar={(p) => {
             cutucar(p);
-            setViewProfile(null);
+            setVerPerfil(null);
           }}
         />
       )}
