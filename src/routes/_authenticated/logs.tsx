@@ -35,6 +35,7 @@ import { useAreas } from "@/lib/permissions";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { ROLE_LABELS, ROLE_ORDER } from "@/lib/roles";
 import { lerLog } from "@/lib/logs-leitura";
+import { filtroDoBancoPorId, logMencionaId } from "@/lib/logs-id";
 import {
   CHAVE_ABRIR_SUSPEITOS,
   segundosDoAlerta,
@@ -141,23 +142,19 @@ async function buscarLogs(
   } else if (t && tipo === "id") {
     const id = t.replace(/^#/, "");
     if (!/^\d{1,9}$/.test(id)) return [];
-    // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"...
-    q = q.or(
-      [
-        `jogador_id.eq.${id}`,
-        `mensagem.ilike.%#${id} %`,
-        `mensagem.ilike.%#${id}-%`,
-        `mensagem.ilike.%: ${id} -%`,
-        `mensagem.ilike.%: #${id}%`,
-        `mensagem.ilike.%: ${id}\n%`,
-      ].join(","),
-    );
+    // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"... ("#3" não pode pegar "#396")
+    q = q.or(filtroDoBancoPorId(id));
   } else if (t && tipo === "steam") {
     q = q.ilike("mensagem", `%${termoDaSteam(t)}%`);
   }
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as LinhaDeLog[];
+  const linhas = (data ?? []) as LinhaDeLog[];
+  if (t && tipo === "id") {
+    const id = t.replace(/^#/, "");
+    return linhas.filter((l) => logMencionaId(l, id));
+  }
+  return linhas;
 }
 
 /** Quanto tempo o radar de uma log fica no mapa ao vivo. */

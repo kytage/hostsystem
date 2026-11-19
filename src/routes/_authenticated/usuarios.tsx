@@ -191,6 +191,257 @@ function CopyValue({ value }: { value: string }) {
   );
 }
 
+
+/** Cor de cada cargo (faixa do grupo e traço da linha), no estilo da planilha do Ilegal. */
+const ROLE_HEX: Record<AppRole, string> = {
+  founder: "#e5231b",
+  c_level: "#f5b301",
+  direcao: "#fb923c",
+  coordinator: "#f43f5e",
+  manager: "#a855f7",
+  head_moderator: "#3b82f6",
+  staff: "#22c55e",
+  support: "#14b8a6",
+  contributor: "#94a3b8",
+  dev: "#64748b",
+};
+
+const celulaEq = "px-3 py-[7px] align-middle";
+
+/**
+ * Tabela da Equipe no estilo da planilha do Ilegal: agrupada por cargo (faixa colorida), uma linha
+ * por pessoa, numerada, com as ações acendendo ao passar o mouse.
+ */
+function TabelaEquipe({
+  usuarios,
+  anota,
+  anotacoes,
+  isFounder,
+  podeEditar,
+  podeExcluir,
+  onCargo,
+  onRenomear,
+  onIds,
+  onAreas,
+  onToken,
+  onExcluir,
+  areaLabel,
+}: {
+  usuarios: UserRow[];
+  anota: boolean;
+  anotacoes: Parameters<typeof BotaoAnotacoes>[0]["anotacoes"];
+  isFounder: boolean;
+  podeEditar: boolean;
+  podeExcluir: boolean;
+  onCargo: (u: UserRow, role: AppRole) => void;
+  onRenomear: (u: UserRow) => void;
+  onIds: (u: UserRow) => void;
+  onAreas: (u: UserRow) => void;
+  onToken: (u: UserRow) => void;
+  onExcluir: (u: UserRow) => void;
+  areaLabel: (a: string) => string;
+}) {
+  const grupos = ROLE_ORDER.map((role) => ({ role, lista: usuarios.filter((u) => u.role === role) })).filter(
+    (g) => g.lista.length > 0,
+  );
+  const colunas = ["#", "ID Host", "Nome", "Cargo", "ID Discord", "Áreas", "Último login", ""];
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1100px] border-collapse text-left text-[12px] leading-tight">
+        <thead>
+          <tr className="border-b border-white/[0.06]">
+            {colunas.map((c, n) => (
+              <th
+                key={c || "acoes"}
+                className={cn(
+                  celulaEq,
+                  "py-[8px] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3",
+                  n === 0 && "w-[40px] text-center",
+                  n === 1 && "w-[88px]",
+                  n === 3 && "w-[170px]",
+                  n === 4 && "w-[190px]",
+                  n === 6 && "w-[110px]",
+                  n === 7 && "w-[150px]",
+                )}
+              >
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {grupos.length === 0 && (
+          <tbody>
+            <tr>
+              <td colSpan={colunas.length} className="px-4 py-10 text-center text-muted-foreground">
+                Nenhum registro encontrado.
+              </td>
+            </tr>
+          </tbody>
+        )}
+        {grupos.map(({ role, lista }) => {
+          const cor = ROLE_HEX[role];
+          const online = lista.filter((u) => isOnline(u.last_sign_in_at)).length;
+          return (
+            <tbody key={role}>
+              {/* faixa do cargo: a cor vem do canto e some para a direita */}
+              <tr className="border-b border-white/[0.06]">
+                <td
+                  colSpan={colunas.length}
+                  className="px-4 py-[6px]"
+                  style={{ background: `linear-gradient(90deg, ${cor}30, ${cor}0d 26%, transparent 58%)` }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="size-[7px] rounded-full" style={{ background: cor, boxShadow: `0 0 10px ${cor}` }} />
+                    <span className="text-[12.5px] font-semibold text-foreground">{ROLE_LABELS[role]}</span>
+                    <span className="font-display text-[12px] font-medium tabular-nums" style={{ color: cor }}>
+                      {lista.length}
+                    </span>
+                    {online > 0 && (
+                      <span className="flex items-center gap-1 text-[10.5px] text-emerald-300/90">
+                        <i className="size-1.5 rounded-full bg-emerald-400" /> {online} online
+                      </span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+              {lista.map((u, i) => {
+                const on = isOnline(u.last_sign_in_at);
+                const areasVisiveis = u.areas.slice(0, 3);
+                const resto = u.areas.slice(3);
+                return (
+                  <tr key={u.id} className="group border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]">
+                    <td
+                      className={cn(celulaEq, "text-center tabular-nums text-foreground/30")}
+                      style={{ boxShadow: `inset 2px 0 0 ${cor}` }}
+                    >
+                      {i + 1}
+                    </td>
+                    <td className={cn(celulaEq, "font-mono text-[11px] text-muted-foreground")}>
+                      <span className="flex items-center gap-1.5">
+                        <span className="min-w-[1.25rem]">{u.host_id || "—"}</span>
+                        {anota && (
+                          <BotaoAnotacoes staffId={u.id} staffNome={u.username} anotacoes={anotacoes} souFounder={isFounder} />
+                        )}
+                      </span>
+                    </td>
+                    <td className={celulaEq}>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="relative shrink-0">
+                          <img
+                            src={u.avatar_url || DEFAULT_AVATAR_URL}
+                            alt=""
+                            className="size-6 rounded-md border border-white/[0.08] bg-muted object-cover"
+                          />
+                          <span
+                            title={on ? "Online agora" : "Offline"}
+                            className={cn(
+                              "absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-[1.5px] border-card",
+                              on ? "bg-emerald-500" : "bg-muted-foreground/40",
+                            )}
+                          />
+                        </span>
+                        <span className="truncate font-semibold text-foreground" title={`@${u.username}`}>
+                          {u.username}
+                        </span>
+                      </span>
+                    </td>
+                    <td className={celulaEq}>
+                      {podeEditar && u.role !== "founder" ? (
+                        <MinimalSelect
+                          value={u.role}
+                          onChange={(v) => onCargo(u, v as AppRole)}
+                          className="h-7 w-full rounded-lg px-2.5 text-[11.5px] font-semibold"
+                          options={ROLE_ORDER.filter((x) => isFounder || x !== "founder").map((x) => ({
+                            value: x,
+                            label: ROLE_LABELS[x],
+                          }))}
+                        />
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-[11.5px] font-semibold">
+                          <span className="size-[7px] rounded-full" style={{ background: cor }} />
+                          {ROLE_LABELS[u.role]}
+                        </span>
+                      )}
+                    </td>
+                    <td className={cn(celulaEq, "[&_span]:text-[11px]")}>
+                      <CopyValue value={u.discord_id} />
+                    </td>
+                    <td className={celulaEq}>
+                      {u.areas.length === 0 ? (
+                        <span className="text-foreground/25">—</span>
+                      ) : (
+                        <span className="flex flex-wrap items-center gap-1">
+                          {areasVisiveis.map((a) => {
+                            const lider = (u.areaNiveis ?? {})[a] === "lider";
+                            return (
+                              <span
+                                key={a}
+                                title={lider ? "Líder da área" : "Auxiliar da área"}
+                                className={cn(
+                                  "flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-[2px] text-[10.5px] font-semibold",
+                                  lider ? "bg-amber-300/[0.09] text-foreground" : "bg-white/[0.04] text-muted-foreground",
+                                )}
+                              >
+                                {lider ? <Crown className="size-2.5 text-amber-300" /> : null}
+                                {areaLabel(a)}
+                              </span>
+                            );
+                          })}
+                          {resto.length > 0 && (
+                            <span
+                              title={resto.map(areaLabel).join(", ")}
+                              className="cursor-help rounded-md bg-white/[0.04] px-1.5 py-[2px] text-[10.5px] font-semibold text-ink-3"
+                            >
+                              +{resto.length}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className={celulaEq}>
+                      <UltimoLogin value={u.last_sign_in_at} />
+                    </td>
+                    <td className={celulaEq}>
+                      {/* ações discretas: acendem ao passar o mouse na linha */}
+                      <span className="flex items-center justify-end gap-1 opacity-45 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                        {podeEditar && (
+                          <>
+                            <button onClick={() => onRenomear(u)} title="Renomear usuário" className="hc-seta !size-6">
+                              <AtSign className="size-3" />
+                            </button>
+                            <button onClick={() => onIds(u)} title="Editar IDs" className="hc-seta !size-6">
+                              <Pencil className="size-3" />
+                            </button>
+                            <button onClick={() => onAreas(u)} title="Editar áreas" className="hc-seta !size-6">
+                              <MapPin className="size-3" />
+                            </button>
+                            <button onClick={() => onToken(u)} title="Gerar token de acesso" className="hc-seta !size-6">
+                              <KeyRound className="size-3" />
+                            </button>
+                          </>
+                        )}
+                        {podeExcluir && u.role !== "founder" && (
+                          <button
+                            onClick={() => onExcluir(u)}
+                            title="Excluir usuário"
+                            className="hc-seta !size-6 hover:!border-destructive/40 hover:!bg-destructive/10 hover:!text-destructive"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          );
+        })}
+      </table>
+    </div>
+  );
+}
+
 function EquipePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -700,188 +951,24 @@ function EquipePage() {
             />
           </div>
         ) : aba === "equipe" ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06] text-left text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
-                  <th className="px-4 py-3">ID Host</th>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Cargo</th>
-                  <th className="px-4 py-3">ID Discord</th>
-                  <th className="px-4 py-3">Áreas</th>
-                  <th className="px-4 py-3">Último login</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtradas.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum registro encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  filtradas.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="border-b border-white/[0.06] align-top last:border-0 hover:bg-white/[0.03]"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className="min-w-[1.5rem]">{u.host_id || "—"}</span>
-                          {anota && (
-                            <BotaoAnotacoes
-                              staffId={u.id}
-                              staffNome={u.username}
-                              anotacoes={anotacoes}
-                              souFounder={isFounder}
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="relative">
-                            <img
-                              src={u.avatar_url || DEFAULT_AVATAR_URL}
-                              alt={u.username}
-                              className="size-8 rounded-lg border border-white/[0.08] bg-muted object-cover"
-                            />
-                            <span
-                              className={cn(
-                                "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card",
-                                isOnline(u.last_sign_in_at)
-                                  ? "bg-emerald-500"
-                                  : "bg-muted-foreground/50",
-                              )}
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-foreground">
-                              {u.username}
-                              {u.host_id ? (
-                                <span className="text-muted-foreground"> #{u.host_id}</span>
-                              ) : null}
-                            </p>
-                            <p className="truncate text-[11px] text-muted-foreground">
-                              @{u.username}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {podeEditar && u.role !== "founder" ? (
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={cn("size-2 shrink-0 rounded-full", ROLE_DOT[u.role])}
-                            />
-                            <MinimalSelect
-                              value={u.role}
-                              onChange={(v) => mutRole.mutate({ userId: u.id, role: v as AppRole })}
-                              className="h-8 rounded-full px-3 text-xs font-semibold"
-                              options={ROLE_ORDER.filter((x) => isFounder || x !== "founder").map(
-                                (x) => ({
-                                  value: x,
-                                  label: ROLE_LABELS[x],
-                                }),
-                              )}
-                            />
-                          </div>
-                        ) : (
-                          <span className="hc-selo">
-                            <span
-                              className={cn("size-1.5 shrink-0 rounded-full", ROLE_DOT[u.role])}
-                            />
-                            {ROLE_LABELS[u.role]}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <CopyValue value={u.discord_id} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex max-w-xs flex-wrap gap-1">
-                          {u.areas.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          ) : (
-                            u.areas.map((a) => {
-                              const lider = (u.areaNiveis ?? {})[a] === "lider";
-                              return (
-                                <span
-                                  key={a}
-                                  title={lider ? "Líder da área" : "Auxiliar da área"}
-                                  className={cn(
-                                    "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                                    lider
-                                      ? "border-amber-300/25 bg-amber-300/[0.06] text-foreground"
-                                      : "border-white/[0.08] bg-white/[0.03] text-muted-foreground",
-                                  )}
-                                >
-                                  {lider ? <Crown className="size-3 text-amber-300" /> : null}
-                                  {areaLabel(a)}
-                                </span>
-                              );
-                            })
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <UltimoLogin value={u.last_sign_in_at} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {podeEditar ? (
-                            <>
-                              <button
-                                onClick={() => openRename(u)}
-                                title="Renomear usuário"
-                                className="hc-seta"
-                              >
-                                <AtSign className="size-3.5" />
-                              </button>
-                              <button
-                                onClick={() => openIdsEditor(u)}
-                                title="Editar IDs"
-                                className="hc-seta"
-                              >
-                                <Pencil className="size-3.5" />
-                              </button>
-                              <button
-                                onClick={() => openAreaEditor(u)}
-                                title="Editar áreas"
-                                className="hc-seta"
-                              >
-                                <MapPin className="size-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setResetTarget(u)}
-                                title="Gerar token de acesso"
-                                className="hc-seta"
-                              >
-                                <KeyRound className="size-3.5" />
-                              </button>
-                            </>
-                          ) : null}
-                          {podeExcluir && u.role !== "founder" ? (
-                            <button
-                              onClick={() => {
-                                const motivo = pedirMotivoExclusao(u.username);
-                                if (motivo !== null) mutDelete.mutate({ userId: u.id, motivo });
-                              }}
-                              title="Excluir usuário"
-                              className="hc-seta hover:!border-destructive/40 hover:!bg-destructive/10 hover:!text-destructive"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <TabelaEquipe
+            usuarios={filtradas}
+            anota={anota}
+            anotacoes={anotacoes}
+            isFounder={isFounder}
+            podeEditar={podeEditar}
+            podeExcluir={podeExcluir}
+            onCargo={(u, role) => mutRole.mutate({ userId: u.id, role })}
+            onRenomear={openRename}
+            onIds={openIdsEditor}
+            onAreas={openAreaEditor}
+            onToken={setResetTarget}
+            onExcluir={(u) => {
+              const motivo = pedirMotivoExclusao(u.username);
+              if (motivo !== null) mutDelete.mutate({ userId: u.id, motivo });
+            }}
+            areaLabel={areaLabel}
+          />
         ) : (
           <table className="w-full text-sm">
             <thead>

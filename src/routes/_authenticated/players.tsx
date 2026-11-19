@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, PlugZap, Search } from "lucide-react";
+import { ArrowDown, ArrowDownUp, ArrowUp, Loader2, PlugZap, Search, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -13,6 +13,18 @@ import { useCan, useMyRole } from "@/lib/permissions";
 import { brl, fetchBanimentos, fetchPlayers } from "@/lib/players";
 import { CopyBtn, HostAvatar } from "@/components/players/player-inventario";
 import { PlayerPerfil, playerSoComId } from "@/components/players/player-perfil";
+import { CARGOS_EMBLEMA } from "@/lib/player-perfil";
+import {
+  FAIXAS_DINHEIRO,
+  FAIXAS_LEVEL,
+  FILTROS_PADRAO,
+  ORDENACOES,
+  filtrosLigados,
+  ordenarPlayers,
+  passaNosFiltros,
+  type FiltrosExtras,
+  type Ordenacao,
+} from "@/lib/players-filtros";
 import { PlayersPainel, type FiltroPlayers } from "@/components/players/players-painel";
 
 export const Route = createFileRoute("/_authenticated/players")({
@@ -41,6 +53,13 @@ function PlayersPage() {
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<FiltroPlayers>("todos");
   const [grupo, setGrupo] = useState("todos");
+  // ordenação e filtros extras (dinheiro, level, cargo VIP, whitelist, veículos)
+  const [extras, setExtras] = useState<FiltrosExtras>(FILTROS_PADRAO);
+  const setExtra = <K extends keyof FiltrosExtras>(k: K, v: FiltrosExtras[K]) =>
+    setExtras((x) => ({ ...x, [k]: v }));
+  /** Clicar no cabeçalho: ordena por aquela coluna (clicar de novo inverte). */
+  const ordenarPor = (desc: Ordenacao, asc: Ordenacao) =>
+    setExtra("ordenacao", extras.ordenacao === desc ? asc : desc);
   const [selId, setSelId] = useState<string | null>(null);
   const [integracao, setIntegracao] = useState(false);
 
@@ -61,18 +80,23 @@ function PlayersPage() {
     () => new Set(banimentos.filter((b) => b.ativo && b.jogadorId).map((b) => b.jogadorId)),
     [banimentos],
   );
+  // grupos sem o nível ("Admin:1", "Admin:3" → "Admin"): o filtro pega todos os níveis
+  const nomeGrupo = (g: string) => g.split(":")[0]!.trim();
   const todosGrupos = useMemo(
     () =>
-      [...new Set(players.flatMap((p) => p.grupos))].sort((a, b) => a.localeCompare(b, "pt-BR")),
+      [...new Set(players.flatMap((p) => p.grupos.map(nomeGrupo)))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "pt-BR")),
     [players],
   );
   const lista = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    return players.filter((p) => {
+    const filtrados = players.filter((p) => {
+      if (!passaNosFiltros(p, extras)) return false;
       if (filtro === "online" && !p.online) return false;
       if (filtro === "offline" && p.online) return false;
       if (filtro === "banidos" && !(p.passaporte && banidos.has(p.passaporte.trim()))) return false;
-      if (grupo !== "todos" && !p.grupos.includes(grupo)) return false;
+      if (grupo !== "todos" && !p.grupos.some((g) => nomeGrupo(g) === grupo)) return false;
       if (!q) return true;
       return (
         [p.nome, p.passaporte, p.license, p.telefone, p.discord_nome, p.discord_id].some((v) =>
@@ -80,7 +104,9 @@ function PlayersPage() {
         ) || p.veiculos.some((v) => v.toLowerCase().includes(q))
       );
     });
-  }, [players, busca, filtro, grupo, banidos]);
+    return ordenarPlayers(filtrados, extras.ordenacao);
+  }, [players, busca, filtro, grupo, banidos, extras]);
+  const ligados = filtrosLigados(extras) + Number(grupo !== "todos") + Number(filtro !== "todos") + Number(!!busca.trim());
   const sel = players.find((p) => p.id === selId) ?? null;
   // aberto pelo link das logs: acha a ficha pelo passaporte; sem ficha, abre só com o ID
   const { jogador } = Route.useSearch();
@@ -169,6 +195,93 @@ function PlayersPage() {
         />
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1.5 pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+          <ArrowDownUp className="size-3.5" /> Ordenar
+        </span>
+        <div className="w-60">
+          <MinimalSelect
+            value={extras.ordenacao}
+            onChange={(v) => setExtra("ordenacao", v as Ordenacao)}
+            options={ORDENACOES.map((o) => ({ value: o.id, label: o.rotulo }))}
+            className="rounded-full px-4"
+          />
+        </div>
+        <span className="mx-1 h-5 w-px bg-white/[0.08]" />
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+          <SlidersHorizontal className="size-3.5" /> Filtrar
+        </span>
+        <div className="w-44">
+          <MinimalSelect
+            value={extras.cargo}
+            onChange={(v) => setExtra("cargo", v as FiltrosExtras["cargo"])}
+            options={[
+              { value: "todos", label: "Qualquer cargo" },
+              ...CARGOS_EMBLEMA.map((c) => ({ value: c.id, label: c.rotulo })),
+              { value: "sem", label: "Sem cargo VIP" },
+            ]}
+            className="rounded-full px-4"
+          />
+        </div>
+        <div className="w-40">
+          <MinimalSelect
+            value={extras.whitelist}
+            onChange={(v) => setExtra("whitelist", v as FiltrosExtras["whitelist"])}
+            options={[
+              { value: "todas", label: "Whitelist: todas" },
+              { value: "ativa", label: "Whitelist ativa" },
+              { value: "nolist", label: "NoList" },
+              { value: "sem_dado", label: "Sem dado" },
+            ]}
+            className="rounded-full px-4"
+          />
+        </div>
+        <div className="w-40">
+          <MinimalSelect
+            value={extras.level}
+            onChange={(v) => setExtra("level", v as FiltrosExtras["level"])}
+            options={FAIXAS_LEVEL.map((x) => ({ value: x.id, label: x.rotulo }))}
+            className="rounded-full px-4"
+          />
+        </div>
+        <div className="w-48">
+          <MinimalSelect
+            value={extras.dinheiro}
+            onChange={(v) => setExtra("dinheiro", v as FiltrosExtras["dinheiro"])}
+            options={FAIXAS_DINHEIRO.map((x) => ({ value: x.id, label: x.rotulo }))}
+            className="rounded-full px-4"
+          />
+        </div>
+        <div className="w-40">
+          <MinimalSelect
+            value={extras.veiculos}
+            onChange={(v) => setExtra("veiculos", v as FiltrosExtras["veiculos"])}
+            options={[
+              { value: "todos", label: "Veículos: todos" },
+              { value: "com", label: "Com veículos" },
+              { value: "sem", label: "Sem veículos" },
+            ]}
+            className="rounded-full px-4"
+          />
+        </div>
+        <span className="ml-auto text-[12px] tabular-nums text-muted-foreground">
+          <b className="text-foreground">{lista.length}</b> de {players.length} players
+        </span>
+        {ligados > 0 && (
+          <button
+            onClick={() => {
+              setExtras(FILTROS_PADRAO);
+              setGrupo("todos");
+              setFiltro("todos");
+              setBusca("");
+            }}
+            className="pilula rounded-full"
+          >
+            <X className="size-3.5" /> Limpar filtros ({ligados})
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Carregando players…
@@ -187,11 +300,11 @@ function PlayersPage() {
               colunas,
             )}
           >
-            <span>Personagem</span>
-            <span className="text-center">Level</span>
-            <span className="text-center">Banco</span>
-            <span className="text-center">Grupos</span>
-            <span className="text-center">Veículos</span>
+            <CabecalhoOrdem rotulo="Personagem" ativo={extras.ordenacao === "nome"} onClick={() => setExtra("ordenacao", "nome")} alinhar="esquerda" />
+            <CabecalhoOrdem rotulo="Level" ativo={extras.ordenacao.startsWith("level")} desc={extras.ordenacao === "level_desc"} onClick={() => ordenarPor("level_desc", "level_asc")} />
+            <CabecalhoOrdem rotulo="Banco" ativo={extras.ordenacao.startsWith("dinheiro") || extras.ordenacao === "banco_desc"} desc={extras.ordenacao !== "dinheiro_asc"} onClick={() => ordenarPor("dinheiro_desc", "dinheiro_asc")} />
+            <CabecalhoOrdem rotulo="Grupos" ativo={extras.ordenacao === "grupos_desc"} desc onClick={() => setExtra("ordenacao", "grupos_desc")} />
+            <CabecalhoOrdem rotulo="Veículos" ativo={extras.ordenacao === "veiculos_desc"} desc onClick={() => setExtra("ordenacao", "veiculos_desc")} />
             <span />
           </div>
           <ul className="divide-y divide-white/[0.06]">
@@ -230,8 +343,14 @@ function PlayersPage() {
                   <span className="hidden text-center text-sm tabular-nums md:block">
                     {p.level}
                   </span>
-                  <span className="hidden truncate text-center text-sm tabular-nums md:block">
+                  <span
+                    className="hidden truncate text-center text-sm tabular-nums md:block"
+                    title={`Banco ${brl(p.banco)} · Carteira ${brl(p.carteira)} · Total ${brl(p.banco + p.carteira)}`}
+                  >
                     {brl(p.banco)}
+                    {p.carteira > 0 && (
+                      <span className="block text-[10.5px] text-ink-3">+ {brl(p.carteira)} na carteira</span>
+                    )}
                   </span>
                   <span className="hidden text-center text-sm tabular-nums text-muted-foreground md:block">
                     {p.grupos.length}
@@ -276,6 +395,37 @@ function PlayersPage() {
 }
 
 /* ------------------------------------------------------------------ */
+
+/** Cabeçalho que ordena a lista ao clicar (seta mostra o sentido). */
+function CabecalhoOrdem({
+  rotulo,
+  ativo,
+  desc,
+  onClick,
+  alinhar = "centro",
+}: {
+  rotulo: string;
+  ativo: boolean;
+  desc?: boolean;
+  onClick: () => void;
+  alinhar?: "centro" | "esquerda";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Ordenar por ${rotulo.toLowerCase()}`}
+      className={cn(
+        "flex items-center gap-1 uppercase tracking-[0.12em] transition-colors hover:text-foreground",
+        alinhar === "centro" ? "justify-center" : "justify-start",
+        ativo && "text-foreground",
+      )}
+    >
+      {rotulo}
+      {ativo && alinhar === "centro" && (desc ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
+    </button>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 
