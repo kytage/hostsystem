@@ -1235,7 +1235,7 @@ export function PlayerInventario({ player: p, onClose }: { player: Player; onClo
   const classeGaveta = (g: ReturnType<typeof useGaveta>) =>
     g.fase === "fechando" ? "inv-fecha" : g.inicio ? "inv-entra-dir" : "inv-abre";
 
-  // Vai direto no <body>, como as outras janelas: fica por cima de tudo (até do HOKI flutuante).
+  // Vai direto no <body>, como as outras janelas: fica por cima de tudo.
   return createPortal(
     <div
       ref={raizRef}

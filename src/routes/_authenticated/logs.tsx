@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import { AntiCheatBot } from "@/components/anticheat-bot";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,11 @@ import {
 } from "@/lib/logs-servidor";
 
 export const Route = createFileRoute("/_authenticated/logs")({
+  // ?jogador=ID (vem do perfil do player): abre a Pesquisa geral pelo ID dele
+  validateSearch: (s: Record<string, unknown>): { jogador?: string } => {
+    const j = String(s["jogador"] ?? "").replace(/^#/, "").trim();
+    return /^[0-9]{1,9}$/.test(j) ? { jogador: j } : {};
+  },
   head: () => ({
     meta: [
       { title: "Logs — HOST" },
@@ -95,14 +101,10 @@ function inicioDo(periodo: Periodo) {
  * as logs que a pessoa pode ver (não só no canal aberto); com a caixa vazia, mostra o canal escolhido.
  */
 const TIPOS_DE_BUSCA = [
-  { id: "texto", nome: "Tudo", dica: "Buscar em todas as logs: nome, ID, Steam ou qualquer texto" },
-  { id: "perfil", nome: "Perfil", dica: "Nome do jogador, em todos os canais" },
-  { id: "id", nome: "ID", dica: "ID (passaporte) do jogador, em todos os canais" },
-  {
-    id: "steam",
-    nome: "Steam",
-    dica: "Steam (steam:110000… ou o número do perfil), em todos os canais",
-  },
+  { id: "texto", nome: "Tudo", dica: "Buscar por nome, ID, Steam ou qualquer texto" },
+  { id: "perfil", nome: "Perfil", dica: "Nome do jogador" },
+  { id: "id", nome: "ID", dica: "ID (passaporte) do jogador" },
+  { id: "steam", nome: "Steam", dica: "Steam (steam:110000… ou o número do perfil)" },
 ] as const;
 type TipoDeBusca = (typeof TIPOS_DE_BUSCA)[number]["id"];
 
@@ -118,6 +120,7 @@ async function buscarLogs(
   periodo: Periodo,
   busca: string,
   tipo: TipoDeBusca = "texto",
+  geral = false,
 ): Promise<LinhaDeLog[]> {
   let q = supabase
     .from("server_logs")
@@ -129,8 +132,8 @@ async function buscarLogs(
     .trim()
     .replace(/[%,()*]/g, " ")
     .trim();
-  // sem busca: só o canal escolhido; com busca: todas as logs que a pessoa pode ver
-  if (!t) q = q.eq("canal", canal);
+  // busca fica no canal escolhido; "Pesquisa geral" procura em todas as logs que a pessoa pode ver
+  if (!t || !geral) q = q.eq("canal", canal);
   if (t && tipo === "texto") {
     q = q.or(`mensagem.ilike.%${t}%,jogador_nome.ilike.%${t}%,jogador_id.ilike.%${t}%`);
   } else if (t && tipo === "perfil") {
@@ -175,6 +178,18 @@ async function buscarAoVivo(): Promise<LinhaDeLog[]> {
 
 /** Quantas logs chegaram hoje, e de quantos canais diferentes. */
 async function resumoDeHoje() {
+  // o banco já conta por canal (public.logs_resumo_desde); se a função ainda não existir, conta aqui
+  const rpc = await supabase.rpc("logs_resumo_desde" as never, { p_desde: inicioDo("hoje") } as never);
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    const porCanal = new Map<string, number>();
+    let total = 0;
+    for (const r of rpc.data as { canal: string; total: number | string }[]) {
+      const n = Number(r.total) || 0;
+      porCanal.set(r.canal, n);
+      total += n;
+    }
+    return { total, porCanal };
+  }
   const { data, error } = await supabase
     .from("server_logs")
     .select("canal")
@@ -220,8 +235,11 @@ function LogsPage() {
     () => CANAIS_DE_LOG.get(lerCanal())?.servidor ?? "logs",
   );
   const [busca, setBusca] = useState("");
-  const [buscaLog, setBuscaLog] = useState("");
-  const [tipoBusca, setTipoBusca] = useState<TipoDeBusca>("texto");
+  const { jogador } = Route.useSearch();
+  const [buscaLog, setBuscaLog] = useState(jogador ?? "");
+  const [tipoBusca, setTipoBusca] = useState<TipoDeBusca>(jogador ? "id" : "texto");
+  /** false = busca só no canal aberto; true = "Pesquisa geral" (todos os canais). */
+  const [geral, setGeral] = useState(!!jogador);
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
   const [editando, setEditando] = useState<CategoriaDeLog | null>(null);
   /** Categorias recolhidas na coluna da esquerda (começa com todas abertas). */
@@ -255,8 +273,15 @@ function LogsPage() {
   const efetivo = CANAIS_DE_LOG.get(canalEfetivo);
 
   const logs = useQuery({
-    queryKey: ["server-logs", termoLog.trim() ? "*" : canalEfetivo, periodo, termoLog, tipoBusca],
-    queryFn: () => buscarLogs(canalEfetivo, periodo, termoLog, tipoBusca),
+    queryKey: [
+      "server-logs",
+      geral && termoLog.trim() ? "*" : canalEfetivo,
+      periodo,
+      termoLog,
+      tipoBusca,
+      geral,
+    ],
+    queryFn: () => buscarLogs(canalEfetivo, periodo, termoLog, tipoBusca, geral),
     enabled: !!canalEfetivo,
   });
   const resumo = useQuery({
@@ -325,6 +350,7 @@ function LogsPage() {
       <PageHeader
         title="Logs"
         subtitle="Tudo o que o servidor registra, separado nas mesmas categorias do Discord."
+        actions={<AntiCheatBot ativo={acesso.podeVer("anti-cheat")} />}
       />
 
       {/* números pequenos */}
@@ -462,6 +488,27 @@ function LogsPage() {
           </header>
 
           <div className="logs-filtros">
+            <div className="segmentos" role="tablist" aria-label="Onde buscar">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!geral}
+                onClick={() => setGeral(false)}
+                title="A busca fica só neste canal"
+              >
+                <Hash className="size-3.5" strokeWidth={2} />
+                <span className="max-w-32 truncate">{efetivo?.canal.nome ?? "Este canal"}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={geral}
+                onClick={() => setGeral(true)}
+                title="Busca em todos os canais que você pode ver"
+              >
+                <Search className="size-3.5" strokeWidth={2} /> Pesquisa geral
+              </button>
+            </div>
             <div className="segmentos" role="tablist" aria-label="Buscar por">
               {TIPOS_DE_BUSCA.map((t) => (
                 <button
@@ -481,7 +528,9 @@ function LogsPage() {
               <input
                 value={buscaLog}
                 onChange={(e) => setBuscaLog(e.target.value)}
-                placeholder={TIPOS_DE_BUSCA.find((t) => t.id === tipoBusca)?.dica}
+                placeholder={`${TIPOS_DE_BUSCA.find((t) => t.id === tipoBusca)?.dica ?? ""} — ${
+                  geral ? "em todos os canais" : `só em #${efetivo?.canal.nome ?? "este canal"}`
+                }`}
                 aria-label="Buscar nas logs"
                 inputMode={tipoBusca === "id" ? "numeric" : undefined}
               />
@@ -517,7 +566,7 @@ function LogsPage() {
                 <p className="hc-nota mt-1">Tente de novo em instantes.</p>
               </div>
             ) : logs.data && logs.data.length > 0 ? (
-              logs.data.map((l) => <LinhaLog key={l.id} l={l} mostrarCanal={!!termoLog.trim()} />)
+              logs.data.map((l) => <LinhaLog key={l.id} l={l} mostrarCanal={geral && !!termoLog.trim()} />)
             ) : (
               <div className="logs-vazio">
                 <span className="hc-icone !size-11">
@@ -816,15 +865,17 @@ function LinhaLog({
                 >
                   <Copy className="size-3.5" strokeWidth={2} />
                 </button>
-                <button
-                  type="button"
-                  className="log-icone"
-                  disabled
-                  title="Abrir perfil do jogador (em breve)"
-                  aria-label="Abrir perfil do jogador (em breve)"
-                >
-                  <UserRound className="size-3.5" strokeWidth={2} />
-                </button>
+                {jogador.id ? (
+                  <Link
+                    to="/players"
+                    search={{ jogador: jogador.id }}
+                    className="log-icone"
+                    title="Abrir o perfil do jogador"
+                    aria-label="Abrir o perfil do jogador"
+                  >
+                    <UserRound className="size-3.5" strokeWidth={2} />
+                  </Link>
+                ) : null}
               </span>
             )}
           </div>

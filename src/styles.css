@@ -961,8 +961,6 @@ img.foto-metal[src$="curvas.jpg"] { filter: grayscale(1) invert(1) contrast(1.2)
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); background-clip: padding-box; }
 .dark ::-webkit-scrollbar-track { background: transparent; }
 
-/* HOKI flutuante (fora da tela inicial): o visual está no bloco "Movimento do site" */
-
 /* ------------------------------------------------------------------ *
  * Inventário do player: palco escuro com malha de holograma que segue
  * o mouse (canvas) e painéis de vidro fosco flutuando um pouco deitados.
@@ -1284,15 +1282,6 @@ button.inv-ico-tile:hover { background: rgba(255, 255, 255, 0.1); border-color: 
 
 /* Comandos Staffs: foco do teclado nos quadros dos comandos */
 .cmd-tile:focus-visible { outline: none; border-color: rgba(229, 35, 27, 0.55); box-shadow: 0 0 0 3px rgba(229, 35, 27, 0.18); }
-
-/* HOST FAZENDAS: alerta de roubo (pisca e balança junto com a sirene de 4 segundos) */
-@keyframes alerta-pisca { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-@keyframes alerta-balanca { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
-.alerta-pisca { animation: alerta-pisca 0.5s ease-in-out 8; }
-.alerta-balanca { animation: alerta-balanca 0.5s ease-in-out 8; }
-@media (prefers-reduced-motion: reduce) {
-  .alerta-pisca, .alerta-balanca { animation: none !important; }
-}
 
 /* ================================================================== *
  * GRAFITE (5ª geração, novembro de 2026): reforma da barra lateral e
@@ -2007,7 +1996,7 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 /* (tasteskill 2.5, references/motion.md). O painel se move em três    */
 /* lugares e em mais nenhum:                                           */
 /*   1. a entrada de cada página, uma vez só;                          */
-/*   2. o momento da tela (no HOKI: a ilha e o nome em pontinhos);     */
+/*   2. o momento da tela;                                              */
 /*   3. a resposta ao mouse e ao clique em tudo o que é clicável.      */
 /* Rolar a página não faz nada aparecer nem sumir. Nada passa do ponto */
 /* (sem quique). Só se movem transform e opacidade (as cores mudam).   */
@@ -2062,15 +2051,12 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
   .page-main[data-entrando] :is(.pagina, .home-grade) > :nth-child(n + 6) { --mv-atraso: 300ms; }
   /* um bloco que só guarda cartões de vidro sobe sem mudar de opacidade; quem esmaece são os
      cartões (cada um na sua própria opacidade, com o desfoque ligado) e o que não tem vidro */
-  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) { animation-name: mv-sobe-firme; }
-  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) :is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) *, .hoki-tela *),
-  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .hoki-tela, .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) > :not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"])) {
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) { animation-name: mv-sobe-firme; }
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) :is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:is(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) * *),
+  .page-main[data-entrando] :is(.pagina > *, .home-grade > *, .animate-rise):not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"], .pagina-topo):has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]) > :not(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"]):not(:has(.hc, .glass, .glass-elevated, .glass-modal, .hc-indice, .campo-busca, .segmentos, .pilula, .hc-pilula, .hc-estado, [role="combobox"])) {
     animation: mv-aparece 520ms var(--mv-ease-enter) backwards;
     animation-delay: var(--mv-atraso, 0ms);
   }
-  /* a tela de entrada do HOKI tem a entrada dela (a ilha, o cartão, as células) */
-  .page-main[data-entrando] :is(.pagina, .home-grade) > .hoki-tela,
-  .hoki-tela.animate-rise { animation: none; }
 
   /* o cabeçalho da página: o título sobe de trás da máscara (700 ms) e o rótulo vem junto; a frase
      e os botões sobem em seguida. O cabeçalho em si fica parado. */
@@ -2251,556 +2237,6 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
   /* (o véu costuma ser filho direto de .pagina, que zera a animação: por isso esta regra tem peso) */
   .fixed.inset-0[class*="bg-black/"]:not([data-state], .pf-fade, [class*="animate-"]) { animation: mv-aparece var(--mv-panel) var(--mv-ease) backwards; }
   :where(.fixed.inset-0[class*="bg-black/"]):where(:not([data-state], .pf-fade, [class*="animate-"])) > :where(:not([class*="animate-"])) { animation: mv-janela 240ms var(--mv-ease-enter) backwards; }
-}
-
-/* ---------- o atalho do HOKI (src/components/hoki/hoki-flutuante.tsx) ---------- */
-/* um botão redondo de vidro, igual aos cartões, só com a ilha em branco; sem brilho atrás e sem boiar */
-.hoki-flutuante {
-  position: fixed;
-  right: 18px;
-  /* acima do botão de mensagens (chat da equipe) */
-  bottom: 72px;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(155deg, rgba(54, 52, 54, 0.55) 0%, rgba(21, 20, 21, 0.86) 55%, rgba(13, 13, 14, 0.92) 100%);
-  -webkit-backdrop-filter: blur(18px) saturate(125%);
-  backdrop-filter: blur(18px) saturate(125%);
-  transition:
-    border-color var(--mv-out) var(--mv-ease),
-    transform var(--mv-out) var(--mv-ease);
-}
-.hoki-flutuante-ilha { width: 19px; height: 19px; color: #ffffff; }
-.hoki-flutuante-conta {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  display: grid;
-  place-items: center;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border-radius: 999px;
-  border: 2px solid #0b0b0c;
-  background: #f4f4f5;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: #09090a;
-}
-.hoki-flutuante:hover { border-color: rgba(255, 255, 255, 0.16); transition-duration: var(--mv-in); }
-@media (prefers-reduced-motion: no-preference) {
-  .hoki-flutuante { animation: mv-sobe 520ms var(--mv-ease-enter) backwards; }
-  @media (hover: hover) and (pointer: fine) { .hoki-flutuante:hover { transform: translateY(-2px); } }
-  .hoki-flutuante:active { transform: translateY(1px) scale(0.985); transition-duration: var(--mv-press); }
-}
-
-/* ================================================================== */
-/* Tela de entrada do HOKI (src/components/hoki/inicio-hoki.tsx): em   */
-/* cima a ilha de verdade flutuando (o motor da praça em "vitrine") na */
-/* frente do nome em pontinhos; ao lado o perfil com o "Acordar agora";*/
-/* embaixo quem está online, em células. A praça abre por cima disso.  */
-/* --rol: 0 no topo da página, 1 quando a parte de cima já saiu.       */
-/* --hx/--hy: onde o ponteiro está sobre a ilha (de -0,5 a 0,5).       */
-/* ================================================================== */
-.hoki-tela { position: relative; }
-/* com a praça aberta a seção tem a altura da janela (a praça a ocupa inteira); dormindo, só a
-   altura da tela de entrada (na tela inicial há outros cartões logo embaixo) */
-.hoki-tela-jogo { min-height: calc(100svh - 32px); }
-.hoki-inicio {
-  --rol: 0;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr);
-}
-@media (min-width: 1024px) {
-  .hoki-inicio {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
-    /* (mais baixo que antes; cresce só se a coluna do lado precisar) */
-    grid-template-rows: minmax(clamp(236px, 30svh, 300px), auto) auto;
-    column-gap: 18px;
-  }
-  .hoki-online { grid-column: 1 / -1; }
-}
-/* com a praça aberta sobra só o palco, que passa a se comportar como filho direto da seção */
-.hoki-inicio-jogo,
-.hoki-inicio-jogo > .hoki-heroi { display: contents; }
-
-/* ---------- a ilha ---------- */
-/* (sem transformação aqui: o palco, quando abre, precisa medir pela seção inteira) */
-.hoki-heroi {
-  --hx: 0;
-  --hy: 0;
-  position: relative;
-  height: 300px;
-}
-@media (min-width: 1024px) {
-  .hoki-heroi { height: auto; }
-}
-.hoki-heroi-solto { position: static; }
-.hoki-heroi-fundo {
-  position: relative;
-  height: 100%;
-  animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-}
-/* brasa vermelha embaixo da ilha (o vermelho do fundo, bem fraco) */
-.hoki-heroi-fundo::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 3%;
-  width: 46%;
-  height: 22%;
-  translate: -50% 0;
-  pointer-events: none;
-  border-radius: 999px;
-  background: radial-gradient(closest-side, rgba(206, 14, 14, 0.26), rgba(206, 14, 14, 0));
-  opacity: calc(1 - var(--rol) * 1.4);
-}
-/* o nome anda ao contrário da ilha (dá profundidade) */
-.hoki-heroi-nome {
-  position: absolute;
-  inset: 0;
-  transform: translate3d(calc(var(--hx) * -18px), calc(var(--hy) * -10px + var(--rol) * 26px), 0);
-  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.hoki-heroi-entrar {
-  position: absolute;
-  z-index: 4;
-  inset: 16% 4% 3%;
-  border-radius: 45%;
-  cursor: pointer;
-}
-.hoki-heroi-dica {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  bottom: 0;
-  translate: -50% 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 4px 11px;
-  pointer-events: none;
-  white-space: nowrap;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(17, 16, 17, 0.6);
-  opacity: calc(0.85 - var(--rol) * 3);
-  transition:
-    color 220ms,
-    background-color 220ms,
-    translate 300ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.hoki-heroi-fundo:has(.hoki-heroi-entrar:hover) .hoki-heroi-dica {
-  color: #fff;
-  background: rgba(168, 21, 18, 0.9);
-  translate: -50% -4px;
-}
-
-/* ---------- o palco (o quadro da praça) ---------- */
-.hoki-palco {
-  position: absolute;
-  z-index: 3;
-}
-/* vitrine: só a ilha, inclinando com o ponteiro e afundando com a rolagem */
-.hoki-palco-vitrine {
-  inset: 16% 0 0 0;
-  pointer-events: none;
-  opacity: calc(1.1 - var(--rol) * 1.4);
-  transform: perspective(1400px) rotateY(calc(var(--hx) * 5deg)) rotateX(calc(var(--hy) * -3.5deg))
-    translate3d(calc(var(--hx) * 12px), calc(var(--hy) * 8px + var(--rol) * 44px), 0);
-  transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    scale 420ms cubic-bezier(0.22, 1, 0.36, 1);
-  animation: hoki-surge 760ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  /* as beiradas somem aos poucos (quando a câmera ainda está perto, logo depois de dormir,
-     a praça não aparece cortada num retângulo) */
-  -webkit-mask-image: radial-gradient(ellipse 62% 72% at 50% 48%, #000 72%, transparent 100%);
-  mask-image: radial-gradient(ellipse 62% 72% at 50% 48%, #000 72%, transparent 100%);
-}
-@keyframes hoki-surge {
-  from { opacity: 0; scale: 0.9; }
-}
-/* com o mouse em cima a ilha chega mais perto; apertando, ela afunda um pouco */
-.hoki-heroi:has(.hoki-heroi-entrar:hover) .hoki-palco-vitrine { scale: 1.04; }
-.hoki-heroi:has(.hoki-heroi-entrar:active) .hoki-palco-vitrine { scale: 0.985; }
-/* praça aberta: a tela toda (por cima da tela de entrada enquanto abre e fecha) */
-.hoki-palco-jogo {
-  inset: 0;
-  z-index: 6;
-}
-/* na vitrine somem os botões, os avisos e a HUD que ficam por cima da praça */
-.praca-raiz[data-vitrine] { min-height: 0; }
-.praca-raiz[data-vitrine] > :not(.praca-mundo),
-.hoki-quadro[data-vitrine] > :not(.praca-raiz) { display: none !important; }
-
-/* ---------- eu: perfil, acordar e as barras ---------- */
-.hoki-lado {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  transform: translate3d(0, calc(var(--rol) * -18px), 0);
-}
-.hoki-lado > * { animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-.hoki-lado > *:nth-child(1) { animation-delay: 80ms; }
-.hoki-lado > *:nth-child(2) { animation-delay: 150ms; }
-.hoki-lado > *:nth-child(3) { animation-delay: 220ms; }
-/* o que some rolando a página (a opacidade vai em cada peça de vidro, e não na coluna,
-   para o desfoque de trás continuar valendo) */
-.hoki-some { opacity: calc(1 - var(--rol) * 1.2); }
-.hoki-inicio .hoki-cartao {
-  --ix: 0;
-  --iy: 0;
-  --bx: 50%;
-  --by: 50%;
-  position: relative;
-  overflow: hidden;
-  transform: perspective(900px) rotateX(calc(var(--iy) * -9deg)) rotateY(calc(var(--ix) * 11deg));
-  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-.hoki-inicio .hoki-cartao[data-inclinado] { transition: transform 90ms linear; }
-.hoki-cartao-brilho {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 320ms;
-  background: radial-gradient(230px circle at var(--bx) var(--by), rgba(255, 255, 255, 0.15), transparent 62%);
-}
-.hoki-cartao[data-inclinado] .hoki-cartao-brilho { opacity: 1; }
-
-/* o meu HOKI num cartão só: o nível, a vida e as quatro necessidades */
-.hoki-estado { display: grid; gap: 8px; padding: 10px 12px 11px; }
-.hoki-estado-topo { display: flex; align-items: center; gap: 8px; }
-.hoki-estado-nivel { flex-shrink: 0; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.35; }
-.hoki-estado-rotulo { min-width: 0; flex: 1; font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.6); }
-.hoki-estado-vida { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: #fff; }
-.hoki-estado-vida svg { width: 13px; height: 13px; color: #e5484d; }
-/* medidor: um trilho fino; o enchimento desliza por transform (nenhuma largura é animada) */
-.hoki-medidor { display: block; height: 3px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.08); }
-.hoki-medidor > i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--cor, #f4f4f5);
-  transform: translateX(calc(var(--v, 0) * 100% - 100%));
-  transition: transform 400ms var(--mv-ease);
-}
-.hoki-medidor-vida { height: 6px; }
-.hoki-medidor-vida > i { background: linear-gradient(90deg, #c2343b, #ef5d62); }
-/* uma fileira de quatro: só o ícone e o número (o nome aparece na dica) */
-.hoki-necessidades { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
-.hoki-necessidade {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 5px;
-  row-gap: 6px;
-  padding: 7px 8px 8px;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.045);
-  text-align: left;
-  font-size: 11.5px;
-  line-height: 1.2;
-  color: rgba(255, 255, 255, 0.7);
-  transition:
-    background-color var(--mv-out) var(--mv-ease),
-    transform var(--mv-press) var(--mv-ease);
-}
-.hoki-necessidade svg { width: 13px; height: 13px; color: var(--cor); }
-.hoki-necessidade b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #fff; }
-.hoki-necessidade .hoki-medidor { grid-column: 1 / -1; }
-button.hoki-necessidade:hover { background: rgba(255, 255, 255, 0.085); transition-duration: var(--mv-in), var(--mv-press); }
-
-/* botão de acordar: branco, como os botões principais do painel (o vermelho fica só no fundo) */
-.hoki-acordar {
-  display: flex;
-  width: 100%;
-  height: 40px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 13px;
-  font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  color: #09090a;
-  background: #f4f4f5;
-  box-shadow:
-    inset 0 1px 0 #ffffff,
-    0 14px 30px -16px rgba(255, 255, 255, 0.4);
-  transition:
-    background-color var(--mv-out) var(--mv-ease),
-    transform var(--mv-press) var(--mv-ease);
-}
-.hoki-acordar:hover { background: #ffffff; transition-duration: var(--mv-in), var(--mv-press); }
-@media (prefers-reduced-motion: no-preference) {
-  /* os medidores enchem uma vez, na entrada */
-  .hoki-medidor > i { animation: hoki-enche 700ms var(--mv-ease-enter) 300ms backwards; }
-  @media (hover: hover) and (pointer: fine) { .hoki-acordar:hover { transform: translateY(-1px); } }
-  .hoki-acordar:active { transform: translateY(1px) scale(0.985); }
-}
-@keyframes hoki-enche { from { transform: translateX(-100%); } }
-/* HOKI em manutenção: o botão vira um aviso parado (sem clique, sem movimento) */
-.hoki-acordar.hoki-manutencao,
-.hoki-acordar.hoki-manutencao:hover {
-  cursor: not-allowed;
-  transform: none;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  font-size: 12.5px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-}
-.hoki-manutencao svg { color: #e5484d; }
-
-/* ---------- quem está online, em células ---------- */
-/* (fechado: só a faixa com o título e as abas; as pessoas aparecem ao clicar) */
-button.hoki-online-titulo { cursor: pointer; border-radius: 8px; }
-.hoki-online-seta { width: 14px; height: 14px; margin-left: 2px; color: rgba(255, 255, 255, 0.45); transition: transform var(--mv-in) var(--mv-ease); }
-.hoki-online-titulo[aria-expanded="true"] .hoki-online-seta { transform: rotate(180deg); }
-.hoki-online {
-  min-width: 0;
-  animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) 240ms backwards;
-}
-.hoki-online-topo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-  padding: 0 2px;
-}
-.hoki-online-titulo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.hoki-online-vivo,
-.hoki-celula[data-estado="lobby"] .hoki-celula-onde > i {
-  animation: hoki-pulso 1.9s ease-out infinite;
-}
-.hoki-online-vivo {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #34d399;
-}
-@keyframes hoki-pulso {
-  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
-  100% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
-}
-/* abas: a pílula branca desliza até a escolhida */
-.hoki-abas {
-  position: relative;
-  display: flex;
-  max-width: 100%;
-  gap: 2px;
-  overflow-x: auto;
-  border-radius: 999px;
-  padding: 3px;
-  background: rgba(17, 16, 17, 0.72);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
-  backdrop-filter: blur(14px) saturate(120%);
-  scrollbar-width: none;
-}
-.hoki-abas-marca {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 0;
-  border-radius: 999px;
-  background: #f4f4f5;
-  transition:
-    translate 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 420ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.hoki-aba {
-  position: relative;
-  display: flex;
-  height: 30px;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 0 12px;
-  white-space: nowrap;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
-  transition: color 240ms;
-}
-.hoki-aba b { font-size: 13px; }
-.hoki-aba:hover { color: #fff; }
-.hoki-aba[aria-selected="true"] { color: #0b0b0c; }
-
-.hoki-celulas {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
-}
-.hoki-celula {
-  --lx: -300px;
-  --ly: -300px;
-  position: relative;
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  padding: 10px 12px;
-  text-align: left;
-  color: var(--gf-tx-1);
-  /* brilho que segue o ponteiro, por cima do vidro escuro */
-  background:
-    radial-gradient(190px circle at var(--lx) var(--ly), rgba(255, 255, 255, 0.1), transparent 66%),
-    rgba(21, 20, 21, 0.8);
-  transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 240ms,
-    box-shadow 280ms;
-  animation: hoki-celula-entra 560ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  animation-delay: calc(var(--i) * 45ms);
-}
-@keyframes hoki-celula-entra {
-  from { opacity: 0; transform: translateY(16px) scale(0.95); }
-}
-.hoki-celula:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.13);
-  box-shadow: 0 18px 30px -22px rgba(0, 0, 0, 0.95);
-}
-.hoki-celula:active { transform: translateY(-1px) scale(0.985); }
-.hoki-celula-foto {
-  position: relative;
-  display: block;
-  width: 46px;
-  height: 46px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.5);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
-  transition:
-    transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 300ms;
-}
-.hoki-celula-rosto {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 999px;
-}
-.hoki-celula:hover .hoki-celula-foto { transform: scale(1.1) rotate(-4deg); }
-/* acordado no lobby: aro verde aceso; na fazenda: aro âmbar; dormindo: apagado */
-.hoki-celula[data-estado="lobby"] .hoki-celula-foto {
-  box-shadow:
-    0 0 0 2px rgba(52, 211, 153, 0.6),
-    0 0 16px -2px rgba(52, 211, 153, 0.5);
-}
-.hoki-celula[data-estado="fazenda"] .hoki-celula-foto { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.55); }
-.hoki-celula[data-estado="dorme"] .hoki-celula-rosto { filter: saturate(0.5) brightness(0.78); }
-.hoki-celula-tag {
-  flex-shrink: 0;
-  border-radius: 4px;
-  background: #ce0e0e;
-  padding: 0 4px;
-  font-size: 8.5px;
-  font-weight: 700;
-  line-height: 13px;
-  color: #fff;
-}
-.hoki-celula-onde {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-}
-.hoki-celula-onde > i {
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
-}
-.hoki-celula[data-estado="lobby"] .hoki-celula-onde > i { background: #34d399; }
-.hoki-celula[data-estado="fazenda"] .hoki-celula-onde > i { background: #fbbf24; }
-.hoki-celula-nivel {
-  flex-shrink: 0;
-  border-radius: 999px;
-  padding: 0 7px;
-  font-size: 10.5px;
-  font-weight: 800;
-  line-height: 18px;
-  font-variant-numeric: tabular-nums;
-  transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.hoki-celula:hover .hoki-celula-nivel { transform: scale(1.12); }
-/* dormindo: os "z z" sobem do canto da foto */
-.hoki-celula-zz {
-  position: absolute;
-  right: -5px;
-  top: -5px;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.75);
-  animation: hoki-zz 2.6s ease-in-out infinite;
-}
-.hoki-celula-zz i {
-  margin-left: 1px;
-  font-size: 7.5px;
-  font-style: normal;
-}
-@keyframes hoki-zz {
-  0% { opacity: 0; translate: -2px 5px; }
-  30% { opacity: 1; }
-  100% { opacity: 0; translate: 5px -8px; }
-}
-.hoki-celulas-vazio {
-  grid-column: 1 / -1;
-  padding: 28px 0;
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hoki-heroi-fundo,
-  .hoki-palco-vitrine,
-  .hoki-lado > *,
-  .hoki-online,
-  .hoki-celula,
-  .hoki-celula-zz,
-  .hoki-online-vivo,
-  .hoki-celula-onde > i { animation: none !important; }
-  .hoki-heroi-nome,
-  .hoki-palco-vitrine,
-  .hoki-lado { transform: none; }
 }
 
 /* ================================================================== */
@@ -3073,3 +2509,29 @@ button.hoki-online-titulo { cursor: pointer; border-radius: 8px; }
 .staff-anotar { display: inline-flex; align-items: center; justify-content: center; gap: 3px; height: 24px; min-width: 24px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--gf-linha); color: var(--gf-tx-2); font-size: 10.5px; }
 .staff-anotar:hover { background: rgba(255, 255, 255, 0.07); color: var(--gf-tx-1); }
 .staff-anotar-tem { border-color: rgba(229, 35, 27, 0.45); color: #ffb1ad; }
+
+/* ---------- Ilegal: cronograma (itens URGENTES pulsam em vermelho) ---------- */
+@keyframes crono-pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.0), 0 0 18px rgba(239, 68, 68, 0.18); } 50% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22), 0 0 26px rgba(239, 68, 68, 0.35); } }
+.crono-urgente { animation: crono-pulso 2.2s ease-in-out infinite; }
+.crono-aba-alerta { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; box-shadow: 0 0 10px rgba(220, 38, 38, 0.7); }
+@media (prefers-reduced-motion: reduce) { .crono-urgente { animation: none; } }
+
+/* ---------- Players: painel do player (perfil, logs, comandos) ---------- */
+.pp-janela { background: #070707; }
+.pp-cartao { border-radius: 22px; background: #0d0d0d; border: 1px solid rgba(255, 255, 255, 0.06); }
+.pp-emblema { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; color: #fff; background: color-mix(in srgb, var(--cor) 28%, rgba(0, 0, 0, 0.55)); border: 1px solid color-mix(in srgb, var(--cor) 70%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--cor) 40%, transparent); backdrop-filter: blur(6px); }
+.pp-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 2px 4px 2px 9px; border-radius: 9px; background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.88); font-size: 12px; font-weight: 600; }
+.pp-chip:not(:has(button)) { padding-right: 9px; }
+.pp-chip-nivel { border-radius: 6px; background: rgba(229, 35, 27, 0.22); color: #ffb1ad; padding: 0 5px; font-size: 10px; font-weight: 800; }
+.pp-aba { display: flex; align-items: center; justify-content: center; gap: 5px; height: 34px; padding: 0 8px; white-space: nowrap; border-radius: 11px; background: rgba(255, 255, 255, 0.06); font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, 0.85); transition: background 0.15s; }
+.pp-aba:hover { background: rgba(255, 255, 255, 0.1); }
+.pp-aba-ativa { background: #c42419; color: #fff; }
+.pp-aba-ativa:hover { background: #d82a1e; }
+.pp-pop { border-radius: 18px !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; background: #111 !important; padding: 10px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); }
+.pp-pop-item { display: flex; width: 100%; align-items: center; gap: 6px; border-radius: 10px; padding: 7px 9px; font-size: 12.5px; text-align: left; color: rgba(255, 255, 255, 0.82); }
+.pp-pop-item span { margin-left: auto; font-variant-numeric: tabular-nums; color: rgba(255, 255, 255, 0.45); font-weight: 700; }
+.pp-pop-item:hover { background: rgba(255, 255, 255, 0.06); }
+.pp-pop-item-ativo { background: rgba(229, 35, 27, 0.16); color: #fff; }
+.pp-botao-vermelho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 12px; background: #c42419; color: #fff; font-size: 12.5px; font-weight: 700; }
+.pp-botao-vermelho:hover { background: #d82a1e; }
+.pp-logs-circulo { display: grid; place-items: center; width: 140px; height: 140px; border-radius: 999px; background: #c42419; color: #fff; font-size: 36px; font-weight: 900; letter-spacing: 0.02em; box-shadow: 0 0 60px rgba(196, 36, 25, 0.35); }

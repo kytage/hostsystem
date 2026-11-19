@@ -760,108 +760,6 @@ export type Database = {
           },
         ]
       }
-      hoshi_jogos: {
-        Row: {
-          created_at: string
-          criado_por: string
-          estado: Json
-          id: string
-          status: string
-          tipo: string
-          updated_at: string
-          versao: number
-        }
-        Insert: {
-          created_at?: string
-          criado_por?: string
-          estado?: Json
-          id?: string
-          status?: string
-          tipo: string
-          updated_at?: string
-          versao?: number
-        }
-        Update: {
-          created_at?: string
-          criado_por?: string
-          estado?: Json
-          id?: string
-          status?: string
-          tipo?: string
-          updated_at?: string
-          versao?: number
-        }
-        Relationships: []
-      }
-      hoshi_pets: {
-        Row: {
-          carinho: number
-          coins: number
-          created_at: string
-          cuidado_em: string
-          energia: number
-          fome: number
-          colheitas: Json
-          higiene: number
-          inventario: Json
-          itens: Json
-          nome: string
-          recorde_petiscos: number
-          recorde_parkour: number
-          recorde_reflexo: number
-          sede: number
-          updated_at: string
-          user_id: string
-          username: string
-          visual: Json
-          xp: number
-        }
-        Insert: {
-          carinho?: number
-          coins?: number
-          created_at?: string
-          cuidado_em?: string
-          energia?: number
-          fome?: number
-          colheitas?: Json
-          higiene?: number
-          inventario?: Json
-          itens?: Json
-          nome?: string
-          recorde_petiscos?: number
-          recorde_parkour?: number
-          recorde_reflexo?: number
-          sede?: number
-          updated_at?: string
-          user_id: string
-          username?: string
-          visual?: Json
-          xp?: number
-        }
-        Update: {
-          carinho?: number
-          coins?: number
-          created_at?: string
-          cuidado_em?: string
-          energia?: number
-          fome?: number
-          colheitas?: Json
-          higiene?: number
-          inventario?: Json
-          itens?: Json
-          nome?: string
-          recorde_petiscos?: number
-          recorde_parkour?: number
-          recorde_reflexo?: number
-          sede?: number
-          updated_at?: string
-          user_id?: string
-          username?: string
-          visual?: Json
-          xp?: number
-        }
-        Relationships: []
-      }
       ilegal_anotacoes: {
         Row: {
           created_at: string
@@ -989,13 +887,18 @@ export type Database = {
           coluna: string
           created_at: string
           criado_por: string
+          checklist: Json
+          concluido_em: string | null
           criado_por_id: string | null
           data_hora: string | null
           descricao: string
           id: string
           ordem: number
+          prioridade: string
+          responsaveis: string[]
           responsavel: string
           setagem: string
+          setagens: string[]
           tipo: string
           titulo: string
           updated_at: string
@@ -1004,13 +907,18 @@ export type Database = {
           coluna?: string
           created_at?: string
           criado_por?: string
+          checklist?: Json
+          concluido_em?: string | null
           criado_por_id?: string | null
           data_hora?: string | null
           descricao?: string
           id?: string
           ordem?: number
+          prioridade?: string
+          responsaveis?: string[]
           responsavel?: string
           setagem?: string
+          setagens?: string[]
           tipo?: string
           titulo: string
           updated_at?: string
@@ -1019,13 +927,18 @@ export type Database = {
           coluna?: string
           created_at?: string
           criado_por?: string
+          checklist?: Json
+          concluido_em?: string | null
           criado_por_id?: string | null
           data_hora?: string | null
           descricao?: string
           id?: string
           ordem?: number
+          prioridade?: string
+          responsaveis?: string[]
           responsavel?: string
           setagem?: string
+          setagens?: string[]
           tipo?: string
           titulo?: string
           updated_at?: string
@@ -2324,36 +2237,6 @@ export type Database = {
           },
         ]
       }
-      termometro_votos: {
-        Row: {
-          created_at: string
-          de_user_id: string
-          dia: string
-          emoji: string
-          id: string
-          para_user_id: string
-          para_username: string
-        }
-        Insert: {
-          created_at?: string
-          de_user_id: string
-          dia?: string
-          emoji: string
-          id?: string
-          para_user_id: string
-          para_username?: string
-        }
-        Update: {
-          created_at?: string
-          de_user_id?: string
-          dia?: string
-          emoji?: string
-          id?: string
-          para_user_id?: string
-          para_username?: string
-        }
-        Relationships: []
-      }
       user_areas: {
         Row: {
           area: string
@@ -2417,6 +2300,72 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      usuarios_arquivados: {
+        Row: {
+          anotacoes_pessoais: string
+          areas: string[]
+          avatar_url: string
+          cargo: string
+          discord_id: string
+          entrou_em: string | null
+          excluido_em: string
+          excluido_por: string
+          excluido_por_id: string | null
+          host_id: string
+          id: string
+          motivo: string
+          perfil: Json
+          punicoes: Json
+          staff_anotacoes: Json
+          tarefas: Json
+          ultimo_acesso: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          anotacoes_pessoais?: string
+          areas?: string[]
+          avatar_url?: string
+          cargo?: string
+          discord_id?: string
+          entrou_em?: string | null
+          excluido_em?: string
+          excluido_por?: string
+          excluido_por_id?: string | null
+          host_id?: string
+          id?: string
+          motivo?: string
+          perfil?: Json
+          punicoes?: Json
+          staff_anotacoes?: Json
+          tarefas?: Json
+          ultimo_acesso?: string | null
+          user_id: string
+          username?: string
+        }
+        Update: {
+          anotacoes_pessoais?: string
+          areas?: string[]
+          avatar_url?: string
+          cargo?: string
+          discord_id?: string
+          entrou_em?: string | null
+          excluido_em?: string
+          excluido_por?: string
+          excluido_por_id?: string | null
+          host_id?: string
+          id?: string
+          motivo?: string
+          perfil?: Json
+          punicoes?: Json
+          staff_anotacoes?: Json
+          tarefas?: Json
+          ultimo_acesso?: string | null
+          user_id?: string
+          username?: string
         }
         Relationships: []
       }

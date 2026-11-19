@@ -78,6 +78,9 @@ const limpar = (t: string) =>
     .replace(/```[a-z]*\n?/gi, "")
     .replace(/\*\*|__|`/g, "")
     .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n")
     .trim();
 
 /**

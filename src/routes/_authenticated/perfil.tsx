@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated/perfil")({
   head: () => ({
     meta: [
       { title: "Perfil & Agenda — HOST" },
-      { name: "description", content: "Sua central no painel: perfil, status, Staff Coins, tarefas e anotações." },
+      { name: "description", content: "Sua central no painel: perfil, tarefas e anotações." },
     ],
   }),
   component: PerfilPage,
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/perfil")({
 function PerfilPage() {
   return (
     <div className="pagina">
-      <PageHeader title="Perfil & Agenda" subtitle="Sua central no painel: perfil, status, Staff Coins, tarefas e anotações." />
+      <PageHeader title="Perfil & Agenda" subtitle="Sua central no painel: perfil, tarefas e anotações." />
 
       {/* tarefas à esquerda; perfil compacto e anotações na coluna da direita (no celular: perfil, tarefas e anotações) */}
       <div className="mt-4 flex flex-col gap-3.5 xl:grid xl:grid-cols-4 xl:items-stretch">

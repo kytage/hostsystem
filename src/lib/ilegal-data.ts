@@ -187,8 +187,20 @@ export async function fetchCategorias(): Promise<IlegalCategoria[]> {
   const orgs = ((data ?? []) as OrgRow[]).map(rowToOrg);
   return CATEGORIAS_META.map((c) => ({
     ...c,
-    orgs: orgs.filter((o) => o.categoria === c.id),
+    orgs: ordenarSetagens(orgs.filter((o) => o.categoria === c.id)),
   }));
+}
+
+const comparaNome = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
+
+/** Setagens em ordem crescente pelo nome (Armas01, Armas02, ..., Armas10); sem nome vão para o fim. */
+export function ordenarSetagens<T extends { setagem: string; ordem: number }>(orgs: T[]): T[] {
+  return [...orgs].sort((a, b) => {
+    const na = a.setagem.trim();
+    const nb = b.setagem.trim();
+    if (!na !== !nb) return na ? -1 : 1;
+    return comparaNome.compare(na, nb) || a.ordem - b.ordem;
+  });
 }
 
 export async function updateOrg(org: IlegalOrg): Promise<void> {

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { fetchCronograma } from "@/lib/ilegal-cronograma";
 import {
   Skull,
   Pencil,
@@ -1049,9 +1050,9 @@ const ILEGAL_VIEWS: {
   cor: string;
   ativa: string;
 }[] = [
+  { id: "cronograma", label: "Cronograma de RP", Icon: CalendarClock, cor: "text-sky-300", ativa: "bg-sky-500/15 ring-sky-500/30" },
   { id: "orgs", label: "Organizações", Icon: Skull, cor: "text-red-400", ativa: "bg-red-500/15 ring-red-500/30" },
   { id: "anotacoes", label: "Anotações", Icon: StickyNote, cor: "text-amber-300", ativa: "bg-amber-500/15 ring-amber-500/30" },
-  { id: "cronograma", label: "Cronograma de RP", Icon: CalendarClock, cor: "text-sky-300", ativa: "bg-sky-500/15 ring-sky-500/30" },
   { id: "online", label: "Online", Icon: Activity, cor: "text-emerald-300", ativa: "bg-emerald-500/15 ring-emerald-500/30" },
   { id: "paineis", label: "Painéis dos líderes", Icon: KeyRound, cor: "text-violet-300", ativa: "bg-violet-500/15 ring-violet-500/30" },
 ];
@@ -1090,6 +1091,15 @@ function IlegalDashboard() {
 
 
   useRealtimeTable("ilegal_orgs", [["ilegal-orgs"]]);
+  useRealtimeTable("ilegal_cronograma", [["ilegal-cronograma"]]);
+  // urgentes em aberto: viram o alerta vermelho na aba do cronograma
+  const { data: cronoItens = [] } = useQuery({
+    queryKey: ["ilegal-cronograma"],
+    queryFn: fetchCronograma,
+  });
+  const cronoUrgentes = cronoItens.filter(
+    (i) => i.prioridade === "urgente" && i.coluna !== "concluido",
+  ).length;
   useRealtimeTable("ilegal_detalhes", [["ilegal-detalhes"]]);
   useRealtimeTable("ilegal_coroas", [["ilegal-coroas-semana"]]);
 
@@ -1259,8 +1269,21 @@ function IlegalDashboard() {
               aria-selected={view === id}
               onClick={() => setView(id)}
               data-ativo={view === id}
+              className={cn(
+                id === "cronograma" && "relative !font-bold",
+                id === "cronograma" && view !== id && "!text-sky-200 ring-1 ring-sky-400/40 bg-sky-500/10",
+              )}
             >
-              <Icon className="size-3.5" strokeWidth={1.8} /> {label}
+              <Icon
+                className={cn("size-3.5", id === "cronograma" && view !== id && "text-sky-300")}
+                strokeWidth={1.8}
+              />{" "}
+              {label}
+              {id === "cronograma" && cronoUrgentes > 0 && (
+                <span className="crono-aba-alerta" title={`${cronoUrgentes} urgente(s)`}>
+                  {cronoUrgentes}
+                </span>
+              )}
             </button>
           ))}
         </div>

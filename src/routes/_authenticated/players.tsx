@@ -11,10 +11,16 @@ import { MinimalSelect } from "@/components/ui/minimal-select";
 import { useRealtimeTable } from "@/lib/realtime";
 import { useCan, useMyRole } from "@/lib/permissions";
 import { brl, fetchBanimentos, fetchPlayers } from "@/lib/players";
-import { CopyBtn, HostAvatar, PlayerInventario } from "@/components/players/player-inventario";
+import { CopyBtn, HostAvatar } from "@/components/players/player-inventario";
+import { PlayerPerfil, playerSoComId } from "@/components/players/player-perfil";
 import { PlayersPainel, type FiltroPlayers } from "@/components/players/players-painel";
 
 export const Route = createFileRoute("/_authenticated/players")({
+  // ?jogador=ID abre o perfil direto (vem do botão de perfil das logs)
+  validateSearch: (s: Record<string, unknown>): { jogador?: string } => {
+    const j = String(s["jogador"] ?? "").replace(/^#/, "").trim();
+    return /^\d{1,9}$/.test(j) ? { jogador: j } : {};
+  },
   head: () => ({
     meta: [
       { title: "Players — HOST Admin" },
@@ -76,6 +82,13 @@ function PlayersPage() {
     });
   }, [players, busca, filtro, grupo, banidos]);
   const sel = players.find((p) => p.id === selId) ?? null;
+  // aberto pelo link das logs: acha a ficha pelo passaporte; sem ficha, abre só com o ID
+  const { jogador } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const doLink = jogador
+    ? (players.find((p) => p.passaporte?.trim() === jogador) ?? null)
+    : null;
+  const fecharLink = () => void navigate({ search: {}, replace: true });
 
   if (role && !podeVer) {
     return (
@@ -242,7 +255,21 @@ function PlayersPage() {
         </div>
       )}
 
-      {sel && <PlayerInventario player={sel} onClose={() => setSelId(null)} />}
+      {sel && (
+        <PlayerPerfil
+          player={sel}
+          banimentos={banimentos}
+          onClose={() => setSelId(null)}
+        />
+      )}
+      {!sel && jogador && !isLoading && (
+        <PlayerPerfil
+          player={doLink ?? playerSoComId(jogador)}
+          semFicha={!doLink}
+          banimentos={banimentos}
+          onClose={fecharLink}
+        />
+      )}
       {integracao && <IntegracaoDialog onClose={() => setIntegracao(false)} />}
     </div>
   );

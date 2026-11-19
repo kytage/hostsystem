@@ -78,13 +78,13 @@ function devStats(cards: KanbanCard[], dev: KanbanDev) {
 
 /**
  * Modal "Status das pendências": pendências criadas pelo usuário logado,
- * histórico de entregas para devs, análise comparativa (Direção+) e ranking
+ * histórico de entregas para devs, análise comparativa (Coordinator+, igual à Direção) e ranking
  * público de quem mais abre solicitações.
  */
 export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
   const { data: myRole } = useMyRole();
   const isDirecaoPlus =
-    ROLE_ORDER.indexOf(myRole ?? "dev") <= ROLE_ORDER.indexOf("direcao");
+    ROLE_ORDER.indexOf(myRole ?? "dev") <= ROLE_ORDER.indexOf("coordinator");
 
   const { data: username = "" } = useQuery({
     queryKey: ["current-username"],

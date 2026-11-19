@@ -62,7 +62,7 @@ export async function fetchChatProfiles(): Promise<ChatProfile[]> {
   for (const a of (areasData ?? []) as { user_id: string; area: string }[]) {
     areasDe.set(a.user_id, [...(areasDe.get(a.user_id) ?? []), a.area]);
   }
-  // só quem tem cargo é da equipe (perfis sem cargo, como visitas do HOKI, ficam fora)
+  // só quem tem cargo é da equipe (perfis sem cargo ficam fora)
   return ((data ?? []) as unknown as Omit<ChatProfile, "role" | "areas">[])
     .filter((p) => roleMap.has(p.id))
     .map((p) => ({

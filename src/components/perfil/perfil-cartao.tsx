@@ -1,20 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Check, Coins, Copy, Heart, ImagePlus, Loader2, Pencil, RotateCcw, Sparkles, X } from "lucide-react";
+import { Camera, Check, Copy, ImagePlus, Loader2, Pencil, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { DEFAULT_AVATAR_URL, fileToAvatarDataUrl } from "@/lib/avatar";
 import { STATUS_CONFIG, type PresenceStatus } from "@/lib/chat";
-import { meuPet } from "@/lib/hoki";
-import { EMOJIS_STATUS, STATUS_PRONTOS, useStatusHoki } from "@/lib/hoki-status";
-import { useMeuNivel } from "@/lib/fazenda/selos";
-import { corDoSelo, progressoDoNivel } from "@/lib/fazenda/catalogo";
 import { ROLE_LABELS, useMyRole } from "@/lib/permissions";
-import { QUERIDOMETRO } from "@/lib/termometro";
-import { PERIODOS, type Periodo } from "@/lib/termometro-periodos";
-import { Queridometro, useQueridometro } from "@/components/hoki/queridometro";
 import { cn } from "@/lib/utils";
 
 export const BANNER_PADRAO = "/perfil/banner-padrao.jpg";
@@ -101,25 +94,16 @@ function Copiar({ valor, rotulo }: { valor: string; rotulo: string }) {
 export const useMeuPerfil = () =>
   useQuery({ queryKey: CHAVE_PERFIL, queryFn: buscarPerfil, staleTime: 30_000 });
 
-/** Topo do Perfil & Agenda: banner, foto, nome, nível do HOKI, status, queridômetro e Staff Coins. */
+/** Topo do Perfil & Agenda: banner, foto, nome, cargo, bio e IDs. */
 export function PerfilCartao() {
   const qc = useQueryClient();
   const { data: role } = useMyRole();
   const { data: perfil } = useQuery({ queryKey: CHAVE_PERFIL, queryFn: buscarPerfil, staleTime: 30_000 });
-  const { data: nivel } = useMeuNivel();
-  const { data: pet } = useQuery({ queryKey: ["hoki-meu"], queryFn: meuPet, staleTime: Infinity });
-  const [status, salvarStatus] = useStatusHoki();
   const [editando, setEditando] = useState(false);
-  const [mudandoStatus, setMudandoStatus] = useState(false);
-  const [quadroAberto, setQuadroAberto] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
 
   const euId = perfil?.id ?? "";
-  const { quadros, pendentes, somandoPeriodos } = useQueridometro(euId, true);
-  /** Quantos de cada emoji eu recebi no período (hoje, na semana ou no mês). */
-  const minhaContagem = (p: Periodo) =>
-    quadros[p].find((l) => l.perfil.id === euId)?.contagem ?? QUERIDOMETRO.map(() => 0);
 
   const atualizar = () => {
     void qc.invalidateQueries({ queryKey: CHAVE_PERFIL });
@@ -165,9 +149,6 @@ export function PerfilCartao() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const prog = progressoDoNivel(nivel?.xp ?? 0);
-  const selo = corDoSelo(nivel?.cor, nivel?.nivel ?? 1);
-  const coins = pet?.coins ?? 0;
   const banner = perfil?.banner_url || BANNER_PADRAO;
   const avatar = perfil?.avatar_url || DEFAULT_AVATAR_URL;
 
@@ -209,41 +190,13 @@ export function PerfilCartao() {
               <h2 className="truncate font-display text-[17px] font-semibold leading-tight tracking-tight">
                 {perfil?.username || "…"}
               </h2>
-              <span
-                className="shrink-0 rounded-full px-1.5 py-px text-[9.5px] font-bold"
-                style={{ background: selo.fundo, color: selo.texto }}
-                title="Nível do HOKI (HOST FAZENDAS)"
-              >
-                HOKI Nv {nivel?.nivel ?? 1}
-              </span>
             </div>
             <p className="truncate text-[11.5px] text-muted-foreground">{ROLE_LABELS[role ?? "staff"]}</p>
           </div>
         </div>
 
-        {/* Status do HOKI e editar */}
-        <div className="mt-3 flex items-center gap-1.5">
-          <div className="relative min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => setMudandoStatus((v) => !v)}
-              className="hc-estado w-full min-w-0 text-left hover:!bg-[var(--gf-3)]"
-              title="Status do HOKI (o mesmo da praça)"
-            >
-              <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              <span className="truncate">{status || "Definir status"}</span>
-            </button>
-            {mudandoStatus && (
-              <EditorStatus
-                atual={status}
-                onSalvar={(s) => {
-                  salvarStatus(s);
-                  setMudandoStatus(false);
-                }}
-                onClose={() => setMudandoStatus(false)}
-              />
-            )}
-          </div>
+        {/* Editar */}
+        <div className="mt-3 flex items-center justify-end">
           <button
             type="button"
             onClick={() => setEditando(true)}
@@ -259,78 +212,8 @@ export function PerfilCartao() {
           </p>
         )}
 
-        {/* Números */}
+        {/* IDs */}
         <div className="hc-dentro mt-3 grid grid-cols-2 overflow-hidden">
-          <div className="border-b border-r border-white/[0.06] p-2.5">
-            <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
-              <Sparkles className="size-3" /> HOKI Level
-            </p>
-            <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{nivel?.nivel ?? 1}</p>
-            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.08]">
-              <div className="h-full rounded-full bg-foreground/85" style={{ width: `${prog.pct}%` }} />
-            </div>
-            <p className="mt-1 text-[10px] text-ink-3" title={prog.maximo ? undefined : "XP para o próximo nível"}>
-              {prog.maximo ? "Nível máximo" : `${prog.noNivel}/${prog.paraSubir} XP`}
-            </p>
-          </div>
-          <div className="border-b border-white/[0.06] p-2.5">
-            <p className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
-              <Coins className="size-3" /> Staff Coins
-            </p>
-            <p className="mt-0.5 font-display text-lg font-semibold leading-tight tabular-nums">{coins.toLocaleString("pt-BR")}</p>
-            <p className="mt-1.5 text-[10px] leading-snug text-ink-3" title="Tarefa recebida concluída: +10 · Sua própria tarefa: +1">
-              +10 tarefa recebida · +1 a sua
-            </p>
-          </div>
-          <div className="col-span-2 border-b border-white/[0.06] p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p
-                className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-muted-foreground"
-                title="Emojis que você recebeu hoje, nesta semana (desde segunda) e neste mês (desde o dia 1)"
-              >
-                <Heart className="size-3 shrink-0" /> Queridômetro
-              </p>
-              <button
-                type="button"
-                onClick={() => setQuadroAberto(true)}
-                className="hc-pilula !h-6 shrink-0 !px-2.5 !text-[10.5px]"
-              >
-                Entregar{pendentes > 0 ? ` (${pendentes})` : ""}
-              </button>
-            </div>
-            {/* hoje, semana (desde segunda) e mês (desde o dia 1), lado a lado */}
-            <table className="mt-1.5 w-full table-fixed text-center text-[10.5px] tabular-nums">
-              <thead>
-                <tr>
-                  <th className="w-[46px]" aria-label="Período" />
-                  {QUERIDOMETRO.map((e) => (
-                    <th key={e.emoji} title={e.nome} className="pb-1 text-[13px] font-normal leading-none">
-                      {e.emoji}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {PERIODOS.map((p) => (
-                  <tr key={p.id} className="border-t border-white/[0.05]">
-                    <td className="py-[3px] text-left text-[10px] text-ink-3">{p.rotulo}</td>
-                    {minhaContagem(p.id).map((n, i) => (
-                      <td
-                        key={i}
-                        className={cn(
-                          "py-[3px] font-semibold",
-                          n ? "text-foreground" : "text-ink-3",
-                          p.id !== "hoje" && somandoPeriodos && "animate-pulse",
-                        )}
-                      >
-                        {n}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           <div className="col-span-2 space-y-1 px-2.5 py-2 text-[11.5px]">
             <p className="flex items-center justify-between gap-2">
               <span className="text-ink-3">ID Host</span>
@@ -385,91 +268,7 @@ export function PerfilCartao() {
           onClose={() => setEditando(false)}
         />
       )}
-      {quadroAberto && euId && <Queridometro euId={euId} onClose={() => setQuadroAberto(false)} />}
     </section>
-  );
-}
-
-function EditorStatus({
-  atual,
-  onSalvar,
-  onClose,
-}: {
-  atual: string;
-  onSalvar: (s: string) => void;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [emoji, setEmoji] = useState(() => EMOJIS_STATUS.find((e) => atual.startsWith(e)) ?? "📘");
-  const [texto, setTexto] = useState(() => {
-    const e = EMOJIS_STATUS.find((x) => atual.startsWith(x));
-    return e ? atual.slice(e.length).trim() : atual;
-  });
-  useEffect(() => {
-    const fora = (ev: MouseEvent) => {
-      if (ref.current && !ref.current.contains(ev.target as Node)) onClose();
-    };
-    document.addEventListener("mousedown", fora);
-    return () => document.removeEventListener("mousedown", fora);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      className="pf-pop glass-modal absolute right-0 top-full z-30 mt-2 w-[290px] rounded-2xl p-3"
-    >
-      <p className="hc-sobre mb-2.5">Status do HOKI</p>
-      <div className="flex flex-wrap gap-1.5">
-        {STATUS_PRONTOS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onSalvar(s)}
-            className={cn(
-              "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors",
-              s === atual ? "border-transparent bg-foreground font-medium text-background" : "border-white/[0.08] text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center gap-1.5">
-        <select
-          value={emoji}
-          onChange={(e) => setEmoji(e.target.value)}
-          className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.03] px-1 text-sm outline-none"
-          aria-label="Emoji do status"
-        >
-          {EMOJIS_STATUS.map((e) => (
-            <option key={e} value={e}>
-              {e}
-            </option>
-          ))}
-        </select>
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && texto.trim() && onSalvar(`${emoji} ${texto}`)}
-          maxLength={28}
-          placeholder="Escreva o seu…"
-          className="h-8 min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 text-[12.5px] text-foreground outline-none placeholder:text-ink-3 focus:border-white/30"
-        />
-      </div>
-      <div className="mt-2.5 flex items-center justify-between">
-        <button type="button" onClick={() => onSalvar("")} className="text-[11.5px] text-ink-3 hover:text-foreground">
-          Limpar status
-        </button>
-        <button
-          type="button"
-          disabled={!texto.trim()}
-          onClick={() => onSalvar(`${emoji} ${texto}`)}
-          className="rounded-full bg-primary px-3 py-1 text-[11.5px] font-semibold text-primary-foreground disabled:opacity-40"
-        >
-          Salvar
-        </button>
-      </div>
-    </div>
   );
 }
 

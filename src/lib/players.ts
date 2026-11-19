@@ -30,6 +30,8 @@ export interface Player {
   maior_sequencia: number;
   ultimo_login: string | null;
   updated_at: string;
+  /** Whitelist liberada no servidor. null = o servidor ainda não manda essa informação. */
+  whitelist: boolean | null;
 }
 
 function parseInventario(v: unknown): InventarioItem[] {
@@ -73,6 +75,8 @@ export async function fetchPlayers(): Promise<Player[]> {
     maior_sequencia: r.maior_sequencia ?? 0,
     ultimo_login: r.ultimo_login,
     updated_at: r.updated_at,
+    // coluna opcional: só existe quando a integração de whitelist for ligada
+    whitelist: ((r as { whitelist?: boolean | null }).whitelist ?? null),
   }));
 }
 
@@ -101,6 +105,10 @@ export interface Banimento {
   data: string;
   /** Ainda valendo: permanente, do VAR, ou temporário dentro dos dias. */
   ativo: boolean;
+  /** Banimento Temporário (com dias). */
+  temporario: boolean;
+  /** Quando o temporário acaba (null = permanente ou sem dias). */
+  ate: string | null;
 }
 
 const DIA_MS = 86_400_000;
@@ -123,6 +131,8 @@ export async function fetchBanimentos(): Promise<Banimento[]> {
       punicao: r.punicao,
       data: r.data_punicao,
       ativo: !temporario || fim === null || fim > agora,
+      temporario: temporario && fim !== null,
+      ate: temporario && fim !== null ? new Date(fim).toISOString() : null,
     };
   });
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -26,20 +26,11 @@ import {
 import { fetchEventos } from "@/lib/eventos";
 import { CalendarMonth, dayKey } from "@/components/calendar-month";
 import { TarefasPreview } from "@/components/home-pessoal";
-import { HOKI_NA_HOME } from "@/lib/hoki-lugar";
 import { AtalhosCard } from "@/components/atalhos-card";
 import { Contagem } from "@/components/contagem";
 import { AvisosHero } from "@/components/avisos-hero";
 import { OrganizacoesDestaque } from "@/components/organizacoes-destaque";
 import { CartaoAndamento, CartaoMovimento } from "@/components/home-graficos";
-
-/**
- * O HOKI aparece na tela inicial (para ocultar, veja src/lib/hoki-lugar.ts).
- * Enquanto estiver oculto, o código dele nem é baixado nesta tela.
- */
-const HokiNaHome = HOKI_NA_HOME
-  ? lazy(() => import("@/components/hoki/hoki-card").then((m) => ({ default: m.HokiCard })))
-  : null;
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -365,16 +356,6 @@ function Dashboard() {
             </section>
           )}
 
-          {/* O HOKI na tela inicial (src/lib/hoki-lugar.ts), com a mesma tela de entrada da aba dele:
-              a ilha flutuando, o perfil com "Acordar agora" e quem está online; a praça só abre ao acordar */}
-          {HokiNaHome && (
-            <div className="md:col-span-6 xl:col-span-12">
-              <Suspense fallback={null}>
-                <HokiNaHome cabecalho />
-              </Suspense>
-            </div>
-          )}
-
           {/* 3. Os números da equipe: movimento do quadro, andamento do desenvolvimento e ranking */}
           <CartaoMovimento
             novos={datasNovas}
@@ -479,7 +460,6 @@ function Dashboard() {
             </div>
           </section>
 
-          {/* o queridômetro fica só dentro do HOKI (no termômetro da praça) */}
           <div className="md:col-span-3 xl:col-span-4 [&>*]:h-full">
             <TarefasPreview />
           </div>

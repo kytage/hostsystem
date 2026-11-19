@@ -17,7 +17,6 @@ import {
   Baby,
   CircleUserRound,
   Wallet,
-  FlaskConical,
   ScrollText,
   Contact,
   Clapperboard,
@@ -102,12 +101,11 @@ const nav: NavEntry[] = [
 /** Itens exclusivos do Founder (não passam pelo mapa de permissões). */
 const founderOnly: NavEntry[] = [
   { title: "Financeiro", icon: Wallet, url: "/financeiro" },
-  { title: "TESTE", icon: FlaskConical, url: "/teste" },
   { title: "Registro de autoria", icon: FileClock, url: "/autoria" },
 ];
 
 /** Estes não ficam no menu lateral: abrem pelo menu da conta (foto no rodapé). */
-export const NO_MENU_DA_CONTA = ["Usuários", "TESTE", "Registro de autoria"];
+export const NO_MENU_DA_CONTA = ["Usuários", "Registro de autoria"];
 
 const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" }];
 
@@ -122,7 +120,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
     nome: "Gestão",
     itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
   },
-  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "TESTE", "Registro de autoria"] },
+  { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "Registro de autoria"] },
 ];
 export const grupoDe = (titulo: string) =>
   GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
@@ -340,7 +338,7 @@ export function AppSidebar() {
   };
   const sair = () => void supabase.auth.signOut();
 
-  // Usuários, TESTE e Registro de autoria saem da lateral e vão para o menu da conta
+  // Usuários e Registro de autoria saem da lateral e vão para o menu da conta
   const doMenuDaConta = todos.filter((i) => NO_MENU_DA_CONTA.includes(i.title));
   const naLateral = todos.filter((i) => !NO_MENU_DA_CONTA.includes(i.title));
   const grupos = GRUPOS.map((g) => ({
@@ -420,7 +418,7 @@ export function AppSidebar() {
                   void navigate({ to: i.url as string });
                 }}
               >
-                <i.icon strokeWidth={1.6} /> {i.title === "TESTE" ? "Teste" : i.title}
+                <i.icon strokeWidth={1.6} /> {i.title}
                 {i.title === "Registro de autoria" && <span className="menu-novo">NEW</span>}
               </DropdownMenuItem>
             ))}

@@ -23,7 +23,6 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_authenticated/desenvolvimento'
 import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
-import { Route as AuthenticatedHokiRouteImport } from './routes/_authenticated/hoki'
 import { Route as AuthenticatedIlegalRouteImport } from './routes/_authenticated/ilegal'
 import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated/logs'
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
@@ -33,12 +32,9 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
-import { Route as AuthenticatedTesteRouteImport } from './routes/_authenticated/teste'
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as ConviteSlugRouteImport } from './routes/convite.$slug'
-import { Route as VisitaIndexRouteImport } from './routes/visita.index'
-import { Route as VisitaTokenRouteImport } from './routes/visita.$token'
 import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
 import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
 import { Route as ApiPublicWebhookLogsRouteImport } from './routes/api/public/webhook/logs'
@@ -118,11 +114,6 @@ const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   path: '/financeiro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedHokiRoute = AuthenticatedHokiRouteImport.update({
-  id: '/hoki',
-  path: '/hoki',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedIlegalRoute = AuthenticatedIlegalRouteImport.update({
   id: '/ilegal',
   path: '/ilegal',
@@ -169,11 +160,6 @@ const AuthenticatedTarefasRoute = AuthenticatedTarefasRouteImport.update({
   path: '/tarefas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedTesteRoute = AuthenticatedTesteRouteImport.update({
-  id: '/teste',
-  path: '/teste',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedUpdateRoute = AuthenticatedUpdateRouteImport.update({
   id: '/update',
   path: '/update',
@@ -187,16 +173,6 @@ const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
 const ConviteSlugRoute = ConviteSlugRouteImport.update({
   id: '/convite/$slug',
   path: '/convite/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VisitaIndexRoute = VisitaIndexRouteImport.update({
-  id: '/visita/',
-  path: '/visita/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VisitaTokenRoute = VisitaTokenRouteImport.update({
-  id: '/visita/$token',
-  path: '/visita/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAreasIndexRoute = AuthenticatedAreasIndexRouteImport.update({
@@ -245,7 +221,6 @@ export interface FileRoutesByFullPath {
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/logs': typeof AuthenticatedLogsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
@@ -255,12 +230,9 @@ export interface FileRoutesByFullPath {
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
-  '/teste': typeof AuthenticatedTesteRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
-  '/visita/$token': typeof VisitaTokenRoute
-  '/visita/': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
@@ -281,7 +253,6 @@ export interface FileRoutesByTo {
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/hoki': typeof AuthenticatedHokiRoute
   '/ilegal': typeof AuthenticatedIlegalRoute
   '/logs': typeof AuthenticatedLogsRoute
   '/marketing': typeof AuthenticatedMarketingRoute
@@ -291,13 +262,10 @@ export interface FileRoutesByTo {
   '/players': typeof AuthenticatedPlayersRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
-  '/teste': typeof AuthenticatedTesteRoute
   '/update': typeof AuthenticatedUpdateRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
-  '/visita/$token': typeof VisitaTokenRoute
   '/': typeof AuthenticatedIndexRoute
-  '/visita': typeof VisitaIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/areas': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
@@ -320,7 +288,6 @@ export interface FileRoutesById {
   '/_authenticated/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/_authenticated/eventos': typeof AuthenticatedEventosRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/_authenticated/hoki': typeof AuthenticatedHokiRoute
   '/_authenticated/ilegal': typeof AuthenticatedIlegalRoute
   '/_authenticated/logs': typeof AuthenticatedLogsRoute
   '/_authenticated/marketing': typeof AuthenticatedMarketingRoute
@@ -330,13 +297,10 @@ export interface FileRoutesById {
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
-  '/_authenticated/teste': typeof AuthenticatedTesteRoute
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
-  '/visita/$token': typeof VisitaTokenRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/visita/': typeof VisitaIndexRoute
   '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
   '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
@@ -360,7 +324,6 @@ export interface FileRouteTypes {
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
-    | '/hoki'
     | '/ilegal'
     | '/logs'
     | '/marketing'
@@ -370,12 +333,9 @@ export interface FileRouteTypes {
     | '/players'
     | '/punicoes'
     | '/tarefas'
-    | '/teste'
     | '/update'
     | '/usuarios'
     | '/convite/$slug'
-    | '/visita/$token'
-    | '/visita/'
     | '/areas/$area'
     | '/areas/'
     | '/api/public/webhook/logs'
@@ -396,7 +356,6 @@ export interface FileRouteTypes {
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
-    | '/hoki'
     | '/ilegal'
     | '/logs'
     | '/marketing'
@@ -406,13 +365,10 @@ export interface FileRouteTypes {
     | '/players'
     | '/punicoes'
     | '/tarefas'
-    | '/teste'
     | '/update'
     | '/usuarios'
     | '/convite/$slug'
-    | '/visita/$token'
     | '/'
-    | '/visita'
     | '/areas/$area'
     | '/areas'
     | '/api/public/webhook/logs'
@@ -434,7 +390,6 @@ export interface FileRouteTypes {
     | '/_authenticated/desenvolvimento'
     | '/_authenticated/eventos'
     | '/_authenticated/financeiro'
-    | '/_authenticated/hoki'
     | '/_authenticated/ilegal'
     | '/_authenticated/logs'
     | '/_authenticated/marketing'
@@ -444,13 +399,10 @@ export interface FileRouteTypes {
     | '/_authenticated/players'
     | '/_authenticated/punicoes'
     | '/_authenticated/tarefas'
-    | '/_authenticated/teste'
     | '/_authenticated/update'
     | '/_authenticated/usuarios'
     | '/convite/$slug'
-    | '/visita/$token'
     | '/_authenticated/'
-    | '/visita/'
     | '/_authenticated/areas/$area'
     | '/_authenticated/areas/'
     | '/api/public/webhook/logs'
@@ -465,8 +417,6 @@ export interface RootRouteChildren {
   LiderRoute: typeof LiderRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ConviteSlugRoute: typeof ConviteSlugRoute
-  VisitaTokenRoute: typeof VisitaTokenRoute
-  VisitaIndexRoute: typeof VisitaIndexRoute
   ApiPublicWebhookLogsRoute: typeof ApiPublicWebhookLogsRoute
   ApiPublicWebhookLogsDiscordRoute: typeof ApiPublicWebhookLogsDiscordRoute
   ApiPublicWebhookOnlineRoute: typeof ApiPublicWebhookOnlineRoute
@@ -573,13 +523,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/hoki': {
-      id: '/_authenticated/hoki'
-      path: '/hoki'
-      fullPath: '/hoki'
-      preLoaderRoute: typeof AuthenticatedHokiRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/ilegal': {
       id: '/_authenticated/ilegal'
       path: '/ilegal'
@@ -643,13 +586,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTarefasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/teste': {
-      id: '/_authenticated/teste'
-      path: '/teste'
-      fullPath: '/teste'
-      preLoaderRoute: typeof AuthenticatedTesteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/update': {
       id: '/_authenticated/update'
       path: '/update'
@@ -669,20 +605,6 @@ declare module '@tanstack/react-router' {
       path: '/convite/$slug'
       fullPath: '/convite/$slug'
       preLoaderRoute: typeof ConviteSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/visita/': {
-      id: '/visita/'
-      path: '/visita'
-      fullPath: '/visita/'
-      preLoaderRoute: typeof VisitaIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/visita/$token': {
-      id: '/visita/$token'
-      path: '/visita/$token'
-      fullPath: '/visita/$token'
-      preLoaderRoute: typeof VisitaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/areas/': {
@@ -740,7 +662,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDesenvolvimentoRoute: typeof AuthenticatedDesenvolvimentoRoute
   AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
-  AuthenticatedHokiRoute: typeof AuthenticatedHokiRoute
   AuthenticatedIlegalRoute: typeof AuthenticatedIlegalRoute
   AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRoute
@@ -750,7 +671,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
-  AuthenticatedTesteRoute: typeof AuthenticatedTesteRoute
   AuthenticatedUpdateRoute: typeof AuthenticatedUpdateRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -768,7 +688,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDesenvolvimentoRoute: AuthenticatedDesenvolvimentoRoute,
   AuthenticatedEventosRoute: AuthenticatedEventosRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
-  AuthenticatedHokiRoute: AuthenticatedHokiRoute,
   AuthenticatedIlegalRoute: AuthenticatedIlegalRoute,
   AuthenticatedLogsRoute: AuthenticatedLogsRoute,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRoute,
@@ -778,7 +697,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
-  AuthenticatedTesteRoute: AuthenticatedTesteRoute,
   AuthenticatedUpdateRoute: AuthenticatedUpdateRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
@@ -795,8 +713,6 @@ const rootRouteChildren: RootRouteChildren = {
   LiderRoute: LiderRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ConviteSlugRoute: ConviteSlugRoute,
-  VisitaTokenRoute: VisitaTokenRoute,
-  VisitaIndexRoute: VisitaIndexRoute,
   ApiPublicWebhookLogsRoute: ApiPublicWebhookLogsRoute,
   ApiPublicWebhookLogsDiscordRoute: ApiPublicWebhookLogsDiscordRoute,
   ApiPublicWebhookOnlineRoute: ApiPublicWebhookOnlineRoute,

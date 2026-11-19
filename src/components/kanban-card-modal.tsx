@@ -24,6 +24,7 @@ import { RichText } from "@/components/rich-text";
 import {
   addComentario,
   CATEGORIA_LABEL,
+  fetchCardAnexos,
   fetchComentarios,
   fetchHistorico,
   fmtDataHora,
@@ -88,7 +89,16 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
   const [obsDev, setObsDev] = useState(card.obsDev);
   const [patchTexto, setPatchTexto] = useState(card.patchTexto);
   const [testeStatus, setTesteStatus] = useState(card.testeStatus ?? "Aguardando teste");
-  const [anexos, setAnexos] = useState<Anexo[]>(card.anexos);
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  // as listas não trazem os anexos (imagens pesadas): eles são buscados ao abrir o card
+  const { data: anexosDoBanco } = useQuery({
+    queryKey: ["kanban-card-anexos", card.id],
+    queryFn: () => fetchCardAnexos(card.id),
+  });
+  const anexosProntos = anexosDoBanco !== undefined;
+  useEffect(() => {
+    if (anexosDoBanco) setAnexos(anexosDoBanco);
+  }, [anexosDoBanco]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>(card.checklist);
   const [novoAnexo, setNovoAnexo] = useState("");
   const [anexoAberto, setAnexoAberto] = useState<Anexo | null>(null);
@@ -110,8 +120,10 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
 
   const salvar = useMutation({
     mutationFn: (fields: Parameters<typeof updateCard>[1]) => updateCard(card.id, fields),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["kanban-cards"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["kanban-cards"] });
+      void queryClient.invalidateQueries({ queryKey: ["kanban-card-anexos", card.id] });
+    },
   });
 
   const comentar = useMutation({
@@ -153,6 +165,8 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
 
 
   const salvarAnexos = (lista: Anexo[]) => {
+    // os anexos chegam depois de abrir o card: sem eles, salvar apagaria os que já existem
+    if (!anexosProntos) return;
     setAnexos(lista);
     salvar.mutate({ anexos: lista });
   };
@@ -463,7 +477,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                 {/* Anexos / Imagens com previews grandes */}
                 <div className="hc-dentro p-3.5">
                   <p className="hc-sobre flex items-center gap-1.5">
-                    <Paperclip className="size-3.5" /> Anexos / Imagens ({anexos.length})
+                    <Paperclip className="size-3.5" /> Anexos / Imagens ({anexosProntos ? anexos.length : "…"})
                   </p>
                   {anexos.length > 0 && (
                     <div className="mt-3 grid grid-cols-2 gap-3">

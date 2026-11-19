@@ -20,8 +20,6 @@ import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { Toaster } from "@/components/ui/sonner";
-import { getAuthUser } from "@/lib/auth-cache";
-import { ehVisita } from "@/lib/hoki-visita";
 
 
 function NotFoundComponent() {
@@ -172,19 +170,6 @@ function RootComponent() {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAuthPage = pathname === "/auth";
-  // Visita do HOKI: não vê o menu da equipe (só a tela do HOKI)
-  const [visita, setVisita] = useState(false);
-  useEffect(() => {
-    let vivo = true;
-    void getAuthUser()
-      .then((u) => (u ? ehVisita(u.id) : false))
-      .then((v) => {
-        if (vivo) setVisita(v);
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [pathname]);
 
   usePresenceHeartbeat();
 
@@ -228,7 +213,7 @@ function RootComponent() {
 
   // Páginas abertas a quem não tem conta: painel do líder (entra por código) e
   // link de afiliação. Ficam sem o menu da equipe.
-  if (pathname === "/lider" || pathname.startsWith("/convite/") || pathname.startsWith("/visita")) {
+  if (pathname === "/lider" || pathname.startsWith("/convite/")) {
     return (
       <QueryClientProvider client={queryClient}>
         <main className="relative z-10 min-h-screen w-full">
@@ -242,7 +227,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="moldura relative z-10 flex h-screen w-full overflow-hidden">
-        {!visita && <AppSidebar />}
+        <AppSidebar />
         <AreaDaPagina key={pathname}>
           {/* a luz de fundo do topo, a mesma em todas as páginas (src/styles.css, .pagina-luz) */}
           <div aria-hidden className="pagina-luz" />

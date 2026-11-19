@@ -25,6 +25,7 @@ import {
   ArrowUpCircle,
   Network,
   Table2,
+  Archive,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ import { PageHeader } from "@/components/page-header";
 import { Indice, Indices } from "@/components/indice";
 import { PermissoesModal } from "@/components/permissoes-modal";
 import { PuxarCommit } from "@/components/puxar-commit";
+import { UsuariosArquivados } from "@/components/equipe/usuarios-arquivados";
 import { BotaoReiniciarSite } from "@/components/reiniciar-site";
 import { TeamOrgChart, PersonDrawer } from "@/components/equipe/team-org-chart";
 import {
@@ -94,12 +96,26 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
 });
 
 type UserRow = EquipeUser;
-type Aba = "equipe" | "casting";
+type Aba = "equipe" | "casting" | "arquivados";
 
 const ABAS: { key: Aba; label: string; icon: typeof Users }[] = [
   { key: "equipe", label: "Equipe", icon: Users },
   { key: "casting", label: "Casting", icon: Clapperboard },
+  { key: "arquivados", label: "Arquivados", icon: Archive },
 ];
+
+/** Confirma a exclusão e pede um motivo (opcional). null = cancelou. */
+function pedirMotivoExclusao(username: string): string | null {
+  const motivo = prompt(
+    `Excluir o usuário "${username}"?
+
+O acesso dele ao painel é removido e tudo dele (anotações, tarefas, punições, cargo e áreas) vai para a aba ARQUIVADOS.
+
+Motivo (opcional):`,
+    "",
+  );
+  return motivo === null ? null : motivo.trim();
+}
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 const EMPTY_CASTING: CastingInput = { nome: "", host_id: "", discord_id: "", obs: "" };
@@ -287,10 +303,11 @@ function EquipePage() {
   });
 
   const mutDelete = useMutation({
-    mutationFn: (userId: string) => deleteUser({ data: { userId } }),
+    mutationFn: (v: { userId: string; motivo: string }) => deleteUser({ data: v }),
     onSuccess: () => {
-      toast.success("Usuário excluído");
+      toast.success("Usuário excluído — os dados dele foram para ARQUIVADOS");
       invalidate();
+      void queryClient.invalidateQueries({ queryKey: ["usuarios-arquivados"] });
     },
     onError: (e) => toast.error(e.message),
   });
@@ -572,7 +589,7 @@ function EquipePage() {
                 <Plus className="size-4" /> Novo casting
               </button>
             ) : null}
-            {podeCriar && aba !== "casting" ? (
+            {podeCriar && aba === "equipe" ? (
               <button
                 onClick={() => {
                   setNovoUser("");
@@ -667,7 +684,9 @@ function EquipePage() {
       </div>
 
       <div className="glass hc">
-        {loadingUsers || (aba === "casting" && loadingCasting) ? (
+        {aba === "arquivados" ? (
+          <UsuariosArquivados busca={busca} />
+        ) : loadingUsers || (aba === "casting" && loadingCasting) ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             Carregando equipe...
           </p>
@@ -846,13 +865,8 @@ function EquipePage() {
                           {podeExcluir && u.role !== "founder" ? (
                             <button
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    `Excluir o usuário "${u.username}"? Essa ação não pode ser desfeita.`,
-                                  )
-                                ) {
-                                  mutDelete.mutate(u.id);
-                                }
+                                const motivo = pedirMotivoExclusao(u.username);
+                                if (motivo !== null) mutDelete.mutate({ userId: u.id, motivo });
                               }}
                               title="Excluir usuário"
                               className="hc-seta hover:!border-destructive/40 hover:!bg-destructive/10 hover:!text-destructive"
@@ -1465,10 +1479,9 @@ function EquipePage() {
                   : undefined
               }
               onDelete={() => {
-                if (
-                  confirm(`Excluir o usuário "${atual.username}"? Essa ação não pode ser desfeita.`)
-                ) {
-                  mutDelete.mutate(atual.id);
+                const motivo = pedirMotivoExclusao(atual.username);
+                if (motivo !== null) {
+                  mutDelete.mutate({ userId: atual.id, motivo });
                   setSelecionado(null);
                 }
               }}

@@ -46,7 +46,7 @@ async function assertManager(
     .eq("user_id", context.userId);
   const myRoles = ((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role);
 
-  // Sem cargo (visita do HOKI, conta criada fora do painel): nunca gerencia usuários.
+  // Sem cargo (conta criada fora do painel): nunca gerencia usuários.
   if (myRoles.length === 0) throw new Error("Sem permissão para gerenciar usuários");
   if (myRoles.includes("founder")) return true;
   if (myRoles.includes("c_level")) return false;
@@ -357,16 +357,146 @@ export const createUser = createServerFn({ method: "POST" })
 
 export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({ userId: z.string().uuid(), motivo: z.string().max(500).optional() })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const actorIsFounder = await assertManager(context, "delete");
     if (data.userId === context.userId) throw new Error("Você não pode excluir a própria conta");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await assertTargetAllowed(supabaseAdmin, actorIsFounder, data.userId, context.userId);
 
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    // 1) guarda uma cópia de tudo da pessoa em "Arquivados" ANTES de apagar.
+    //    Se não der para arquivar, a exclusão é cancelada (nada se perde).
+    const uid = data.userId;
+    const [perfil, roles, areas, notasStaff, notasPessoais, tarefas, punicoes, autor, authUser] =
+      await Promise.all([
+        supabaseAdmin.from("profiles").select("*").eq("id", uid).maybeSingle(),
+        supabaseAdmin.from("user_roles").select("role").eq("user_id", uid),
+        supabaseAdmin.from("user_areas").select("area").eq("user_id", uid),
+        supabaseAdmin
+          .from("staff_anotacoes")
+          .select("autor_nome, texto, criado_em")
+          .eq("staff_id", uid)
+          .order("criado_em", { ascending: true }),
+        supabaseAdmin.from("anotacoes").select("texto").eq("user_id", uid).maybeSingle(),
+        supabaseAdmin
+          .from("tarefas_particulares")
+          .select("titulo, descricao, coluna, tipo, designada_por, reuniao_at, created_at")
+          .eq("user_id", uid),
+        supabaseAdmin
+          .from("punicoes")
+          .select("tipo, jogador, jogador_id, motivo, punicao, duracao, data_punicao")
+          .eq("staff_id", uid)
+          .order("data_punicao", { ascending: false })
+          .limit(500),
+        supabaseAdmin.from("profiles").select("username").eq("id", context.userId).maybeSingle(),
+        supabaseAdmin.auth.admin.getUserById(uid),
+      ]);
+    for (const r of [perfil, roles, areas, notasStaff, notasPessoais, tarefas, punicoes]) {
+      if (r.error) throw new Error(`Não foi possível arquivar os dados: ${r.error.message}`);
+    }
+    const p = (perfil.data ?? {}) as Partial<{
+      username: string; avatar_url: string | null; discord_id: string | null; host_id: string | null;
+      created_at: string; last_seen_at: string | null; bio: string | null; status: string | null;
+      banner_url: string | null;
+    }>;
+    const texto = (v: unknown) => (typeof v === "string" ? v : "");
+    const { error: erroArquivo } = await supabaseAdmin.from("usuarios_arquivados").insert({
+      user_id: uid,
+      username: texto(p.username),
+      avatar_url: texto(p.avatar_url),
+      cargo: highestRole(((roles.data ?? []) as { role: AppRole }[]).map((r) => r.role)),
+      areas: ((areas.data ?? []) as { area: string }[]).map((a) => a.area),
+      discord_id: texto(p.discord_id),
+      host_id: texto(p.host_id),
+      entrou_em: (p.created_at as string | null) ?? null,
+      ultimo_acesso:
+        (p.last_seen_at as string | null) ?? authUser.data?.user?.last_sign_in_at ?? null,
+      perfil: { bio: texto(p.bio), status: texto(p.status), banner_url: texto(p.banner_url) },
+      staff_anotacoes: (notasStaff.data ?? []) as never,
+      anotacoes_pessoais: texto(notasPessoais.data?.texto),
+      tarefas: (tarefas.data ?? []) as never,
+      punicoes: (punicoes.data ?? []) as never,
+      motivo: (data.motivo ?? "").trim(),
+      excluido_por: texto(autor.data?.username),
+      excluido_por_id: context.userId,
+    });
+    if (erroArquivo) throw new Error(`Não foi possível arquivar os dados: ${erroArquivo.message}`);
+
+    // 2) apaga a conta (cargo, áreas e anotações de staff saem junto pelo banco)
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(uid);
     if (error) throw new Error(error.message);
+
+    // 3) anotações e tarefas pessoais já estão no arquivo: tira as cópias soltas
+    await Promise.all([
+      supabaseAdmin.from("anotacoes").delete().eq("user_id", uid),
+      supabaseAdmin.from("tarefas_particulares").delete().eq("user_id", uid),
+    ]);
     return { ok: true };
+  });
+
+export interface UsuarioArquivado {
+  id: string;
+  user_id: string;
+  username: string;
+  avatar_url: string;
+  cargo: string;
+  areas: string[];
+  discord_id: string;
+  host_id: string;
+  entrou_em: string | null;
+  ultimo_acesso: string | null;
+  perfil: { bio?: string; status?: string; banner_url?: string };
+  staff_anotacoes: { autor_nome: string; texto: string; criado_em: string }[];
+  anotacoes_pessoais: string;
+  tarefas: {
+    titulo: string;
+    descricao: string;
+    coluna: string;
+    tipo: string | null;
+    designada_por: string | null;
+    created_at: string;
+  }[];
+  punicoes: {
+    tipo: string;
+    jogador: string;
+    jogador_id: string;
+    motivo: string;
+    punicao: string;
+    duracao: string;
+    data_punicao: string;
+  }[];
+  motivo: string;
+  excluido_por: string;
+  excluido_em: string;
+}
+
+/** Histórico de quem foi excluído do painel (aba ARQUIVADOS em /usuarios). */
+export const listArquivados = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertManager(context, "view");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: eu } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    // anotações de staff seguem a mesma regra da Equipe: só Coordinator+ lê
+    const meuCargo = highestRole(((eu ?? []) as { role: AppRole }[]).map((r) => r.role));
+    const veNotas = ["founder", "c_level", "direcao", "coordinator"].includes(meuCargo);
+    const { data, error } = await supabaseAdmin
+      .from("usuarios_arquivados")
+      .select("*")
+      .order("excluido_em", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as unknown as UsuarioArquivado[]).map((a) => ({
+      ...a,
+      staff_anotacoes: veNotas ? a.staff_anotacoes : [],
+    }));
   });
 
 export const resetUserPassword = createServerFn({ method: "POST" })

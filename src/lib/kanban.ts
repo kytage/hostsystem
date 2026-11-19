@@ -135,7 +135,7 @@ export function rowToCard(r: CardRow): KanbanCard {
     aprovadoPor: r.aprovado_por ?? "",
     obsDev: r.obs_dev,
     patchTexto: r.patch_texto,
-    anexos: (r.anexos as unknown as Anexo[]) ?? [],
+    anexos: ((r as { anexos?: unknown }).anexos as Anexo[] | undefined) ?? [],
     checklist: (r.checklist as unknown as ChecklistItem[]) ?? [],
     entrouDevAt: r.entrou_dev_at,
     concluidoAt: r.concluido_at,
@@ -207,10 +207,25 @@ export async function fetchProfilesBasic(): Promise<{ id: string; username: stri
   return data ?? [];
 }
 
+/**
+ * Colunas dos cards SEM os anexos: as imagens coladas ficam guardadas dentro do card e
+ * pesam mais de 1 MB no total; as listas (quadro, home, ranking) não precisam delas.
+ * Os anexos de um card são buscados só quando ele é aberto (fetchCardAnexos).
+ */
+const COLUNAS_SEM_ANEXOS =
+  "id, numero, titulo, descricao, categoria, prioridade, coluna, status, teste_status, responsavel, criado_por, obs_dev, patch_texto, checklist, entrou_dev_at, concluido_at, concluido_por, patchnote_gerado, patchnote_id, arquivado, created_at, updated_at, aprovado_por";
+
+/** Os anexos (imagens e links) de um card. */
+export async function fetchCardAnexos(id: string): Promise<Anexo[]> {
+  const { data, error } = await supabase.from("kanban_cards").select("anexos").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return ((data?.anexos as unknown as Anexo[] | null) ?? []);
+}
+
 export async function fetchCards(arquivados = false): Promise<KanbanCard[]> {
   const { data, error } = await supabase
     .from("kanban_cards")
-    .select("*")
+    .select(COLUNAS_SEM_ANEXOS)
     .eq("arquivado", arquivados)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -552,7 +567,7 @@ export async function fetchPatchNotes(): Promise<PatchNote[]> {
 export async function fetchPatchNoteCards(patchnoteId: string): Promise<KanbanCard[]> {
   const { data, error } = await supabase
     .from("kanban_cards")
-    .select("*")
+    .select(COLUNAS_SEM_ANEXOS)
     .eq("patchnote_id", patchnoteId)
     .order("numero", { ascending: true });
   if (error) throw error;

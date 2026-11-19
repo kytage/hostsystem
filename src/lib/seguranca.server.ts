@@ -1,7 +1,7 @@
 /**
  * Checagens de acesso das server functions (só servidor).
  *
- * Estar logado não basta: contas de visita do HOKI (e qualquer conta criada fora do painel)
+ * Estar logado não basta: contas criadas fora do painel
  * também têm login. Antes de usar o client privilegiado, a função precisa confirmar que a
  * pessoa é da equipe e, quando for o caso, que tem a permissão daquela aba.
  */
