@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CATEGORIAS_COM_HISTORICO, lidoPeloBot } from "@/lib/logs-bot";
 
 /**
- * Anti-Cheat → site. O PL_PROTECT manda as logs direto para o Discord (não passa pelo host_logs),
- * então o site lê os canais do Anti-Cheat com um bot do Discord e copia as mensagens novas.
- * SÓ os canais da categoria "anti-cheat" são lidos.
+ * Bot de logs do Discord → site. Lê os canais dos scripts que não podem usar a cópia do servidor
+ * (Anti-Cheat/PL_PROTECT e os scripts criptografados — lista em src/lib/logs-bot.ts) e copia as
+ * mensagens novas. Só os canais dessa lista são lidos.
  *
  * - O token do bot fica em server_logs_config (chave "anticheat_bot_token"), que só o servidor lê.
  * - Onde parou em cada canal fica em "anticheat_cursor:<id do canal>" (id da última mensagem).
@@ -109,6 +110,14 @@ async function lerCanal(
   let cursor = await lerConfig(admin, chaveCursor);
   let novas = 0;
 
+  // canal novo sem histórico: só marca onde está agora (o que veio antes já chegou pela cópia antiga)
+  if (!cursor && !CATEGORIAS_COM_HISTORICO.has(canalSite.split("/")[0] ?? "")) {
+    const r = await discord<MsgDiscord[]>(token, `/channels/${canalDiscord}/messages?limit=1`);
+    if (!r.ok) return { novas, erro: r.status };
+    await gravarConfig(admin, chaveCursor, r.dados[0]?.id ?? "0");
+    return { novas };
+  }
+
   for (let pagina = 0; pagina < (cursor ? MAX_PAGINAS : 1); pagina++) {
     const caminho = cursor
       ? `/channels/${canalDiscord}/messages?after=${cursor}&limit=100`
@@ -163,7 +172,7 @@ export const sincronizarAntiCheat = createServerFn({ method: "POST" })
     if (!(await pegarVez(supabaseAdmin))) return { ok: true as const, novas: 0, pulou: true };
 
     const { CANAL_DO_DISCORD } = await import("@/lib/logs-servidor");
-    const canais = [...CANAL_DO_DISCORD.entries()].filter(([, site]) => site.startsWith("anti-cheat/"));
+    const canais = [...CANAL_DO_DISCORD.entries()].filter(([, site]) => lidoPeloBot(site));
     let novas = 0;
     const erros: number[] = [];
     // poucos por vez para não estourar o limite do Discord
@@ -218,4 +227,28 @@ export const statusBotAntiCheat = createServerFn({ method: "GET" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return { configurado: !!(await lerConfig(supabaseAdmin, CHAVE_TOKEN)) };
+  });
+
+/** Founder: testa em quais canais lidos pelo bot ele ainda NÃO tem acesso (para liberar no Discord). */
+export const verificarAcessoBot = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", context.userId);
+    if (!(roles ?? []).some((r) => r.role === "founder")) throw new Error("Só o Founder pode ver isso.");
+    const token = await lerConfig(supabaseAdmin, CHAVE_TOKEN);
+    if (!token) return { configurado: false, total: 0, semAcesso: [] as string[] };
+    const { CANAL_DO_DISCORD } = await import("@/lib/logs-servidor");
+    const canais = [...CANAL_DO_DISCORD.entries()].filter(([, site]) => lidoPeloBot(site));
+    const semAcesso: string[] = [];
+    for (let i = 0; i < canais.length; i += 5) {
+      const lote = await Promise.all(
+        canais.slice(i, i + 5).map(async ([id, site]) => {
+          const r = await discord<unknown[]>(token, `/channels/${id}/messages?limit=1`);
+          return r.ok ? null : site;
+        }),
+      );
+      semAcesso.push(...lote.filter((x): x is string => !!x));
+    }
+    return { configurado: true, total: canais.length, semAcesso };
   });

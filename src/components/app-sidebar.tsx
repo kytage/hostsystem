@@ -1,4 +1,5 @@
 import { useAcessoLogs } from "@/lib/logs-acesso";
+import { hasPoliciaAccess } from "@/lib/policia";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
@@ -18,6 +19,7 @@ import {
   CircleUserRound,
   Wallet,
   ScrollText,
+  Siren,
   Contact,
   Clapperboard,
   Map as MapIcon,
@@ -114,7 +116,7 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
   { nome: "Geral", itens: ["Home", "Perfil & Agenda", "Áreas", "Eventos e Cronograma"] },
   {
     nome: "Operação",
-    itens: ["Comandos Staffs", "Logs", "Ilegal", "Captações", "Peds", "Players", "Punições"],
+    itens: ["Comandos Staffs", "Logs", "Ilegal", "Polícia", "Captações", "Peds", "Players", "Punições"],
   },
   {
     nome: "Gestão",
@@ -156,6 +158,10 @@ export function useMenu() {
   const todos: NavEntry[] = [
     ...nav.filter(pode),
     ...(logs.temAcesso ? [{ title: "Logs", icon: ScrollText, url: "/logs" } satisfies NavEntry] : []),
+    // Polícia: Coordinator+ ou área Polícia (src/lib/policia.ts)
+    ...(hasPoliciaAccess(role, myAreas)
+      ? [{ title: "Polícia", icon: Siren, url: "/policia" } satisfies NavEntry]
+      : []),
     ...(role === "founder" ? founderOnly : []),
     ...ops.filter(pode),
     ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms, userPerms)

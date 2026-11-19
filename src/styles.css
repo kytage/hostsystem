@@ -2535,3 +2535,7 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 .pp-botao-vermelho { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 12px; background: #c42419; color: #fff; font-size: 12.5px; font-weight: 700; }
 .pp-botao-vermelho:hover { background: #d82a1e; }
 .pp-logs-circulo { display: grid; place-items: center; width: 140px; height: 140px; border-radius: 999px; background: #c42419; color: #fff; font-size: 36px; font-weight: 900; letter-spacing: 0.02em; box-shadow: 0 0 60px rgba(196, 36, 25, 0.35); }
+/* X de fechar do painel do player: no canto do cartão de logs, sem cobrir os botões */
+.pp-janela > button:last-child { top: 18px; right: 18px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; opacity: 1; color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); transition: background 0.15s, color 0.15s; }
+.pp-janela > button:last-child:hover { background: rgba(229, 35, 27, 0.18); color: #fff; border-color: rgba(229, 35, 27, 0.4); }
+.pp-janela > button:last-child svg { width: 15px; height: 15px; }

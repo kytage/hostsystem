@@ -347,3 +347,121 @@ export async function fetchPunicoesDoPlayer(id: string): Promise<PunicaoDoPlayer
     dias: r.dias ?? null,
   }));
 }
+
+/* ------------------------------------------------------------------ horas online */
+
+export interface HorasOnline {
+  /** Últimos 14 dias, do mais antigo para hoje (horas com 1 casa). */
+  porDia: { dia: string; rotulo: string; horas: number }[];
+  horas7: number;
+  horas30: number;
+  sessoes: number;
+  /** Duração média de cada sessão, em horas. */
+  mediaSessao: number;
+}
+
+const LIMITE_SESSAO_MS = 16 * 3600_000;
+
+/**
+ * Sessões a partir das logs de entrada e saída do servidor: a saída (#disconnect) traz o
+ * passaporte e a license; a entrada (#connect) traz a license. Cada saída fecha a última entrada
+ * antes dela; sessão sem saída (player online) vai até agora.
+ */
+export function calcularHorasOnline(
+  entradas: string[],
+  saidas: string[],
+  online: boolean,
+  agora = new Date(),
+): HorasOnline {
+  const ev = [
+    ...entradas.map((t) => ({ t: new Date(t).getTime(), tipo: "in" as const })),
+    ...saidas.map((t) => ({ t: new Date(t).getTime(), tipo: "out" as const })),
+  ].sort((a, b) => a.t - b.t);
+  const sessoes: [number, number][] = [];
+  let aberta: number | null = null;
+  for (const e of ev) {
+    if (e.tipo === "in") aberta = e.t;
+    else if (aberta !== null) {
+      sessoes.push([aberta, Math.min(e.t, aberta + LIMITE_SESSAO_MS)]);
+      aberta = null;
+    }
+  }
+  if (aberta !== null && online) sessoes.push([aberta, Math.min(agora.getTime(), aberta + LIMITE_SESSAO_MS)]);
+
+  // horas por dia (a sessão que passa da meia-noite é dividida entre os dias)
+  const porDiaMs = new Map<string, number>();
+  for (const [ini, fim] of sessoes) {
+    let a = ini;
+    while (a < fim) {
+      const d = new Date(a);
+      const meiaNoite = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+      const b = Math.min(fim, meiaNoite);
+      const k = chaveDia(d);
+      porDiaMs.set(k, (porDiaMs.get(k) ?? 0) + (b - a));
+      a = b;
+    }
+  }
+  const h = (ms: number) => Math.round((ms / 3600_000) * 10) / 10;
+  const porDia: HorasOnline["porDia"] = [];
+  let ms7 = 0;
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(agora.getTime() - i * 86_400_000);
+    const k = chaveDia(d);
+    const ms = porDiaMs.get(k) ?? 0;
+    if (i < 7) ms7 += ms;
+    porDia.push({ dia: k, rotulo: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), horas: h(ms) });
+  }
+  const total = [...porDiaMs.values()].reduce((s, x) => s + x, 0);
+  return {
+    porDia,
+    horas7: h(ms7),
+    horas30: h(total),
+    sessoes: sessoes.length,
+    mediaSessao: sessoes.length ? h(total / sessoes.length) : 0,
+  };
+}
+
+/** Busca as entradas e saídas do player (30 dias) e calcula as horas online. */
+export async function fetchHorasOnline(
+  p: { passaporte: string | null; license: string; online: boolean },
+  dias = 30,
+): Promise<HorasOnline> {
+  const pid = p.passaporte?.trim() ?? "";
+  const desde = new Date(Date.now() - dias * 86_400_000).toISOString();
+  const { data: saidas, error } = pid
+    ? await supabase
+        .from("server_logs")
+        .select("mensagem, criado_em")
+        .eq("canal", "infos-players/disconnect")
+        .eq("jogador_id", pid)
+        .gte("criado_em", desde)
+        .order("criado_em", { ascending: true })
+        .limit(2000)
+    : { data: [], error: null };
+  if (error) throw error;
+  // a entrada não tem passaporte: acha pela license (das saídas) ou pela Steam da ficha
+  const chaves = new Set<string>();
+  for (const s of saidas ?? []) {
+    const m = s.mensagem.match(/license:([0-9a-f]{20,60})/i);
+    if (m) chaves.add(`license:${m[1]!.toLowerCase()}`);
+  }
+  if (/^1100001[0-9a-f]{8,}$/i.test(p.license)) chaves.add(`steam:${p.license.toLowerCase()}`);
+  let entradas: string[] = [];
+  if (chaves.size) {
+    const { data, error: e2 } = await supabase
+      .from("server_logs")
+      .select("criado_em")
+      .eq("canal", "infos-players/connect")
+      .gte("criado_em", desde)
+      .or([...chaves].slice(0, 5).map((k) => `mensagem.ilike.%${k}%`).join(","))
+      .order("criado_em", { ascending: true })
+      .limit(2000);
+    if (e2) throw e2;
+    entradas = (data ?? []).map((x) => x.criado_em);
+  }
+  return calcularHorasOnline(
+    entradas,
+    (saidas ?? []).map((x) => x.criado_em),
+    p.online,
+  );
+}

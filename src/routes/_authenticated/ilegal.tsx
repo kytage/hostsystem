@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { IlegalPlayersSet } from "@/components/ilegal-players-set";
 import { fetchCronograma } from "@/lib/ilegal-cronograma";
 import {
   Skull,
@@ -145,11 +146,11 @@ const SERIE_TEXT: Record<SerieIlegal, string> = {
 /** Célula "Média": apenas o número do maior pico — detalhes por horário no hover. */
 function MediaOnlineCell({ info }: { info: SetagemOnlineResumo | undefined }) {
   if (!info) return <span className="text-xs text-muted-foreground/50">—</span>;
-  const detalhes = HORAS_MEDIA.map(
-    (h) => `${String(h).padStart(2, "0")}h: ${info.porHora[h] ?? "sem dado"}`,
-  ).join("  ·  ");
+  // "00h" é a contagem de 23:5x (último envio antes da meia-noite: fecha o dia)
+  const rotuloHora = (h: number) => (h === 0 ? "23:59" : `${String(h).padStart(2, "0")}h`);
+  const detalhes = HORAS_MEDIA.map((h) => `${rotuloHora(h)}: ${info.porHora[h] ?? "sem dado"}`).join("  ·  ");
   const titulo = info.picoHora !== null
-    ? `${detalhes}\nMaior pico — ${String(info.picoHora).padStart(2, "0")}h`
+    ? `${detalhes}\nMaior pico — ${rotuloHora(info.picoHora)}`
     : `${detalhes}\nMaior pico`;
   return (
     <span title={titulo} className="inline-flex cursor-help items-center">
@@ -458,7 +459,7 @@ function DetalhesModal({
   const [transferirOpen, setTransferirOpen] = useState(false);
   const [excluirOpen, setExcluirOpen] = useState(false);
   const [abaModal, setAbaModal] = useState<
-    "detalhes" | "historico" | "denuncias" | "punicoes"
+    "detalhes" | "historico" | "denuncias" | "punicoes" | "players"
   >("detalhes");
 
 
@@ -637,6 +638,7 @@ function DetalhesModal({
               { id: "historico", label: "Histórico de Online" },
               { id: "denuncias", label: "Denúncias" },
               { id: "punicoes", label: "Punições" },
+              { id: "players", label: "Players" },
             ] as const
           ).map((t) => (
             <button
@@ -689,6 +691,8 @@ function DetalhesModal({
           <IlegalRegistrosSet setagem={org.setagem} tipo="denuncia" desde={org.limpoEm} />
         ) : abaModal === "punicoes" ? (
           <IlegalRegistrosSet setagem={org.setagem} tipo="var" desde={org.limpoEm} />
+        ) : abaModal === "players" ? (
+          <IlegalPlayersSet setagem={org.setagem} />
         ) : isLoading ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Carregando detalhes...

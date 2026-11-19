@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export interface InventarioItem {
   item: string;
@@ -44,13 +45,10 @@ function parseInventario(v: unknown): InventarioItem[] {
     .map((i) => ({ item: i.item, qtd: Number(i.qtd) || 1 }));
 }
 
-export async function fetchPlayers(): Promise<Player[]> {
-  const { data, error } = await supabase
-    .from("players")
-    .select("*")
-    .order("nome", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((r) => ({
+type LinhaPlayer = Database["public"]["Tables"]["players"]["Row"];
+
+function linhaParaPlayer(r: LinhaPlayer): Player {
+  return {
     id: r.id,
     license: r.license,
     passaporte: r.passaporte,
@@ -75,9 +73,31 @@ export async function fetchPlayers(): Promise<Player[]> {
     maior_sequencia: r.maior_sequencia ?? 0,
     ultimo_login: r.ultimo_login,
     updated_at: r.updated_at,
-    // coluna opcional: só existe quando a integração de whitelist for ligada
-    whitelist: ((r as { whitelist?: boolean | null }).whitelist ?? null),
-  }));
+    // vem do host_painel (null = o servidor ainda não mandou)
+    whitelist: r.whitelist ?? null,
+  };
+}
+
+export async function fetchPlayers(): Promise<Player[]> {
+  const { data, error } = await supabase
+    .from("players")
+    .select("*")
+    .order("nome", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(linhaParaPlayer);
+}
+
+/** Players que têm o grupo (ex.: "Muni01"; aceita "Muni01:2" com nível). Online primeiro. */
+export async function fetchPlayersDoGrupo(grupo: string): Promise<Player[]> {
+  const alvo = grupo.trim().toLowerCase();
+  if (!alvo) return [];
+  const { data, error } = await supabase.rpc("players_com_grupo" as never, { p_grupo: alvo } as never);
+  if (!error) return ((data ?? []) as LinhaPlayer[]).map(linhaParaPlayer);
+  // plano B (função ainda não criada no banco): filtra aqui
+  const todos = await fetchPlayers();
+  return todos
+    .filter((p) => p.grupos.some((g) => g.split(":")[0]!.trim().toLowerCase() === alvo))
+    .sort((a, b) => Number(b.online) - Number(a.online) || (b.ultimo_login ?? "").localeCompare(a.ultimo_login ?? ""));
 }
 
 export const brl = (n: number) =>

@@ -1709,6 +1709,7 @@ export type Database = {
           telefone: string | null
           ultimo_login: string | null
           updated_at: string
+          whitelist: boolean | null
           veiculos: string[]
         }
         Insert: {
@@ -1736,6 +1737,7 @@ export type Database = {
           telefone?: string | null
           ultimo_login?: string | null
           updated_at?: string
+          whitelist?: boolean | null
           veiculos?: string[]
         }
         Update: {
@@ -1763,6 +1765,7 @@ export type Database = {
           telefone?: string | null
           ultimo_login?: string | null
           updated_at?: string
+          whitelist?: boolean | null
           veiculos?: string[]
         }
         Relationships: []

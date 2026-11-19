@@ -34,6 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CopyBtn } from "@/components/players/player-inventario";
 import { brl, itemBase, type Banimento, type Player } from "@/lib/players";
 import { PdfDoPlayer } from "@/components/players/player-pdf";
+import { fotoDoAdmin } from "@/lib/player-foto.functions";
 import { lerLog } from "@/lib/logs-leitura";
 import {
   BANNER_PADRAO,
@@ -44,6 +45,7 @@ import {
   haQuanto,
   situacaoDoPlayer,
   type Situacao,
+  fetchHorasOnline,
   fetchLogsDoPlayer,
   lerGrupos,
   progressoNoRank,
@@ -113,6 +115,23 @@ export function playerSoComId(id: string, nome?: string | null): Player {
   };
 }
 
+/**
+ * Foto do player: ADMIN no jogo usa a foto do perfil dele no site (achado pelo ID HOST = passaporte
+ * ou pelo ID Discord); o resto, a foto padrão (até a integração da foto do personagem).
+ */
+export function useFotoDoPlayer(p: Player): string {
+  const admin = useMemo(() => cargoDoPlayer(lerGrupos(p.grupos))?.id === "admin", [p.grupos]);
+  const passaporte = /^\d{1,9}$/.test(p.passaporte ?? "") ? p.passaporte : null;
+  const discordId = /^\d{5,25}$/.test(p.discord_id ?? "") ? p.discord_id : null;
+  const { data } = useQuery({
+    queryKey: ["foto-admin", passaporte, discordId],
+    queryFn: () => fotoDoAdmin({ data: { passaporte, discordId } }),
+    enabled: admin && !!(passaporte || discordId),
+    staleTime: 10 * 60_000,
+  });
+  return data?.foto || FOTO_PADRAO;
+}
+
 /** Painel do player: perfil, inventário/veículos, logs com estatísticas e comandos (em breve). */
 export function PlayerPerfil({
   player: p,
@@ -128,6 +147,7 @@ export function PlayerPerfil({
   onClose: () => void;
 }) {
   const situacao = situacaoDoPlayer(p.passaporte, p.whitelist, banimentos);
+  const foto = useFotoDoPlayer(p);
   const [pdf, setPdf] = useState(false);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -136,7 +156,7 @@ export function PlayerPerfil({
         {/* em telas largas tudo cabe na altura (sem rolar a janela): cada coluna rola por dentro */}
         <div className="grid gap-2.5 p-2.5 lg:grid-cols-[320px_minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[320px_300px_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)]">
           <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
-            <CartaoPerfil p={p} situacao={situacao} semFicha={semFicha} onPdf={() => setPdf(true)} />
+            <CartaoPerfil p={p} foto={foto} situacao={situacao} semFicha={semFicha} onPdf={() => setPdf(true)} />
             <CartaoGrupos p={p} />
           </div>
           <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
@@ -147,7 +167,7 @@ export function PlayerPerfil({
             <BarraComandos p={p} />
           </div>
         </div>
-        {pdf && <PdfDoPlayer p={p} situacao={situacao} onClose={() => setPdf(false)} />}
+        {pdf && <PdfDoPlayer p={p} foto={foto} situacao={situacao} onClose={() => setPdf(false)} />}
       </DialogContent>
     </Dialog>
   );
@@ -157,11 +177,13 @@ export function PlayerPerfil({
 
 function CartaoPerfil({
   p,
+  foto,
   situacao,
   semFicha,
   onPdf,
 }: {
   p: Player;
+  foto: string;
   situacao: Situacao;
   semFicha?: boolean | undefined;
   onPdf: () => void;
@@ -204,8 +226,11 @@ function CartaoPerfil({
         <div className="flex items-end gap-3">
           <span className="relative shrink-0">
             <img
-              src={FOTO_PADRAO}
+              src={foto}
               alt=""
+              onError={(e) => {
+                if (!e.currentTarget.src.endsWith(FOTO_PADRAO)) e.currentTarget.src = FOTO_PADRAO;
+              }}
               className="size-[72px] rounded-[18px] border-[3px] border-[#0d0d0d] object-cover shadow-xl"
             />
             <span
@@ -487,7 +512,7 @@ function ListaVeiculos({ p }: { p: Player }) {
       <ul className="grid max-h-[55svh] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
         {lista.map((v) => (
           <li key={`${v.spawn}-${v.indice}`} className="rounded-xl bg-white/[0.03] p-2">
-            <div className="grid h-20 place-items-center overflow-hidden rounded-lg bg-black/30">
+            <div className="relative grid h-24 place-items-center overflow-hidden rounded-lg bg-black/30">
               <Miniatura src={urlVeiculo(v.spawn)} icone={Car} grande />
             </div>
             <div className="mt-1.5 flex items-center gap-1">
@@ -521,7 +546,8 @@ function Miniatura({ src, icone: I, grande }: { src: string; icone: LucideIcon; 
       alt=""
       loading="lazy"
       onError={() => setErro(true)}
-      className={cn("shrink-0 object-contain", grande ? "h-full w-full" : "size-9")}
+      // grande: preenche o quadro inteiro sem cortar (object-contain + posição absoluta)
+      className={cn("shrink-0 object-contain", grande ? "absolute inset-0 size-full p-1.5" : "size-9")}
     />
   );
 }
@@ -549,10 +575,23 @@ function PainelLogs({ p }: { p: Player }) {
     });
   }, [todas, q, categoria]);
   const catAtual = resumo.porCategoria.find((c) => c.id === categoria);
+  // horas online: das logs de entrada (#connect) e saída (#disconnect) do servidor
+  const horas = useQuery({
+    queryKey: ["player-horas", id, p.license, p.online],
+    queryFn: () => fetchHorasOnline(p),
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+  const [grafico, setGrafico] = useState<"logs" | "horas">("logs");
+  const dadosGrafico =
+    grafico === "logs"
+      ? resumo.porDia.map((d) => ({ rotulo: d.rotulo, valor: d.total }))
+      : (horas.data?.porDia ?? []).map((d) => ({ rotulo: d.rotulo, valor: d.horas }));
 
   return (
     <section className="pp-cartao flex min-h-[460px] flex-1 flex-col xl:min-h-0">
-      <header className="flex flex-wrap items-center gap-2 border-b border-white/[0.05] px-3 py-2">
+      {/* pr-12: espaço para o X de fechar a janela, que fica neste canto */}
+      <header className="flex flex-wrap items-center gap-2 border-b border-white/[0.05] py-2 pl-3 pr-12">
         <h3 className="mr-auto pl-1 text-[15px] font-bold">Logs do player</h3>
         <label className="campo-busca w-full sm:w-72">
           <Search className="size-[14px] shrink-0" strokeWidth={1.75} />
@@ -585,10 +624,10 @@ function PainelLogs({ p }: { p: Player }) {
           <Link
             to="/logs"
             search={{ jogador: id }}
-            className="hc-seta !size-9"
+            className="grid size-7 place-items-center rounded-lg text-ink-3 transition-colors hover:bg-white/[0.06] hover:text-foreground"
             title="Abrir todas as logs dele na aba Logs"
           >
-            <ExternalLink className="size-4" />
+            <ExternalLink className="size-3.5" />
           </Link>
         )}
       </header>
@@ -606,21 +645,54 @@ function PainelLogs({ p }: { p: Player }) {
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-2.5">
           {/* números */}
-          <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-5">
             {/* a busca traz as 1000 mais recentes: com mais que isso, mostra "1.000+" */}
             <Estat rotulo="30 dias" valor={resumo.total} mais={todas.length >= 1000} />
             <Estat rotulo="7 dias" valor={resumo.ultimos7} mais={todas.length >= 1000} />
             <Estat rotulo="Hoje" valor={resumo.hoje} />
+            <Estat
+              rotulo="Online · 7 dias"
+              valor={0}
+              texto={horas.data ? horasTexto(horas.data.horas7) : horas.isLoading ? "…" : "—"}
+              titulo={
+                horas.data
+                  ? `30 dias: ${horasTexto(horas.data.horas30)} · ${horas.data.sessoes} sessões · média de ${horasTexto(horas.data.mediaSessao)} por sessão`
+                  : undefined
+              }
+            />
             <Estat rotulo="Anti-Cheat" valor={resumo.antiCheat} alerta={resumo.antiCheat > 0} />
           </div>
 
           <div className="grid shrink-0 gap-2.5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             {/* atividade por dia */}
             <div className="rounded-2xl bg-white/[0.025] p-3">
-              <p className="hc-sobre mb-2">Atividade — últimos 14 dias</p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="hc-sobre">
+                  {grafico === "logs" ? "Logs por dia" : "Horas online por dia"} — 14 dias
+                </p>
+                <div className="flex rounded-lg bg-white/[0.04] p-0.5 text-[10.5px] font-semibold">
+                  {(
+                    [
+                      ["logs", "Logs"],
+                      ["horas", "Horas online"],
+                    ] as const
+                  ).map(([k, rot]) => (
+                    <button
+                      key={k}
+                      onClick={() => setGrafico(k)}
+                      className={cn(
+                        "rounded-md px-2 py-0.5 transition-colors",
+                        grafico === k ? "bg-white/[0.1] text-foreground" : "text-ink-3 hover:text-foreground",
+                      )}
+                    >
+                      {rot}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="h-24">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={resumo.porDia} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                  <BarChart data={dadosGrafico} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                     <XAxis
                       dataKey="rotulo"
                       tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
@@ -637,9 +709,13 @@ function PainelLogs({ p }: { p: Player }) {
                         fontSize: 12,
                       }}
                       labelStyle={{ color: "rgba(255,255,255,0.6)" }}
-                      formatter={(v: number) => [`${v} logs`, ""]}
+                      formatter={(v: number) => [grafico === "logs" ? `${v} logs` : horasTexto(v), ""]}
                     />
-                    <Bar dataKey="total" fill="#e5231b" radius={[5, 5, 2, 2]} />
+                    <Bar
+                      dataKey="valor"
+                      fill={grafico === "logs" ? "#e5231b" : "#34d399"}
+                      radius={[5, 5, 2, 2]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -699,16 +775,23 @@ function PainelLogs({ p }: { p: Player }) {
   );
 }
 
+const horasTexto = (h: number) => `${h.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`;
+
 function Estat({
   rotulo,
   valor,
   alerta,
   mais,
+  texto,
+  titulo,
 }: {
   rotulo: string;
   valor: number;
   alerta?: boolean;
   mais?: boolean;
+  /** Mostra este texto no lugar do número (ex.: "12,5 h"). */
+  texto?: string;
+  titulo?: string | undefined;
 }) {
   return (
     <div
@@ -716,12 +799,13 @@ function Estat({
         "rounded-xl bg-white/[0.03] px-3 py-1.5",
         alerta && "bg-orange-500/[0.12] ring-1 ring-orange-500/30",
       )}
+      title={titulo}
     >
       <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
         {alerta && <ShieldAlert className="size-3 text-orange-300" />} {rotulo}
       </p>
       <p className="text-lg font-bold leading-tight tabular-nums">
-        {num(valor)}
+        {texto ?? num(valor)}
         {mais ? "+" : ""}
       </p>
     </div>

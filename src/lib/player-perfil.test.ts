@@ -85,3 +85,19 @@ test("situação: banido > temporário > whitelist > nolist > sem dado", async (
   assert.equal(situacaoDoPlayer("5", null, []).id, "sem_dado");
   assert.equal(situacaoDoPlayer("6", true, [ban({})]).id, "whitelist");
 });
+
+test("horas online: entrada→saída, sessão aberta e virada de dia", async () => {
+  const { calcularHorasOnline } = await import("./player-perfil");
+  const agora = new Date("2026-11-19T15:00:00");
+  const r = calcularHorasOnline(
+    ["2026-11-18T22:00:00", "2026-11-19T10:00:00", "2026-11-19T13:00:00"],
+    ["2026-11-19T01:00:00", "2026-11-19T12:00:00"],
+    true,
+    agora,
+  );
+  // 18/11: 2h (22h-00h) · 19/11: 1h + 2h + 2h (sessão aberta até 15h) = 5h
+  assert.equal(r.porDia.at(-2)?.horas, 2);
+  assert.equal(r.porDia.at(-1)?.horas, 5);
+  assert.equal(r.horas7, 7);
+  assert.equal(r.sessoes, 3);
+});

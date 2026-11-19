@@ -8,6 +8,7 @@ import {
   salvarTokenBotAntiCheat,
   sincronizarAntiCheat,
   statusBotAntiCheat,
+  verificarAcessoBot,
 } from "@/lib/anticheat-discord.functions";
 
 const A_CADA_MS = 30_000;
@@ -75,6 +76,42 @@ export function AntiCheatBot({ ativo }: { ativo: boolean }) {
   );
 }
 
+/** Lista os canais que o bot ainda não consegue ler (falta liberar no Discord). */
+function AcessoDoBot() {
+  const acesso = useQuery({ queryKey: ["bot-acesso"], queryFn: () => verificarAcessoBot(), staleTime: 0 });
+  if (acesso.isLoading)
+    return (
+      <p className="mt-3 flex items-center gap-2 text-[12px] text-ink-3">
+        <Loader2 className="size-3.5 animate-spin" /> Testando o acesso aos canais...
+      </p>
+    );
+  if (!acesso.data) return null;
+  const { total, semAcesso } = acesso.data;
+  return (
+    <div
+      className={cn(
+        "mt-3 rounded-xl px-3 py-2 text-[12px]",
+        semAcesso.length ? "bg-orange-500/10 text-orange-200" : "bg-emerald-500/10 text-emerald-200",
+      )}
+      data-bot-acesso
+    >
+      {semAcesso.length === 0 ? (
+        <>O bot lê todos os {total} canais.</>
+      ) : (
+        <>
+          <b>
+            Sem acesso em {semAcesso.length} de {total} canais
+          </b>{" "}
+          — no Discord, dê ao cargo “HOST Logs Anti-Cheat” acesso a:
+          <span className="mt-1 block font-mono text-[11px] leading-relaxed text-orange-100/80">
+            {semAcesso.map((c) => `#${c}`).join("  ")}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ModalToken({ configurado, onClose }: { configurado: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
@@ -100,8 +137,9 @@ function ModalToken({ configurado, onClose }: { configurado: boolean; onClose: (
         <p className="hc-nota mt-2">
           {configurado
             ? "O bot já está conectado. Cole um token novo só se quiser trocar."
-            : "Cole o token do bot do Discord. Ele só lê os canais do Anti-Cheat."}
+            : "Cole o token do bot do Discord. Ele só lê os canais do Anti-Cheat e dos scripts protegidos."}
         </p>
+        {configurado && <AcessoDoBot />}
         <input
           type="password"
           value={token}

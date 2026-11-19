@@ -4,7 +4,8 @@ import { lerJsonLimitado, tokenIgual } from '@/lib/webhook-seguro'
 
 /**
  * Integração FiveM → painel Players.
- * POST /api/public/webhook/players  (header x-webhook-token = PLAYERS_WEBHOOK_TOKEN)
+ * POST /api/public/webhook/players  (header x-webhook-token = PLAYERS_WEBHOOK_TOKEN ou o token das logs)
+ * O resource host_painel (servidor) usa o mesmo token das logs (convar host_logs_token).
  * Faz upsert por license. Listas aceitam array ou texto separado por vírgula,
  * e o inventário aceita [{item, qtd}] ou o texto "1x cake, 5x biotonico".
  */
@@ -26,7 +27,7 @@ const playerSchema = z.object({
   discord_id: z.string().max(40).optional().nullable(),
   discord_nome: z.string().max(80).optional().nullable(),
   online: z.boolean().optional(),
-  level: z.number().int().min(1).max(250).optional(),
+  level: z.number().int().min(0).max(9999).optional(),
   xp: z.number().int().min(0).optional(),
   rank_vip: z.string().max(60).optional().nullable(),
   host_coins: z.number().int().min(0).optional(),
@@ -34,12 +35,16 @@ const playerSchema = z.object({
   mortes: z.number().int().min(0).optional(),
   headshots: z.number().int().min(0).optional(),
   maior_sequencia: z.number().int().min(0).optional(),
+  /** Whitelist liberada no servidor (true = ativa, false = NoList). */
+  whitelist: z.boolean().optional().nullable(),
 })
 
 const bodySchema = z.object({
   players: z.array(playerSchema).min(1).max(2000),
   /** true = quem não veio na lista fica offline (envio da lista completa de online). */
   marcar_offline_ausentes: z.boolean().optional(),
+  /** Licenses de TODOS os online agora (quando o envio vem em lotes): quem não estiver aqui fica offline. */
+  licencas_online: z.array(z.string().min(3).max(120)).max(5000).optional(),
 })
 
 const split = (v: string[] | string | undefined) =>
@@ -63,8 +68,13 @@ export const Route = createFileRoute('/api/public/webhook/players')({
     handlers: {
       POST: async ({ request }) => {
         const token = request.headers.get('x-webhook-token')
-        const esperado = process.env['PLAYERS_WEBHOOK_TOKEN']
-        if (!(await tokenIgual(token, esperado))) {
+        const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
+        const { tokenDasLogs } = await import('@/lib/logs-servidor.server')
+        // aceita o token próprio dos players ou o mesmo token que o servidor já usa nas logs
+        const liberado =
+          (await tokenIgual(token, process.env['PLAYERS_WEBHOOK_TOKEN'] ?? null)) ||
+          (await tokenIgual(token, await tokenDasLogs(supabaseAdmin)))
+        if (!liberado) {
           return new Response('Não autorizado', { status: 401 })
         }
 
@@ -90,6 +100,7 @@ export const Route = createFileRoute('/api/public/webhook/players')({
           if (p.veiculos !== undefined) row['veiculos'] = split(p.veiculos)
           if (p.discord_id !== undefined) row['discord_id'] = p.discord_id
           if (p.discord_nome !== undefined) row['discord_nome'] = p.discord_nome
+          if (p.whitelist !== undefined) row['whitelist'] = p.whitelist
           for (const k of ['level', 'xp', 'rank_vip', 'host_coins', 'kills', 'mortes', 'headshots', 'maior_sequencia'] as const) {
             if (p[k] !== undefined) row[k] = p[k]
           }
@@ -100,7 +111,6 @@ export const Route = createFileRoute('/api/public/webhook/players')({
           return row
         })
 
-        const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
         // Upsert por grupo de campos iguais: campo ausente no payload nunca é apagado.
         const grupos = new Map<string, Record<string, unknown>[]>()
         for (const r of rows) {
@@ -113,7 +123,10 @@ export const Route = createFileRoute('/api/public/webhook/players')({
         }
 
         if (parsed.data.marcar_offline_ausentes) {
-          const presentes = new Set(rows.map((r) => r['license'] as string))
+          const presentes = new Set([
+            ...rows.map((r) => r['license'] as string),
+            ...(parsed.data.licencas_online ?? []),
+          ])
           const { data: online } = await supabaseAdmin.from('players').select('license').eq('online', true)
           const ausentes = ((online ?? []) as { license: string }[])
             .map((p) => p.license)
@@ -125,7 +138,18 @@ export const Route = createFileRoute('/api/public/webhook/players')({
               .in('license', ausentes.slice(i, i + 200))
           }
         }
-        return Response.json({ ok: true, atualizados: rows.length })
+        // lista completa de online (último lote do host_painel): nos horários de pico, o site
+        // registra quantos online tem cada setagem do Ilegal (coluna PICO). Falha aqui não derruba o envio.
+        let picoRegistrado = 0
+        if (parsed.data.licencas_online) {
+          try {
+            const { registrarOnlinePorSetagem } = await import('@/lib/online-setagens.server')
+            picoRegistrado = await registrarOnlinePorSetagem(supabaseAdmin)
+          } catch {
+            picoRegistrado = -1
+          }
+        }
+        return Response.json({ ok: true, atualizados: rows.length, pico_setagens: picoRegistrado })
       },
     },
   },

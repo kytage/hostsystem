@@ -55,6 +55,8 @@ export interface DadosPdfPlayer {
   resumo: ResumoDeLogs;
   punicoes: PunicaoDoPlayer[];
   geradoPor: string;
+  /** Foto do player (Admin = foto do site); vazia = foto padrão. */
+  foto?: string;
 }
 
 /* 1920x1080 px = 1440x810 pt */
@@ -226,7 +228,10 @@ async function paginaFicha(doc: jsPDF, d: DadosPdfPlayer, o: OpcoesPdfPlayer) {
   cartao(doc, x1, top, w1, alto);
   const [banner, foto, emblema] = await Promise.all([
     carregarImagemPng(BANNER_PADRAO, 900, true),
-    carregarImagemPng(FOTO_PADRAO, 260, true),
+    // foto do site (Admin) e, se não carregar, a padrão
+    (d.foto ? carregarImagemPng(d.foto, 260, true) : Promise.resolve(null)).then(
+      (img) => img ?? carregarImagemPng(FOTO_PADRAO, 260, true),
+    ),
     carregarImagemPng(rank.imagem, 150),
   ]);
   if (banner) doc.addImage(banner.dataUrl, banner.formato, x1 + 1, top + 1, w1 - 2, 140, undefined, "FAST");

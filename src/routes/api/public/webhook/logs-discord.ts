@@ -39,6 +39,10 @@ export const Route = createFileRoute("/api/public/webhook/logs-discord")({
 
         const [webhookId = "", webhookToken = ""] = lido.data.webhook.split("/");
         const canal = await canalDoWebhook(supabaseAdmin, webhookId, webhookToken);
+        // canais lidos pelo bot do Discord: a cópia do servidor é ignorada (evita log duplicada)
+        const { lidoPeloBot } = await import("@/lib/logs-bot");
+        if (canal && lidoPeloBot(canal))
+          return Response.json({ ok: true, gravada: false, motivo: "canal lido pelo bot" }, { status: 202 });
         if (!canal)
           return Response.json(
             { ok: true, gravada: false, motivo: "canal fora da lista" },

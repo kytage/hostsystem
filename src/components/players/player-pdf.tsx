@@ -28,10 +28,13 @@ const SECOES: { k: keyof OpcoesPdfPlayer; rotulo: string; dica: string }[] = [
 /** Opções e geração do PDF (1920x1080) de um player. */
 export function PdfDoPlayer({
   p,
+  foto,
   situacao,
   onClose,
 }: {
   p: Player;
+  /** Foto já escolhida pelo painel (Admin = foto do site). */
+  foto: string;
   situacao: Situacao;
   onClose: () => void;
 }) {
@@ -68,6 +71,7 @@ export function PdfDoPlayer({
           resumo: resumirLogs(lista),
           punicoes,
           geradoPor,
+          foto,
         },
         o,
       );

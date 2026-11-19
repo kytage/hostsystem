@@ -350,7 +350,7 @@ function LogsPage() {
       <PageHeader
         title="Logs"
         subtitle="Tudo o que o servidor registra, separado nas mesmas categorias do Discord."
-        actions={<AntiCheatBot ativo={acesso.podeVer("anti-cheat")} />}
+        actions={<AntiCheatBot ativo={acesso.temAcesso} />}
       />
 
       {/* números pequenos */}

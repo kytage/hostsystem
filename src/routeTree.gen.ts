@@ -30,6 +30,7 @@ import { Route as AuthenticatedOrganizacoesRouteImport } from './routes/_authent
 import { Route as AuthenticatedPedsRouteImport } from './routes/_authenticated/peds'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated/players'
+import { Route as AuthenticatedPoliciaRouteImport } from './routes/_authenticated/policia'
 import { Route as AuthenticatedPunicoesRouteImport } from './routes/_authenticated/punicoes'
 import { Route as AuthenticatedTarefasRouteImport } from './routes/_authenticated/tarefas'
 import { Route as AuthenticatedUpdateRouteImport } from './routes/_authenticated/update'
@@ -150,6 +151,11 @@ const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
   path: '/players',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPoliciaRoute = AuthenticatedPoliciaRouteImport.update({
+  id: '/policia',
+  path: '/policia',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPunicoesRoute = AuthenticatedPunicoesRouteImport.update({
   id: '/punicoes',
   path: '/punicoes',
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/peds': typeof AuthenticatedPedsRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/players': typeof AuthenticatedPlayersRoute
+  '/policia': typeof AuthenticatedPoliciaRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/peds': typeof AuthenticatedPedsRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/players': typeof AuthenticatedPlayersRoute
+  '/policia': typeof AuthenticatedPoliciaRoute
   '/punicoes': typeof AuthenticatedPunicoesRoute
   '/tarefas': typeof AuthenticatedTarefasRoute
   '/update': typeof AuthenticatedUpdateRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/peds': typeof AuthenticatedPedsRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/players': typeof AuthenticatedPlayersRoute
+  '/_authenticated/policia': typeof AuthenticatedPoliciaRoute
   '/_authenticated/punicoes': typeof AuthenticatedPunicoesRoute
   '/_authenticated/tarefas': typeof AuthenticatedTarefasRoute
   '/_authenticated/update': typeof AuthenticatedUpdateRoute
@@ -331,6 +340,7 @@ export interface FileRouteTypes {
     | '/peds'
     | '/perfil'
     | '/players'
+    | '/policia'
     | '/punicoes'
     | '/tarefas'
     | '/update'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/peds'
     | '/perfil'
     | '/players'
+    | '/policia'
     | '/punicoes'
     | '/tarefas'
     | '/update'
@@ -397,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/peds'
     | '/_authenticated/perfil'
     | '/_authenticated/players'
+    | '/_authenticated/policia'
     | '/_authenticated/punicoes'
     | '/_authenticated/tarefas'
     | '/_authenticated/update'
@@ -572,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlayersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/policia': {
+      id: '/_authenticated/policia'
+      path: '/policia'
+      fullPath: '/policia'
+      preLoaderRoute: typeof AuthenticatedPoliciaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/punicoes': {
       id: '/_authenticated/punicoes'
       path: '/punicoes'
@@ -669,6 +688,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPedsRoute: typeof AuthenticatedPedsRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
+  AuthenticatedPoliciaRoute: typeof AuthenticatedPoliciaRoute
   AuthenticatedPunicoesRoute: typeof AuthenticatedPunicoesRoute
   AuthenticatedTarefasRoute: typeof AuthenticatedTarefasRoute
   AuthenticatedUpdateRoute: typeof AuthenticatedUpdateRoute
@@ -695,6 +715,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPedsRoute: AuthenticatedPedsRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
+  AuthenticatedPoliciaRoute: AuthenticatedPoliciaRoute,
   AuthenticatedPunicoesRoute: AuthenticatedPunicoesRoute,
   AuthenticatedTarefasRoute: AuthenticatedTarefasRoute,
   AuthenticatedUpdateRoute: AuthenticatedUpdateRoute,
