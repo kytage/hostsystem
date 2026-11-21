@@ -21,7 +21,8 @@ DROP POLICY IF EXISTS "Quem pode ver a categoria le as logs" ON public.server_lo
 CREATE POLICY "Quem pode ver a categoria le as logs" ON public.server_logs FOR SELECT TO authenticated
   USING (
     (SELECT public.is_coordinator_plus(auth.uid()))
-    OR split_part(canal, '/', 1) = ANY ((SELECT public.logs_categorias_do_usuario(auth.uid())))
+    -- "(SELECT ...)::text[]": a lista é calculada uma vez só e comparada como lista
+    OR split_part(canal, '/', 1) = ANY ((SELECT public.logs_categorias_do_usuario(auth.uid()))::text[])
   );
 
 -- 2) Busca por texto ("contém"): índice de trechos de palavras na mensagem e no nome do jogador.

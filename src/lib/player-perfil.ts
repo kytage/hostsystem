@@ -7,7 +7,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { CANAIS_DE_LOG } from "@/lib/logs-servidor";
-import { filtroDoBancoPorId, logMencionaId } from "@/lib/logs-id";
+import { buscarEmPartes, filtroDoBancoPorId, logMencionaId } from "@/lib/logs-id";
 
 /** Foto e banner padrão enquanto o servidor não manda a foto do personagem. */
 export const FOTO_PADRAO = "/img/player/foto-padrao.png";
@@ -141,17 +141,21 @@ export async function fetchLogsDoPlayer(id: string, dias = 30): Promise<LogDoPla
   const pid = id.trim().replace(/^#/, "");
   if (!/^\d{1,9}$/.test(pid)) return [];
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString();
-  const { data, error } = await supabase
-    .from("server_logs")
-    .select("id, canal, jogador_id, jogador_nome, mensagem, dados, criado_em")
-    .gte("criado_em", desde)
-    // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"... (mesma regra da busca por ID da aba /logs)
-    .or(filtroDoBancoPorId(pid))
-    .order("criado_em", { ascending: false })
-    .limit(1000);
-  if (error) throw error;
+  // a lista "ids" de cada log tem índice: uma busca só já é rápida
+  const linhas = await buscarEmPartes<LogDoPlayer>(desde, 1, 1000, (de, ate) => {
+    let q = supabase
+      .from("server_logs")
+      .select("id, canal, jogador_id, jogador_nome, mensagem, dados, criado_em")
+      .gte("criado_em", de)
+      // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"... (mesma regra da busca por ID da aba /logs)
+      .or(filtroDoBancoPorId(pid))
+      .order("criado_em", { ascending: false })
+      .limit(1000);
+    if (ate) q = q.lt("criado_em", ate);
+    return q;
+  });
   // confere de verdade: "#3" não pode trazer as logs do "#396"
-  return ((data ?? []) as LogDoPlayer[]).filter((l) => logMencionaId(l, pid));
+  return linhas.filter((l) => logMencionaId(l, pid));
 }
 
 export interface CategoriaContada {

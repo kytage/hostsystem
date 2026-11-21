@@ -4,19 +4,12 @@
  * Cuidado: "#3" NÃO pode pegar "#396" — o número tem que acabar ali.
  */
 
-/** Filtro do banco (or= do Supabase): pré-seleção larga, mas já sem os prefixos. */
+/**
+ * Filtro do banco (or= do Supabase). Cada log guarda em "ids" os IDs que ela menciona (migração
+ * 20261228120000, mesma regra de logMencionaId), com índice: a busca é instantânea.
+ */
 export function filtroDoBancoPorId(pid: string): string {
-  return [
-    `jogador_id.eq.${pid}`,
-    `mensagem.ilike.%#${pid} %`,
-    `mensagem.ilike.%#${pid}-%`,
-    // (sem padrão com vírgula: ela separa os filtros do or= e quebra a busca)
-    `mensagem.ilike.%#${pid}\n%`,
-    `mensagem.ilike.%#${pid}`,
-    `mensagem.ilike.%: ${pid} -%`,
-    `mensagem.ilike.%: ${pid}\n%`,
-    `mensagem.ilike.%: ${pid}`,
-  ].join(",");
+  return `jogador_id.eq.${pid},ids.cs.{${Number(pid)}}`;
 }
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -40,4 +33,43 @@ export function logMencionaId(
     "i",
   );
   return re.test(l.mensagem);
+}
+
+/** Divide [desde, agora] em pedaços iguais (do mais novo para o mais velho). */
+export function pedacosDoPeriodo(desde: string, partes: number, agora = Date.now()): { de: string; ate: string | null }[] {
+  const ini = new Date(desde).getTime();
+  const passo = Math.max(1, (agora - ini) / Math.max(1, partes));
+  const lista: { de: string; ate: string | null }[] = [];
+  for (let i = 0; i < partes; i++) {
+    const fim = agora - i * passo;
+    const comeco = Math.max(ini, fim - passo);
+    lista.push({ de: new Date(comeco).toISOString(), ate: i === 0 ? null : new Date(fim).toISOString() });
+  }
+  return lista;
+}
+
+type Resp = PromiseLike<{ data: unknown[] | null; error: unknown }>;
+
+/**
+ * Busca em pedaços do período, todos ao mesmo tempo, e junta as mais novas. Com o período inteiro o
+ * banco lê as 100 mil+ logs uma a uma (passa do limite de 8 s); em pedaços cada busca é pequena.
+ */
+export async function buscarEmPartes<T extends { id: number; criado_em: string }>(
+  desde: string,
+  partes: number,
+  limite: number,
+  buscar: (de: string, ate: string | null) => Resp,
+): Promise<T[]> {
+  const respostas = await Promise.all(pedacosDoPeriodo(desde, partes).map((p) => buscar(p.de, p.ate)));
+  const vistos = new Set<number>();
+  const todas: T[] = [];
+  for (const r of respostas) {
+    if (r.error) throw r.error;
+    for (const l of (r.data ?? []) as T[]) {
+      if (vistos.has(l.id)) continue;
+      vistos.add(l.id);
+      todas.push(l);
+    }
+  }
+  return todas.sort((a, b) => b.criado_em.localeCompare(a.criado_em)).slice(0, limite);
 }

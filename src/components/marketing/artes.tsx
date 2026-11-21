@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen,
@@ -27,7 +27,8 @@ import {
   CORES_HOST,
   FONTES_HOST,
   FORMATOS_ARTE,
-  PADRAO_DA_ARTE,
+  TAMANHO_DO_TITULO,
+  TEXTO_INICIAL,
   REGRAS_DA_ARTE,
   lerDestaque,
   lerTabela,
@@ -309,7 +310,7 @@ export async function gerarPng(el: HTMLElement, w: number, h: number): Promise<B
 }
 
 function novaArte(formato: FormatoArte): DadosArte {
-  return { formato, personagem: null, ...PADRAO_DA_ARTE[formato] };
+  return { formato, personagem: null, tamanhoTitulo: TAMANHO_DO_TITULO[formato], ...TEXTO_INICIAL };
 }
 
 function GeradorDeArte() {
@@ -332,7 +333,8 @@ function GeradorDeArte() {
   const escala = Math.min(largura / f.w, (f.h > f.w ? 760 : 9999) / f.h);
 
   const trocarFormato = (formato: FormatoArte) =>
-    setD((x) => ({ ...novaArte(formato), personagem: x.personagem }));
+    // troca só o formato (e o tamanho do título daquele formato); os textos ficam
+    setD((x) => ({ ...x, formato, tamanhoTitulo: TAMANHO_DO_TITULO[formato] }));
 
   const escolherPersonagem = (file: File | undefined) => {
     if (!file) return;
@@ -451,7 +453,7 @@ function GeradorDeArte() {
             {baixando ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             Baixar PNG ({f.w}×{f.h})
           </Button>
-          <Button variant="outline" onClick={() => setD((x) => ({ ...novaArte(x.formato), personagem: x.personagem }))} title="Voltar o texto de exemplo">
+          <Button variant="outline" onClick={() => setD((x) => ({ ...novaArte(x.formato), personagem: x.personagem }))} title="Limpar: volta para os textos iniciais">
             <RotateCcw className="size-4" />
           </Button>
         </div>
@@ -515,27 +517,54 @@ function Campo({
 
 /* ------------------------------------------------------------------ desenho da arte */
 
-function Titulo({ texto, tamanho, estilo }: { texto: string; tamanho: number; estilo?: CSSProperties }) {
+/**
+ * Título da arte. Se não couber na largura (ex.: título comprido no Post, que entraria no painel
+ * vermelho e a palavra vermelha sumiria), diminui sozinho até caber.
+ */
+function Titulo({
+  texto,
+  tamanho,
+  largura,
+  estilo,
+}: {
+  texto: string;
+  tamanho: number;
+  largura: number;
+  estilo?: CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [cabe, setCabe] = useState(tamanho);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // mede no tamanho escolhido e reduz na proporção do que passou
+    el.style.fontSize = `${tamanho}px`;
+    const linhas = Array.from(el.children) as HTMLElement[];
+    const maior = Math.max(1, ...linhas.map((l) => l.scrollWidth));
+    setCabe(maior > largura ? Math.max(40, Math.floor((tamanho * largura) / maior)) : tamanho);
+  }, [texto, tamanho, largura]);
+  const t = cabe;
   return (
     <div
+      ref={ref}
       style={{
         fontFamily: ANTON,
-        fontSize: tamanho,
+        fontSize: t,
         lineHeight: "normal",
         color: PRETO,
         textTransform: "uppercase",
-        marginTop: -0.27 * tamanho,
-        marginBottom: -0.24 * tamanho,
+        marginTop: -0.27 * t,
+        marginBottom: -0.24 * t,
         ...estilo,
       }}
     >
       {lerDestaque(texto).map((linha, i) => (
-        <div key={i} style={{ whiteSpace: "nowrap", marginTop: i > 0 ? -0.5 * tamanho : 0 }}>
+        <div key={i} style={{ whiteSpace: "nowrap", width: "max-content", marginTop: i > 0 ? -0.5 * t : 0 }}>
           {linha.length === 0
             ? " "
-            : linha.map((t, j) => (
-                <span key={j} style={{ color: t.vermelho ? VERMELHO : PRETO }}>
-                  {t.t}
+            : linha.map((p, j) => (
+                <span key={j} style={{ color: p.vermelho ? VERMELHO : PRETO }}>
+                  {p.t}
                 </span>
               ))}
         </div>
@@ -680,7 +709,7 @@ export function ArteHost({ d }: { d: DadosArte }) {
           <Etiqueta etiqueta={d.etiqueta} rotulo={d.rotulo} tamanho={19} />
         </div>
         <div style={{ position: "absolute", left: 75, top: 182, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 34 }}>
-          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} />
+          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} largura={d.painel ? 1240 : 1830} />
           <Faixa texto={d.faixa} tamanho={52} />
         </div>
         <div style={{ position: "absolute", left: 78, bottom: 42 }}>
@@ -704,7 +733,7 @@ export function ArteHost({ d }: { d: DadosArte }) {
           <Etiqueta etiqueta={d.etiqueta} rotulo={d.rotulo} tamanho={17} />
         </div>
         <div style={{ position: "absolute", left: 60, top: 300, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 30 }}>
-          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} />
+          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} largura={d.painel ? 600 : 960} />
           <Faixa texto={d.faixa} tamanho={40} />
         </div>
         <div style={{ position: "absolute", left: 62, bottom: 52 }}>
@@ -733,7 +762,7 @@ export function ArteHost({ d }: { d: DadosArte }) {
           <Etiqueta etiqueta={d.etiqueta} rotulo={d.rotulo} tamanho={20} />
         </div>
         <div style={{ position: "absolute", left: 70, top: 380, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 36 }}>
-          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} />
+          <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} largura={940} />
           <Faixa texto={d.faixa} tamanho={50} />
         </div>
         <div style={{ position: "absolute", left: 72, bottom: 70 }}>
@@ -759,7 +788,7 @@ export function ArteHost({ d }: { d: DadosArte }) {
         <Etiqueta etiqueta={d.etiqueta} rotulo={d.rotulo} tamanho={17} />
       </div>
       <div style={{ position: "absolute", left: 62, top: 170 }}>
-        <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} />
+        <Titulo texto={d.titulo} tamanho={d.tamanhoTitulo} largura={d.painel ? 1280 : 1860} />
       </div>
       <div
         style={{

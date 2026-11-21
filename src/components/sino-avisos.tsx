@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -106,6 +107,19 @@ export function SinoBotao() {
   const paraMim = comunicados.filter((c) => c.criado_por_id !== eu?.id);
   const pendentes = paraMim.filter((c) => pendenteParaMim(c, minhas.get(c.id)));
   const urgente = pendentes.some((c) => c.prioridade === "urgente");
+  // obrigatório: aviso que pede confirmação (ou tarefa) que a pessoa ainda nem abriu
+  const obrigatorios = paraMim.filter(
+    (c) => !c.arquivado && !minhas.has(c.id) && (c.exige_leitura || c.tipo === "tarefa"),
+  );
+  const temObrigatorio = !!eu && carregado && obrigatorios.length > 0;
+  const urgenteObrigatorio = obrigatorios.some((c) => c.prioridade === "urgente");
+  // apita a cada 5 s enquanto houver aviso para confirmar
+  useEffect(() => {
+    if (!temObrigatorio) return;
+    tocarAlerta(urgenteObrigatorio);
+    const t = window.setInterval(() => tocarAlerta(urgenteObrigatorio), 5000);
+    return () => window.clearInterval(t);
+  }, [temObrigatorio, urgenteObrigatorio]);
 
   // aviso novo chegando (tempo real): toca o som e mostra um aviso na tela
   const vistos = useRef<Set<string> | null>(null);
@@ -131,6 +145,8 @@ export function SinoBotao() {
 
   const aberto = painel === "avisos";
   return (
+    <>
+    {temObrigatorio && eu && <AvisosObrigatorios lista={obrigatorios} eu={eu} />}
     <button
       type="button"
       onClick={alternarAvisos}
@@ -142,6 +158,75 @@ export function SinoBotao() {
       {aberto ? <X className="size-[17px]" strokeWidth={2.1} /> : pendentes.length ? <BellRing className="size-[17px]" strokeWidth={2} /> : <Bell className="size-[17px]" strokeWidth={1.9} />}
       {pendentes.length > 0 && !aberto && <span className="menu-sino-num">{pendentes.length > 9 ? "9+" : pendentes.length}</span>}
     </button>
+    </>
+  );
+}
+
+/* ================================================================== aviso obrigatório */
+
+/**
+ * Tela que tapa o site inteiro até a pessoa confirmar a leitura dos avisos obrigatórios (e dar
+ * ciência das tarefas). Apita a cada 5 s enquanto estiver aberta.
+ */
+function AvisosObrigatorios({ lista, eu }: { lista: Comunicado[]; eu: { id: string; nome: string } }) {
+  const qc = useQueryClient();
+  const [salvando, setSalvando] = useState<string | null>(null);
+  const confirmar = async (c: Comunicado) => {
+    setSalvando(c.id);
+    try {
+      await confirmarLeitura(c.id, eu);
+      await qc.invalidateQueries({ queryKey: KEY_L });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não deu para confirmar. Tente de novo.");
+    } finally {
+      setSalvando(null);
+    }
+  };
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="aviso-obrigatorio-fundo" role="alertdialog" aria-modal="true" aria-label="Avisos para confirmar">
+      <div className="aviso-obrigatorio">
+        <div className="flex items-center gap-3">
+          <span className="aviso-obrigatorio-sino">
+            <BellRing className="size-6" strokeWidth={2} />
+          </span>
+          <div>
+            <p className="text-[19px] font-bold text-white">
+              {lista.length === 1 ? "Você tem 1 aviso para confirmar" : `Você tem ${lista.length} avisos para confirmar`}
+            </p>
+            <p className="hc-nota">Leia e confirme para continuar usando o painel.</p>
+          </div>
+        </div>
+        <ul className="mt-4 max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+          {lista.map((c) => {
+            const p = PRIORIDADES.find((x) => x.id === c.prioridade)!;
+            return (
+              <li key={c.id} className="aviso-card aviso-card-pendente" style={{ borderLeftColor: p.cor }}>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Etiqueta tipo={c.tipo} />
+                  {c.prioridade !== "normal" && (
+                    <span className="aviso-chip" style={{ color: p.cor, borderColor: `${p.cor}55` }}>
+                      {p.rotulo}
+                    </span>
+                  )}
+                  <span className="hc-nota ml-auto">{c.criado_por ? `De ${c.criado_por} · ` : ""}{haQuanto(c.created_at)}</span>
+                </div>
+                <p className="mt-1.5 text-[14px] font-semibold text-foreground">{c.titulo}</p>
+                {c.texto && <p className="aviso-texto"><TextoFormatado texto={c.texto} /></p>}
+                {c.prazo && <p className="hc-nota mt-1">Prazo: {horaCurta(c.prazo)}</p>}
+                <div className="mt-2.5 flex justify-end">
+                  <button type="button" className="aviso-confirmar" disabled={salvando === c.id} onClick={() => void confirmar(c)}>
+                    {salvando === c.id ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                    {c.tipo === "tarefa" ? "Estou ciente" : "Confirmar leitura"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

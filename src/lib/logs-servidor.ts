@@ -340,6 +340,17 @@ export const SERVIDORES_DE_LOG = [
 export type ServidorDeLog = (typeof SERVIDORES_DE_LOG)[number]["id"];
 
 /** Todos os canais com a sua categoria e servidor, para achar um canal pela chave. */
+/**
+ * Canais que agora ficam em outro lugar: o site NÃO puxa nem mostra as logs deles, só o aviso.
+ * anti-cheat/aimbot: a log de aimbot passou para um webhook do Discord PRINCIPAL.
+ */
+export const CANAIS_EM_OUTRO_LUGAR: Record<string, { titulo: string; nota: string }> = {
+  "anti-cheat/aimbot": {
+    titulo: "Conferir no Discord Principal",
+    nota: "A log de aimbot agora vai direto para o Discord Principal. Ela não aparece aqui no site.",
+  },
+};
+
 export const CANAIS_DE_LOG = new Map(
   SERVIDORES_DE_LOG.flatMap((s) =>
     s.categorias.flatMap((c) =>

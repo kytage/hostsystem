@@ -15,6 +15,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  ExternalLink,
   Radio,
   Search,
   Settings2,
@@ -35,7 +36,7 @@ import { useAreas } from "@/lib/permissions";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { ROLE_LABELS, ROLE_ORDER } from "@/lib/roles";
 import { lerLog } from "@/lib/logs-leitura";
-import { filtroDoBancoPorId, logMencionaId } from "@/lib/logs-id";
+import { buscarEmPartes, filtroDoBancoPorId, logMencionaId } from "@/lib/logs-id";
 import {
   CHAVE_ABRIR_SUSPEITOS,
   segundosDoAlerta,
@@ -48,6 +49,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTable } from "@/lib/realtime";
 import {
   CANAIS_DE_LOG,
+  CANAIS_EM_OUTRO_LUGAR,
   CATEGORIAS_DE_LOG,
   SERVIDORES_DE_LOG,
   type ServidorDeLog,
@@ -123,38 +125,38 @@ async function buscarLogs(
   tipo: TipoDeBusca = "texto",
   geral = false,
 ): Promise<LinhaDeLog[]> {
-  let q = supabase
-    .from("server_logs")
-    .select("id, canal, jogador_id, jogador_nome, mensagem, dados, criado_em")
-    .gte("criado_em", inicioDo(periodo))
-    .order("criado_em", { ascending: false })
-    .limit(200);
   const t = busca
     .trim()
     .replace(/[%,()*]/g, " ")
     .trim();
-  // busca fica no canal escolhido; "Pesquisa geral" procura em todas as logs que a pessoa pode ver
-  if (!t || !geral) q = q.eq("canal", canal);
-  if (t && tipo === "texto") {
-    q = q.or(`mensagem.ilike.%${t}%,jogador_nome.ilike.%${t}%,jogador_id.ilike.%${t}%`);
-  } else if (t && tipo === "perfil") {
-    q = q.or(`jogador_nome.ilike.%${t}%,mensagem.ilike.%${t}%`);
-  } else if (t && tipo === "id") {
-    const id = t.replace(/^#/, "");
-    if (!/^\d{1,9}$/.test(id)) return [];
-    // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"... ("#3" não pode pegar "#396")
-    q = q.or(filtroDoBancoPorId(id));
-  } else if (t && tipo === "steam") {
-    q = q.ilike("mensagem", `%${termoDaSteam(t)}%`);
-  }
-  const { data, error } = await q;
-  if (error) throw error;
-  const linhas = (data ?? []) as LinhaDeLog[];
-  if (t && tipo === "id") {
-    const id = t.replace(/^#/, "");
-    return linhas.filter((l) => logMencionaId(l, id));
-  }
-  return linhas;
+  const id = t.replace(/^#/, "");
+  if (t && tipo === "id" && !/^\d{1,9}$/.test(id)) return [];
+  const montar = (de: string, ate: string | null) => {
+    let q = supabase
+      .from("server_logs")
+      .select("id, canal, jogador_id, jogador_nome, mensagem, dados, criado_em")
+      .gte("criado_em", de)
+      .order("criado_em", { ascending: false })
+      .limit(200);
+    if (ate) q = q.lt("criado_em", ate);
+    // busca fica no canal escolhido; "Pesquisa geral" procura em todas as logs que a pessoa pode ver
+    if (!t || !geral) q = q.eq("canal", canal);
+    if (t && tipo === "texto") {
+      q = q.or(`mensagem.ilike.%${t}%,jogador_nome.ilike.%${t}%,jogador_id.ilike.%${t}%`);
+    } else if (t && tipo === "perfil") {
+      q = q.or(`jogador_nome.ilike.%${t}%,mensagem.ilike.%${t}%`);
+    } else if (t && tipo === "id") {
+      // o ID aparece como "#1", "1 - Nome", "Passaporte: 1"... ("#3" não pode pegar "#396")
+      q = q.or(filtroDoBancoPorId(id));
+    } else if (t && tipo === "steam") {
+      q = q.ilike("mensagem", `%${termoDaSteam(t)}%`);
+    }
+    return q;
+  };
+  // com busca em vários dias, divide o período (de uma vez só passava do limite de 8 s do banco)
+  const partes = !t || periodo === "hoje" || tipo === "id" ? 1 : periodo === "7d" ? 2 : 6;
+  const linhas = await buscarEmPartes<LinhaDeLog>(inicioDo(periodo), partes, 200, montar);
+  return t && tipo === "id" ? linhas.filter((l) => logMencionaId(l, id)) : linhas;
 }
 
 /** Quanto tempo o radar de uma log fica no mapa ao vivo. */
@@ -268,6 +270,8 @@ function LogsPage() {
   const canalValido = !!atual && acesso.podeVer(atual.categoria.id);
   const canalEfetivo = canalValido ? canal : (doServidor[0]?.canais[0]?.id ?? "");
   const efetivo = CANAIS_DE_LOG.get(canalEfetivo);
+  // canal que ficou em outro lugar (ex.: aimbot no Discord Principal): não busca nada, só avisa
+  const emOutroLugar = !geral ? CANAIS_EM_OUTRO_LUGAR[canalEfetivo] : undefined;
 
   const logs = useQuery({
     queryKey: [
@@ -279,7 +283,7 @@ function LogsPage() {
       geral,
     ],
     queryFn: () => buscarLogs(canalEfetivo, periodo, termoLog, tipoBusca, geral),
-    enabled: !!canalEfetivo,
+    enabled: !!canalEfetivo && !emOutroLugar,
   });
   const resumo = useQuery({
     queryKey: ["server-logs-resumo"],
@@ -553,7 +557,15 @@ function LogsPage() {
           </div>
 
           <div className="logs-tabela logs-lista-cartoes" aria-label="Logs">
-            {logs.isLoading ? (
+            {emOutroLugar ? (
+              <div className="logs-vazio">
+                <span className="hc-icone !size-11 !text-[#ff6a5c]">
+                  <ExternalLink className="size-5" strokeWidth={1.75} />
+                </span>
+                <p className="hc-titulo mt-3">{emOutroLugar.titulo}</p>
+                <p className="hc-nota mx-auto mt-1 max-w-[380px]">{emOutroLugar.nota}</p>
+              </div>
+            ) : logs.isLoading ? (
               <div className="logs-vazio">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
@@ -676,7 +688,11 @@ function CategoriaLateral({
               >
                 <Hash className="size-3.5 shrink-0" strokeWidth={2} />
                 <span className="min-w-0 flex-1 truncate">{k.nome}</span>
-                {hoje?.get(k.id) ? (
+                {CANAIS_EM_OUTRO_LUGAR[k.id] ? (
+                  <span className="logs-canal-fora" title={CANAIS_EM_OUTRO_LUGAR[k.id]!.titulo}>
+                    Discord Principal
+                  </span>
+                ) : hoje?.get(k.id) ? (
                   <span className="logs-canal-conta">{hoje.get(k.id)}</span>
                 ) : null}
               </button>

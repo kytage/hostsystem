@@ -118,55 +118,39 @@ RASTREADOR ; R$ 4.000 ; R$ 3.000
 PAGER ; R$ 17.000 ; R$ 15.000
 DROGAS ; R$ 350 ; R$ 250`;
 
-export const PADRAO_DA_ARTE: Record<FormatoArte, Omit<DadosArte, "formato" | "personagem">> = {
-  banner: {
-    etiqueta: "ILEGAL",
-    rotulo: "AVISO ÀS ORGANIZAÇÕES",
-    titulo: "BENEFÍCIO *E* ARMAS",
-    faixa: "SETAGEM NO DISCORD *E* TABELA DE VALORES.",
-    rodape: "(HOST)® WORLD ©2026",
-    tamanhoTitulo: 172,
-    painel: true,
-    tabela: TABELA_EXEMPLO,
-    colunaA: "SEM PARCERIA",
-    colunaB: "COM PARCERIA",
-  },
-  post: {
-    etiqueta: "EVENTO",
-    rotulo: "HOST WORLD",
-    titulo: "NOITE DO\n*PVP*",
-    faixa: "SÁBADO *ÀS* 21H NA PRAÇA",
-    rodape: "(HOST)® WORLD ©2026",
-    tamanhoTitulo: 160,
-    painel: true,
-    tabela: TABELA_EXEMPLO,
-    colunaA: "SEM PARCERIA",
-    colunaB: "COM PARCERIA",
-  },
-  story: {
-    etiqueta: "UPDATE",
-    rotulo: "SEASON 3.0",
-    titulo: "NOVIDADES\nNA *CIDADE*",
-    faixa: "CONFIRA *NO* DISCORD",
-    rodape: "(HOST)® WORLD ©2026",
-    tamanhoTitulo: 170,
-    painel: true,
-    tabela: TABELA_EXEMPLO,
-    colunaA: "SEM PARCERIA",
-    colunaB: "COM PARCERIA",
-  },
-  tabela: {
-    etiqueta: "ILEGAL",
-    rotulo: "(HOST)® WORLD ©2026",
-    titulo: "TABELA DE VALORES *ILEGAL*",
-    faixa: "",
-    rodape: "(HOST)® WORLD ©2026",
-    tamanhoTitulo: 124,
-    painel: true,
-    tabela: TABELA_EXEMPLO,
-    colunaA: "SEM PARCERIA",
-    colunaB: "COM PARCERIA",
-  },
+/** Tabela inicial: modelo para a pessoa trocar pelos itens de verdade. */
+export const TABELA_INICIAL = `# SEÇÃO 1 | LEGENDA
+ITEM 1 ; R$ 0.000 ; R$ 0.000
+ITEM 2 ; R$ 0.000 ; R$ 0.000
+ITEM 3 ; R$ 0.000 ; R$ 0.000
+---
+# SEÇÃO 2 | LEGENDA
+ITEM 1 ; R$ 0.000 ; R$ 0.000
+ITEM 2 ; R$ 0.000 ; R$ 0.000
+---
+# SEÇÃO 3 | LEGENDA
+ITEM 1 ; R$ 0.000 ; R$ 0.000
+ITEM 2 ; R$ 0.000 ; R$ 0.000`;
+
+/** Textos iniciais genéricos (de propósito, para a pessoa sempre trocar). Valem para todo formato. */
+export const TEXTO_INICIAL: Omit<DadosArte, "formato" | "personagem" | "tamanhoTitulo"> = {
+  etiqueta: "ETIQUETA",
+  rotulo: "ASSUNTO DA ARTE",
+  titulo: "TÍTULO DA *ARTE*",
+  faixa: "TEXTO DA FAIXA *AQUI*",
+  rodape: "(HOST)® WORLD ©2026",
+  painel: true,
+  tabela: TABELA_INICIAL,
+  colunaA: "SEM PARCERIA",
+  colunaB: "COM PARCERIA",
+};
+
+/** Tamanho inicial do título em cada formato (trocar o formato só muda isso, não os textos). */
+export const TAMANHO_DO_TITULO: Record<FormatoArte, number> = {
+  banner: 172,
+  post: 120,
+  story: 150,
+  tabela: 124,
 };
 
 export interface Trecho {

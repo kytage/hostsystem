@@ -87,6 +87,7 @@ export function MenuPerfil() {
             {perfilAberto ? <X className="size-4" strokeWidth={2.25} /> : <ChevronDown className="size-4" strokeWidth={2.25} />}
           </span>
         </button>
+        <span className="menu-topo-sep" aria-hidden />
         <SinoBotao />
       </div>
 
