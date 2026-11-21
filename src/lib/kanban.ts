@@ -319,7 +319,7 @@ export async function moveCard(
   // desatualizada (evento realtime perdido, aba em segundo plano).
   const { data: atualRow, error: readError } = await supabase
     .from("kanban_cards")
-    .select("*")
+    .select(COLUNAS_SEM_ANEXOS)
     .eq("id", card.id)
     .maybeSingle();
   if (readError) throw readError;
@@ -369,7 +369,7 @@ export async function moveCard(
     // Perdemos a corrida entre a leitura e o update.
     const { data: fresh } = await supabase
       .from("kanban_cards")
-      .select("*")
+      .select(COLUNAS_SEM_ANEXOS)
       .eq("id", card.id)
       .maybeSingle();
     throw new CardConflitoError(fresh ? rowToCard(fresh as CardRow) : atual);

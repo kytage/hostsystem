@@ -6,6 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 const COALESCE_MS = 120;
 
 /**
+ * Tabelas que mudam o tempo todo (o servidor FiveM escreve nelas sem parar): no máximo uma
+ * atualização a cada X ms. Sem isso, cada log nova fazia toda aba aberta na tela de Logs buscar a
+ * lista inteira de novo (dezenas de vezes por minuto, por pessoa).
+ */
+const INTERVALO_MINIMO: Record<string, number> = {
+  server_logs: 15_000,
+  players: 30_000,
+};
+
+/** A aba está sendo vista? (aba escondida não busca nada; atualiza quando a pessoa voltar) */
+const abaVisivel = () => typeof document === "undefined" || document.visibilityState === "visible";
+
+/**
  * Assina mudanças em tempo real de uma tabela e invalida as queries
  * relacionadas, mantendo todos os usuários sincronizados.
  *
@@ -19,13 +32,35 @@ export function useRealtimeTable(table: string, queryKeys: string[][]) {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // chegou mudança enquanto a aba estava escondida: atualiza quando ela voltar a aparecer
+    let pendente = false;
+    let ultima = 0;
+    const espera = INTERVALO_MINIMO[table] ?? COALESCE_MS;
 
     const flush = () => {
       timer = null;
+      if (!abaVisivel()) {
+        pendente = true;
+        return;
+      }
+      pendente = false;
+      ultima = Date.now();
       for (const key of keysRef.current) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     };
+
+    const agendar = () => {
+      if (timer) return;
+      // tabelas agitadas: espera o que falta para completar o intervalo mínimo
+      const falta = Math.max(COALESCE_MS, espera - (Date.now() - ultima));
+      timer = setTimeout(flush, falta);
+    };
+
+    const aoVoltar = () => {
+      if (pendente && abaVisivel()) agendar();
+    };
+    document.addEventListener("visibilitychange", aoVoltar);
 
     // Nome único por instância: canais Supabase são reutilizados por tópico,
     // e reusar o mesmo nome em dois componentes lança
@@ -34,13 +69,17 @@ export function useRealtimeTable(table: string, queryKeys: string[][]) {
     const channel = supabase
       .channel(topic)
       .on("postgres_changes", { event: "*", schema: "public", table }, () => {
-        if (timer) return;
-        timer = setTimeout(flush, COALESCE_MS);
+        if (!abaVisivel()) {
+          pendente = true;
+          return;
+        }
+        agendar();
       })
       .subscribe();
 
     return () => {
       if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", aoVoltar);
       void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

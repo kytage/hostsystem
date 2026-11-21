@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
@@ -8,8 +8,13 @@ import { getAuthUserData } from "@/lib/auth-cache";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { alternarPerfil, fecharPainel, usePainelTopo } from "@/lib/menu-perfil";
 import { PainelAvisos, SinoBotao } from "@/components/sino-avisos";
-import { PerfilConteudo } from "@/components/perfil/perfil-conteudo";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
+
+// o conteúdo do perfil (tarefas, anotações) só é baixado quando o pop-up abre
+const PerfilConteudo = lazy(() =>
+  import("@/components/perfil/perfil-conteudo").then((m) => ({ default: m.PerfilConteudo })),
+);
 
 /** Mesmo cache do menu lateral (chave "my-username"). */
 function useEu() {
@@ -105,7 +110,15 @@ export function MenuPerfil() {
                 </button>
               </div>
               <div className="menu-perfil-corpo">
-                <PerfilConteudo />
+                <Suspense
+                  fallback={
+                    <div className="grid h-40 place-items-center">
+                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <PerfilConteudo />
+                </Suspense>
               </div>
             </div>
           ) : (
