@@ -83,6 +83,36 @@ const qtdItens = (p: Player) => p.inventario.reduce((s, i) => s + (i.qtd || 0), 
 const tempo = (iso: string | null) => (iso ? new Date(iso).getTime() : 0);
 const passaporteNum = (p: Player) => Number(p.passaporte) || Number.MAX_SAFE_INTEGER;
 
+/**
+ * Busca do topo. Só número (ou "#741") = busca pelo ID da Host (passaporte): mostra os IDs que
+ * começam com o número, o ID exato primeiro. Texto = nome, license, telefone, Discord ou veículo.
+ */
+export const idDaBusca = (busca: string): string | null => {
+  const m = busca.trim().match(/^#?\s*(\d+)$/);
+  return m ? m[1]! : null;
+};
+
+export function bateNaBusca(p: Player, busca: string): boolean {
+  const q = busca.trim().toLowerCase();
+  if (!q) return true;
+  const id = idDaBusca(q);
+  if (id !== null) return (p.passaporte ?? "").trim().startsWith(id);
+  return (
+    [p.nome, p.passaporte, p.license, p.telefone, p.discord_nome, p.discord_id].some((v) =>
+      v?.toLowerCase().includes(q),
+    ) || p.veiculos.some((v) => v.toLowerCase().includes(q))
+  );
+}
+
+/** Na busca por ID: o ID exato primeiro, depois do menor para o maior. */
+export function ordenarPorId(lista: Player[], id: string): Player[] {
+  const n = (p: Player) => Number((p.passaporte ?? "").trim()) || Number.MAX_SAFE_INTEGER;
+  return [...lista].sort(
+    (a, b) =>
+      Number((b.passaporte ?? "").trim() === id) - Number((a.passaporte ?? "").trim() === id) || n(a) - n(b),
+  );
+}
+
 /** Quantos filtros extras estão ligados (para o botão "Limpar"). */
 export function filtrosLigados(f: FiltrosExtras): number {
   return (

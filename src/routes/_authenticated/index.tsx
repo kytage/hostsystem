@@ -31,6 +31,7 @@ import { Contagem } from "@/components/contagem";
 import { AvisosHero } from "@/components/avisos-hero";
 import { OrganizacoesDestaque } from "@/components/organizacoes-destaque";
 import { CartaoAndamento, CartaoMovimento } from "@/components/home-graficos";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -317,7 +318,7 @@ function Dashboard() {
                         <h3 className="text-sm font-semibold">{s.titulo}</h3>
                         {s.descricao && (
                           <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
-                            {s.descricao}
+                            <TextoFormatado texto={s.descricao} />
                           </p>
                         )}
                         {s.anexos.length > 0 && (

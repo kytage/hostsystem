@@ -7,6 +7,8 @@ import { useIlegalAvisoNotify } from "@/hooks/use-ilegal-aviso-notify";
 import { useAvisoDeSuspeitos } from "@/lib/logs-suspeitos";
 import { useVersaoNova } from "@/hooks/use-versao-nova";
 import { OuvinteReinicio } from "@/components/reiniciar-site";
+import { MenuPerfil } from "@/components/menu-perfil";
+import { BarraDeFormatacao } from "@/components/barra-formatacao";
 
 /** Avisos da equipe e o botão de mensagens. */
 function SoDaEquipe() {
@@ -25,6 +27,10 @@ function AuthenticatedLayout() {
     <>
       <Abertura />
       <Outlet />
+      {/* botão fixo no topo que abre o Perfil & Agenda por cima de qualquer página */}
+      <MenuPerfil />
+      {/* selecionar texto em qualquer campo grande mostra a barra de negrito, itálico... (igual ao Discord) */}
+      <BarraDeFormatacao />
       <OuvinteReinicio />
       <SoDaEquipe />
     </>

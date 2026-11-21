@@ -39,6 +39,7 @@ import {
 } from "@/lib/kanban";
 import { useRealtimeTable } from "@/lib/realtime";
 import { clipboardImageToDataUrl, nomeImagemColada, pasteImageFromEvent } from "@/lib/clipboard-image";
+import { EditorTexto } from "@/components/editor-texto";
 
 export const CATEGORIA_STYLE: Record<Categoria, string> = {
   normal: "bg-chart-2/15 text-chart-2",
@@ -353,7 +354,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                   <label className="hc-sobre mb-1.5 flex items-center gap-1.5">
                     <StickyNote className="size-3.5" /> Observações do desenvolvedor (interno)
                   </label>
-                  <textarea
+                  <EditorTexto
                     value={obsDev}
                     onChange={(e) => setObsDev(e.target.value)}
 
@@ -368,7 +369,7 @@ export function KanbanCardModal({ card, username, onClose }: Props) {
                     <FileText className="size-3.5" /> Texto para Patch Note
                   </label>
                   <div className="relative">
-                    <textarea
+                    <EditorTexto
                       value={patchTexto}
                       onChange={(e) => setPatchTexto(e.target.value)}
 

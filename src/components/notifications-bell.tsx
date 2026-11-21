@@ -10,6 +10,7 @@ import {
   marcarNotificacoesLidas,
 } from "@/lib/kanban";
 import { useRealtimeTable } from "@/lib/realtime";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export function NotificationsBell() {
   const [aberto, setAberto] = useState(false);
@@ -142,7 +143,7 @@ export function NotificationsBell() {
                         )}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="whitespace-pre-line break-words">{n.texto}</p>
+                        <p className="whitespace-pre-line break-words"><TextoFormatado texto={n.texto} /></p>
                         <p className="mt-1.5 text-[11px] text-ink-3">{fmtDataHora(n.createdAt)}</p>
                       </div>
                     </div>

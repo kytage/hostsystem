@@ -88,6 +88,7 @@ import { fetchCoroasSemanaAtual } from "@/lib/ilegal-coroas";
 
 import { IlegalSolicitacoes } from "@/components/ilegal-solicitacoes";
 import { IlegalPaineis } from "@/components/ilegal-paineis";
+import { EditorTexto } from "@/components/editor-texto";
 
 
 
@@ -378,7 +379,7 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
             <span className="hc-sobre mb-1 block">
               Observação
             </span>
-            <textarea
+            <EditorTexto
               className={cn(inputCls, "min-h-20 resize-y")}
               value={form.observacao}
               onChange={(e) => set("observacao", e.target.value)}
@@ -959,7 +960,7 @@ function DetalhesModal({
                     <span className="hc-sobre mb-1 block">
                       Texto extra para o DEV
                     </span>
-                    <textarea
+                    <EditorTexto
                       className={cn(
                         inputCls,
                         "min-h-20 resize-y",
@@ -1003,7 +1004,7 @@ function DetalhesModal({
               <span className="hc-sobre mb-1 block">
                 Anotações sobre
               </span>
-              <textarea
+              <EditorTexto
                 className={cn(
                   inputCls,
                   "min-h-28 resize-y",

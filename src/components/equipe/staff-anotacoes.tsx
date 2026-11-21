@@ -7,6 +7,8 @@ import { getAuthUserData } from "@/lib/auth-cache";
 import { roleRank } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 /**
  * Anotações sobre cada staff (observações, conversas, avisos): só Coordinator e acima leem e
@@ -135,7 +137,7 @@ function PainelAnotacoes({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <textarea
+        <EditorTexto
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           rows={3}
@@ -189,7 +191,7 @@ function PainelAnotacoes({
                   </button>
                 )}
               </div>
-              <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{a.texto}</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-[13px]"><TextoFormatado texto={a.texto} /></p>
             </div>
           ))
         )}

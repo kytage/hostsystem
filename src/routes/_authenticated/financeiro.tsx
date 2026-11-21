@@ -62,6 +62,7 @@ import {
   type Saida,
   type SaidaStatus,
 } from "@/lib/financeiro";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
@@ -342,7 +343,7 @@ function FinanceiroPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{e.titulo}</p>
                     {e.observacao ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{e.observacao}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground"><TextoFormatado texto={e.observacao} /></p>
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -423,7 +424,7 @@ function FinanceiroPage() {
                       {s.criadoPor ? ` · por ${s.criadoPor}` : ""}
                     </p>
                     {s.observacao ? (
-                      <p className="mt-1 text-xs text-muted-foreground">{s.observacao}</p>
+                      <p className="mt-1 text-xs text-muted-foreground"><TextoFormatado texto={s.observacao} /></p>
                     ) : null}
                     {s.comprovante ? (
                       s.comprovante.startsWith("data:image") ? (

@@ -17,6 +17,8 @@ import { useRealtimeTable } from "@/lib/realtime";
 import { useMyRole, ROLE_ORDER } from "@/lib/permissions";
 import { PageHeader } from "@/components/page-header";
 import { getAuthUserData } from "@/lib/auth-cache";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 export const Route = createFileRoute("/_authenticated/avisos")({
   component: AvisosPage,
@@ -123,7 +125,7 @@ function AvisosPage() {
             maxLength={120}
             className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/60"
           />
-          <textarea
+          <EditorTexto
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Descrição do aviso..."
@@ -199,7 +201,7 @@ function AvisosPage() {
               </div>
               {a.texto && (
                 <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed text-foreground/90">
-                  {a.texto}
+                  <TextoFormatado texto={a.texto} />
                 </p>
               )}
               <div className="mt-4 border-t border-white/[0.07] pt-3">

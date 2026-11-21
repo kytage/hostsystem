@@ -23,6 +23,8 @@ import {
 import { useRealtimeTable } from "@/lib/realtime";
 import { cn } from "@/lib/utils";
 import { getAuthUserData } from "@/lib/auth-cache";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 const VAZIO: IlegalAnotacaoInput = { titulo: "", descricao: "", imagens: [] };
 
@@ -105,7 +107,7 @@ function AnotacaoEditor({ inicial, titulo, saving, onClose, onSave }: EditorProp
 
           <div>
             <label className="hc-sobre">Descrição</label>
-            <textarea
+            <EditorTexto
               value={form.descricao}
               onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
               rows={7}
@@ -251,7 +253,7 @@ function AnotacaoViewer({
 
           {anotacao.descricao && (
             <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {anotacao.descricao}
+              <TextoFormatado texto={anotacao.descricao} />
             </p>
           )}
 
@@ -423,7 +425,7 @@ export function IlegalAnotacoes() {
 
               {a.descricao && (
                 <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
-                  {a.descricao}
+                  <TextoFormatado texto={a.descricao} />
                 </p>
               )}
 

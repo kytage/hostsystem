@@ -8,6 +8,7 @@ import { CATEGORIAS, COLUNAS } from "@/lib/update-board";
 import { MinimalSelect } from "@/components/ui/minimal-select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EditorTexto } from "@/components/editor-texto";
 
 const inputCls =
   "rounded-xl border border-input bg-black/25 px-3.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring";
@@ -77,7 +78,7 @@ export function NovoProjetoModal({
             className={cn(inputCls, "w-full")}
             autoFocus
           />
-          <textarea
+          <EditorTexto
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             placeholder="Descrição (opcional)"

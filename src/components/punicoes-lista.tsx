@@ -1,6 +1,7 @@
 import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { fmtDataHora } from "@/lib/kanban";
 import type { PunicaoRow } from "@/lib/punicoes";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 interface PunicoesListaProps {
   rows: PunicaoRow[];
@@ -77,7 +78,7 @@ export function PunicoesLista({
                 </p>
                 {row.observacao ? (
                   <p className="truncate text-xs text-muted-foreground" title={row.observacao}>
-                    {row.observacao}
+                    <TextoFormatado texto={row.observacao} />
                   </p>
                 ) : null}
               </td>

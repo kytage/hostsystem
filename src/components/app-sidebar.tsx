@@ -4,6 +4,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   Home,
+  GraduationCap,
   ShieldCheck,
   Skull,
   Code2,
@@ -16,7 +17,6 @@ import {
   Gavel,
   Handshake,
   Baby,
-  CircleUserRound,
   Wallet,
   ScrollText,
   Siren,
@@ -78,13 +78,15 @@ export interface NavEntry {
   badge?: number;
   category?: CategoryKey;
   trailing?: ReactNode;
+  /** Etiqueta pequena ao lado do nome (ex.: "NOVO"). */
+  tag?: string;
   /** Item em destaque no menu (vermelho com brilho). */
   destaque?: boolean;
 }
 
 const nav: NavEntry[] = [
   { title: "Home", icon: Home, url: "/" },
-  { title: "Perfil & Agenda", icon: CircleUserRound, url: "/perfil", destaque: true },
+  // Perfil & Agenda saiu do menu: abre pelo botão fixo no topo (src/components/menu-perfil.tsx)
   // Avisos saiu do menu: o quadro fica na tela inicial (a página /avisos continua, pelo atalho do quadro).
   { title: "Comandos Staffs", icon: ShieldCheck, url: "/comandos", category: "comandos" },
   { title: "Ilegal", icon: Skull, url: "/ilegal", category: "ilegal" },
@@ -93,9 +95,12 @@ const nav: NavEntry[] = [
   { title: "Áreas", icon: MapIcon, url: "/areas" },
   { title: "Equipe", icon: ClipboardList, url: "/usuarios", category: "controle_staff" },
   { title: "Players", icon: Contact, url: "/players", category: "players" },
-  { title: "Marketing", icon: Clapperboard, url: "/marketing", category: "marketing" },
+  // Marketing aparece para toda a staff: quem não é da equipe abre só a aba Artes
+  { title: "Marketing", icon: Clapperboard, url: "/marketing" },
   { title: "Área Manager", icon: FolderKanban, url: "/area-manager", category: "area_manager" },
   { title: "Eventos e Cronograma", icon: PartyPopper, url: "/eventos" },
+  // Cursos: aberto para toda a staff (por enquanto só a vitrine "em breve")
+  { title: "Cursos", icon: GraduationCap, url: "/cursos", tag: "NOVO" },
   { title: "Punições", icon: Gavel, url: "/punicoes", category: "punicoes" },
   { title: "Desenvolvimento", icon: Code2, url: "/desenvolvimento", category: "desenvolvimento" },
 ];
@@ -113,10 +118,11 @@ const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update
 
 /** Grupos do menu, na ordem em que aparecem. Item que não estiver aqui cai em "Outros". */
 export const GRUPOS: { nome: string; itens: string[] }[] = [
-  { nome: "Geral", itens: ["Home", "Perfil & Agenda", "Áreas", "Eventos e Cronograma"] },
+  // Players e Logs são os mais usados: logo abaixo da Home
+  { nome: "Geral", itens: ["Home", "Players", "Logs", "Áreas", "Eventos e Cronograma", "Cursos"] },
   {
     nome: "Operação",
-    itens: ["Comandos Staffs", "Logs", "Ilegal", "Polícia", "Captações", "Peds", "Players", "Punições"],
+    itens: ["Comandos Staffs", "Ilegal", "Polícia", "Captações", "Peds", "Punições"],
   },
   {
     nome: "Gestão",
@@ -202,7 +208,10 @@ function Item({
       </span>
       {!fechado && (
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate">{item.title}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{item.title}</span>
+            {item.tag && <span className="menu-tag-novo">{item.tag}</span>}
+          </span>
           {item.trailing}
         </span>
       )}
@@ -349,7 +358,10 @@ export function AppSidebar() {
   const naLateral = todos.filter((i) => !NO_MENU_DA_CONTA.includes(i.title));
   const grupos = GRUPOS.map((g) => ({
     nome: g.nome,
-    itens: naLateral.filter((i) => g.itens.includes(i.title)),
+    // na ordem da lista do grupo (ex.: Home, Players, Logs...)
+    itens: naLateral
+      .filter((i) => g.itens.includes(i.title))
+      .sort((a, b) => g.itens.indexOf(a.title) - g.itens.indexOf(b.title)),
   })).filter((g) => g.itens.length > 0);
   const semGrupo = naLateral.filter((i) => !GRUPOS.some((g) => g.itens.includes(i.title)));
   if (semGrupo.length) grupos.push({ nome: "Outros", itens: semGrupo });

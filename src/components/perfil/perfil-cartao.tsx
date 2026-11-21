@@ -9,6 +9,8 @@ import { DEFAULT_AVATAR_URL, fileToAvatarDataUrl } from "@/lib/avatar";
 import { STATUS_CONFIG, type PresenceStatus } from "@/lib/chat";
 import { ROLE_LABELS, useMyRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { EditorTexto } from "@/components/editor-texto";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export const BANNER_PADRAO = "/perfil/banner-padrao.jpg";
 const CHAVE_PERFIL = ["perfil-agenda"] as const;
@@ -208,7 +210,7 @@ export function PerfilCartao() {
 
         {perfil?.bio && (
           <p className="mt-2.5 line-clamp-2 text-[12px] leading-snug text-muted-foreground" title={perfil.bio}>
-            {perfil.bio}
+            <TextoFormatado texto={perfil.bio} />
           </p>
         )}
 
@@ -321,7 +323,7 @@ function EditarPerfil({
 
         <label className="mt-3 block space-y-1.5">
           <span className="hc-sobre block">Sobre mim (bio)</span>
-          <textarea
+          <EditorTexto
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}

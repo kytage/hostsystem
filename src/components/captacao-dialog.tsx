@@ -21,6 +21,7 @@ import { fetchCategorias } from "@/lib/ilegal-data";
 import { getAuthUserData } from "@/lib/auth-cache";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EditorTexto } from "@/components/editor-texto";
 
 export interface CaptacaoPrefill {
   organizacao?: string;
@@ -279,7 +280,7 @@ export function CaptacaoDialog({ open, onClose, captacao, prefill }: Props) {
 
           <div className="col-span-2">
             <label className={labelCls}>Observação</label>
-            <textarea
+            <EditorTexto
               className={cn(inputCls, "min-h-20 resize-y")}
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}

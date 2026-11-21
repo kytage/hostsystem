@@ -21,6 +21,7 @@ import {
   saudeDaArea,
   useAreasDados,
 } from "@/components/areas/use-areas-dados";
+import { EditorTexto } from "@/components/editor-texto";
 
 export const Route = createFileRoute("/_authenticated/areas/$area")({
   head: () => ({ meta: [{ title: "Área — HOST" }] }),
@@ -282,7 +283,7 @@ function NovaPendencia({ area, eu }: { area: string; eu: string }) {
       <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", aberto ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
           <div className="space-y-2 px-2 pb-1 pt-1">
-            <textarea
+            <EditorTexto
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               rows={2}

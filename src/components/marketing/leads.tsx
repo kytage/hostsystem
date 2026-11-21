@@ -52,6 +52,7 @@ import {
 } from "@/lib/marketing-leads";
 import { useRealtimeTable } from "@/lib/realtime";
 import { playSfx } from "@/lib/sfx";
+import { EditorTexto } from "@/components/editor-texto";
 
 const KEY_LEADS = ["marketing-leads"];
 const KEY_REFS = ["marketing-referencias"];
@@ -346,7 +347,7 @@ function LeadDialog({ lead, onClose, onMudou }: { lead: Lead; onClose: () => voi
           </div>
           <label className="block">
             <span className={rotuloCls}>Notas</span>
-            <textarea value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={3} placeholder="O que foi conversado, proposta, próximos passos…" className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/25" />
+            <EditorTexto value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={3} placeholder="O que foi conversado, proposta, próximos passos…" className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/25" />
           </label>
           <Rodape nome={f.nome} salvando={salvar.isPending} podeSalvar={f.nome.trim().length > 0} onSalvar={() => salvar.mutate()} onExcluir={() => remover.mutate()} />
         </div>
@@ -593,7 +594,7 @@ function ReferenciaDialog({ referencia, onClose, onMudou }: { referencia: Refere
           </div>
           <label className="block">
             <span className={rotuloCls}>Por que funciona</span>
-            <textarea value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={3} placeholder="Gancho, formato, o que dá para adaptar para a HOST…" className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/25" />
+            <EditorTexto value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={3} placeholder="Gancho, formato, o que dá para adaptar para a HOST…" className="w-full resize-y rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-ink-3 focus:border-white/25" />
           </label>
           <Rodape nome={f.titulo} salvando={salvar.isPending} podeSalvar={f.titulo.trim().length > 0} onSalvar={() => salvar.mutate()} onExcluir={() => remover.mutate()} />
         </div>

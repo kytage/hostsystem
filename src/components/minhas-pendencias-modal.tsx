@@ -15,6 +15,7 @@ import {
 } from "@/lib/kanban";
 import { ROLE_ORDER, useMyRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 type TabKey = "minhas" | "meus-feitos" | "analise" | "ranking";
 type FiltroStatus =
@@ -241,7 +242,7 @@ export function MinhasPendenciasModal({ onClose }: { onClose: () => void }) {
                         </p>
                         {c.descricao && (
                           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                            {c.descricao}
+                            <TextoFormatado texto={c.descricao} />
                           </p>
                         )}
                         <p className="mt-2 text-[11px] text-ink-3">

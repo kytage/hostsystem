@@ -16,6 +16,7 @@ import {
 import { KanbanCardModal, CATEGORIA_STYLE } from "@/components/kanban-card-modal";
 import { MinimalSelect } from "@/components/ui/minimal-select";
 import { cn } from "@/lib/utils";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export interface HistoricoModalProps {
   onClose: () => void;
@@ -381,7 +382,7 @@ function ArquivadosTab() {
                     )}
                   </div>
                   <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                    {c.descricao || "—"}
+                    {c.descricao ? <TextoFormatado texto={c.descricao} /> : "—"}
                   </p>
                   <p className="mt-1 text-[11px] text-muted-foreground/70">
                     {c.status} · por {c.criadoPor || "—"} · {fmtDataHora(c.createdAt)}

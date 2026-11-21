@@ -8,6 +8,7 @@ import {
   labelClasses,
 } from "@/components/financeiro/modal-base";
 import { mesLabel, parseValor, salvarEntrada, type Entrada } from "@/lib/financeiro";
+import { EditorTexto } from "@/components/editor-texto";
 
 interface EntradaDialogProps {
   mes: string;
@@ -87,7 +88,7 @@ export function EntradaDialog({ mes, entrada, onClose, onSaved }: EntradaDialogP
           <label className={labelClasses} htmlFor="entrada-obs">
             Observação
           </label>
-          <textarea
+          <EditorTexto
             id="entrada-obs"
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}

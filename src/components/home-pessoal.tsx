@@ -1,6 +1,7 @@
 import { RichTextarea } from "@/components/rich-textarea";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { abrirPerfil } from "@/lib/menu-perfil";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
@@ -702,7 +703,7 @@ export function TarefasPreview() {
 
   // cartão da tela inicial (classes `hc-*`, em src/styles.css): o cartão inteiro leva a Perfil & Agenda
   return (
-    <Link to="/perfil" className="glass hc flex h-full flex-col p-5">
+    <button type="button" onClick={abrirPerfil} className="glass hc flex h-full w-full flex-col p-5 text-left">
       <div className="flex items-center gap-3">
         <span className="hc-icone">
           <NotebookPen className="size-4" strokeWidth={1.75} />
@@ -752,6 +753,6 @@ export function TarefasPreview() {
           </p>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }

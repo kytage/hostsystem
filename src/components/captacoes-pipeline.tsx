@@ -42,6 +42,7 @@ import {
 } from "@/lib/captacoes";
 import { CaptacaoDialog, type CaptacaoPrefill } from "@/components/captacao-dialog";
 import { toast } from "sonner";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 const COLUNAS: { id: CaptacaoStatus; cor: string }[] = [
   { id: "pendente", cor: "bg-yellow-400" },
@@ -642,7 +643,7 @@ function CardCaptacao({
           )}
           {c.observacao && (
             <p className="mt-1.5 line-clamp-2 border-l-2 border-foreground/15 pl-2 text-[10px] italic text-muted-foreground">
-              {c.observacao}
+              <TextoFormatado texto={c.observacao} />
             </p>
           )}
           <div className="mt-2 flex items-center justify-between">

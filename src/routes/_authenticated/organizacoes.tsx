@@ -9,6 +9,7 @@ import { fetchCategorias } from "@/lib/ilegal-data";
 import { isSemLocal } from "@/lib/ilegal-status";
 import { ROLE_ORDER, useCanEditIlegal, useMyRole } from "@/lib/permissions";
 import { useRealtimeTable } from "@/lib/realtime";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export const Route = createFileRoute("/_authenticated/organizacoes")({
   validateSearch: (s: Record<string, unknown>): { aba?: "legais" | "faccoes" } => (s["aba"] === "faccoes" ? { aba: "faccoes" } : {}),
@@ -138,7 +139,7 @@ function Faccoes() {
                     <td className="py-2 pr-2 text-muted-foreground">{o.local || "—"}</td>
                     <td className="py-2 pr-2 font-mono text-[11px] text-muted-foreground">{o.cds || "—"}</td>
                     <td className="max-w-40 truncate py-2 pr-2 text-muted-foreground" title={o.observacao}>
-                      {o.observacao || "—"}
+                      {o.observacao ? <TextoFormatado texto={o.observacao} /> : "—"}
                     </td>
                   </tr>
                 ))}

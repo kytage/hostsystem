@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ColumnId } from "@/lib/dev-tasks";
 import { fetchEstrutura, progressoEstrutura, saveEstrutura, type EstruturaGrupo, type EstruturaItem } from "@/lib/update-estrutura";
 import { cn } from "@/lib/utils";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 const STATUS: { id: ColumnId; label: string; dot: string; chip: string }[] = [
   { id: "backlog", label: "Planejado", dot: "bg-muted-foreground", chip: "bg-muted text-foreground border-white/[0.08]" },
@@ -132,7 +134,7 @@ function ItemLinha({ item, usuarios, onSave, onRemove }: { item: EstruturaItem; 
           <span className={cn("text-sm font-semibold", item.status === "done" && "text-muted-foreground line-through")}>{item.titulo}</span>
           <span className="text-[11px] text-muted-foreground">{item.responsaveis.length ? item.responsaveis.join(", ") : "Sem responsável"}</span>
         </div>
-        {item.descricao && <p className="mt-0.5 whitespace-pre-line break-words text-xs text-muted-foreground">{item.descricao}</p>}
+        {item.descricao && <p className="mt-0.5 whitespace-pre-line break-words text-xs text-muted-foreground"><TextoFormatado texto={item.descricao} /></p>}
       </div>
       <div className="w-44 shrink-0">
         <MinimalSelect className={cn("rounded-full px-3 py-1 text-xs font-semibold", st.chip)} value={item.status}
@@ -155,7 +157,7 @@ function ItemForm({ item, usuarios, onSave, onCancel }: { item: EstruturaItem; u
         <ResponsaveisPicker value={d.responsaveis} usuarios={usuarios} onChange={(responsaveis) => setD({ ...d, responsaveis })} />
         <MinimalSelect value={d.status} onChange={(v) => setD({ ...d, status: v as ColumnId })} options={STATUS.map((s) => ({ value: s.id, label: s.label }))} />
       </div>
-      <textarea rows={2} className={cn(field, "resize-y")} placeholder="Descrição (opcional)" value={d.descricao} onChange={(e) => setD({ ...d, descricao: e.target.value })} />
+      <EditorTexto rows={2} className={cn(field, "resize-y")} placeholder="Descrição (opcional)" value={d.descricao} onChange={(e) => setD({ ...d, descricao: e.target.value })} />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" className="rounded-full" onClick={onCancel}>Cancelar</Button>
         <Button size="sm" className="rounded-full" disabled={!d.titulo.trim()} onClick={() => onSave({ ...d, titulo: d.titulo.trim(), descricao: d.descricao.trim() })}>Salvar</Button>

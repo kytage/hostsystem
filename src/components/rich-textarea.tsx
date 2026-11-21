@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
-import { Bold, Code, Eye, Italic, List, Pencil, SquareCode } from "lucide-react";
+import { useRef } from "react";
+import { Bold, Code, Italic, List, SquareCode, Strikethrough, Underline } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RichText } from "@/components/rich-text";
+import { EditorTexto } from "@/components/editor-texto";
 
 export interface RichTextareaProps {
   value: string;
@@ -9,40 +9,18 @@ export interface RichTextareaProps {
   placeholder?: string;
   rows?: number;
   className?: string;
-  /** Classe aplicada ao textarea (para manter os estilos de input do projeto). */
+  /** Classe aplicada ao campo (para manter os estilos de input do projeto). */
   inputClassName?: string;
-  onPaste?: React.ClipboardEventHandler<HTMLTextAreaElement>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onPaste?: React.ClipboardEventHandler<any>;
   disabled?: boolean;
   autoFocus?: boolean;
 }
 
-type Acao = {
-  key: string;
-  label: string;
-  icon: typeof Bold;
-  before: string;
-  after: string;
-  /** Insere em linhas novas (blocos). */
-  block?: boolean;
-  placeholder: string;
-};
-
-const ACOES: Acao[] = [
-  { key: "bold", label: "Negrito", icon: Bold, before: "**", after: "**", placeholder: "texto" },
-  { key: "italic", label: "Itálico", icon: Italic, before: "_", after: "_", placeholder: "texto" },
-  { key: "code", label: "Código inline", icon: Code, before: "`", after: "`", placeholder: "código" },
-  {
-    key: "block",
-    label: "Caixa para copiar",
-    icon: SquareCode,
-    before: "```\n",
-    after: "\n```",
-    block: true,
-    placeholder: "conteúdo para copiar",
-  },
-  { key: "list", label: "Lista", icon: List, before: "- ", after: "", block: true, placeholder: "item" },
-];
-
+/**
+ * Campo de descrição com botões de formatação. Mostra o texto já formatado enquanto escreve
+ * (igual ao Discord); selecionar um trecho também abre a barra flutuante.
+ */
 export function RichTextarea({
   value,
   onChange,
@@ -54,89 +32,88 @@ export function RichTextarea({
   disabled,
   autoFocus,
 }: RichTextareaProps) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  const [preview, setPreview] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const aplicar = (acao: Acao) => {
-    const el = ref.current;
-    if (!el) return;
-    const start = el.selectionStart ?? value.length;
-    const end = el.selectionEnd ?? start;
-    const selecionado = value.slice(start, end) || acao.placeholder;
-    const precisaQuebra = acao.block && start > 0 && value[start - 1] !== "\n";
-    const prefixo = precisaQuebra ? "\n" : "";
-    const inserido = `${prefixo}${acao.before}${selecionado}${acao.after}`;
-    const novo = value.slice(0, start) + inserido + value.slice(end);
-    onChange(novo);
-    // Reposiciona o cursor selecionando o conteúdo inserido.
-    const selStart = start + prefixo.length + acao.before.length;
-    window.requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(selStart, selStart + selecionado.length);
-    });
+  /** Garante o cursor dentro deste campo antes de aplicar (se não estiver, vai para o fim). */
+  const focar = () => {
+    const ed = ref.current;
+    if (!ed) return false;
+    const s = window.getSelection();
+    if (!s || s.rangeCount === 0 || !ed.contains(s.getRangeAt(0).commonAncestorContainer)) {
+      ed.focus();
+      const r = document.createRange();
+      r.selectNodeContents(ed);
+      r.collapse(false);
+      s?.removeAllRanges();
+      s?.addRange(r);
+    }
+    return true;
+  };
+  const avisar = () => ref.current?.dispatchEvent(new Event("input", { bubbles: true }));
+
+  const comando = (c: string) => () => {
+    if (!focar()) return;
+    document.execCommand(c);
+    avisar();
+  };
+  const codigo = () => {
+    if (!focar()) return;
+    const s = window.getSelection();
+    const r = s?.getRangeAt(0);
+    if (!r) return;
+    const el = document.createElement("code");
+    el.textContent = r.toString() || "código";
+    r.deleteContents();
+    r.insertNode(el);
+    avisar();
+  };
+  const linhas = (antes: string, depois = "") => () => {
+    if (!focar()) return;
+    const texto = window.getSelection()?.toString() || "";
+    document.execCommand("insertText", false, `${antes}${texto}${depois}`);
+    avisar();
   };
 
-  const onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const key = e.key.toLowerCase();
-    const map: Record<string, string> = { b: "bold", i: "italic", e: "code" };
-    const alvo = map[key];
-    if (!alvo) return;
-    const acao = ACOES.find((a) => a.key === alvo);
-    if (!acao) return;
-    e.preventDefault();
-    aplicar(acao);
-  };
+  const acoes = [
+    { label: "Negrito (Ctrl+B)", icon: Bold, f: comando("bold") },
+    { label: "Itálico (Ctrl+I)", icon: Italic, f: comando("italic") },
+    { label: "Sublinhado (Ctrl+U)", icon: Underline, f: comando("underline") },
+    { label: "Riscado", icon: Strikethrough, f: comando("strikeThrough") },
+    { label: "Código", icon: Code, f: codigo },
+    { label: "Caixa para copiar", icon: SquareCode, f: linhas("```\n", "\n```") },
+    { label: "Lista", icon: List, f: linhas("- ") },
+  ];
 
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex flex-wrap items-center gap-1">
-        {ACOES.map((a) => (
+        {acoes.map((a) => (
           <button
-            key={a.key}
+            key={a.label}
             type="button"
             title={a.label}
             aria-label={a.label}
-            disabled={disabled || preview}
-            onClick={() => aplicar(a)}
+            disabled={disabled}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={a.f}
             className="rounded-lg glass-inset p-1.5 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
           >
             <a.icon className="size-3.5" />
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => setPreview((p) => !p)}
-          className="ml-auto flex items-center gap-1.5 rounded-lg glass-inset px-2 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {preview ? <Pencil className="size-3.5" /> : <Eye className="size-3.5" />}
-          {preview ? "Editar" : "Visualizar"}
-        </button>
+        <span className="ml-auto text-[10.5px] text-ink-3">Selecione o texto para mais opções</span>
       </div>
-
-      {preview ? (
-        <div
-          className={cn(
-            "overflow-y-auto rounded-xl glass-inset px-3 py-2",
-            inputClassName
-          )}
-        >
-          <RichText value={value} />
-        </div>
-      ) : (
-        <textarea
-          ref={ref}
-          autoFocus={autoFocus}
-          value={value}
-          rows={rows}
-          disabled={disabled}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          className={inputClassName}
-        />
-      )}
+      <EditorTexto
+        ref={ref}
+        autoFocus={autoFocus}
+        value={value}
+        rows={rows}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onPaste={onPaste}
+        className={inputClassName}
+      />
     </div>
   );
 }

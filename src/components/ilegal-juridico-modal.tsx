@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Loader2, Scale } from "lucide-react";
 import { fmtDataHora } from "@/lib/kanban";
 import { fetchPunicoesPorSetagem } from "@/lib/punicoes";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 interface IlegalJuridicoModalProps {
   setagem: string;
@@ -77,7 +78,7 @@ export function IlegalJuridicoModal({
                   {row.duracao ? ` · ${row.duracao}` : ""} · ID {row.jogador_id || "—"}
                 </p>
                 {row.observacao ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{row.observacao}</p>
+                  <p className="mt-2 text-xs text-muted-foreground"><TextoFormatado texto={row.observacao} /></p>
                 ) : null}
                 <p className="mt-2 text-[11px] text-muted-foreground/70">
                   Staff: {row.staff || "—"}

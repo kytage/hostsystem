@@ -21,6 +21,7 @@ import {
   type SaidaSubtipo,
   type SaidaTipo,
 } from "@/lib/financeiro";
+import { EditorTexto } from "@/components/editor-texto";
 
 interface SaidaDialogProps {
   mes: string;
@@ -205,7 +206,7 @@ export function SaidaDialog({ mes, saida, onClose, onSaved }: SaidaDialogProps) 
           <label className={labelClasses} htmlFor="saida-obs">
             Observação
           </label>
-          <textarea
+          <EditorTexto
             id="saida-obs"
             value={observacao}
             onChange={(e) => setObservacao(e.target.value)}

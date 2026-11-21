@@ -1,10 +1,13 @@
 import { useState, type ComponentProps } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lerLinha, tipoDaLinha } from "@/lib/formatacao";
+import { nosEmReact } from "@/components/texto-formatado";
 
 /**
  * Renderizador leve de texto formatado (subset de Markdown).
- * Suporta: **negrito**, _itálico_, `code` inline, blocos ``` com botão copiar,
+ * Suporta a formatação do Discord (src/lib/formatacao.ts): **negrito**, *itálico*, __sublinhado__,
+ * ~~riscado~~, ||spoiler||, `code`, títulos (#), citação (>), blocos ``` com botão copiar,
  * listas com "- " e links http.
  */
 
@@ -40,49 +43,7 @@ function CopyBox({ text }: { text: string }) {
 }
 
 function renderInline(raw: string, keyPrefix: string) {
-  // Divide preservando os delimitadores suportados.
-  const tokens = raw.split(/(\*\*[^*]+\*\*|`[^`]+`|_[^_]+_|https?:\/\/\S+)/g);
-  return tokens.filter(Boolean).map((tk, i) => {
-    const key = `${keyPrefix}-${i}`;
-    if (tk.startsWith("**") && tk.endsWith("**") && tk.length > 4) {
-      return (
-        <strong key={key} className="font-semibold text-foreground">
-          {tk.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (tk.startsWith("`") && tk.endsWith("`") && tk.length > 2) {
-      return (
-        <code
-          key={key}
-          className="rounded-md bg-white/[0.05] px-1.5 py-0.5 font-mono text-[0.85em] text-foreground"
-        >
-          {tk.slice(1, -1)}
-        </code>
-      );
-    }
-    if (tk.startsWith("_") && tk.endsWith("_") && tk.length > 2) {
-      return (
-        <em key={key} className="italic">
-          {tk.slice(1, -1)}
-        </em>
-      );
-    }
-    if (/^https?:\/\//.test(tk)) {
-      return (
-        <a
-          key={key}
-          href={tk}
-          target="_blank"
-          rel="noreferrer"
-          className="text-primary underline underline-offset-2"
-        >
-          {tk}
-        </a>
-      );
-    }
-    return <span key={key}>{tk}</span>;
-  });
+  return nosEmReact(lerLinha(raw), keyPrefix);
 }
 
 export interface RichTextProps extends ComponentProps<"div"> {
@@ -110,6 +71,12 @@ export function RichText({ value, className, ...rest }: RichTextProps) {
         return block.split("\n").map((line, li) => {
           const key = `b${bi}-l${li}`;
           if (!line.trim()) return <div key={key} className="h-2" />;
+          const { tipo, conteudo } = tipoDaLinha(line);
+          if (tipo === "h1") return <p key={key} className="tf-h1">{renderInline(conteudo, key)}</p>;
+          if (tipo === "h2") return <p key={key} className="tf-h2">{renderInline(conteudo, key)}</p>;
+          if (tipo === "h3") return <p key={key} className="tf-h3">{renderInline(conteudo, key)}</p>;
+          if (tipo === "pequeno") return <p key={key} className="tf-pequeno">{renderInline(conteudo, key)}</p>;
+          if (tipo === "citacao") return <p key={key} className="tf-citacao">{renderInline(conteudo, key)}</p>;
           if (/^\s*[-*]\s+/.test(line)) {
             return (
               <div key={key} className="flex gap-2">

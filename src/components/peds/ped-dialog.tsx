@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EditorTexto } from "@/components/editor-texto";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -45,7 +46,7 @@ export function PedDialog({ ped, categoria, onClose }: PedDialogProps) {
           <div className="space-y-2"><Label htmlFor="ped-grupo" className="hc-sobre">Grupo / Status</Label><Select value={input.grupo} onValueChange={(v) => change("grupo", v)}><SelectTrigger id="ped-grupo" className="rounded-xl"><SelectValue /></SelectTrigger><SelectContent>{PED_GROUPS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
           {PED_FIELDS.map(([key, label]) => <div key={key} className="space-y-2"><Label htmlFor={`ped-${key}`} className="hc-sobre">{label}</Label><Input id={`ped-${key}`} value={input[key]} onChange={(e) => change(key, e.target.value)} required={key === "responsavel" || key === "arquivo"} maxLength={2000} /></div>)}
         </div>
-        <div className="space-y-2"><Label htmlFor="ped-observacao" className="hc-sobre">Observação</Label><Textarea id="ped-observacao" className="rounded-xl" value={input.observacao} onChange={(e) => change("observacao", e.target.value)} rows={4} maxLength={10000} /></div>
+        <div className="space-y-2"><Label htmlFor="ped-observacao" className="hc-sobre">Observação</Label><EditorTexto id="ped-observacao" className="rounded-xl" value={input.observacao} onChange={(e) => change("observacao", e.target.value)} rows={4} maxLength={10000} /></div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>Cancelar</Button><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Salvar</Button></div>
       </form>

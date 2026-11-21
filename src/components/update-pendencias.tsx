@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PlanningAttachments } from "@/components/update-planning-attachments";
 import { deleteDevTask, patchDevTask, type ChecklistItem, type ColumnId, type DevTask, type Priority } from "@/lib/dev-tasks";
 import { playSfx, setSfxMuted, sfxMuted } from "@/lib/sfx";
+import { EditorTexto } from "@/components/editor-texto";
 
 export const STATUS: { id: ColumnId; label: string; on: string; dot: string }[] = [
   { id: "backlog", label: "Planejado", on: "bg-white/[0.12] text-foreground", dot: "bg-white/40" },
@@ -419,7 +420,7 @@ function TopicoDialog({ topico: t, onClose }: { topico: DevTask; onClose: () => 
 
           <div>
             <span className={label}>Descrição</span>
-            <textarea
+            <EditorTexto
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               onBlur={() => descricao !== t.description && set({ description: descricao })}

@@ -4,6 +4,7 @@ import type { IlegalCategoria, IlegalOrg } from "@/lib/ilegal-data";
 import { HORAS_MEDIA, serieDoPico, type SetagemOnlineResumo } from "@/lib/ilegal-online";
 import { HEX_SERIE, HEX_SITUACAO, HEX_STATUS, hexDaCategoria } from "@/lib/ilegal-cores";
 import { cn } from "@/lib/utils";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 /**
  * Planilha do Ilegal no vidro da tela inicial: todas as setagens numa tabela
@@ -311,7 +312,7 @@ export function IlegalPlanilha(props: IlegalPlanilhaProps) {
                       </td>
                       <td className={cn(celula, "text-violet-700 dark:text-violet-200/90")}>
                         <span className="line-clamp-2" title={o.observacao}>
-                          {o.observacao || vazio}
+                          {o.observacao ? <TextoFormatado texto={o.observacao} /> : vazio}
                         </span>
                       </td>
                       <td className={cn(celula, "text-foreground/55")}>

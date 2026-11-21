@@ -25,6 +25,7 @@ import {
 import { BANNER_PADRAO } from "@/components/perfil/perfil-cartao";
 import { cn } from "@/lib/utils";
 import { getAuthUserData } from "@/lib/auth-cache";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 const EMOJIS = [
   "😀",
@@ -150,7 +151,7 @@ function CartaoPerfil({
               Sobre mim
             </p>
             <p className="mt-1 whitespace-pre-line text-[12.5px] text-white/85">
-              {perfil.bio || "Este usuário ainda não escreveu uma bio."}
+              <TextoFormatado texto={perfil.bio || "Este usuário ainda não escreveu uma bio."} />
             </p>
           </div>
           <button

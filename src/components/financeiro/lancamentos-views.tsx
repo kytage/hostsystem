@@ -27,6 +27,7 @@ import {
   type SaidaSubtipo,
   type SaidaTipo,
 } from "@/lib/financeiro";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 /* ------------------------------------------------------------------ *
  * Filtro de período (por mês de competência)
@@ -193,7 +194,7 @@ export function EntradasView({ mes, entradas, onNova, onEditar, onExcluir }: Ent
                     {mesLabel(e.mes)}
                   </td>
                   <td className="px-4 py-3 font-semibold text-foreground">{e.titulo}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{e.observacao || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{e.observacao ? <TextoFormatado texto={e.observacao} /> : "—"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-emerald-400">
                     {moeda(e.valor)}
                   </td>
@@ -433,7 +434,7 @@ export function SaidasView({
                   <td className="px-4 py-3">
                     <p className="font-semibold text-foreground">{s.titulo}</p>
                     {s.observacao ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{s.observacao}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground"><TextoFormatado texto={s.observacao} /></p>
                     ) : null}
                   </td>
                   <td className="px-4 py-3">

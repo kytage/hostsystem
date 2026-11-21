@@ -20,6 +20,9 @@ import {
   FILTROS_PADRAO,
   ORDENACOES,
   filtrosLigados,
+  bateNaBusca,
+  idDaBusca,
+  ordenarPorId,
   ordenarPlayers,
   passaNosFiltros,
   type FiltrosExtras,
@@ -90,21 +93,17 @@ function PlayersPage() {
     [players],
   );
   const lista = useMemo(() => {
-    const q = busca.trim().toLowerCase();
     const filtrados = players.filter((p) => {
       if (!passaNosFiltros(p, extras)) return false;
       if (filtro === "online" && !p.online) return false;
       if (filtro === "offline" && p.online) return false;
       if (filtro === "banidos" && !(p.passaporte && banidos.has(p.passaporte.trim()))) return false;
       if (grupo !== "todos" && !p.grupos.some((g) => nomeGrupo(g) === grupo)) return false;
-      if (!q) return true;
-      return (
-        [p.nome, p.passaporte, p.license, p.telefone, p.discord_nome, p.discord_id].some((v) =>
-          v?.toLowerCase().includes(q),
-        ) || p.veiculos.some((v) => v.toLowerCase().includes(q))
-      );
+      return bateNaBusca(p, busca);
     });
-    return ordenarPlayers(filtrados, extras.ordenacao);
+    // buscando pelo ID da Host: o ID exato vem primeiro
+    const id = idDaBusca(busca);
+    return id !== null ? ordenarPorId(filtrados, id) : ordenarPlayers(filtrados, extras.ordenacao);
   }, [players, busca, filtro, grupo, banidos, extras]);
   const ligados = filtrosLigados(extras) + Number(grupo !== "todos") + Number(filtro !== "todos") + Number(!!busca.trim());
   const sel = players.find((p) => p.id === selId) ?? null;
@@ -180,7 +179,15 @@ function PlayersPage() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar player, passaporte, license, Discord ou veículo"
+            onKeyDown={(e) => {
+              // Enter abre o player do ID digitado (ou o único achado)
+              if (e.key !== "Enter") return;
+              const id = idDaBusca(busca);
+              const alvo = (id !== null && lista.find((p) => p.passaporte?.trim() === id)) || (lista.length === 1 ? lista[0] : null);
+              if (alvo) setSelId(alvo.id);
+            }}
+            autoFocus
+            placeholder="Buscar pelo ID da Host (ex.: 741), nome, license, Discord ou veículo"
             aria-label="Buscar player"
           />
         </label>

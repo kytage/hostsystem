@@ -11,7 +11,6 @@ import {
   ExternalLink,
   FilePenLine,
   Loader2,
-  Lock,
   Plus,
   Send,
   Trash2,
@@ -19,15 +18,19 @@ import {
   CheckCheck,
   Eye,
   Lightbulb,
+  Palette,
 } from "lucide-react";
 import { Indice, Indices } from "@/components/indice";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { MarketingLeads } from "@/components/marketing/leads";
+import { MarketingArtes } from "@/components/marketing/artes";
+import { textoSemMarcas } from "@/lib/formatacao";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getCurrentUsername } from "@/lib/kanban";
+import { roleRank } from "@/lib/roles";
 import {
   canAccessCombined,
   useAreaPermissions,
@@ -58,6 +61,7 @@ import {
   type StatusConteudo,
   type TipoPostagem,
 } from "@/lib/marketing";
+import { EditorTexto } from "@/components/editor-texto";
 
 export const Route = createFileRoute("/_authenticated/marketing")({
   head: () => ({
@@ -119,12 +123,15 @@ function MarketingPage() {
     );
   }
   if (!pode) {
+    // quem não é do Marketing vê só a aba Artes (manual, gerador e tópicos são para toda a staff)
     return (
       <div className="pagina">
-        <PageHeader kicker="REDES SOCIAIS" title="Marketing" />
-        <p className="mt-6 flex items-center justify-center gap-2 rounded-[22px] border border-dashed border-white/[0.1] p-8 text-sm text-muted-foreground">
-          <Lock className="size-4" /> Área restrita a Coordinator+ e à equipe de Marketing.
-        </p>
+        <PageHeader
+          kicker="REDES SOCIAIS"
+          title="Artes HOST"
+          subtitle="Manual de identidade, gerador de artes no padrão novo e as artes de marketing."
+        />
+        <MarketingArtes podeGerir={!!role && roleRank(role) <= roleRank("coordinator")} />
       </div>
     );
   }
@@ -134,7 +141,7 @@ function MarketingPage() {
 function Painel() {
   useRealtimeTable("marketing_conteudos", [KEY]);
   const { data: todos = [], isLoading } = useQuery({ queryKey: KEY, queryFn: fetchConteudos });
-  const [visao, setVisao] = useState<"calendario" | "pipeline" | "rascunhos" | "leads">(
+  const [visao, setVisao] = useState<"calendario" | "pipeline" | "rascunhos" | "leads" | "artes">(
     "calendario",
   );
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -215,8 +222,8 @@ function Painel() {
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <div
-          className={cn("segmentos", visao === "leads" && "invisible")}
-          aria-hidden={visao === "leads"}
+          className={cn("segmentos", (visao === "leads" || visao === "artes") && "invisible")}
+          aria-hidden={visao === "leads" || visao === "artes"}
           role="group"
           aria-label="Plataforma"
         >
@@ -264,10 +271,15 @@ function Painel() {
           <button type="button" aria-pressed={visao === "leads"} onClick={() => setVisao("leads")}>
             <UserSearch className="size-3.5" /> Leads
           </button>
+          <button type="button" aria-pressed={visao === "artes"} onClick={() => setVisao("artes")}>
+            <Palette className="size-3.5" /> Artes
+          </button>
         </div>
       </div>
 
-      {visao === "leads" ? (
+      {visao === "artes" ? (
+        <MarketingArtes podeGerir />
+      ) : visao === "leads" ? (
         <MarketingLeads />
       ) : isLoading ? (
         <div className="mt-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -423,7 +435,7 @@ function Rascunhos({ itens, onAbrir }: { itens: Conteudo[]; onAbrir: (c: Conteud
               <button onClick={() => onAbrir(c)} className="min-w-0 flex-1 text-left">
                 <span className="block truncate text-sm font-medium">{c.titulo}</span>
                 {c.roteiro && (
-                  <span className="block truncate text-[11.5px] text-ink-3">{c.roteiro}</span>
+                  <span className="block truncate text-[11.5px] text-ink-3">{textoSemMarcas(c.roteiro ?? "")}</span>
                 )}
                 {(c.areas.length > 0 || c.tipo_postagem === "campanha") && (
                   <span className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -1042,7 +1054,7 @@ function ConteudoDialog({ inicial, onClose }: { inicial: Partial<Conteudo>; onCl
 
           <label className="block">
             <span className={label}>Roteiro e legenda</span>
-            <textarea
+            <EditorTexto
               value={f.roteiro}
               onChange={(e) => set("roteiro", e.target.value)}
               rows={5}

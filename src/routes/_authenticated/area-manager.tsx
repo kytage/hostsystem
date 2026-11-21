@@ -54,6 +54,7 @@ import { MinimalSelect } from "@/components/ui/minimal-select";
 import { RichTextarea } from "@/components/rich-textarea";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export const Route = createFileRoute("/_authenticated/area-manager")({
   head: () => ({
@@ -609,7 +610,7 @@ function PendCard({
             compact && "line-clamp-2 text-xs"
           )}
         >
-          {p.descricao}
+          <TextoFormatado texto={p.descricao} />
         </p>
       )}
       {p.anexos.length > 0 && (
@@ -644,7 +645,7 @@ function PendCard({
             {p.criadoPor || "autor"}
           </p>
           <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-foreground">
-            {p.obsCoordenacao}
+            <TextoFormatado texto={p.obsCoordenacao} />
           </p>
           <p className="mt-1.5 text-[11px] text-ink-3">
             por <span className="font-medium text-muted-foreground">{p.obsPor}</span>
@@ -1229,7 +1230,7 @@ function SecaoAdmin() {
               </div>
               {s.descricao && (
                 <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-muted-foreground">
-                  {s.descricao}
+                  <TextoFormatado texto={s.descricao} />
                 </p>
               )}
               {s.anexos.length > 0 && (

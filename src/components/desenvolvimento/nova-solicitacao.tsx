@@ -25,6 +25,7 @@ import {
 import { clipboardImageToDataUrl, nomeImagemColada } from "@/lib/clipboard-image";
 import { MinimalSelect } from "@/components/ui/minimal-select";
 import { cn } from "@/lib/utils";
+import { EditorTexto } from "@/components/editor-texto";
 
 const inputCls =
   "w-full rounded-xl border border-input bg-black/25 px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring";
@@ -130,7 +131,7 @@ export function NovaSolicitacaoModal({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex min-h-[min(560px,55vh)] flex-col">
                 <label className="hc-sobre mb-1.5 block">Descrição</label>
-                <textarea
+                <EditorTexto
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Descreva detalhadamente a solicitação..."
@@ -152,12 +153,12 @@ export function NovaSolicitacaoModal({
 
                 <div>
                   <label className="hc-sobre mb-1.5 flex items-center gap-1.5"><StickyNote className="size-3.5" /> Observações do desenvolvedor (interno)</label>
-                  <textarea value={obsDev} onChange={(e) => setObsDev(e.target.value)} rows={2} placeholder="Anotações técnicas, não aparecem no Patch Note" className={cn(inputCls, "resize-none")} />
+                  <EditorTexto value={obsDev} onChange={(e) => setObsDev(e.target.value)} rows={2} placeholder="Anotações técnicas, não aparecem no Patch Note" className={cn(inputCls, "resize-none")} />
                 </div>
 
                 <div>
                   <label className="hc-sobre mb-1.5 flex items-center gap-1.5"><FileText className="size-3.5" /> Texto para Patch Note</label>
-                  <textarea value={patchTexto} onChange={(e) => setPatchTexto(e.target.value)} rows={2} placeholder="Ex.: Corrigido o sistema... (vazio = IA gera)" className={cn(inputCls, "resize-none")} />
+                  <EditorTexto value={patchTexto} onChange={(e) => setPatchTexto(e.target.value)} rows={2} placeholder="Ex.: Corrigido o sistema... (vazio = IA gera)" className={cn(inputCls, "resize-none")} />
                 </div>
 
                 <div className="hc-dentro p-3.5">

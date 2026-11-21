@@ -23,6 +23,8 @@ import {
 import { useRealtimeTable } from "@/lib/realtime";
 import { ROLE_ORDER, useCanEditIlegal, useMyRole } from "@/lib/permissions";
 import { getAuthUserData } from "@/lib/auth-cache";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 function useMe() {
   return useQuery({
@@ -150,7 +152,7 @@ export function IlegalAvisos() {
             maxLength={120}
             className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground/60 focus:border-white/30"
           />
-          <textarea
+          <EditorTexto
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Descrição do aviso..."
@@ -236,7 +238,7 @@ export function IlegalAvisos() {
               </div>
               {a.texto && (
                 <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
-                  {a.texto}
+                  <TextoFormatado texto={a.texto} />
                 </p>
               )}
               {a.confirmacoes.length > 0 && (

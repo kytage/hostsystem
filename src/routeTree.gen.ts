@@ -20,6 +20,7 @@ import { Route as AuthenticatedAvisosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedCaptacoesRouteImport } from './routes/_authenticated/captacoes'
 import { Route as AuthenticatedComandosRouteImport } from './routes/_authenticated/comandos'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedCursosRouteImport } from './routes/_authenticated/cursos'
 import { Route as AuthenticatedDesenvolvimentoRouteImport } from './routes/_authenticated/desenvolvimento'
 import { Route as AuthenticatedEventosRouteImport } from './routes/_authenticated/eventos'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
@@ -99,6 +100,11 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCursosRoute = AuthenticatedCursosRouteImport.update({
+  id: '/cursos',
+  path: '/cursos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDesenvolvimentoRoute =
   AuthenticatedDesenvolvimentoRouteImport.update({
     id: '/desenvolvimento',
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/captacoes': typeof AuthenticatedCaptacoesRoute
   '/comandos': typeof AuthenticatedComandosRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/cursos': typeof AuthenticatedCursosRoute
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/captacoes': typeof AuthenticatedCaptacoesRoute
   '/comandos': typeof AuthenticatedComandosRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/cursos': typeof AuthenticatedCursosRoute
   '/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/eventos': typeof AuthenticatedEventosRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/_authenticated/captacoes': typeof AuthenticatedCaptacoesRoute
   '/_authenticated/comandos': typeof AuthenticatedComandosRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/cursos': typeof AuthenticatedCursosRoute
   '/_authenticated/desenvolvimento': typeof AuthenticatedDesenvolvimentoRoute
   '/_authenticated/eventos': typeof AuthenticatedEventosRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/captacoes'
     | '/comandos'
     | '/configuracoes'
+    | '/cursos'
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/captacoes'
     | '/comandos'
     | '/configuracoes'
+    | '/cursos'
     | '/desenvolvimento'
     | '/eventos'
     | '/financeiro'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/_authenticated/captacoes'
     | '/_authenticated/comandos'
     | '/_authenticated/configuracoes'
+    | '/_authenticated/cursos'
     | '/_authenticated/desenvolvimento'
     | '/_authenticated/eventos'
     | '/_authenticated/financeiro'
@@ -512,6 +524,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cursos': {
+      id: '/_authenticated/cursos'
+      path: '/cursos'
+      fullPath: '/cursos'
+      preLoaderRoute: typeof AuthenticatedCursosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/desenvolvimento': {
@@ -678,6 +697,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCaptacoesRoute: typeof AuthenticatedCaptacoesRoute
   AuthenticatedComandosRoute: typeof AuthenticatedComandosRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedCursosRoute: typeof AuthenticatedCursosRoute
   AuthenticatedDesenvolvimentoRoute: typeof AuthenticatedDesenvolvimentoRoute
   AuthenticatedEventosRoute: typeof AuthenticatedEventosRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
@@ -705,6 +725,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCaptacoesRoute: AuthenticatedCaptacoesRoute,
   AuthenticatedComandosRoute: AuthenticatedComandosRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedCursosRoute: AuthenticatedCursosRoute,
   AuthenticatedDesenvolvimentoRoute: AuthenticatedDesenvolvimentoRoute,
   AuthenticatedEventosRoute: AuthenticatedEventosRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
@@ -742,13 +763,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

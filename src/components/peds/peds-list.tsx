@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { PedRow } from "@/components/peds/ped-dialog";
 import { PED_CATEGORY_LABELS } from "@/lib/peds-schema";
 import { isRemovedPed, pedCategory } from "@/lib/peds-records";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 export interface PedsListProps { rows: PedRow[]; onEdit: (ped: PedRow) => void; onDelete: (ped: PedRow) => void; }
 function Identifier({ value, label }: { value: string; label: string }) {
@@ -25,7 +26,7 @@ export function PedsList({ rows, onEdit, onDelete }: PedsListProps) {
         <div className="sm:col-span-2"><dt className="hc-sobre mb-1">Discord · Responsável</dt><dd><Identifier value={ped.discord_responsavel} label="Discord do responsável" /></dd></div>
         <div><dt className="hc-sobre mb-1">Passaporte · Responsável</dt><dd><Identifier value={ped.passaporte_responsavel} label="passaporte do responsável" /></dd></div>
       </dl>
-      {ped.observacao && <p className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">{ped.observacao}</p>}
+      {ped.observacao && <p className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground"><TextoFormatado texto={ped.observacao} /></p>}
     </article>)}
   </div>;
 }

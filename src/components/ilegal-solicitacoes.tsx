@@ -24,6 +24,7 @@ import {
   reprovarPendencia,
   type PendenciaArea,
 } from "@/lib/area-manager";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 const inputCls =
   "w-full rounded-xl glass-inset px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary/60 focus:outline-none";
@@ -336,7 +337,7 @@ function PendItem({
             compact && "line-clamp-2 text-xs"
           )}
         >
-          {p.descricao}
+          <TextoFormatado texto={p.descricao} />
         </p>
       )}
 

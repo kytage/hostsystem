@@ -18,6 +18,7 @@ import {
   type PunicaoRow,
   type PunicaoTipo,
 } from "@/lib/punicoes";
+import { EditorTexto } from "@/components/editor-texto";
 
 interface PunicaoDialogProps {
   /** Quando ausente, o modal inicia na seleção de área. */
@@ -413,7 +414,7 @@ export function PunicaoDialog({
 
               <label className={cn(labelCls, "md:col-span-2")}>
                 Observação
-                <textarea
+                <EditorTexto
                   className={cn(inputCls, "min-h-[90px] resize-y normal-case")}
                   value={form.observacao}
                   onChange={(e) => set("observacao", e.target.value)}
@@ -649,7 +650,7 @@ export function PunicaoDialog({
 
               <label className={cn(labelCls, "md:col-span-2")}>
                 Observação
-                <textarea
+                <EditorTexto
                   className={cn(inputCls, "min-h-[110px] resize-y normal-case")}
                   value={form.observacao}
                   onChange={(e) => set("observacao", e.target.value)}

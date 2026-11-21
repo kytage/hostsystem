@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { AREA_LABELS, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { listArquivados, type UsuarioArquivado } from "@/lib/users.functions";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 const fmtData = (iso: string | null) =>
   iso
@@ -133,7 +134,7 @@ function Linha({ a, aberto, onToggle }: { a: UsuarioArquivado; aberto: boolean; 
             ) : (
               a.staff_anotacoes.map((n, i) => (
                 <div key={i} className="rounded-lg bg-white/[0.03] p-2.5">
-                  <p className="whitespace-pre-line text-[12.5px] text-foreground/90">{n.texto}</p>
+                  <p className="whitespace-pre-line text-[12.5px] text-foreground/90"><TextoFormatado texto={n.texto} /></p>
                   <p className="mt-1 text-[10.5px] text-ink-3">
                     @{n.autor_nome || "?"} · {fmtData(n.criado_em)}
                   </p>
@@ -186,7 +187,7 @@ function Linha({ a, aberto, onToggle }: { a: UsuarioArquivado; aberto: boolean; 
             <div className="md:col-span-2">
               <Bloco titulo="Anotações pessoais" icone={NotebookPen}>
                 <p className="whitespace-pre-line rounded-lg bg-white/[0.03] p-2.5 text-[12.5px] text-foreground/90">
-                  {a.anotacoes_pessoais}
+                  <TextoFormatado texto={a.anotacoes_pessoais} />
                 </p>
               </Bloco>
             </div>

@@ -4,6 +4,7 @@ import { Loader2, Gavel, Scale } from "lucide-react";
 import { fmtDataHora } from "@/lib/kanban";
 import { fetchPunicoesPorSetagem, type PunicaoRow, type PunicaoTipo } from "@/lib/punicoes";
 import { cn } from "@/lib/utils";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 interface IlegalRegistrosSetProps {
   /** Setagem (userset_sub) da organização ilegal. */
@@ -109,7 +110,7 @@ export function IlegalRegistrosSet({ setagem, tipo, desde }: IlegalRegistrosSetP
                 {row.jogador ? ` · ${row.jogador}` : ""}
               </p>
               {row.observacao ? (
-                <p className="mt-2 text-xs text-muted-foreground">{row.observacao}</p>
+                <p className="mt-2 text-xs text-muted-foreground"><TextoFormatado texto={row.observacao} /></p>
               ) : null}
               <p className="mt-2 text-[11px] text-muted-foreground/70">
                 Staff: {row.staff || "—"}

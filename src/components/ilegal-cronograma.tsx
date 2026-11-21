@@ -48,6 +48,8 @@ import {
   type CronoPrioridade,
   type CronoTipo,
 } from "@/lib/ilegal-cronograma";
+import { TextoFormatado } from "@/components/texto-formatado";
+import { EditorTexto } from "@/components/editor-texto";
 
 const TIPO_ICON: Record<CronoTipo, typeof Target> = {
   roleplay: Users,
@@ -590,7 +592,7 @@ function CronoCard({
 
       {item.descricao && (
         <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs text-muted-foreground">
-          {item.descricao}
+          <TextoFormatado texto={item.descricao} />
         </p>
       )}
 
@@ -896,7 +898,7 @@ function CronoModal({
             </div>
           </div>
 
-          <textarea
+          <EditorTexto
             value={form.descricao}
             onChange={(e) => set("descricao", e.target.value)}
             placeholder="Descrição / roteiro do RP..."

@@ -36,6 +36,7 @@ import {
   type EstabStatus,
 } from "@/lib/captacoes";
 import { toast } from "sonner";
+import { TextoFormatado } from "@/components/texto-formatado";
 
 const STATUS_CORES: Record<EstabStatus, string> = {
   livre: "bg-emerald-500/15 text-emerald-400",
@@ -187,7 +188,7 @@ export function CaptacoesEstabelecimentos({ onCaptar, podeEditar = true }: Props
                         </span>
                       </td>
                       <td className="max-w-32 truncate py-2 pr-2 text-muted-foreground">
-                        {e.observacao || "—"}
+                        {e.observacao ? <TextoFormatado texto={e.observacao} /> : "—"}
                       </td>
                       {cat.nome === "Outros" && (
                         <td className="py-2 pr-2 text-muted-foreground">{e.staff || "—"}</td>

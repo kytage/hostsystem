@@ -33,3 +33,14 @@ test("filtros: cargo VIP, whitelist, level, dinheiro e veículos", () => {
   assert.equal(passaNosFiltros(comum, { ...f, dinheiro: "ate10k" }), true);
   assert.equal(passaNosFiltros(comum, { ...f, veiculos: "com" }), false);
 });
+
+test("busca pelo ID da Host: 741 acha o #741 primeiro e não pega license/telefone", async () => {
+  const { bateNaBusca, idDaBusca, ordenarPorId } = await import("./players-filtros");
+  const p = (passaporte: string, extra: Partial<import("./players").Player> = {}) =>
+    ({ passaporte, nome: "X", license: "", telefone: "", discord_nome: "", discord_id: "", veiculos: [], ...extra }) as unknown as import("./players").Player;
+  assert.equal(idDaBusca("#741"), "741");
+  assert.equal(idDaBusca("Dam"), null);
+  const lista = [p("7410"), p("741"), p("74"), p("999", { telefone: "741-000", license: "741abc" })];
+  const achados = lista.filter((x) => bateNaBusca(x, "741"));
+  assert.deepEqual(ordenarPorId(achados, "741").map((x) => x.passaporte), ["741", "7410"]);
+});
