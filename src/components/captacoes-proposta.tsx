@@ -142,7 +142,7 @@ export function CaptacoesProposta() {
     }
     if (secoes.camp) linhas.push(`▶ ${modelo.camp} — ${modelo.campExtras}`);
     if (secoes.pix && modelo.pix) {
-      linhas.push("", "**Remuneração via Pix (pico diário):**");
+      linhas.push("", "**Remuneração via Pix (média do pico diário durante 30 dias):**");
       for (const f of pix) linhas.push(`• ${f.online} online: ${brl(f.valor)}`);
     }
     if (observacoes.trim()) linhas.push("", `📝 ${observacoes.trim()}`);
@@ -523,7 +523,7 @@ export function CaptacoesProposta() {
             {secoes.pix && modelo.pix && pix.length > 0 && (
               <div className="mt-4">
                 <p className="text-[11px] font-semibold tracking-[0.3em] text-white/60">
-                  REMUNERAÇÃO VIA PIX <span className="ml-1 font-normal normal-case tracking-normal text-white/40">por pico diário de online</span>
+                  REMUNERAÇÃO VIA PIX <span className="ml-1 font-normal normal-case tracking-normal text-white/40">pela média do pico diário durante 30 dias</span>
                 </p>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                   {pix.map((f, i) => (
@@ -709,7 +709,7 @@ function ModelosDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <p className={labelCls}>Faixas de remuneração (pico diário)</p>
+            <p className={labelCls}>Faixas de remuneração (média do pico diário em 30 dias)</p>
             {pixForm.map((fx, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
