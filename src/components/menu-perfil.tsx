@@ -9,6 +9,8 @@ import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
 import { alternarPerfil, fecharPainel, usePainelTopo } from "@/lib/menu-perfil";
 import { PainelAvisos, SinoBotao } from "@/components/sino-avisos";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BarraCelular } from "@/components/barra-celular";
 import { Loader2 } from "lucide-react";
 
 // o conteúdo do perfil (tarefas, anotações) só é baixado quando o pop-up abre
@@ -43,6 +45,8 @@ export function MenuPerfil() {
   const aberto = painel !== null;
   const { data: eu } = useEu();
   const caminho = useRouterState({ select: (s) => s.location.pathname });
+  // celular: a barra de baixo (5 atalhos) no lugar do botão do topo
+  const celular = useIsMobile();
 
   // trocou de página (ex.: clicou num link dentro do perfil): fecha o pop-up
   useEffect(() => {
@@ -76,6 +80,9 @@ export function MenuPerfil() {
 
   return createPortal(
     <>
+      {celular ? (
+        <BarraCelular />
+      ) : (
       <div className="menu-topo">
         <button
           type="button"
@@ -95,6 +102,7 @@ export function MenuPerfil() {
         <span className="menu-topo-sep" aria-hidden />
         <SinoBotao />
       </div>
+      )}
 
       {aberto && (
         <div className="menu-perfil-fundo" onMouseDown={(e) => e.target === e.currentTarget && fecharPainel()}>

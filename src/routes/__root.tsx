@@ -16,6 +16,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { instalarRolagemSuave } from "@/lib/rolagem-suave";
 import { instalarMovimento } from "@/lib/movimento";
 import { instalarFundoPontilhado } from "@/lib/fundo-pontilhado";
+import { instalarLuzDosCartoes } from "@/lib/luz-cartoes";
 import { instalarSonsDaInterface, playSfx } from "@/lib/sfx";
 import { supabase } from "@/integrations/supabase/client";
 import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
@@ -86,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "HOST Eventos e Cronograma" },
       {
         name: "description",
@@ -202,6 +203,8 @@ function RootComponent() {
   useEffect(() => instalarFundoPontilhado(), []);
   // os marcadores que viajam: a pílula das abas e o traço da página atual no menu
   useEffect(() => instalarMovimento(), []);
+  // a luz que segue o mouse nos cartões e acende a borda (Magic Card, src/lib/luz-cartoes.ts)
+  useEffect(() => instalarLuzDosCartoes(), []);
 
   if (isAuthPage) {
     return (

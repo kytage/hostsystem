@@ -37,7 +37,6 @@ function AuthPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [showNova, setShowNova] = useState(false);
-  const [inclina, setInclina] = useState({ x: 0, y: 0 });
 
   // Quem chega aqui está deslogado: a próxima entrada mostra a abertura de novo.
   useEffect(() => {
@@ -134,21 +133,19 @@ function AuthPage() {
     "h-12 w-full rounded-2xl border border-white/[0.09] bg-black/40 pl-11 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-ink-3 focus:border-white/30 sm:text-sm";
   const rotulo = "mb-1.5 block text-xs text-muted-foreground";
   const botao =
-    "flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold text-black transition-all duration-200 hover:bg-white/90 active:scale-[0.985] disabled:opacity-60";
+    "botao-brilho flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-semibold text-black transition-all duration-200 hover:bg-white/90 active:scale-[0.985] disabled:opacity-60";
 
   return (
     <div
-      className="dark relative flex min-h-screen flex-col items-center overflow-hidden px-4"
-      onPointerMove={(e) => setInclina({ x: (0.5 - e.clientY / window.innerHeight) * 10, y: (e.clientX / window.innerWidth - 0.5) * 14 })}
+      className="login-tela dark relative flex min-h-[100dvh] flex-col items-center overflow-hidden px-4"
     >
-      {/* HOST gigante atrás do cartão de vidro, inclinando em 3D com o ponteiro */}
-      <div className="pf-glow pointer-events-none mt-[9vh] w-[min(1080px,94vw)] select-none" style={{ perspective: 1200 }}>
-        <div className="transition-transform duration-500 ease-out" style={{ transform: `rotateX(${inclina.x}deg) rotateY(${inclina.y}deg)` }}>
-          <LogoExtenso />
-        </div>
+      <div className="pf-glow relative z-10 mt-[max(9vh,env(safe-area-inset-top))] w-[min(210px,52vw)] select-none">
+        <LogoExtenso />
       </div>
 
-      <div className="pf-modal glass relative z-10 -mt-[min(9vw,92px)] w-full max-w-sm rounded-[28px] !bg-black/45 p-6 backdrop-blur-2xl sm:p-7">
+      <div className="login-cartao pf-modal relative z-10 mt-8 w-full max-w-sm rounded-[24px] p-6 sm:p-7">
+        {/* luz que corre em volta da borda (Border Beam) */}
+        <span aria-hidden className="login-feixe-borda" />
         <p className="eyebrow text-center">HOST GROUP · Sistema e gestão</p>
         <h1 className="mt-2 text-center font-display text-2xl font-semibold tracking-tight">{criandoSenha ? "Crie sua senha" : "Acesse o painel"}</h1>
         <p className="mt-1.5 text-center text-xs text-muted-foreground">
@@ -210,7 +207,7 @@ function AuthPage() {
         </p>
       </div>
 
-      <p className="relative z-10 mt-auto pb-6 pt-8 text-[10px] uppercase tracking-[0.3em] text-ink-3">desenvolvido por henrique bonne</p>
+      <p className="relative z-10 mt-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-8 text-[10px] uppercase tracking-[0.3em] text-ink-3">desenvolvido por henrique bonne</p>
     </div>
   );
 }

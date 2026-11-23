@@ -472,6 +472,9 @@ export function AppSidebar() {
     </DropdownMenu>
   );
 
+  // celular: sem menu lateral — a barra de baixo (src/components/barra-celular.tsx) assume
+  if (estreito) return null;
+
   return (
     <TooltipProvider delayDuration={60} skipDelayDuration={300}>
       {/* tela estreita com o menu aberto: um véu escurece a página e um espaço guarda o lugar da barra */}

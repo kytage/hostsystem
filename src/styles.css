@@ -1655,7 +1655,7 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 .hc-indice[data-compacto] .hc-indice-valor { overflow: hidden; text-overflow: ellipsis; font-size: 22px; }
 /* pede ação: um ponto vermelho ao lado do número */
 .hc-indice[data-alerta] .hc-indice-valor::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 8px; border-radius: 999px; vertical-align: 0.62em; background: #ce0e0e; box-shadow: 0 0 0 3px rgba(206, 14, 14, 0.2), 0 0 12px rgba(206, 14, 14, 0.85); }
-@container (min-width: 400px) {
+@container (min-width: 300px) {
   .hc-indices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hc-indices > :last-child:nth-child(odd) { grid-column: span 2; }
   .hc-indice { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "valor icone" "rotulo rotulo" "nota nota"; align-items: start; row-gap: 0; padding: 14px 14px 14px 16px; }
@@ -1663,6 +1663,12 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
   .hc-indice[data-compacto] .hc-indice-valor { font-size: 26px; }
   .hc-indice-rotulo { margin-top: 14px; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .hc-indice-nota { margin-top: 3px; }
+}
+/* celular (dois por linha num espaço estreito): número um pouco menor para valores em R$ caberem inteiros */
+@container (min-width: 300px) and (max-width: 399px) {
+  .hc-indice { padding: 12px 12px 12px 14px; }
+  .hc-indice-valor { font-size: 28px; }
+  .hc-indice[data-compacto] .hc-indice-valor { font-size: 17px; letter-spacing: -0.03em; }
 }
 @container (min-width: 760px) {
   .hc-indices { grid-template-columns: repeat(var(--quantos, 4), minmax(0, 1fr)); }
@@ -2699,3 +2705,104 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 @keyframes aviso-obrigatorio-borda { 50% { box-shadow: 0 0 0 8px rgba(206, 15, 15, 0.22), 0 40px 120px -20px rgba(0, 0, 0, 0.95); } }
 .aviso-obrigatorio-sino { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 15px; background: #ce0f0f; color: #fff; animation: aviso-sino-balanca 1s ease-in-out infinite; transform-origin: 50% 10%; }
 @keyframes aviso-sino-balanca { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-5deg); } }
+
+/* ---------- Celular (iPhone e Android): barra de baixo com 5 atalhos ---------- */
+:root { --cel-barra: 64px; --cel-folga: calc(var(--cel-barra) + 22px + env(safe-area-inset-bottom)); }
+.cel-barra { position: fixed; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 45; display: flex; align-items: center; justify-content: space-between; gap: 4px; width: min(440px, calc(100vw - 24px)); height: var(--cel-barra); padding: 0 8px; border-radius: 26px; border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(17, 17, 19, 0.88); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); box-shadow: 0 18px 44px -12px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05); }
+.cel-botao, .cel-botao-sino .menu-sino { position: relative; display: grid; place-items: center; flex: 1 1 0; height: 48px; min-width: 0; border-radius: 18px; color: rgba(255, 255, 255, 0.62); -webkit-tap-highlight-color: transparent; transition: color 150ms, background 150ms, transform 120ms; }
+.cel-botao:active, .cel-botao-sino .menu-sino:active { transform: scale(0.92); }
+.cel-botao[data-ativo] { color: #fff; background: rgba(255, 255, 255, 0.08); }
+.cel-botao-sino { display: flex; flex: 1 1 0; min-width: 0; }
+.cel-botao-sino .menu-sino { width: auto; }
+.cel-botao-sino .menu-sino svg { width: 21px; height: 21px; }
+.cel-botao-sino .menu-sino-num { top: 6px; right: calc(50% - 20px); }
+.cel-botao-perfil { flex: 0 0 auto; width: 64px; background: rgba(255, 255, 255, 0.07); border-radius: 20px; }
+.cel-botao-perfil img { width: 32px; height: 32px; border-radius: 999px; object-fit: cover; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); }
+.cel-botao-perfil-on img { box-shadow: 0 0 0 2px #e5231b; }
+html:not(.dark) .cel-barra { background: rgba(255, 255, 255, 0.9); border-color: rgba(0, 0, 0, 0.08); }
+html:not(.dark) .cel-botao, html:not(.dark) .cel-botao-sino .menu-sino { color: rgba(0, 0, 0, 0.55); }
+html:not(.dark) .cel-botao[data-ativo] { color: #000; background: rgba(0, 0, 0, 0.06); }
+
+.cel-menu-fundo { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, 0.6); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: menu-perfil-fade 180ms ease-out; }
+.cel-menu { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); bottom: calc(var(--cel-barra) + 20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; overflow: hidden; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(13, 13, 14, 0.98); box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.9); animation: menu-perfil-sobe 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+html:not(.dark) .cel-menu { background: #fff; border-color: rgba(0, 0, 0, 0.08); }
+.cel-menu-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 14px 10px; }
+.cel-menu-fechar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+.cel-menu-busca { display: flex; align-items: center; gap: 8px; margin: 0 14px 6px; height: 44px; padding: 0 14px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); }
+.cel-menu-busca input { flex: 1; min-width: 0; background: transparent; outline: none; font-size: 16px; }
+.cel-menu-lista { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 4px 14px 18px; }
+.cel-menu-grupo { margin-top: 12px; }
+.cel-menu-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.cel-menu-item { display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 0 12px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.06); background: rgba(255, 255, 255, 0.03); font-size: 13.5px; font-weight: 500; text-align: left; -webkit-tap-highlight-color: transparent; }
+.cel-menu-item:active { background: rgba(255, 255, 255, 0.08); }
+.cel-menu-item[data-ativo] { border-color: rgba(229, 35, 27, 0.55); background: rgba(229, 35, 27, 0.1); }
+.cel-menu-sair { color: #ff8f85; }
+
+@media (max-width: 767px) {
+  /* tela inteira de verdade no iPhone (100vh conta a barra do Safari) */
+  .moldura { height: 100dvh; }
+  html, body { overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+  /* espaço para a barra de baixo não cobrir o fim da página */
+  .page-main { padding-bottom: var(--cel-folga); scroll-padding-bottom: var(--cel-folga); }
+  .pagina, .home { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); padding-top: max(12px, env(safe-area-inset-top)); }
+  /* iPhone dá zoom sozinho em campo com letra menor que 16px */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea, [contenteditable="true"] { font-size: 16px !important; }
+  /* botão do chat e avisos de canto: acima da barra de baixo */
+  .chat-flutuante { right: 14px; bottom: calc(var(--cel-barra) + 22px + env(safe-area-inset-bottom)); }
+  .chat-janela { top: calc(10px + env(safe-area-inset-top)); bottom: calc(var(--cel-barra) + 20px + env(safe-area-inset-bottom)); height: auto; right: 10px; left: 10px; }
+  [data-sonner-toaster] { --offset-bottom: calc(var(--cel-barra) + 22px + env(safe-area-inset-bottom)) !important; --mobile-offset-bottom: calc(var(--cel-barra) + 22px + env(safe-area-inset-bottom)) !important; }
+  /* Perfil e Avisos: janela inteira entre o topo e a barra */
+  .menu-perfil-fundo { z-index: 44; }
+  .menu-perfil-janela { top: calc(10px + env(safe-area-inset-top)); bottom: calc(var(--cel-barra) + 20px + env(safe-area-inset-bottom)); width: calc(100vw - 20px); border-radius: 22px; }
+  .menu-perfil-topo { padding: 14px 14px 8px; }
+  .menu-perfil-corpo { padding: 4px 12px 16px; }
+  /* janelas (Radix) e tabelas não estouram a largura da tela */
+  [role="dialog"]:not(.menu-perfil-janela):not(.cel-menu) { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; }
+  .page-main img, .page-main video { max-width: 100%; }
+  .page-main pre { white-space: pre-wrap; word-break: break-word; }
+  /* abas em pílula: se não couberem, deslizam para o lado em vez de estourar */
+  .segmentos { max-width: 100%; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .segmentos::-webkit-scrollbar { display: none; }
+  .segmentos > :is(button, a) { flex-shrink: 0; }
+  .logs-filtros .campo-busca { flex: 1 1 100%; }
+  /* janela aberta (ex.: Novo evento): a barra de baixo e o chat somem para não cobrir os botões dela */
+  body:has([role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], .fixed.inset-0[class*="bg-black"]) :is(.cel-barra, .chat-flutuante) { display: none; }
+  .aviso-grade-gestor .aviso-coluna { min-height: 0; }
+  /* tabelas largas: deslizam dentro do cartão */
+  .page-main table { font-size: 12.5px; }
+  .page-main th { white-space: nowrap; }
+}
+
+/* ---------- Tela de login: o mesmo fundo e o mesmo vidro do painel ----------
+   fundo preto pontilhado com o feixe vermelho (src/lib/fundo-pontilhado.ts) e cartão de vidro escuro */
+.login-tela { background: #060606; isolation: isolate; }
+.login-tela::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background-image: var(--fundo-pontilhado, none); background-size: cover; background-position: center; image-rendering: pixelated; }
+.login-cartao { border: 1px solid rgba(255, 255, 255, 0.035); background: linear-gradient(155deg, rgba(54, 52, 54, 0.4) 0%, rgba(21, 20, 21, 0.78) 55%, rgba(13, 13, 14, 0.88) 100%); -webkit-backdrop-filter: blur(18px) saturate(125%); backdrop-filter: blur(18px) saturate(125%); box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9); }
+.login-cartao input { background: rgba(255, 255, 255, 0.045) !important; border-color: transparent !important; }
+.login-cartao input:focus { border-color: rgba(255, 255, 255, 0.22) !important; }
+
+/* ---------- Efeitos do Magic UI (feitos em CSS, sem biblioteca) ---------- */
+/* Magic Card: luz que segue o mouse por dentro do cartão e acende a borda perto do ponteiro (src/lib/luz-cartoes.ts) */
+[data-luz]::before,
+[data-luz]::after { content: "" !important; display: block !important; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: var(--luz-o, 0); transition: opacity 260ms ease; }
+[data-luz]::before { z-index: 2; padding: 1px; background: radial-gradient(200px circle at var(--luz-x, -999px) var(--luz-y, -999px), rgba(255, 90, 80, 0.9), rgba(206, 15, 15, 0.35) 40%, transparent 72%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+[data-luz]::after { z-index: 0; background: radial-gradient(300px circle at var(--luz-x, -999px) var(--luz-y, -999px), rgba(255, 255, 255, 0.05), rgba(206, 15, 15, 0.035) 40%, transparent 70%); }
+:root:not(.dark) [data-luz]::after { background: radial-gradient(300px circle at var(--luz-x, -999px) var(--luz-y, -999px), rgba(206, 15, 15, 0.06), transparent 70%); }
+
+/* Border Beam: um ponto de luz vermelha que corre em volta do cartão de login */
+@property --borda-giro { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.login-feixe-borda { position: absolute; inset: 0; z-index: 3; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--borda-giro), transparent 0deg 250deg, rgba(206, 15, 15, 0.55) 300deg, #ff4a3d 340deg, #ffffff 355deg, transparent 360deg);
+  animation: borda-gira 6s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+@keyframes borda-gira { to { --borda-giro: 360deg; } }
+
+/* Shine: um reflexo que atravessa o botão de entrar de tempos em tempos */
+.botao-brilho { position: relative; overflow: hidden; isolation: isolate; }
+.botao-brilho::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(206, 15, 15, 0.22) 48%, rgba(255, 255, 255, 0.9) 50%, rgba(206, 15, 15, 0.22) 52%, transparent 65%);
+  background-size: 250% 100%; background-position: 130% 0; animation: botao-brilho 4.5s ease-in-out infinite; mix-blend-mode: multiply; }
+@keyframes botao-brilho { 0%, 55% { background-position: 130% 0; } 85%, 100% { background-position: -30% 0; } }
+
+@media (prefers-reduced-motion: reduce) { .login-feixe-borda, .botao-brilho::after { animation: none; } }
