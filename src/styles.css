@@ -5,6 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* cores do HOST AVANÇADO (text-tx-1, text-tx-2, text-tx-3, border-host) */
+  --color-tx-1: #f4f4f5;
+  --color-tx-2: #a1a1a7;
+  --color-tx-3: #7c7c84;
+  --color-host: #ce0e0e;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

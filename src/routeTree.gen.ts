@@ -39,6 +39,8 @@ import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticat
 import { Route as ConviteSlugRouteImport } from './routes/convite.$slug'
 import { Route as AuthenticatedAreasIndexRouteImport } from './routes/_authenticated/areas.index'
 import { Route as AuthenticatedAreasAreaRouteImport } from './routes/_authenticated/areas.$area'
+import { Route as AuthenticatedAvancadoIndexRouteImport } from './routes/_authenticated/avancado.index'
+import { Route as AuthenticatedAvancadoSplatRouteImport } from './routes/_authenticated/avancado.$'
 import { Route as ApiPublicWebhookLogsRouteImport } from './routes/api/public/webhook/logs'
 import { Route as ApiPublicWebhookLogsDiscordRouteImport } from './routes/api/public/webhook/logs-discord'
 import { Route as ApiPublicWebhookOnlineRouteImport } from './routes/api/public/webhook/online'
@@ -197,6 +199,18 @@ const AuthenticatedAreasAreaRoute = AuthenticatedAreasAreaRouteImport.update({
   path: '/areas/$area',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAvancadoIndexRoute =
+  AuthenticatedAvancadoIndexRouteImport.update({
+    id: '/avancado/',
+    path: '/avancado/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAvancadoSplatRoute =
+  AuthenticatedAvancadoSplatRouteImport.update({
+    id: '/avancado/$',
+    path: '/avancado/$',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicWebhookLogsRoute = ApiPublicWebhookLogsRouteImport.update({
   id: '/api/public/webhook/logs',
   path: '/api/public/webhook/logs',
@@ -248,7 +262,9 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/convite/$slug': typeof ConviteSlugRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/avancado/$': typeof AuthenticatedAvancadoSplatRoute
   '/areas/': typeof AuthenticatedAreasIndexRoute
+  '/avancado/': typeof AuthenticatedAvancadoIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
   '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -283,7 +299,9 @@ export interface FileRoutesByTo {
   '/convite/$slug': typeof ConviteSlugRoute
   '/': typeof AuthenticatedIndexRoute
   '/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/avancado/$': typeof AuthenticatedAvancadoSplatRoute
   '/areas': typeof AuthenticatedAreasIndexRoute
+  '/avancado': typeof AuthenticatedAvancadoIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
   '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -320,7 +338,9 @@ export interface FileRoutesById {
   '/convite/$slug': typeof ConviteSlugRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/areas/$area': typeof AuthenticatedAreasAreaRoute
+  '/_authenticated/avancado/$': typeof AuthenticatedAvancadoSplatRoute
   '/_authenticated/areas/': typeof AuthenticatedAreasIndexRoute
+  '/_authenticated/avancado/': typeof AuthenticatedAvancadoIndexRoute
   '/api/public/webhook/logs': typeof ApiPublicWebhookLogsRoute
   '/api/public/webhook/logs-discord': typeof ApiPublicWebhookLogsDiscordRoute
   '/api/public/webhook/online': typeof ApiPublicWebhookOnlineRoute
@@ -357,7 +377,9 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/convite/$slug'
     | '/areas/$area'
+    | '/avancado/$'
     | '/areas/'
+    | '/avancado/'
     | '/api/public/webhook/logs'
     | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
@@ -392,7 +414,9 @@ export interface FileRouteTypes {
     | '/convite/$slug'
     | '/'
     | '/areas/$area'
+    | '/avancado/$'
     | '/areas'
+    | '/avancado'
     | '/api/public/webhook/logs'
     | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
@@ -428,7 +452,9 @@ export interface FileRouteTypes {
     | '/convite/$slug'
     | '/_authenticated/'
     | '/_authenticated/areas/$area'
+    | '/_authenticated/avancado/$'
     | '/_authenticated/areas/'
+    | '/_authenticated/avancado/'
     | '/api/public/webhook/logs'
     | '/api/public/webhook/logs-discord'
     | '/api/public/webhook/online'
@@ -659,6 +685,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAreasAreaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/avancado/': {
+      id: '/_authenticated/avancado/'
+      path: '/avancado'
+      fullPath: '/avancado/'
+      preLoaderRoute: typeof AuthenticatedAvancadoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/avancado/$': {
+      id: '/_authenticated/avancado/$'
+      path: '/avancado/$'
+      fullPath: '/avancado/$'
+      preLoaderRoute: typeof AuthenticatedAvancadoSplatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/webhook/logs': {
       id: '/api/public/webhook/logs'
       path: '/api/public/webhook/logs'
@@ -715,7 +755,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAreasAreaRoute: typeof AuthenticatedAreasAreaRoute
+  AuthenticatedAvancadoSplatRoute: typeof AuthenticatedAvancadoSplatRoute
   AuthenticatedAreasIndexRoute: typeof AuthenticatedAreasIndexRoute
+  AuthenticatedAvancadoIndexRoute: typeof AuthenticatedAvancadoIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -743,7 +785,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAreasAreaRoute: AuthenticatedAreasAreaRoute,
+  AuthenticatedAvancadoSplatRoute: AuthenticatedAvancadoSplatRoute,
   AuthenticatedAreasIndexRoute: AuthenticatedAreasIndexRoute,
+  AuthenticatedAvancadoIndexRoute: AuthenticatedAvancadoIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -763,3 +807,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

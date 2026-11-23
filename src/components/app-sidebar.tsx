@@ -4,6 +4,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   Home,
+  Gauge,
   GraduationCap,
   ShieldCheck,
   Skull,
@@ -34,6 +35,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { podeVerAvancado } from "@/components/avancado/pagina-avancado";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { DEFAULT_AVATAR_URL } from "@/lib/avatar";
@@ -116,6 +118,9 @@ export const NO_MENU_DA_CONTA = ["Usuários", "Registro de autoria"];
 
 const ops: NavEntry[] = [{ title: "HOST UPDATE 3.0", icon: Rocket, url: "/update" }];
 
+/** HOST AVANÇADO: captação, conteúdo, tarefas e radar do fundador. Só Founder e CEO (o banco também barra). */
+const avancado: NavEntry = { title: "HOST AVANÇADO", icon: Gauge, url: "/avancado" };
+
 /** Grupos do menu, na ordem em que aparecem. Item que não estiver aqui cai em "Outros". */
 export const GRUPOS: { nome: string; itens: string[] }[] = [
   // Players e Logs são os mais usados: logo abaixo da Home
@@ -129,11 +134,15 @@ export const GRUPOS: { nome: string; itens: string[] }[] = [
     itens: ["Equipe", "Marketing", "Área Manager", "Desenvolvimento", "Financeiro"],
   },
   { nome: "Sistema", itens: ["HOST UPDATE 3.0", "Usuários", "Registro de autoria"] },
+  // por último, na parte de baixo da barra
+  { nome: "Fundadores", itens: ["HOST AVANÇADO"] },
 ];
 export const grupoDe = (titulo: string) =>
   GRUPOS.find((g) => g.itens.includes(titulo))?.nome ?? "Outros";
 export const ehAtual = (item: NavEntry, pathname: string) =>
-  pathname === item.url || (item.url === "/areas" && pathname.startsWith("/areas/"));
+  pathname === item.url ||
+  (item.url === "/areas" && pathname.startsWith("/areas/")) ||
+  (item.url === "/avancado" && pathname.startsWith("/avancado/"));
 
 /** O que o usuário pode abrir no menu e quem ele é. */
 export function useMenu() {
@@ -173,6 +182,7 @@ export function useMenu() {
     ...(canAccessCombined(role, myAreas, "usuarios", perms, areaPerms, userPerms)
       ? [{ title: "Usuários", icon: Users, url: "/usuarios" } satisfies NavEntry]
       : []),
+    ...(podeVerAvancado(role) ? [avancado] : []),
   ];
   return {
     role,
