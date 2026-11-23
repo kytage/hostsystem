@@ -1,10 +1,12 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { Check, Copy, Crown, Eye, Pencil, Plus, Scale, Skull, Trash2 } from "lucide-react";
+import type { IlegalChecklist, MarcasChecklist } from "@/lib/ilegal-checklists";
 import type { IlegalCategoria, IlegalOrg } from "@/lib/ilegal-data";
 import { HORAS_MEDIA, serieDoPico, type SetagemOnlineResumo } from "@/lib/ilegal-online";
 import { HEX_SERIE, HEX_SITUACAO, HEX_STATUS, hexDaCategoria } from "@/lib/ilegal-cores";
 import { cn } from "@/lib/utils";
 import { TextoFormatado } from "@/components/texto-formatado";
+import { ProdutosCentral } from "@/components/ilegal-produtos";
 
 /**
  * Planilha do Ilegal no vidro da tela inicial: todas as setagens numa tabela
@@ -127,6 +129,54 @@ export interface IlegalPlanilhaProps {
   onCoroas: (org: IlegalOrg) => void;
   onJuridico: (org: IlegalOrg) => void;
   onAdicionar: (cat: IlegalCategoria) => void;
+  /** Check-lists: cada uma vira uma coluna de caixinhas depois da Observação. */
+  checklists?: IlegalChecklist[];
+  marcas?: MarcasChecklist;
+  onMarcar?: (checklistId: string, org: IlegalOrg, marcar: boolean) => void;
+}
+
+const dataHora = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+/** Caixinha da check-list numa setagem: clicar marca/desmarca. */
+function Caixinha({
+  nome,
+  marca,
+  onClick,
+}: {
+  nome: string;
+  marca: { marcadoPor: string; createdAt: string } | undefined;
+  onClick?: (() => void) | undefined;
+}) {
+  const titulo = marca
+    ? `${nome}: feito por ${marca.marcadoPor || "?"} em ${dataHora(marca.createdAt)}${onClick ? " (clique para desmarcar)" : ""}`
+    : `${nome}: ainda não feito${onClick ? " (clique para marcar)" : ""}`;
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={!!marca}
+      aria-label={titulo}
+      title={titulo}
+      disabled={!onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      className={cn(
+        "mx-auto grid size-[16px] place-items-center rounded-[4px] border transition-colors disabled:cursor-default",
+        marca
+          ? "border-primary bg-primary text-primary-foreground shadow-[0_0_8px_var(--color-primary)]"
+          : "border-foreground/25 hover:border-primary hover:bg-primary/15",
+      )}
+    >
+      {marca && <Check className="size-3" strokeWidth={3} />}
+    </button>
+  );
 }
 
 const COLUNAS: { nome: string; largura: string; titulo?: string; centro?: boolean }[] = [
@@ -163,7 +213,32 @@ const COLUNAS: { nome: string; largura: string; titulo?: string; centro?: boolea
 
 export function IlegalPlanilha(props: IlegalPlanilhaProps) {
   const { categorias, medias, coroas, canEdit } = props;
+  const checklists = props.checklists ?? [];
+  const marcas = props.marcas;
   const total = categorias.reduce((s, c) => s + c.orgs.length, 0);
+  // Observação é a 11ª coluna: as check-lists entram logo depois dela
+  const antes = COLUNAS.slice(0, 11);
+  const depois = COLUNAS.slice(11);
+  const nColunas = COLUNAS.length + checklists.length;
+  const contam = categorias.flatMap((c) => c.orgs).filter((o) => o.status !== "Fechado");
+  const feitas = (id: string) => {
+    const porOrg = marcas?.get(id);
+    return porOrg ? contam.filter((o) => porOrg.has(o.id)).length : 0;
+  };
+  const cabecalho = (c: (typeof COLUNAS)[number]) => (
+    <th
+      key={c.nome || "acoes"}
+      title={c.titulo}
+      className={cn(
+        celula,
+        "py-[7px] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3",
+        c.largura,
+        c.centro && "text-center",
+      )}
+    >
+      {c.nome}
+    </th>
+  );
   return (
     <section className="glass hc mt-3.5">
       <span aria-hidden className="pontilhado opacity-40" />
@@ -187,23 +262,36 @@ export function IlegalPlanilha(props: IlegalPlanilhaProps) {
       </div>
 
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[1320px] border-collapse text-left text-[11px] leading-tight">
+        <table
+          style={{ minWidth: 1320 + checklists.length * 96 }}
+          className="w-full border-collapse text-left text-[11px] leading-tight">
           <thead>
             <tr className="border-y border-white/[0.06]">
-              {COLUNAS.map((c) => (
-                <th
-                  key={c.nome || "acoes"}
-                  title={c.titulo}
-                  className={cn(
-                    celula,
-                    "py-[7px] text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-3",
-                    c.largura,
-                    c.centro && "text-center",
-                  )}
-                >
-                  {c.nome}
-                </th>
-              ))}
+              {antes.map(cabecalho)}
+              {checklists.map((ck) => {
+                const n = feitas(ck.id);
+                const completa = contam.length > 0 && n === contam.length;
+                return (
+                  <th
+                    key={`ck-${ck.id}`}
+                    title={`Check-list: ${ck.nome} — ${n} de ${contam.length} setagens feitas`}
+                    className={cn(celula, "w-[96px] max-w-[96px] py-[5px] text-center")}
+                  >
+                    <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                      {ck.nome}
+                    </span>
+                    <span
+                      className={cn(
+                        "block text-[9.5px] font-medium tabular-nums",
+                        completa ? "text-success" : "text-ink-3",
+                      )}
+                    >
+                      {n}/{contam.length}
+                    </span>
+                  </th>
+                );
+              })}
+              {depois.map(cabecalho)}
             </tr>
           </thead>
           {categorias.map((cat) => {
@@ -213,7 +301,7 @@ export function IlegalPlanilha(props: IlegalPlanilhaProps) {
                 {/* faixa da categoria: a cor dela vem do canto e some para a direita */}
                 <tr className="border-b border-white/[0.06]">
                   <td
-                    colSpan={COLUNAS.length}
+                    colSpan={nColunas}
                     className="px-4 py-[5px]"
                     style={{
                       background: `linear-gradient(90deg, ${cor}30, ${cor}0d 26%, transparent 58%)`,
@@ -311,10 +399,35 @@ export function IlegalPlanilha(props: IlegalPlanilhaProps) {
                         <Cds cds={o.cds} />
                       </td>
                       <td className={cn(celula, "text-violet-700 dark:text-violet-200/90")}>
-                        <span className="line-clamp-2" title={o.observacao}>
-                          {o.observacao ? <TextoFormatado texto={o.observacao} /> : vazio}
+                        <span className="flex items-center gap-2">
+                          {cat.id === "central" && (
+                            <ProdutosCentral
+                              droga={o.droga}
+                              desmanche={o.desmanche}
+                              contrabando={o.contrabando}
+                            />
+                          )}
+                          <span className="line-clamp-2 min-w-0" title={o.observacao}>
+                            {o.observacao ? (
+                              <TextoFormatado texto={o.observacao} />
+                            ) : cat.id === "central" && (o.droga || o.desmanche || o.contrabando) ? null : (
+                              vazio
+                            )}
+                          </span>
                         </span>
                       </td>
+                      {checklists.map((ck) => {
+                        const marca = marcas?.get(ck.id)?.get(o.id);
+                        return (
+                          <td key={`ck-${ck.id}`} className={cn(celula, "text-center")}>
+                            <Caixinha
+                              nome={ck.nome}
+                              marca={marca}
+                              onClick={props.onMarcar ? () => props.onMarcar?.(ck.id, o, !marca) : undefined}
+                            />
+                          </td>
+                        );
+                      })}
                       <td className={cn(celula, "text-foreground/55")}>
                         {limpa ? (
                           <span

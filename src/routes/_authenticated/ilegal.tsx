@@ -5,6 +5,7 @@ import {
   Skull,
   Pencil,
   Plus,
+  ListChecks,
   MapPin,
   Copy,
   Check,
@@ -38,6 +39,8 @@ import {
   fetchDetalhes,
   saveDetalhesDb,
   updateOrg,
+  DROGAS_CENTRAL,
+  type DrogaCentral,
   type IlegalCategoria,
   type IlegalDetalhes,
   type IlegalOrg,
@@ -81,6 +84,14 @@ import { HEX_SERIE, HEX_SITUACAO, HEX_STATUS } from "@/lib/ilegal-cores";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft } from "lucide-react";
 import { IlegalCoroasModal } from "@/components/ilegal-coroas-modal";
+import { IlegalChecklistsModal } from "@/components/ilegal-checklists-modal";
+import { COR_CONTRABANDO, COR_DESMANCHE } from "@/components/ilegal-produtos";
+import {
+  fetchChecklists,
+  fetchMarcasChecklist,
+  marcarChecklist,
+  type MarcasChecklist,
+} from "@/lib/ilegal-checklists";
 import { fetchCoroasSemanaAtual } from "@/lib/ilegal-coroas";
 
 
@@ -375,6 +386,44 @@ function EditModal({ org, categoriaNome, categorias = [], isNew = false, onClose
               }))}
             />
           </label>
+          {form.categoria === "central" && (
+            <div className="sm:col-span-2">
+              <span className="hc-sobre mb-1 block">Produtos da Central</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-[170px] flex-1">
+                  <MinimalSelect
+                    value={form.droga || "nenhuma"}
+                    onChange={(v) => set("droga", v === "nenhuma" ? "" : (v as DrogaCentral))}
+                    options={[
+                      { value: "nenhuma", label: "Droga: nenhuma" },
+                      ...DROGAS_CENTRAL.map((d) => ({ value: d, label: `Droga: ${d}` })),
+                    ]}
+                  />
+                </div>
+                {(
+                  [
+                    { chave: "desmanche", rotulo: "Desmanche", cor: COR_DESMANCHE },
+                    { chave: "contrabando", rotulo: "Contrabando", cor: COR_CONTRABANDO },
+                  ] as const
+                ).map((p) => {
+                  const ativo = form[p.chave];
+                  return (
+                    <button
+                      key={p.chave}
+                      type="button"
+                      aria-pressed={ativo}
+                      onClick={() => set(p.chave, !ativo)}
+                      className="pilula flex items-center gap-1.5 rounded-full"
+                      style={ativo ? { color: p.cor, boxShadow: `inset 0 0 0 1px ${p.cor}80`, background: `${p.cor}1a` } : undefined}
+                    >
+                      {ativo ? <Check className="size-3.5" /> : <X className="size-3.5 opacity-50" />}
+                      {p.rotulo}: {ativo ? "Sim" : "Não"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <label className="block sm:col-span-2">
             <span className="hc-sobre mb-1 block">
               Observação
@@ -1087,6 +1136,7 @@ function IlegalDashboard() {
     organizacao: string;
   } | null>(null);
   const [relGeral, setRelGeral] = useState(false);
+  const [checklistsAberto, setChecklistsAberto] = useState(false);
   const [relMulti, setRelMulti] = useState(false);
   const [excluindo, setExcluindo] = useState<IlegalOrg | null>(null);
   const [coroas, setCoroas] = useState<{
@@ -1107,6 +1157,42 @@ function IlegalDashboard() {
   ).length;
   useRealtimeTable("ilegal_detalhes", [["ilegal-detalhes"]]);
   useRealtimeTable("ilegal_coroas", [["ilegal-coroas-semana"]]);
+  useRealtimeTable("ilegal_checklists", [["ilegal-checklists"]]);
+  useRealtimeTable("ilegal_checklist_marcas", [["ilegal-checklists", "marcas"]]);
+
+  // Check-lists: colunas de caixinhas na tabela (tarefas em massa por setagem)
+  const { data: checklists = [] } = useQuery({
+    queryKey: ["ilegal-checklists", "lista"],
+    queryFn: fetchChecklists,
+  });
+  const { data: marcasChecklist = new Map() as MarcasChecklist } = useQuery({
+    queryKey: ["ilegal-checklists", "marcas"],
+    queryFn: fetchMarcasChecklist,
+  });
+  const marcarMutation = useMutation({
+    mutationFn: (v: { checklistId: string; orgId: string; marcar: boolean }) =>
+      marcarChecklist(v.checklistId, v.orgId, v.marcar),
+    // a caixinha muda na hora; se o banco recusar, volta como estava
+    onMutate: async (v) => {
+      const chave = ["ilegal-checklists", "marcas"];
+      await queryClient.cancelQueries({ queryKey: chave });
+      const anterior = queryClient.getQueryData<MarcasChecklist>(chave);
+      const novo: MarcasChecklist = new Map(
+        [...(anterior ?? new Map())].map(([k, m]) => [k, new Map(m)]),
+      );
+      const porOrg = novo.get(v.checklistId) ?? new Map();
+      if (v.marcar) porOrg.set(v.orgId, { marcadoPor: "você", createdAt: new Date().toISOString() });
+      else porOrg.delete(v.orgId);
+      novo.set(v.checklistId, porOrg);
+      queryClient.setQueryData(chave, novo);
+      return { anterior };
+    },
+    onError: (e, _v, ctx) => {
+      if (ctx?.anterior) queryClient.setQueryData(["ilegal-checklists", "marcas"], ctx.anterior);
+      toast.error(e instanceof Error ? e.message : "Não deu para marcar. Tente de novo.");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["ilegal-checklists", "marcas"] }),
+  });
 
   const { data: categorias = [], isLoading } = useQuery({
     queryKey: ["ilegal-orgs"],
@@ -1227,6 +1313,9 @@ function IlegalDashboard() {
       observacao: "",
       limpoEm: null,
       limpoPor: "",
+      droga: "",
+      desmanche: false,
+      contrabando: false,
     };
     setEditando({ org: nova, categoriaNome: categoria.nome, isNew: true });
   };
@@ -1308,6 +1397,16 @@ function IlegalDashboard() {
             >
               <FileText className="size-3.5" /> Relatório geral
             </button>
+            {(canEdit || checklists.length > 0) && (
+              <button
+                onClick={() => setChecklistsAberto(true)}
+                title="Criar e gerenciar check-lists (tarefas em massa por setagem)"
+                className="pilula flex items-center gap-1.5 rounded-full"
+              >
+                {canEdit ? <Plus className="size-3.5" /> : <ListChecks className="size-3.5" />}
+                {canEdit ? "Criar check-list" : "Check-lists"}
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() =>
@@ -1402,6 +1501,11 @@ function IlegalDashboard() {
                   onCoroas={(o) => setCoroas({ setagem: o.setagem, organizacao: o.organizacao })}
                   onJuridico={(o) => setJuridico({ setagem: o.setagem, organizacao: o.organizacao })}
                   onAdicionar={handleAdd}
+                  checklists={checklists}
+                  marcas={marcasChecklist}
+                  onMarcar={(checklistId, o, marcar) =>
+                    marcarMutation.mutate({ checklistId, orgId: o.id, marcar })
+                  }
                 />
               )}
             </>
@@ -1438,6 +1542,16 @@ function IlegalDashboard() {
           organizacao={coroas.organizacao}
           canEdit={canEdit}
           onClose={() => setCoroas(null)}
+        />
+      )}
+
+      {checklistsAberto && (
+        <IlegalChecklistsModal
+          checklists={checklists}
+          marcas={marcasChecklist}
+          orgIds={allOrgs.filter((o) => o.status !== "Fechado").map((o) => o.id)}
+          canEdit={canEdit}
+          onClose={() => setChecklistsAberto(false)}
         />
       )}
 

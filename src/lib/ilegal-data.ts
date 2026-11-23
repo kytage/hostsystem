@@ -20,7 +20,14 @@ export interface IlegalOrg {
   /** Marco da última "Limpar Fac": oculta histórico/registros anteriores no Ilegal. */
   limpoEm: string | null;
   limpoPor: string;
+  /** Produtos extras (só a Central usa): droga escolhida, desmanche e contrabando. */
+  droga: DrogaCentral;
+  desmanche: boolean;
+  contrabando: boolean;
 }
+
+export const DROGAS_CENTRAL = ["Cocaína", "Maconha", "Loló", "Metanfetamina", "Ecstasy"] as const;
+export type DrogaCentral = (typeof DROGAS_CENTRAL)[number] | "";
 
 
 export interface IlegalCategoria {
@@ -157,6 +164,9 @@ interface OrgRow {
   observacao: string;
   limpo_em?: string | null;
   limpo_por?: string | null;
+  droga?: string | null;
+  desmanche?: boolean | null;
+  contrabando?: boolean | null;
 }
 
 function rowToOrg(r: OrgRow): IlegalOrg {
@@ -174,6 +184,9 @@ function rowToOrg(r: OrgRow): IlegalOrg {
     observacao: r.observacao,
     limpoEm: r.limpo_em ?? null,
     limpoPor: r.limpo_por ?? "",
+    droga: (DROGAS_CENTRAL as readonly string[]).includes(r.droga ?? "") ? (r.droga as DrogaCentral) : "",
+    desmanche: r.desmanche ?? false,
+    contrabando: r.contrabando ?? false,
   };
 }
 
@@ -203,6 +216,16 @@ export function ordenarSetagens<T extends { setagem: string; ordem: number }>(or
   });
 }
 
+/** Fora da Central os produtos extras ficam vazios. */
+function produtosCentral(org: IlegalOrg) {
+  const central = org.categoria === "central";
+  return {
+    droga: central ? org.droga : "",
+    desmanche: central && org.desmanche,
+    contrabando: central && org.contrabando,
+  };
+}
+
 export async function updateOrg(org: IlegalOrg): Promise<void> {
   const { error } = await supabase
     .from("ilegal_orgs")
@@ -216,6 +239,7 @@ export async function updateOrg(org: IlegalOrg): Promise<void> {
       status: statusPorLocal(org),
       situacao: org.situacao,
       observacao: org.observacao,
+      ...produtosCentral(org),
       updated_at: new Date().toISOString(),
     })
     .eq("id", org.id);
@@ -235,6 +259,7 @@ export async function createOrg(org: IlegalOrg): Promise<void> {
     status: statusPorLocal(org),
     situacao: org.situacao,
     observacao: org.observacao,
+    ...produtosCentral(org),
   });
   if (error) throw error;
 }

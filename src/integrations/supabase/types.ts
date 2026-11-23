@@ -1067,6 +1067,9 @@ export type Database = {
       ilegal_orgs: {
         Row: {
           categoria: string
+          contrabando: boolean
+          desmanche: boolean
+          droga: string
           cds: string
           created_at: string
           grupo: string
@@ -1084,6 +1087,9 @@ export type Database = {
         }
         Insert: {
           categoria: string
+          contrabando?: boolean
+          desmanche?: boolean
+          droga?: string
           cds?: string
           created_at?: string
           grupo?: string
@@ -1101,6 +1107,9 @@ export type Database = {
         }
         Update: {
           categoria?: string
+          contrabando?: boolean
+          desmanche?: boolean
+          droga?: string
           cds?: string
           created_at?: string
           grupo?: string
