@@ -62,12 +62,13 @@ function Secoes() {
   const triagem = painel?.captacao.para_triagem ?? 0;
   return (
     <div className="pagina nao-imprimir !pb-0">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-1">
-        <div className="flex items-baseline gap-2">
+      {/* título numa linha e seções na de baixo: o menu flutuante do site (canto de cima, à direita) não cobre nada */}
+      <div className="flex flex-col items-start gap-3 px-1">
+        <div className="flex h-9 items-center gap-2">
           <span className="font-display text-[17px] font-semibold tracking-[-0.015em]">HOST</span>
           <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[#ce0e0e]">Avançado</span>
         </div>
-        <nav className="segmentos" aria-label="Seções do HOST AVANÇADO">
+        <nav className="segmentos max-w-full" aria-label="Seções do HOST AVANÇADO">
           {SECOES.map((s) => (
             <NavLink key={s.para} to={s.para} end={s.exato === true}>
               <s.icone size={13} strokeWidth={1.9} />
