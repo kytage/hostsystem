@@ -61,6 +61,7 @@ import { PageHeader } from "@/components/page-header";
 import { IlegalLogButton } from "@/components/ilegal-log-modal";
 import { IlegalAnotacoes } from "@/components/ilegal-anotacoes";
 import { IlegalCronograma } from "@/components/ilegal-cronograma";
+import { IlegalSemanaEventos } from "@/components/ilegal-semana-eventos";
 import { IlegalOnline, SetHistoricoOnline } from "@/components/ilegal-online";
 import {
   fetchSetOnline,
@@ -1381,6 +1382,7 @@ function IlegalDashboard() {
             </button>
           ))}
         </div>
+        <IlegalSemanaEventos className="min-w-[260px] max-w-[620px] flex-1" />
         {view === "orgs" && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <button

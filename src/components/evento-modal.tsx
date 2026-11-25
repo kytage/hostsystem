@@ -36,6 +36,8 @@ export interface EventoModalProps {
   evento?: EventoGestao | null;
   staffOptions: StaffOption[];
   saving?: boolean;
+  /** Valores iniciais de um evento novo (ex.: equipe Ilegal já escolhida). */
+  inicial?: Partial<EventoInput>;
   onSave: (input: EventoInput) => void;
   onClose: () => void;
 }
@@ -69,11 +71,12 @@ export function EventoModal({
   evento,
   staffOptions,
   saving,
+  inicial,
   onSave,
   onClose,
 }: EventoModalProps) {
   const [form, setForm] = useState<EventoInput>(() =>
-    evento ? fromEvento(evento) : { ...EVENTO_INPUT_DEFAULT }
+    evento ? fromEvento(evento) : { ...EVENTO_INPUT_DEFAULT, ...inicial }
   );
   const [busca, setBusca] = useState("");
   const bannerInput = useRef<HTMLInputElement>(null);

@@ -270,6 +270,31 @@ export async function fetchEventosGestao(): Promise<EventoGestao[]> {
   );
 }
 
+/**
+ * Eventos de uma equipe entre duas datas (YYYY-MM-DD, inclusivas), em ordem
+ * de data e horário. Usado no Cronograma da semana do Ilegal: só baixa os
+ * banners quando `comBanner` é true, para o botão do topo ficar leve.
+ */
+export async function fetchEventosDaEquipe(
+  equipe: EquipeKey,
+  de: string,
+  ate: string,
+  comBanner: boolean,
+): Promise<EventoGestao[]> {
+  const { data, error } = await supabase
+    .from("eventos_gestao")
+    .select(comBanner ? `${COLUNAS_SEM_BANNER}, banner_url` : COLUNAS_SEM_BANNER)
+    .eq("equipe", equipe)
+    .gte("data_evento", de)
+    .lte("data_evento", ate)
+    .order("data_evento", { ascending: true })
+    .order("horario", { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as unknown as Row[]).map((r) =>
+    mapEventoRow({ ...r, banner_url: comBanner ? r.banner_url ?? "" : "" }),
+  );
+}
+
 export interface StaffOption {
   id: string;
   username: string;
