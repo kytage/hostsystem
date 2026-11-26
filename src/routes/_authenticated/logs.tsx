@@ -8,6 +8,7 @@ import {
   ChevronsUpDown,
   Copy,
   Crosshair,
+  KeyRound,
   Eye,
   EyeOff,
   Map as IconeMapa,
@@ -995,6 +996,9 @@ function AoVivo({ onAbrirCanal }: { onAbrirCanal: (canal: string) => void }) {
       return false;
     }
   });
+  /** Busca por token da morte (o número que liga DEATH, KILL e RESPAWN da mesma morte). */
+  const [tokenDigitado, setTokenDigitado] = useState("");
+  const [token, setToken] = useState<string | null>(null);
   const acessoLogs = useAcessoLogs();
   const veSuspeitos = acessoLogs.podeVer("players");
   const suspeitos = useSuspeitos(veSuspeitos);
@@ -1060,6 +1064,48 @@ function AoVivo({ onAbrirCanal }: { onAbrirCanal: (canal: string) => void }) {
           {itens.length} {itens.length === 1 ? "log" : "logs"} nos últimos {MINUTOS_AO_VIVO} minutos
           · {pontos.length} no mapa
         </span>
+        <form
+          className="logs-token-busca"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const n = numeroDoToken(tokenDigitado);
+            if (!n) {
+              toast.error("Digite o número do token (pelo menos 6 números). Ex.: #6267313850");
+              return;
+            }
+            setToken(n);
+            setAberto(false);
+            setSuspeitosAberto(false);
+          }}
+        >
+          <KeyRound className="size-3.5 shrink-0 text-white/50" strokeWidth={2} aria-hidden />
+          <input
+            value={tokenDigitado}
+            onChange={(e) => setTokenDigitado(e.target.value)}
+            placeholder="Procurar por token  #6267313850"
+            aria-label="Procurar por token da morte"
+            inputMode="numeric"
+            maxLength={30}
+          />
+          {token ? (
+            <button
+              type="button"
+              aria-label="Fechar busca por token"
+              title="Fechar"
+              onClick={() => {
+                setToken(null);
+                setTokenDigitado("");
+              }}
+            >
+              <X className="size-3.5" strokeWidth={2} />
+            </button>
+          ) : (
+            <button type="submit" aria-label="Procurar token" title="Procurar">
+              <Search className="size-3.5" strokeWidth={2} />
+            </button>
+          )}
+        </form>
         <div className="ml-auto flex items-center gap-2">
           {aberto && (
             <div className="segmentos" role="tablist" aria-label="Estilo do mapa">
@@ -1085,6 +1131,7 @@ function AoVivo({ onAbrirCanal }: { onAbrirCanal: (canal: string) => void }) {
               onClick={() => {
                 setSuspeitosAberto((v) => !v);
                 setAberto(false);
+                setToken(null);
               }}
             >
               <Crosshair className="size-3.5" strokeWidth={2} />
@@ -1099,6 +1146,7 @@ function AoVivo({ onAbrirCanal }: { onAbrirCanal: (canal: string) => void }) {
             onClick={() => {
               setAberto((v) => !v);
               setSuspeitosAberto(false);
+              setToken(null);
             }}
           >
             {aberto ? (
@@ -1110,6 +1158,7 @@ function AoVivo({ onAbrirCanal }: { onAbrirCanal: (canal: string) => void }) {
           </button>
         </div>
       </header>
+      {token && <LogsDoToken token={token} />}
       {suspeitosAberto && veSuspeitos && (
         <PainelSuspeitos lista={suspeitos.data ?? []} carregando={suspeitos.isLoading} />
       )}
@@ -1274,6 +1323,65 @@ function LogsDoSuspeito({ ids }: { ids: number[] }) {
       {(q.data ?? []).map((l) => (
         <LinhaLog key={l.id} l={l} />
       ))}
+    </div>
+  );
+}
+
+/** Só os números do token ("#6267313850", "Token: 6267313850"...); null se tiver menos de 6. */
+function numeroDoToken(texto: string): string | null {
+  const n = texto.replace(/\D/g, "");
+  return n.length >= 6 && n.length <= 20 ? n : null;
+}
+
+/**
+ * Todas as logs com o mesmo token da morte: a DEATH (quem morreu), a KILL (quem matou) e o
+ * RESPAWN (itens perdidos). Procura em todo o histórico que a pessoa pode ver; o banco tem
+ * índice de texto na mensagem, então não precisa limitar por data.
+ */
+function LogsDoToken({ token }: { token: string }) {
+  const q = useQuery({
+    queryKey: ["server-logs-token", token],
+    queryFn: async (): Promise<LinhaDeLog[]> => {
+      const { data, error } = await supabase
+        .from("server_logs")
+        .select("id, canal, jogador_id, jogador_nome, mensagem, dados, criado_em")
+        .ilike("mensagem", `%${token}%`)
+        .order("criado_em", { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      // "#62673" não pode pegar "#6267313850": o número tem que estar inteiro
+      const inteiro = new RegExp(`(^|[^0-9])${token}(?![0-9])`);
+      return ((data ?? []) as LinhaDeLog[]).filter((l) => inteiro.test(l.mensagem));
+    },
+    staleTime: 60_000,
+  });
+  return (
+    <div className="logs-token-resultado">
+      <p className="hc-nota mb-2">
+        Token <b className="text-white/85">#{token}</b>
+        {q.data ? ` · ${q.data.length} ${q.data.length === 1 ? "log encontrada" : "logs encontradas"}` : ""}
+      </p>
+      {q.isLoading ? (
+        <div className="logs-vazio !min-h-[120px]">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : q.isError ? (
+        <p className="hc-nota py-6 text-center">Não deu para buscar agora. Tente de novo.</p>
+      ) : (q.data ?? []).length === 0 ? (
+        <div className="logs-suspeitos-vazio">
+          <span className="hc-icone !size-10">
+            <KeyRound className="size-5" strokeWidth={1.75} />
+          </span>
+          <p className="hc-titulo mt-3">Nenhuma log com esse token</p>
+          <p className="hc-nota mt-1">Confira o número ou se você tem acesso às logs de morte (players).</p>
+        </div>
+      ) : (
+        <div className="logs-lista-cartoes">
+          {(q.data ?? []).map((l) => (
+            <LinhaLog key={l.id} l={l} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

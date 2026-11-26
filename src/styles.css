@@ -2426,6 +2426,13 @@ a.hc-estado:hover { background: var(--gf-3); border-color: var(--gf-linha-2); }
 
 /* ---------- logs: aba SUSPEITOS (4+ kills em 60 segundos) ---------- */
 .logs-suspeitos-botao[data-tem] { border-color: rgba(229, 72, 77, 0.45); color: #ffb1b3; }
+.logs-token-busca { display: flex; align-items: center; gap: 8px; height: 34px; width: min(100%, 340px); padding: 0 6px 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); transition: border-color .15s; }
+.logs-token-busca:focus-within { border-color: rgba(206,14,14,0.6); background: rgba(206,14,14,0.06); }
+.logs-token-busca input { min-width: 0; flex: 1; background: transparent; font-size: 12.5px; color: var(--foreground); outline: none; }
+.logs-token-busca input::placeholder { color: rgba(255,255,255,0.4); }
+.logs-token-busca button { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; color: rgba(255,255,255,0.65); }
+.logs-token-busca button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.logs-token-resultado { margin-top: 12px; }
 .logs-suspeitos { display: flex; flex-direction: column; gap: 6px; }
 .logs-suspeito { overflow: hidden; border-radius: 14px; background: rgba(255, 255, 255, 0.035); }
 .logs-suspeito[data-aberto] { background: rgba(255, 255, 255, 0.05); }
